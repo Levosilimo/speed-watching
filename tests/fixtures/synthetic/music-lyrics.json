@@ -1,0 +1,44 @@
+{
+  "wireMagic": "pb3",
+  "pens": [
+    {}
+  ],
+  "events": [
+    {
+      "tStartMs": 0,
+      "dDurationMs": 5000,
+      "segs": [
+        {
+          "utf8": "[Music]"
+        }
+      ]
+    },
+    {
+      "tStartMs": 6000,
+      "dDurationMs": 4000,
+      "segs": [
+        {
+          "utf8": "♪ Oh baby ♪"
+        }
+      ]
+    },
+    {
+      "tStartMs": 11000,
+      "dDurationMs": 5000,
+      "segs": [
+        {
+          "utf8": "[Music]"
+        }
+      ]
+    },
+    {
+      "tStartMs": 17000,
+      "dDurationMs": 4000,
+      "segs": [
+        {
+          "utf8": "♪ yeah yeah ♪"
+        }
+      ]
+    }
+  ]
+}

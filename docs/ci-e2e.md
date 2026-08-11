@@ -16,7 +16,8 @@ Two safety nets guard the extension before it ever reaches a store:
 | `.github/workflows/publish.yml` | Draft store-submission workflow (inert until secrets exist) |
 | `scripts/run-ci.ts` | The `bun run ci` pipeline |
 | `e2e/server.ts` | Local fixture server: stub watch page, caption JSON, PAC proxy |
-| `e2e/shared/specs.ts` | Browser-agnostic E2E specs (fixture wpm math assertions) |
+| `e2e/shared/fixtures.ts` | Fixture metadata (caption-track kind, blocked captions) shared by server and specs |
+| `e2e/shared/specs.ts` | Browser-agnostic E2E specs (fixture wpm math + pill behavior) |
 | `e2e/chromium/e2e.spec.ts` | Playwright suite: SW reachability + shared specs + console hook |
 | `e2e/firefox/run.ts` | selenium-webdriver runner for the shared specs |
 | `playwright.config.chromium.ts` | Playwright config (webServer, chromium channel) |
@@ -58,7 +59,14 @@ things via `e2e/shared/specs.ts`:
 - wait for the content script's `speedwatcher:measure` window event,
 - compare the reported word/cue/corrected wpm and `nWords` against values
   recomputed in the runner from the same `lib/wpm.ts` functions, within
-  ±0.5 wpm.
+  ±0.5 wpm,
+- wait for the pill state test hook (`window.__speedwatcherPill` — the pill's
+  shadow root is closed) and compare it against `lib/recommend.ts` over the
+  same fixture; then assert Apply changes the fixture `<video>` playbackRate,
+  Dismiss hides the pill, music/unreachable variants suppress Apply, and the
+  WEB-blocked fixture (`synthetic/web-blocked.json`) makes the content script
+  exercise the ANDROID innertube fallback (asserted per browser at the
+  network layer: Playwright route counter / fixture-server POST counter).
 
 No real YouTube traffic: the fixture server serves the stub page, the caption
 JSON (the real `tests/fixtures/real/*.json` files), and — for Firefox — a PAC
@@ -168,8 +176,11 @@ publish time, pinned to `@8`.
 - **The stub page is not YouTube.** It mimics the watch page structure (a
   `<video>` element, `ytInitialPlayerResponse`, `yt-navigate-finish`) so the
   content script's real code path runs; it does not exercise the real
-  player's DOM. Phase-1 pill specs (captions overlay etc.) will need their
-  own fixtures.
+  player's DOM. The pill specs run against the same stub (a wrapper div
+  inside `#movie_player` serves as the shadow host; real YouTube's
+  `#movie_player` is a div too). The ANDROID innertube fallback is exercised
+  via the WEB-blocked fixture; the android-success path needs real YouTube
+  and stays covered by the residential re-run (docs/store-readiness.md).
 - **Twitch/Coursera/Disney+** remain blocked for probing (429 /
   enrollment-gated / geo-redirect, from `docs/phase0-generic-probe.md`);
   E2E never touches them.

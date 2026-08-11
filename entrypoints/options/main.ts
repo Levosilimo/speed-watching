@@ -1,16 +1,17 @@
 import { browser } from 'wxt/browser';
 import type { ProbeState } from '../../lib/audio-probe';
+import type { ContentType } from '../../lib/music';
 import {
-  KEY_TARGET_WPM,
-  KEY_CONTENT_TYPE,
-  KEY_SITE_OVERRIDES,
-  KEY_HABITS,
-  read,
-  write,
-  type ContentType,
-  type SiteOverride,
-  type HabitEntry,
-} from '../../ui/storage';
+  OVERRIDE_LOG_STORAGE_KEY,
+  OverrideLog,
+  type OverrideLogEntry,
+} from '../../lib/override-log';
+import {
+  DEFAULT_TARGET_WPM,
+  SETTINGS_STORAGE_KEY,
+  SettingsStore,
+  type Settings,
+} from '../../lib/settings';
 
 // ── Audio probe (preserved from Lane B, unchanged) ───────────────────────
 
@@ -101,6 +102,14 @@ async function onToggle(): Promise<void> {
 toggle.addEventListener('click', () => void onToggle());
 void refreshProbe();
 
+// ── Settings: single storage namespace ───────────────────────────────────
+// chrome.storage.local holds exactly two keys — 'sw.settings' (SettingsStore)
+// and 'sw.overrideLog' (OverrideLog); see the lib/settings.ts module doc.
+// ui/storage.ts's parallel 'sw:' schema is retired.
+
+const settingsStore = new SettingsStore(browser.storage.local, SETTINGS_STORAGE_KEY);
+const overrideLog = new OverrideLog(browser.storage.local);
+
 // ── Settings: WPM Slider ─────────────────────────────────────────────────
 
 const wpmSlider = el('wpm-slider') as HTMLInputElement;
@@ -121,7 +130,7 @@ positionSafeZone();
 
 wpmSlider.addEventListener('input', () => {
   wpmValue.textContent = wpmSlider.value;
-  void write(KEY_TARGET_WPM, Number(wpmSlider.value));
+  void settingsStore.update((settings) => ({ ...settings, target: Number(wpmSlider.value) }));
 });
 
 // ── Settings: Content Type Presets ────────────────────────────────────────
@@ -139,7 +148,7 @@ presetBtns.forEach((btn) => {
   btn.addEventListener('click', () => {
     const type = btn.dataset.type as ContentType;
     setActivePreset(type);
-    void write(KEY_CONTENT_TYPE, type);
+    void settingsStore.update((settings) => ({ ...settings, contentType: type }));
   });
 });
 
@@ -150,7 +159,19 @@ const overrideEmpty = el('override-empty');
 const overrideInput = el('override-input') as HTMLInputElement;
 const overrideAdd = el('override-add');
 
-function renderOverrides(overrides: SiteOverride[]): void {
+interface DisplayedOverride {
+  hostname: string;
+  contentType: ContentType;
+}
+
+function siteList(settings: Settings): DisplayedOverride[] {
+  return Object.entries(settings.sites).map(([hostname, override]) => ({
+    hostname,
+    contentType: override.contentType ?? 'generic',
+  }));
+}
+
+function renderOverrides(overrides: DisplayedOverride[]): void {
   overrideList.innerHTML = '';
   if (overrides.length === 0) {
     overrideEmpty.hidden = false;
@@ -176,8 +197,13 @@ function renderOverrides(overrides: SiteOverride[]): void {
     removeBtn.textContent = 'Remove';
     removeBtn.setAttribute('aria-label', `Remove override for ${item.hostname}`);
     removeBtn.addEventListener('click', () => {
-      const next = overrides.filter((o) => o.hostname !== item.hostname);
-      void write(KEY_SITE_OVERRIDES, next).then(() => renderOverrides(next));
+      void settingsStore
+        .update((settings) => {
+          const next = { ...settings, sites: { ...settings.sites } };
+          delete next.sites[item.hostname];
+          return next;
+        })
+        .then((next) => renderOverrides(siteList(next)));
     });
 
     li.append(left, removeBtn);
@@ -189,18 +215,18 @@ overrideAdd.addEventListener('click', () => {
   const hostname = overrideInput.value.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, '');
   if (!hostname) return;
 
-  void read(KEY_SITE_OVERRIDES).then((current) => {
-    if (current.some((o) => o.hostname === hostname)) {
-      overrideInput.value = '';
-      return;
-    }
-    const contentType = document.querySelector<HTMLButtonElement>('.preset-btn[aria-pressed="true"]')?.dataset.type as ContentType ?? 'generic';
-    const next = [...current, { hostname, contentType, addedAt: Date.now() }];
-    void write(KEY_SITE_OVERRIDES, next).then(() => {
-      renderOverrides(next);
+  void settingsStore
+    .update((settings) => {
+      if (settings.sites[hostname] !== undefined) return settings;
+      const contentType =
+        (document.querySelector<HTMLButtonElement>('.preset-btn[aria-pressed="true"]')
+          ?.dataset.type as ContentType) ?? 'generic';
+      return { ...settings, sites: { ...settings.sites, [hostname]: { contentType } } };
+    })
+    .then((next) => {
+      renderOverrides(siteList(next));
       overrideInput.value = '';
     });
-  });
 });
 
 overrideInput.addEventListener('keydown', (e: KeyboardEvent) => {
@@ -215,7 +241,7 @@ const habitTotal = el('habit-total');
 const habitAvgMult = el('habit-avg-mult');
 const habitList = el('habit-list');
 
-function renderHabits(habits: HabitEntry[]): void {
+function renderHabits(habits: OverrideLogEntry[]): void {
   habitTotal.textContent = String(habits.length);
 
   if (habits.length === 0) {
@@ -249,17 +275,12 @@ function renderHabits(habits: HabitEntry[]): void {
 // ── Load persisted state ─────────────────────────────────────────────────
 
 async function loadSettings(): Promise<void> {
-  const [targetWpm, contentType, overrides, habits] = await Promise.all([
-    read(KEY_TARGET_WPM),
-    read(KEY_CONTENT_TYPE),
-    read(KEY_SITE_OVERRIDES),
-    read(KEY_HABITS),
-  ]);
-
-  wpmSlider.value = String(targetWpm);
-  wpmValue.textContent = String(targetWpm);
-  setActivePreset(contentType);
-  renderOverrides(overrides);
+  const [settings, habits] = await Promise.all([settingsStore.load(), overrideLog.entries()]);
+  const target = settings.target ?? DEFAULT_TARGET_WPM;
+  wpmSlider.value = String(target);
+  wpmValue.textContent = String(target);
+  setActivePreset(settings.contentType ?? 'generic');
+  renderOverrides(siteList(settings));
   renderHabits(habits);
 }
 
@@ -267,8 +288,7 @@ void loadSettings();
 
 // Listen for storage changes from other contexts (e.g., pill apply)
 browser.storage.local.onChanged.addListener((changes) => {
-  const keys = Object.keys(changes);
-  if (keys.some((k) => k.startsWith('sw:habits'))) {
-    void read(KEY_HABITS).then(renderHabits);
+  if (changes[OVERRIDE_LOG_STORAGE_KEY] !== undefined) {
+    void overrideLog.entries().then(renderHabits);
   }
 });

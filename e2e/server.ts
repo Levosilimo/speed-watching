@@ -15,6 +15,7 @@ import { createServer, type Server } from 'node:http';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { BLOCKED_FIXTURES, KIND_BY_FIXTURE } from './shared/fixtures';
 
 export const FIXTURE_PORT = 4319;
 
@@ -23,30 +24,33 @@ const html = readFileSync(join(fileURLToPath(new URL('.', import.meta.url)), 'wa
 
 const FIXTURE_NAME = /^(real|synthetic)\/[a-z0-9-]+\.json$/;
 
-/** Fixture file → caption track kind; absent kind means a manual track. */
-const KIND_BY_FIXTURE: Record<string, string | undefined> = {
-  'real/asr-word.json': 'asr',
-  'synthetic/word-level.json': 'asr',
-  'real/manual-cue.json': undefined,
-  'synthetic/cue-level-only.json': undefined,
-};
-
 interface FixtureServer {
   /** Base URL of this server, e.g. http://127.0.0.1:4319 */
   baseUrl: string;
   /** Full stub page URL for a fixture. */
   watchUrl(fixture: string): string;
+  /** ANDROID innertube fallback attempts observed at the network layer. */
+  androidPosts(): number;
   close(): Promise<void>;
 }
 
 export function createFixtureServer(port = FIXTURE_PORT): Promise<FixtureServer> {
   let actualPort = port;
+  let androidPosts = 0;
   const server: Server = createServer((req, res) => {
     const url = new URL(req.url ?? '/', `http://127.0.0.1:${actualPort}`);
     const path = url.pathname;
     const fixture = url.searchParams.get('fixture');
 
     res.setHeader('Access-Control-Allow-Origin', '*');
+
+    if (req.method === 'POST' && path === '/youtubei/v1/player') {
+      // The content script's ANDROID innertube fallback (same-origin POST).
+      androidPosts += 1;
+      res.statusCode = 400;
+      res.end('no player');
+      return;
+    }
 
     if (path === '/proxy.pac') {
       // Firefox-only: proxies *.youtube.com to this server so the content
@@ -63,6 +67,12 @@ export function createFixtureServer(port = FIXTURE_PORT): Promise<FixtureServer>
     }
 
     if (path === '/api/timedtext' && fixture !== null && FIXTURE_NAME.test(fixture)) {
+      if (BLOCKED_FIXTURES.includes(fixture)) {
+        // Forces the ANDROID innertube fallback in the content script.
+        res.statusCode = 403;
+        res.end('blocked');
+        return;
+      }
       // Caption payload: served on the youtube.com origin (same-origin for
       // the content script's fetch — avoids CORS and Private Network Access).
       res.setHeader('Content-Type', 'application/json');
@@ -112,6 +122,7 @@ export function createFixtureServer(port = FIXTURE_PORT): Promise<FixtureServer>
       resolve({
         baseUrl,
         watchUrl: (fixture) => `${baseUrl}/watch?fixture=${fixture}`,
+        androidPosts: () => androidPosts,
         close: () =>
           new Promise((done) => {
             server.close(() => done());

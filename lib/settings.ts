@@ -1,5 +1,13 @@
+// Storage namespace: chrome.storage.local holds exactly two keys, both
+// prefixed 'sw.' and owned by their lib module — 'sw.settings' (this file,
+// via SettingsStore) and 'sw.overrideLog' (lib/override-log.ts). The options
+// page, the isolated-world bridge, and the background all read/write through
+// SettingsStore/OverrideLog over browser.storage.local; ui/storage.ts's
+// parallel 'sw:' schema is retired. No other key may be introduced.
+
 import type { ContentType } from './music';
 
+export const SETTINGS_STORAGE_KEY = 'sw.settings';
 export const DEFAULT_TARGET_WPM = 250;
 export const CONSERVATIVE_TARGET_WPM = 225;
 export const DEFAULT_PLATFORM_MAX = 2;
@@ -21,6 +29,8 @@ export interface Settings {
   /** Conservative mode: default target 225 instead of 250. */
   conservative: boolean;
   platformMax: number;
+  /** Global content-type default; unset means auto-detect. */
+  contentType?: ContentType;
   /** Keyed by hostname, e.g. 'youtube.com'. */
   sites: Record<string, SiteOverride>;
   contentTypes: Partial<Record<ContentType, ContentTypePrefs>>;
@@ -62,6 +72,7 @@ function normalizeSettings(raw: unknown): Settings {
   };
   const target = finiteOr(raw.target, undefined);
   if (target !== undefined) settings.target = target;
+  if (typeof raw.contentType === 'string') settings.contentType = raw.contentType as ContentType;
   return settings;
 }
 
@@ -87,7 +98,7 @@ export function resolveContentType(
   site: string,
   detected: ContentType,
 ): ContentType {
-  return settings.sites[site]?.contentType ?? detected;
+  return settings.sites[site]?.contentType ?? settings.contentType ?? detected;
 }
 
 export function resolveMultiplierOverride(
@@ -100,7 +111,7 @@ export function resolveMultiplierOverride(
 export class SettingsStore {
   constructor(
     private readonly storage: StorageLike,
-    private readonly key = 'sw.settings',
+    private readonly key = SETTINGS_STORAGE_KEY,
   ) {}
 
   async load(): Promise<Settings> {

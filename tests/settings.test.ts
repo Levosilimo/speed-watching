@@ -53,6 +53,14 @@ describe('settings resolution', () => {
     expect(resolvePlatformMax(settings, 'youtube.com')).toBe(1.75);
     expect(resolvePlatformMax(settings, 'other.com')).toBe(DEFAULT_PLATFORM_MAX);
   });
+
+  it('falls back from site to global content type, then detected', () => {
+    const settings: Settings = { ...defaultSettings(), contentType: 'podcast' };
+    expect(resolveContentType(settings, 'youtube.com', 'generic')).toBe('podcast');
+    expect(resolveContentType(settings, 'youtube.com', 'music')).toBe('podcast');
+    const withSite = { ...settings, sites: { 'youtube.com': { contentType: 'talk' as const } } };
+    expect(resolveContentType(withSite, 'youtube.com', 'music')).toBe('talk');
+  });
 });
 
 describe('SettingsStore', () => {
@@ -61,6 +69,7 @@ describe('SettingsStore', () => {
     const settings = {
       ...defaultSettings(),
       conservative: true,
+      contentType: 'music' as const,
       sites: { 'youtube.com': { target: 240 } },
     };
     await store.save(settings);

@@ -2,6 +2,7 @@ import type { ContentType } from './music';
 import type { RecommendationMode } from './recommend';
 import type { StorageLike } from './settings';
 
+export const OVERRIDE_LOG_STORAGE_KEY = 'sw.overrideLog';
 export const OVERRIDE_LOG_LIMIT = 500;
 
 export interface OverrideLogEntry {
@@ -34,7 +35,7 @@ export interface OverrideReport {
 export class OverrideLog {
   constructor(
     private readonly storage: StorageLike,
-    private readonly key = 'sw.overrideLog',
+    private readonly key = OVERRIDE_LOG_STORAGE_KEY,
   ) {}
 
   async append(entry: Omit<OverrideLogEntry, 'ts'>): Promise<void> {

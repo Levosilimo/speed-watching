@@ -2,7 +2,7 @@
 // sampling harness. Declares window.ytInitialPlayerResponse so both can
 // read the player response without type assertions.
 
-interface CaptionTrack {
+export interface CaptionTrack {
   baseUrl: string;
   kind?: string;
   languageCode?: string;

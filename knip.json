@@ -3,10 +3,10 @@
   "entry": [
     "entrypoints/background.ts",
     "entrypoints/content.ts",
+    "entrypoints/bridge.content.ts",
     "entrypoints/offscreen/main.ts",
     "entrypoints/options/*.ts",
     "ui/pill.ts",
-    "ui/storage.ts",
     "wxt.config.ts",
     "scripts/*.ts",
     "e2e/**/*.ts"

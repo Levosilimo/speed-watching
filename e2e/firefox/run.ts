@@ -23,7 +23,14 @@ import { Builder } from 'selenium-webdriver';
 import { Options as FirefoxOptions, Driver as FirefoxDriver } from 'selenium-webdriver/firefox';
 import { start as startGeckodriver } from 'geckodriver';
 import { createFixtureServer } from '../server';
-import { runMeasurementSpecs, type E2EDriver, type Measurement } from '../shared/specs';
+import type { PillState } from '../../ui/pill';
+import {
+  runMeasurementSpecs,
+  runPillSpecs,
+  type CaptionSource,
+  type E2EDriver,
+  type Measurement,
+} from '../shared/specs';
 
 const GECKODRIVER_PORT = 4444;
 
@@ -104,8 +111,48 @@ async function main(): Promise<void> {
         }
         return undefined;
       },
+      async readPillState() {
+        const deadline = Date.now() + 15_000;
+        while (Date.now() < deadline) {
+          const value = await driver.executeScript(
+            'return window.__speedwatcherPill ? window.__speedwatcherPill.state : null',
+          );
+          if (value !== null && value !== undefined) return value as unknown as PillState;
+          await new Promise((resolve) => setTimeout(resolve, 250));
+        }
+        return null;
+      },
+      async applyPill() {
+        await driver.executeScript('window.__speedwatcherPill && window.__speedwatcherPill.apply()');
+      },
+      async dismissPill() {
+        await driver.executeScript('window.__speedwatcherPill && window.__speedwatcherPill.dismiss()');
+      },
+      async readPlaybackRate() {
+        const value = await driver.executeScript(
+          'return document.querySelector("video") ? document.querySelector("video").playbackRate : null',
+        );
+        return value as unknown as number | null;
+      },
+      async readCaptionSource() {
+        const deadline = Date.now() + 15_000;
+        while (Date.now() < deadline) {
+          const value = await driver.executeScript(
+            'return window.__speedwatcherCaptionSource',
+          );
+          if (value !== null && value !== undefined) return value as unknown as CaptionSource;
+          await new Promise((resolve) => setTimeout(resolve, 250));
+        }
+        return null;
+      },
     };
     await runMeasurementSpecs(e2e);
+    await runPillSpecs(e2e);
+    if (server.androidPosts() === 0) {
+      // The web-blocked fixture must have sent the ANDROID innertube POST
+      // (same-origin, so the PAC proxy delivers it to this server).
+      throw new Error('firefox e2e: ANDROID innertube fallback never fired');
+    }
     console.log('firefox e2e: all shared specs passed');
   } finally {
     await driver.quit().catch(() => undefined);
