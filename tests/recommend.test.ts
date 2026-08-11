@@ -3,6 +3,7 @@ import type { RecommendInput, Recommendation } from '../lib/recommend';
 import {
   MANUAL_CUE_CLAMP,
   ROUNDING_STEP,
+  SAFE_ZONE_CEILING_WPM,
   SLOW_DOWN_FLOOR,
   TARGET_WPM,
   TIER_LABELS,
@@ -16,6 +17,7 @@ const asr = (naturalRate: number, platformMax = 2, userTarget?: number) =>
 describe('recommend — constants', () => {
   it('pins the engine constants', () => {
     expect(TARGET_WPM).toBe(250);
+    expect(SAFE_ZONE_CEILING_WPM).toBe(275);
     expect(ROUNDING_STEP).toBe(0.05);
     expect(MANUAL_CUE_CLAMP).toBe(1.5);
     expect(SLOW_DOWN_FLOOR).toBe(0.5);
@@ -62,6 +64,7 @@ describe('recommend — slow-down and clamps', () => {
     expect(r.multiplier).toBe(MANUAL_CUE_CLAMP);
     expect(r.effectiveWpm).toBeCloseTo(225, 6);
     expect(r.mode).toBe('warning');
+    expect(r.reason).toBe('capped-below');
     expect(r.label).toContain('capped');
   });
 
@@ -88,6 +91,48 @@ describe('recommend — slow-down and clamps', () => {
     expect(r.multiplier).toBe(SLOW_DOWN_FLOOR);
     expect(r.effectiveWpm).toBeCloseTo(240, 6);
     expect(r.mode).toBe('warning');
+    expect(r.reason).toBe('capped-below');
+  });
+});
+
+describe('recommend — above-zone warning', () => {
+  it('warns when a user target pushes the effective rate past the cliff', () => {
+    // Target 280 on a 140-wpm talk: 2x ≈ 280 wpm — past the 275 cliff.
+    const r = asr(140, 2, 280);
+    expect(r.multiplier).toBe(2);
+    expect(r.effectiveWpm).toBeCloseTo(280, 6);
+    expect(r.mode).toBe('warning');
+    expect(r.reason).toBe('above-zone');
+    expect(r.label).not.toContain('capped');
+  });
+
+  it('warns on a high target even without hitting a clamp', () => {
+    const r = asr(160, 2, 300);
+    expect(r.multiplier).toBeCloseTo(1.9, 6); // 300/160 = 1.875 → 1.9
+    expect(r.effectiveWpm).toBeCloseTo(304, 6);
+    expect(r.mode).toBe('warning');
+    expect(r.reason).toBe('above-zone');
+  });
+
+  it('the cliff outranks the clamp cap when both apply', () => {
+    const r = recommend({
+      naturalRate: 190,
+      tier: 'manual-cue',
+      contentType: 'talk',
+      platformMax: 2,
+      userTarget: 380,
+    });
+    expect(r.multiplier).toBe(MANUAL_CUE_CLAMP);
+    expect(r.effectiveWpm).toBeCloseTo(285, 6); // clamped but still past 275
+    expect(r.mode).toBe('warning');
+    expect(r.reason).toBe('above-zone');
+  });
+
+  it('stays in recommend mode when the effective rate sits in the safe zone', () => {
+    const r = asr(200, 2, 270);
+    expect(r.effectiveWpm).toBeCloseTo(270, 6); // below the 275 ceiling
+    expect(r.mode).toBe('recommend');
+    expect(r.reason).toBeNull();
   });
 });
 
@@ -117,6 +162,7 @@ describe('recommend — unreachable and music', () => {
     expect(r.mode).toBe('music');
     expect(r.multiplier).toBe(1);
     expect(r.effectiveWpm).toBe(38);
+    expect(r.reason).toBeNull();
     expect(r.label).toBe('music — speed not recommended');
   });
 });

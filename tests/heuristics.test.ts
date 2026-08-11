@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { WpmRange } from '../lib/heuristics';
-import { priorRange } from '../lib/heuristics';
+import { priorMidpoint, priorRange } from '../lib/heuristics';
 
 describe('priorRange', () => {
   it('returns the measured anchors for known content types', () => {
@@ -16,5 +16,14 @@ describe('priorRange', () => {
     expect(priorRange('generic')).toEqual({ min: 130, max: 190 });
     expect(priorRange('unknown')).toEqual({ min: 130, max: 190 });
     expect(priorRange('music')).toEqual({ min: 130, max: 190 });
+  });
+});
+
+describe('priorMidpoint', () => {
+  it('is the range midpoint, the estimated-tier natural rate', () => {
+    expect(priorMidpoint('generic')).toBe(160);
+    expect(priorMidpoint('talk')).toBe(173);
+    expect(priorMidpoint('podcast')).toBe(170);
+    expect(priorMidpoint('unknown')).toBe(160);
   });
 });

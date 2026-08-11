@@ -12,10 +12,11 @@
 // the background stays the audio-probe orchestrator.
 import { defineContentScript } from 'wxt/utils/define-content-script';
 import { parseYouTubeJson3 } from '@/lib/captions';
+import { priorMidpoint } from '@/lib/heuristics';
 import { createBridgeClient } from '@/lib/messaging';
 import type { ContentType } from '@/lib/music';
 import { detectMusic } from '@/lib/music';
-import { recommend, type Recommendation } from '@/lib/recommend';
+import { recommend, type RateTier, type Recommendation } from '@/lib/recommend';
 import {
   defaultSettings,
   resolveContentType,
@@ -134,16 +135,19 @@ async function measure(): Promise<void> {
     return;
   }
   const videoId = response.videoDetails?.videoId ?? '?';
+  const settings = await loadSettings();
+  // Options-page overrides key on the bare hostname ('youtube.com').
+  const site = location.hostname.replace(/^www\./, '');
   const track = response.captions?.playerCaptionsTracklistRenderer?.captionTracks?.[0];
-  if (!track) {
-    console.info('[speed-watcher] wpm: no caption tracks for this video');
-    showPill(NONE_STATE);
+  if (track === undefined) {
+    console.info('[speed-watcher] wpm: no caption tracks for this video — estimated');
+    showEstimatedPill(videoId, settings, site);
     return;
   }
   const json = await fetchCaptions(track, videoId);
   if (json === null) {
-    console.info('[speed-watcher] wpm: caption fetch failed');
-    showPill(NONE_STATE);
+    console.info('[speed-watcher] wpm: caption fetch failed — estimated');
+    showEstimatedPill(videoId, settings, site);
     return;
   }
   const { words, cues } = parseYouTubeJson3(json);
@@ -164,27 +168,52 @@ async function measure(): Promise<void> {
     });
   } else {
     console.info(
-      `[speed-watcher] video=${videoId} kind=${kind} lang=${lang}: captions parsed but empty`,
+      `[speed-watcher] video=${videoId} kind=${kind} lang=${lang}: captions parsed but empty — estimated`,
     );
-    showPill(NONE_STATE);
+    showEstimatedPill(videoId, settings, site);
     return;
   }
 
   const naturalRate =
     kind === 'asr' ? filteredTokensOverTrimmedSpan(cues) : manualCueRate(cues);
   if (naturalRate === null) {
-    showPill(NONE_STATE);
+    showEstimatedPill(videoId, settings, site);
     return;
   }
-  const settings = await loadSettings();
-  // Options-page overrides key on the bare hostname ('youtube.com').
-  const site = location.hostname.replace(/^www\./, '');
   const detected = detectMusic(cues, naturalRate) ? 'music' : 'generic';
   const contentType = resolveContentType(settings, site, detected);
+  renderRecommendation(
+    videoId,
+    naturalRate,
+    kind === 'asr' ? 'asr-cue' : 'manual-cue',
+    contentType,
+    settings,
+    site,
+  );
+}
+
+/** No usable caption rate: heuristic prior midpoint for the content type. */
+function showEstimatedPill(
+  videoId: string,
+  settings: Settings,
+  site: string,
+): void {
+  const contentType = resolveContentType(settings, site, 'generic');
+  renderRecommendation(videoId, priorMidpoint(contentType), 'estimated', contentType, settings, site);
+}
+
+function renderRecommendation(
+  videoId: string,
+  naturalRate: number,
+  tier: RateTier,
+  contentType: ContentType,
+  settings: Settings,
+  site: string,
+): void {
   const platformMax = resolvePlatformMax(settings, site);
   const recommendation = recommend({
     naturalRate,
-    tier: kind === 'asr' ? 'asr-cue' : 'manual-cue',
+    tier,
     contentType,
     platformMax,
     userTarget: resolveTarget(settings, site, contentType),
@@ -197,6 +226,7 @@ async function measure(): Promise<void> {
     effectiveWpm: recommendation.effectiveWpm,
     tierLabel: recommendation.tierLabel,
     label: recommendation.label,
+    reason: recommendation.reason ?? undefined,
   });
 }
 

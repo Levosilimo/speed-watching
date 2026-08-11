@@ -18,6 +18,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseYouTubeJson3 } from '../../lib/captions';
+import { priorMidpoint } from '../../lib/heuristics';
 import { detectMusic } from '../../lib/music';
 import { recommend, type Recommendation } from '../../lib/recommend';
 import type { PillState } from '../../ui/pill';
@@ -107,6 +108,16 @@ function expectedRecommendation(fixture: string): { rec: Recommendation; natural
 
 const WPM_TOLERANCE = 0.5;
 const RATE_TOLERANCE = 0.01;
+
+/** The estimated-tier pill the content script must render when captions are
+ * unavailable: generic-prior midpoint (no content-type signal in fixtures). */
+function expectedEstimatedPill(): { rec: Recommendation; naturalRate: number } {
+  const naturalRate = priorMidpoint('generic');
+  return {
+    rec: recommend({ naturalRate, tier: 'estimated', contentType: 'generic', platformMax: 2 }),
+    naturalRate,
+  };
+}
 
 function assertClose(actual: number | null | undefined, expected: number | null | undefined, label: string): void {
   if (actual === null || actual === undefined) {
@@ -233,8 +244,8 @@ export async function runPillSpecs(driver: E2EDriver): Promise<void> {
   }
 
   // (f) WEB caption fetch blocked → ANDROID fallback attempted and failed →
-  // no captions, pill hidden. The ANDROID POST itself is additionally
-  // asserted at the network layer by each runner.
+  // no captions, so the pill falls back to the estimated tier. The ANDROID
+  // POST itself is additionally asserted at the network layer by each runner.
   {
     const fixture = 'synthetic/web-blocked.json';
     await driver.navigateToWatch(fixture);
@@ -243,6 +254,34 @@ export async function runPillSpecs(driver: E2EDriver): Promise<void> {
       throw new Error(`${fixture}: caption source ${source}, expected none (WEB blocked)`);
     }
     const state = expectState(await driver.readPillState(), fixture);
-    if (state.mode !== 'none') throw new Error(`${fixture}: pill mode ${state.mode}, expected none`);
+    const { rec, naturalRate } = expectedEstimatedPill();
+    if (state.mode !== rec.mode || state.tierLabel !== rec.tierLabel) {
+      throw new Error(
+        `${fixture}: pill ${state.mode}/${state.tierLabel}, expected ${rec.mode}/${rec.tierLabel}`,
+      );
+    }
+    if (Math.abs(state.rateWpm - naturalRate) > WPM_TOLERANCE) {
+      throw new Error(`${fixture}: pill rateWpm ${state.rateWpm}, expected ${naturalRate}`);
+    }
+  }
+
+  // (g) No caption tracks at all → estimated tier from the generic prior.
+  {
+    const fixture = 'synthetic/no-tracks.json';
+    await driver.navigateToWatch(fixture);
+    const state = expectState(await driver.readPillState(), fixture);
+    const { rec, naturalRate } = expectedEstimatedPill();
+    if (state.mode !== 'recommend') {
+      throw new Error(`${fixture}: pill mode ${state.mode}, expected recommend`);
+    }
+    if (state.tierLabel !== 'estimated') {
+      throw new Error(`${fixture}: pill tierLabel ${state.tierLabel}, expected estimated`);
+    }
+    if (Math.abs(state.rateWpm - naturalRate) > WPM_TOLERANCE) {
+      throw new Error(`${fixture}: pill rateWpm ${state.rateWpm}, expected ${naturalRate}`);
+    }
+    if (state.label !== rec.label) {
+      throw new Error(`${fixture}: pill label "${state.label}" !== expected "${rec.label}"`);
+    }
   }
 }

@@ -16,3 +16,9 @@ export const KIND_BY_FIXTURE: Record<string, string | undefined> = {
  * the file itself never needs to exist.
  */
 export const BLOCKED_FIXTURES = ['synthetic/web-blocked.json'];
+
+/**
+ * Fixtures served as a watch page with no caption tracks at all — the
+ * content script must fall back to the 'estimated' heuristic tier.
+ */
+export const NO_TRACK_FIXTURES = ['synthetic/no-tracks.json'];

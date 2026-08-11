@@ -17,12 +17,12 @@ from caption speech rate). No secondary purposes are present or planned.
 |---|---|
 | `storage` | Settings (`sw.settings`), override log (`sw.overrideLog`), audio-probe session state. Everything is `chrome.storage.local`; nothing syncs. |
 | `tabCapture` | Required-not-optional: the Chrome API refuses this permission as optional, so it must sit in the manifest from day one. Used only by the audio probe (options-page "Test audio capture" button) and the future on-device STT feature. STT itself is feature-gated behind an explicit user opt-in and is not part of the MVP; `tabCapture` is never called without a user gesture. |
+| `offscreen` | `chrome.offscreen.createDocument` fails without this manifest permission (live Chrome docs); `lib/capture-orchestrator.ts` calls it with reason `USER_MEDIA` for the audio probe. Offscreen documents cannot be created lazily on Chrome 116–, hence the static declaration. |
 
 No other permissions: no `tabs`, no `<all_urls>`, no host permissions beyond
-the `*://*.youtube.com/*` content-script matches, no `offscreen` permission
-(offscreen documents are used but need no permission entry), no network
-access at all from the extension's own contexts (the content script fetches
-YouTube caption endpoints from the page context, same-origin).
+the `*://*.youtube.com/*` content-script matches, no network access at all
+from the extension's own contexts (the content script fetches YouTube
+caption endpoints from the page context, same-origin).
 
 ## No-remote-code declaration
 
@@ -57,6 +57,24 @@ URL into the CWS listing before submission. AMO requires a "privacy policy"
 field only for add-ons that collect data; this one does not, but a policy
 page is still good practice.
 
+Note: `tabCapture` is declared, so CWS will ask why it is present even
+though nothing is collected. The justification is the audio probe + the
+feature-gated future STT; publish anyway — the data-safety form stays "No
+data collected".
+
+## CWS listing assets (mandatory)
+
+These are hard submission requirements, not polish:
+
+1. **At least one screenshot** — CWS requires ≥1 screenshot at 1280×800 or
+   640×400 (JPEG/PNG, ≤2 MB). Planned: the pill on a YouTube watch page and
+   the options page.
+2. **Listing description body** — a store description distinct from the
+   manifest one-liner: what the pill does, the 250–275 wpm safe-zone frame,
+   report-only override log, and the scope (YouTube captioned videos).
+3. **Final icons** — CWS rejects placeholder art. The current 16/32/48/96/128
+   icons are generated placeholders; real artwork is required before upload.
+
 ## Version policy
 
 - `package.json` version is the single source; the CI `ci` job fails unless
@@ -76,8 +94,11 @@ page is still good practice.
 2. **Audio probe manual verification** (from `docs/phase0-offscreen-audio.md`):
    the tabCapture → offscreen → getUserMedia flow is unit-tested only;
    `chrome.offscreen` is absent from every Playwright build, so a human must
-   run the options-page probe on a real Chrome once before submission.
-3. **Icons final polish**: the current icons are placeholders; final art is
-   TBD (visual design is the designer lane's call).
-4. **Firefox AMO listing metadata** (name/description/summary fields) and the
+   run the options-page probe on a real Chrome once before submission. The
+   `offscreen` permission this flow needs is now declared in the manifest.
+3. **Firefox AMO listing metadata** (name/description/summary fields) and the
    optional source-code upload for `web-ext sign --channel listed`.
+
+The CWS listing assets (screenshots, description body, final icons) are
+listed under "CWS listing assets" above and are mandatory before the first
+upload.

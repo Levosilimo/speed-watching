@@ -27,13 +27,15 @@ export const MUSIC_RATE_CAP_WPM = 90;
 export const MUSIC_MARKER_RATIO_MIN = 0.05;
 
 /**
- * Music detection needs all three signals. Markers alone are common in
- * talks (TED [Music] intros) and must never suppress the recommendation.
+ * Music detection: sub-90 wpm AND (bracket markers OR note symbols). The
+ * rate floor is the never-markers-alone guard — measured spoken content
+ * runs 103–206 wpm, so a marker-heavy track below 90 wpm is lyric-like
+ * even without ♪ notes (measured lyric tracks carry ♪ with zero bracket
+ * markers). Markers alone at speech rate stay safe (TED [Music] intros).
  */
 export function detectMusic(cues: readonly Segment[], naturalRateWpm: number): boolean {
   return (
     naturalRateWpm < MUSIC_RATE_CAP_WPM &&
-    containsNotes(cues) &&
-    markerRatio(cues) >= MUSIC_MARKER_RATIO_MIN
+    (markerRatio(cues) >= MUSIC_MARKER_RATIO_MIN || containsNotes(cues))
   );
 }

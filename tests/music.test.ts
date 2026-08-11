@@ -32,22 +32,27 @@ describe('detectMusic', () => {
     { text: '[Applause]', startSec: 11, durSec: 2 },
   ];
 
-  it('requires markers, notes, and a sub-90 wpm rate together', () => {
+  it('fires on markers or notes when the rate is sub-90 wpm', () => {
     expect(detectMusic(lyricCues, 80)).toBe(true);
+    // ♪ notes with zero bracket markers: measured lyric tracks (Happy,
+    // Despacito, Blinding Lights) carry no markers at all.
+    const notesOnly = lyricCues.filter((cue) => cue.text.includes('♪'));
+    expect(markerRatio(notesOnly)).toBe(0);
+    expect(detectMusic(notesOnly, 80)).toBe(true);
+    // Bracket markers alone, no notes: Faded-style lyric track.
+    const markersOnly = lyricCues.map((cue) => ({ ...cue, text: cue.text.replace(/♪/g, '') }));
+    expect(detectMusic(markersOnly, 80)).toBe(true);
+  });
+
+  it('never fires at speech rate, even with notes and markers', () => {
     expect(detectMusic(lyricCues, MUSIC_RATE_CAP_WPM)).toBe(false);
     expect(detectMusic(lyricCues, 120)).toBe(false);
+    const notesOnly = lyricCues.filter((cue) => cue.text.includes('♪'));
+    expect(detectMusic(notesOnly, 120)).toBe(false);
   });
 
-  it('never fires on markers alone, even with a high marker share', () => {
-    const noNotes = lyricCues.map((cue) => ({ ...cue, text: cue.text.replace(/♪/g, '') }));
-    expect(detectMusic(noNotes, 80)).toBe(false);
-  });
-
-  it('requires the marker share to clear the ratio floor', () => {
-    const noMarkers = lyricCues.filter((cue) => cue.text.includes('♪'));
-    expect(markerRatio(noMarkers)).toBe(0);
-    expect(detectMusic(noMarkers, 80)).toBe(false);
-    // A TED-style talk: one intro marker drowned in speech cues.
+  it('requires the marker share to clear the ratio floor when there are no notes', () => {
+    // A TED-style talk: one intro marker drowned in speech cues, no notes.
     const talkCues: Segment[] = [
       { text: '[Music]', startSec: 0, durSec: 5 },
       ...[...Array(50)].map((_, i) => ({
@@ -61,13 +66,13 @@ describe('detectMusic', () => {
     expect(detectMusic(talkCues, 70)).toBe(false);
   });
 
-  it('reports the real Faded fixture honestly: sparse rate, but no notes', () => {
+  it('reports the real Faded fixture as music: sparse rate plus markers', () => {
     const { cues } = parseYouTubeJson3(readFixture('real/music.json'));
     const rate = filteredTokensOverTrimmedSpan(cues);
     if (rate === null) throw new Error('rate must be computable on the fixture');
     expect(rate).toBeLessThan(MUSIC_RATE_CAP_WPM);
     expect(markerRatio(cues)).toBe(0.3);
     expect(containsNotes(cues)).toBe(false);
-    expect(detectMusic(cues, rate)).toBe(false);
+    expect(detectMusic(cues, rate)).toBe(true);
   });
 });

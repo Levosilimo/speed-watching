@@ -15,6 +15,8 @@ export interface PillState {
   effectiveWpm: number;
   tierLabel?: string;
   label: string;
+  /** Warning-mode copy selector: cliff crossing vs clamp cap. */
+  reason?: 'above-zone' | 'capped-below';
 }
 
 export interface PillEvents {
@@ -272,6 +274,12 @@ function wireEvents(
   });
 }
 
+export function warningNoteCopy(reason?: 'above-zone' | 'capped-below'): string {
+  return reason === 'capped-below'
+    ? 'Estimate uncertain — capped at 1.5x for safety'
+    : 'Past the safe zone — comprehension drops above ~275 wpm';
+}
+
 function render(dom: PillDom, state: PillState, destroyed: boolean): void {
   if (destroyed) return;
 
@@ -297,9 +305,9 @@ function render(dom: PillDom, state: PillState, destroyed: boolean): void {
     dom.tierEl.hidden = true;
   }
 
-  // Warning note (only for warning mode)
+  // Warning note (only for warning mode; copy picked by reason)
   if (mode === 'warning') {
-    dom.warningNote.textContent = 'Past the safe zone — comprehension drops above ~275 wpm';
+    dom.warningNote.textContent = warningNoteCopy(state.reason);
     dom.warningNote.hidden = false;
   } else {
     dom.warningNote.hidden = true;

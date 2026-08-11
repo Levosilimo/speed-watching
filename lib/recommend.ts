@@ -6,6 +6,8 @@ export type RecommendationMode = 'recommend' | 'warning' | 'unreachable' | 'musi
 export type RateTier = 'asr-word' | 'asr-cue' | 'manual-cue' | 'estimated';
 
 export const TARGET_WPM = 250;
+/** Comprehension cliff (Murphy et al.): above this, warning mode. */
+export const SAFE_ZONE_CEILING_WPM = 275;
 export const ROUNDING_STEP = 0.05;
 export const MANUAL_CUE_CLAMP = 1.5;
 export const SLOW_DOWN_FLOOR = 0.5;
@@ -29,6 +31,8 @@ export interface Recommendation {
   multiplier: number;
   effectiveWpm: number;
   mode: RecommendationMode;
+  /** Why warning mode fired; null in every other mode. */
+  reason: 'above-zone' | 'capped-below' | null;
   /** User-facing pill string, e.g. '→ 1.6x ≈ 240 wpm'. */
   label: string;
   /** 'from captions' | 'from captions (corrected)' | 'estimated'. */
@@ -47,8 +51,9 @@ function formatMultiplier(value: number): string {
  * Multiplier = userTarget / naturalRate, rounded to 0.05 and clamped per
  * tier: manual-cue ≤1.5x, every tier within [slow-down floor, platformMax].
  * Unreachable when even platformMax cannot reach the target; music never
- * recommends a speed. Warning when a clamp keeps the effective rate below
- * the target.
+ * recommends a speed. Warning when the effective rate crosses the ~275 wpm
+ * comprehension cliff ('above-zone') or when a clamp keeps it below the
+ * target ('capped-below').
  */
 export function recommend(input: RecommendInput): Recommendation {
   const { naturalRate, tier, contentType, platformMax, userTarget } = input;
@@ -60,6 +65,7 @@ export function recommend(input: RecommendInput): Recommendation {
       multiplier: 1,
       effectiveWpm: naturalRate,
       mode: 'music',
+      reason: null,
       label: 'music — speed not recommended',
       tierLabel,
     };
@@ -70,6 +76,7 @@ export function recommend(input: RecommendInput): Recommendation {
       multiplier: platformMax,
       effectiveWpm: naturalRate * platformMax,
       mode: 'unreachable',
+      reason: null,
       label: `safe zone unreachable — ${formatMultiplier(platformMax)}x ≈ ${Math.round(naturalRate * platformMax)} wpm`,
       tierLabel,
     };
@@ -84,10 +91,17 @@ export function recommend(input: RecommendInput): Recommendation {
   const clampedBelowZone =
     (tier === 'manual-cue' && multiplier === MANUAL_CUE_CLAMP) ||
     (multiplier === SLOW_DOWN_FLOOR && floor === SLOW_DOWN_FLOOR);
-  const mode: RecommendationMode =
-    clampedBelowZone && effectiveWpm < target ? 'warning' : 'recommend';
+  // The cliff outranks the clamp when both apply: crossing ~275 wpm is the
+  // safety-critical message even on a clamp-capped recommendation.
+  let reason: Recommendation['reason'] = null;
+  if (effectiveWpm > SAFE_ZONE_CEILING_WPM) {
+    reason = 'above-zone';
+  } else if (clampedBelowZone && effectiveWpm < target) {
+    reason = 'capped-below';
+  }
+  const mode: RecommendationMode = reason === null ? 'recommend' : 'warning';
 
   let label = `→ ${formatMultiplier(multiplier)}x ≈ ${Math.round(effectiveWpm)} wpm`;
-  if (mode === 'warning') label += ' (capped below safe zone)';
-  return { multiplier, effectiveWpm, mode, label, tierLabel };
+  if (reason === 'capped-below') label += ' (capped below safe zone)';
+  return { multiplier, effectiveWpm, mode, reason, label, tierLabel };
 }

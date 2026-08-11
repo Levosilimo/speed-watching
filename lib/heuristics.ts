@@ -25,3 +25,9 @@ export function priorRange(contentType: ContentType): WpmRange {
   if (contentType === 'podcast') return PODCAST_PRIOR;
   return GENERIC_PRIOR;
 }
+
+/** Best-guess natural rate for the 'estimated' tier: prior-range midpoint. */
+export function priorMidpoint(contentType: ContentType): number {
+  const { min, max } = priorRange(contentType);
+  return (min + max) / 2;
+}

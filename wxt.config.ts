@@ -9,7 +9,7 @@ export default defineConfig({
     name: 'Speed Watcher',
     description: 'WPM-based speed-watching extension',
     version: '0.0.1',
-    permissions: ['storage', 'tabCapture'],
+    permissions: ['storage', 'tabCapture', 'offscreen'],
     min_chrome_version: '116',
     browser_specific_settings: {
       gecko: {
