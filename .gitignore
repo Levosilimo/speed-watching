@@ -32,5 +32,9 @@ lce-setup-hint.md
 # Build artifacts
 *.zip
 
+# Playwright output
+test-results
+playwright-report
+
 # Env files
 .env*

@@ -76,11 +76,31 @@ function logWpm(
 ): void {
   const fmt = (value: number | null | undefined): string =>
     value === undefined || value === null ? 'n/a' : value.toFixed(1);
-  console.info(
+  const line =
     `[speed-watcher] video=${videoId} kind=${kind} lang=${lang} ` +
-      `wpm word-level=${fmt(stats.word)} cue-level=${fmt(stats.cue)} ` +
-      `corrected=${fmt(stats.corrected)} nWords=${stats.nWords}`,
+    `wpm word-level=${fmt(stats.word)} cue-level=${fmt(stats.cue)} ` +
+    `corrected=${fmt(stats.corrected)} nWords=${stats.nWords}`;
+  console.info(line);
+  // E2E hook: the fixture page listens for this event; the console line
+  // alone is not assertable from WebDriver (no console API in Selenium).
+  window.dispatchEvent(
+    new CustomEvent('speedwatcher:measure', {
+      detail: { videoId, kind, lang, stats, line } satisfies MeasureEventDetail,
+    }),
   );
+}
+
+export interface MeasureEventDetail {
+  videoId: string;
+  kind: string;
+  lang: string;
+  stats: {
+    word?: number | null;
+    cue?: number | null;
+    corrected?: number | null;
+    nWords: number;
+  };
+  line: string;
 }
 
 async function waitForPlayerResponse(): Promise<PlayerResponse | undefined> {

@@ -1,0 +1,127 @@
+// Local fixture server for E2E: serves the stub YouTube watch page and the
+// real caption fixtures. No network calls ever leave the machine.
+//
+// Two entry modes:
+//   - Standalone (Playwright `webServer`): `bun run e2e/server.ts`, listens
+//     on FIXTURE_PORT (default 4319), used by the chromium config.
+//   - Programmatic (Firefox runner): `createFixtureServer()` picks a free
+//     port and returns the server handle.
+//
+// The stub page must be reachable at a *.youtube.com origin for the content
+// script to inject. Chromium gets that via route interception in the spec;
+// Firefox gets it via a PAC proxy served here (see proxy.pac below).
+
+import { createServer, type Server } from 'node:http';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+export const FIXTURE_PORT = 4319;
+
+const fixtureRoot = fileURLToPath(new URL('../tests/fixtures/', import.meta.url));
+const html = readFileSync(join(fileURLToPath(new URL('.', import.meta.url)), 'watch.html'), 'utf8');
+
+const FIXTURE_NAME = /^(real|synthetic)\/[a-z0-9-]+\.json$/;
+
+/** Fixture file → caption track kind; absent kind means a manual track. */
+const KIND_BY_FIXTURE: Record<string, string | undefined> = {
+  'real/asr-word.json': 'asr',
+  'synthetic/word-level.json': 'asr',
+  'real/manual-cue.json': undefined,
+  'synthetic/cue-level-only.json': undefined,
+};
+
+interface FixtureServer {
+  /** Base URL of this server, e.g. http://127.0.0.1:4319 */
+  baseUrl: string;
+  /** Full stub page URL for a fixture. */
+  watchUrl(fixture: string): string;
+  close(): Promise<void>;
+}
+
+export function createFixtureServer(port = FIXTURE_PORT): Promise<FixtureServer> {
+  let actualPort = port;
+  const server: Server = createServer((req, res) => {
+    const url = new URL(req.url ?? '/', `http://127.0.0.1:${actualPort}`);
+    const path = url.pathname;
+    const fixture = url.searchParams.get('fixture');
+
+    res.setHeader('Access-Control-Allow-Origin', '*');
+
+    if (path === '/proxy.pac') {
+      // Firefox-only: proxies *.youtube.com to this server so the content
+      // script (matches *://*.youtube.com/*) injects without touching the
+      // real YouTube. Everything else goes direct.
+      res.setHeader('Content-Type', 'application/x-ns-proxy-autoconfig');
+      res.end(
+        `function FindProxyForURL(url, host) {\n` +
+          `  if (host === 'www.youtube.com') return 'PROXY 127.0.0.1:${actualPort}';\n` +
+          `  return 'DIRECT';\n` +
+          `}\n`,
+      );
+      return;
+    }
+
+    if (path === '/api/timedtext' && fixture !== null && FIXTURE_NAME.test(fixture)) {
+      // Caption payload: served on the youtube.com origin (same-origin for
+      // the content script's fetch — avoids CORS and Private Network Access).
+      res.setHeader('Content-Type', 'application/json');
+      res.end(readFileSync(join(fixtureRoot, fixture)));
+      return;
+    }
+
+    // Anything else on youtube.com (or a direct localhost visit) is the watch
+    // page: stub HTML with a player response whose caption track points at
+    // this server's /captions endpoint.
+    if (fixture === null || !FIXTURE_NAME.test(fixture)) {
+      res.statusCode = 400;
+      res.end('bad fixture name');
+      return;
+    }
+    const trackKind = KIND_BY_FIXTURE[fixture];
+    const playerResponse = {
+      videoDetails: { videoId: 'e2e-fixture', title: `E2E fixture: ${fixture}` },
+      captions: {
+        playerCaptionsTracklistRenderer: {
+          captionTracks: [
+            {
+              // Same-origin path: the content script resolves it against the
+              // page URL, so the fetch never leaves the youtube.com origin.
+              baseUrl: `/api/timedtext?fixture=${fixture}`,
+              ...(trackKind === undefined ? {} : { kind: trackKind }),
+              languageCode: 'en',
+            },
+          ],
+        },
+      },
+    };
+    const page = html.replace(
+      '__PLAYER_RESPONSE_JSON__',
+      JSON.stringify(playerResponse).replaceAll('</', '<\\/'),
+    );
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.end(page);
+  });
+
+  return new Promise((resolve, reject) => {
+    server.once('error', reject);
+    server.listen(port, '127.0.0.1', () => {
+      const actual = (server.address() as { port: number }).port;
+      actualPort = actual;
+      const baseUrl = `http://127.0.0.1:${actual}`;
+      resolve({
+        baseUrl,
+        watchUrl: (fixture) => `${baseUrl}/watch?fixture=${fixture}`,
+        close: () =>
+          new Promise((done) => {
+            server.close(() => done());
+          }),
+      });
+    });
+  });
+}
+
+if (import.meta.main) {
+  const server = await createFixtureServer();
+  console.log(`fixture server on ${server.baseUrl}`);
+}

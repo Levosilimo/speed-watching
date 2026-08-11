@@ -1,0 +1,22 @@
+<!doctype html>
+<!-- E2E stub of the YouTube watch page: minimal structural mimic (a video
+     element, a player response) plus the measurement-event listener the
+     content script's E2E hook dispatches. The player response JSON is
+     injected by e2e/server.ts. -->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Fixture watch page</title>
+  </head>
+  <body>
+    <div id="player">
+      <video id="movie_player"></video>
+    </div>
+    <script>
+      window.ytInitialPlayerResponse = __PLAYER_RESPONSE_JSON__;
+      window.addEventListener('speedwatcher:measure', (event) => {
+        window.__speedwatcherLastMeasure = event.detail;
+      });
+    </script>
+  </body>
+</html>

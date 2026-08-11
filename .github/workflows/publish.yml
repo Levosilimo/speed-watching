@@ -1,0 +1,76 @@
+# Store submission — DRAFT. These jobs cannot run until the store credentials
+# exist as repository secrets; until then they fail at the upload/sign step
+# (with a clear "missing secrets" error from each tool). See
+# docs/ci-e2e.md#publishing for the full secret list and setup.
+#
+# Triggers:
+#   - push of a v* tag (intended release flow)
+#   - workflow_dispatch with confirm: "publish" (dry-run safety: a stray
+#     manual run cannot publish anything)
+#
+# Each job runs in its own GitHub environment (cws / amo) so approval rules
+# and secret scoping can be attached per store.
+
+name: Publish
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "publish" to run the store submission jobs'
+        required: true
+        default: 'no'
+
+jobs:
+  cws:
+    name: Chrome Web Store
+    runs-on: ubuntu-latest
+    environment: cws
+    if: ${{ github.event_name == 'push' || github.event.inputs.confirm == 'publish' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.3.14'
+      - run: bun install --frozen-lockfile
+      - run: bun run zip
+      - name: Upload to Chrome Web Store
+        env:
+          EXTENSION_ID: ${{ secrets.EXTENSION_ID }}
+          CLIENT_ID: ${{ secrets.CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
+          REFRESH_TOKEN: ${{ secrets.REFRESH_TOKEN }}
+        run: npx chrome-webstore-upload-cli@4 upload --source .output/speed-watcher-0.0.1-chrome.zip --auto-publish
+
+  amo:
+    name: Firefox Add-ons (AMO)
+    runs-on: ubuntu-latest
+    environment: amo
+    if: ${{ github.event_name == 'push' || github.event.inputs.confirm == 'publish' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.3.14'
+      - run: bun install --frozen-lockfile
+      - run: bun run build:firefox
+      - name: Sign with AMO
+        env:
+          WEB_EXT_API_KEY: ${{ secrets.WEB_EXT_API_KEY }}
+          WEB_EXT_API_SECRET: ${{ secrets.WEB_EXT_API_SECRET }}
+        run: >
+          npx web-ext@8 sign
+          --source-dir .output/firefox-mv3
+          --channel listed
+          --api-key "$WEB_EXT_API_KEY"
+          --api-secret "$WEB_EXT_API_SECRET"
+          --amo-metadata
+          --upload-source-code
