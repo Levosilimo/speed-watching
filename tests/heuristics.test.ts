@@ -1,0 +1,20 @@
+import { describe, expect, it } from 'vitest';
+import type { WpmRange } from '../lib/heuristics';
+import { priorRange } from '../lib/heuristics';
+
+describe('priorRange', () => {
+  it('returns the measured anchors for known content types', () => {
+    const talk: WpmRange = priorRange('talk');
+    expect(talk).toEqual({ min: 140, max: 206 });
+    expect(priorRange('lecture')).toEqual({ min: 110, max: 188 });
+    expect(priorRange('explainer')).toEqual({ min: 103, max: 191 });
+    expect(priorRange('news')).toEqual({ min: 127, max: 150 });
+  });
+
+  it('falls back to defaults for unmeasured types', () => {
+    expect(priorRange('podcast')).toEqual({ min: 140, max: 200 });
+    expect(priorRange('generic')).toEqual({ min: 130, max: 190 });
+    expect(priorRange('unknown')).toEqual({ min: 130, max: 190 });
+    expect(priorRange('music')).toEqual({ min: 130, max: 190 });
+  });
+});

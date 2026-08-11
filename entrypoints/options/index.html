@@ -3,63 +3,128 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Speed Watcher Options</title>
-    <style>
-      body {
-        font-family: system-ui, sans-serif;
-        max-width: 640px;
-        margin: 2rem auto;
-        padding: 0 1rem;
-      }
-      button {
-        padding: 0.5rem 1rem;
-        font-size: 1rem;
-      }
-      #status {
-        margin: 1rem 0;
-        font-weight: 600;
-      }
-      #meter {
-        width: 100%;
-        height: 12px;
-        background: #eee;
-        border-radius: 6px;
-        overflow: hidden;
-      }
-      #meter-fill {
-        height: 100%;
-        width: 0%;
-        background: #4caf50;
-        transition: width 80ms linear;
-      }
-      #wasm {
-        margin: 0.5rem 0;
-        font-size: 0.85rem;
-        color: #555;
-      }
-      #log {
-        font-family: ui-monospace, monospace;
-        font-size: 12px;
-        white-space: pre-wrap;
-        background: #fafafa;
-        padding: 0.75rem;
-        border-radius: 6px;
-        max-height: 320px;
-        overflow-y: auto;
-      }
-    </style>
+    <title>Speed Watcher — Options</title>
+    <link rel="stylesheet" href="../ui/options-styles.css" />
   </head>
   <body>
-    <h1>Speed Watcher — audio capture probe</h1>
-    <p>
-      Phase 0 throwaway: proves the tab → offscreen document → AudioContext
-      path that Phase 2 STT depends on.
-    </p>
-    <button id="toggle" type="button">Test audio capture</button>
-    <div id="status">idle</div>
-    <div id="meter"><div id="meter-fill"></div></div>
-    <div id="wasm"></div>
-    <pre id="log"></pre>
+    <div class="header">
+      <h1>Speed Watcher</h1>
+      <p>WPM-based playback speed recommendations</p>
+    </div>
+
+    <!-- Target WPM -->
+    <div class="section">
+      <div class="section-label">Target speech rate</div>
+      <div class="section-card">
+        <div class="wpm-display">
+          <span class="wpm-value" id="wpm-value">250</span>
+          <span class="wpm-unit">wpm</span>
+        </div>
+        <div class="slider-track">
+          <div class="safe-zone" id="safe-zone"></div>
+          <input
+            type="range"
+            class="slider-input"
+            id="wpm-slider"
+            min="100"
+            max="400"
+            step="5"
+            value="250"
+          />
+        </div>
+        <div class="safe-zone-label">
+          <span>Slow</span>
+          <span>Safe zone (250–275)</span>
+          <span>Fast</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Content Type -->
+    <div class="section">
+      <div class="section-label">Content type</div>
+      <div class="section-card">
+        <div class="presets" role="group" aria-label="Content type presets">
+          <button class="preset-btn" data-type="lecture" aria-pressed="false">Lecture</button>
+          <button class="preset-btn" data-type="talk" aria-pressed="false">Talk</button>
+          <button class="preset-btn" data-type="podcast" aria-pressed="false">Podcast</button>
+          <button class="preset-btn" data-type="music" aria-pressed="false">Music</button>
+          <button class="preset-btn" data-type="generic" aria-pressed="true">Generic</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Per-site Overrides -->
+    <div class="section">
+      <div class="section-label">Per-site overrides</div>
+      <div class="section-card">
+        <ul class="override-list" id="override-list"></ul>
+        <p class="empty-note" id="override-empty">No site overrides set.</p>
+        <div class="add-override">
+          <input
+            type="text"
+            id="override-input"
+            placeholder="e.g. ted.com"
+            aria-label="Hostname to override"
+          />
+          <button type="button" id="override-add">Add</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Your Habits -->
+    <div class="section">
+      <div class="section-label">Your habits</div>
+      <div class="section-card">
+        <div class="habits-grid">
+          <div class="habit-stat">
+            <span class="stat-value" id="habit-total">0</span>
+            <span class="stat-label">Recommendations applied</span>
+          </div>
+          <div class="habit-stat">
+            <span class="stat-value" id="habit-avg-mult">—</span>
+            <span class="stat-label">Average multiplier</span>
+          </div>
+        </div>
+        <ul class="habit-list" id="habit-list"></ul>
+      </div>
+    </div>
+
+    <!-- Tier Info -->
+    <div class="section">
+      <div class="section-label">Tier labels</div>
+      <div class="section-card">
+        <ul class="tier-list">
+          <li class="tier-item">
+            <span class="tier-badge">from captions</span>
+            <span class="tier-desc">Word-timed ASR captions. The most common tier — covers ~77% of YouTube videos.</span>
+          </li>
+          <li class="tier-item">
+            <span class="tier-badge">from captions (corrected)</span>
+            <span class="tier-desc">Manual captions with silence correction applied. Higher confidence, clamped to 1.5× max.</span>
+          </li>
+          <li class="tier-item">
+            <span class="tier-badge">estimated</span>
+            <span class="tier-desc">Heuristic estimate from content type and video metadata. Used when captions are unavailable.</span>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Audio Capture Probe (preserved from Lane B) -->
+    <div class="probe-section">
+      <h2>Audio capture probe</h2>
+      <p>
+        Phase 0 throwaway: proves the tab → offscreen document → AudioContext
+        path that Phase 2 STT depends on.
+      </p>
+      <button id="toggle" type="button">Test audio capture</button>
+      <div id="status">idle</div>
+      <div id="meter"><div id="meter-fill"></div></div>
+      <div id="wasm"></div>
+      <pre id="log"></pre>
+    </div>
+
     <script type="module" src="./main.ts"></script>
   </body>
 </html>

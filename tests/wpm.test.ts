@@ -5,6 +5,8 @@ import {
   cueLevelWpm,
   cueSpanSec,
   estimateSpeechDurationSec,
+  filteredTokensOverTrimmedSpan,
+  manualCueRate,
   totalWords,
   wordLevelWpm,
 } from '../lib/wpm';
@@ -102,6 +104,95 @@ describe('wpm across the synthetic fixture pipeline', () => {
     const corrected = correctedCueLevelWpm(cues);
     expect(naive).toBeCloseTo((5 / 7) * 60, 6);
     expect(corrected).toBeCloseTo(60, 6);
+  });
+});
+
+describe('filteredTokensOverTrimmedSpan (unified ASR rule)', () => {
+  it('counts letter/digit tokens over the first-to-last non-bracket span', () => {
+    const cues = [
+      { text: '[Music]', startSec: 0, durSec: 5 },
+      { text: 'hello world', startSec: 10, durSec: 2 },
+      { text: '[Applause]', startSec: 15, durSec: 5 },
+      { text: 'goodbye now', startSec: 20, durSec: 3 },
+    ];
+    // 4 tokens over the 10 s span from 10 to 20; the markers add nothing.
+    expect(filteredTokensOverTrimmedSpan(cues)).toBeCloseTo(24, 6);
+  });
+
+  it('returns null without two spaced non-bracket cues', () => {
+    expect(filteredTokensOverTrimmedSpan([])).toBeNull();
+    expect(
+      filteredTokensOverTrimmedSpan([{ text: '[Music]', startSec: 0, durSec: 5 }]),
+    ).toBeNull();
+    expect(
+      filteredTokensOverTrimmedSpan([
+        { text: 'hello', startSec: 10, durSec: 2 },
+        { text: 'world', startSec: 10, durSec: 2 },
+      ]),
+    ).toBeNull();
+  });
+});
+
+describe('unified rule on real fixtures', () => {
+  it('runs above word-level on the ASR fixture — the naive path undercounts', () => {
+    const { words, cues } = parseYouTubeJson3(readFixture('real/asr-word.json'));
+    const unified = filteredTokensOverTrimmedSpan(cues);
+    const word = wordLevelWpm(words);
+    if (unified === null || word === null) {
+      throw new Error('wpm must be computable on the fixture');
+    }
+    expect(unified).toBeGreaterThan(word);
+    expect(unified).toBeCloseTo(160.25, 2);
+  });
+
+  it('beats the raw cue rate by excluding the leading marker from the span', () => {
+    const { cues } = parseYouTubeJson3(readFixture('real/asr-word.json'));
+    const unified = filteredTokensOverTrimmedSpan(cues);
+    const raw = cueLevelWpm(cues);
+    if (unified === null || raw === null) {
+      throw new Error('wpm must be computable on the fixture');
+    }
+    expect(unified).toBeGreaterThan(raw);
+  });
+});
+
+describe('manualCueRate (silence-corrected manual tier)', () => {
+  it('applies the silence correction on the manual fixture', () => {
+    const { cues } = parseYouTubeJson3(readFixture('real/manual-cue.json'));
+    const rate = manualCueRate(cues);
+    const naive = cueLevelWpm(cues);
+    if (rate === null || naive === null) {
+      throw new Error('wpm must be computable on the fixture');
+    }
+    expect(rate).toBeGreaterThan(naive);
+    expect(rate).toBeCloseTo(181.76, 2);
+  });
+
+  it('ignores bracket-marker cues in tokens and speech estimate', () => {
+    const cues = [
+      { text: '[Music]', startSec: 0, durSec: 10 },
+      { text: 'hello world', startSec: 10, durSec: 2 },
+      { text: 'goodbye now', startSec: 20, durSec: 3 },
+    ];
+    // 4 tokens over 5 s of speech; the marker's 10 s adds nothing.
+    expect(manualCueRate(cues)).toBeCloseTo(48, 6);
+  });
+
+  it('returns null when no speech duration is measurable', () => {
+    expect(manualCueRate([])).toBeNull();
+    expect(manualCueRate([{ text: 'a', startSec: 0, durSec: 0 }])).toBeNull();
+  });
+});
+
+describe('duration-less cues (windows without durMs)', () => {
+  it('treats missing durations as zero in span and speech estimates', () => {
+    const cues = [
+      { text: 'a', startSec: 0, durSec: 2 },
+      { text: 'b', startSec: 5 },
+    ];
+    expect(cueSpanSec(cues)).toBe(5);
+    expect(estimateSpeechDurationSec(cues)).toBe(2);
+    expect(correctedCueLevelWpm(cues)).toBeCloseTo(60, 6);
   });
 });
 

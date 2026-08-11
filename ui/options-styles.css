@@ -1,0 +1,515 @@
+/* Speed Watcher options page styles.
+   Design system: tokens from ui/styles.ts, applied via CSS custom properties. */
+
+:root {
+  --sw-bg: #ffffff;
+  --sw-bg-subtle: #f8f9fa;
+  --sw-bg-muted: #f1f3f5;
+  --sw-border: #dee2e6;
+  --sw-border-subtle: #e9ecef;
+  --sw-text: #212529;
+  --sw-text-secondary: #6c757d;
+  --sw-text-muted: #adb5bd;
+  --sw-primary: #1a9c8f;
+  --sw-primary-hover: #17897d;
+  --sw-primary-subtle: #e6f7f5;
+  --sw-warning: #d97706;
+  --sw-warning-subtle: #fef3c7;
+  --sw-danger: #dc3545;
+  --sw-danger-subtle: #fee2e2;
+  --sw-focus-ring: rgba(26, 156, 143, 0.35);
+  --sw-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  --sw-shadow-md: 0 4px 12px rgba(0,0,0,0.1);
+  --sw-r-sm: 4px;
+  --sw-r-md: 6px;
+  --sw-r-lg: 8px;
+  --sw-r-pill: 999px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --sw-bg: #1e1e1e;
+    --sw-bg-subtle: #272727;
+    --sw-bg-muted: #2d2d2d;
+    --sw-border: #3a3a3a;
+    --sw-border-subtle: #333333;
+    --sw-text: #e8eaed;
+    --sw-text-secondary: #9aa0a6;
+    --sw-text-muted: #6e7681;
+    --sw-primary: #2dd4bf;
+    --sw-primary-hover: #5eead4;
+    --sw-primary-subtle: rgba(45, 212, 191, 0.12);
+    --sw-warning: #fbbf24;
+    --sw-warning-subtle: rgba(251, 191, 36, 0.12);
+    --sw-danger: #f87171;
+    --sw-danger-subtle: rgba(248, 113, 113, 0.12);
+    --sw-focus-ring: rgba(45, 212, 191, 0.35);
+    --sw-shadow: 0 1px 3px rgba(0,0,0,0.3);
+    --sw-shadow-md: 0 4px 12px rgba(0,0,0,0.4);
+  }
+}
+
+/* ── Reset & Base ────────────────────────────────────────────────────── */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--sw-text);
+  background: var(--sw-bg);
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 32px 20px 64px;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Header ──────────────────────────────────────────────────────────── */
+
+.header {
+  margin-bottom: 32px;
+}
+
+.header h1 {
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin-bottom: 4px;
+}
+
+.header p {
+  font-size: 13px;
+  color: var(--sw-text-secondary);
+}
+
+/* ── Sections ────────────────────────────────────────────────────────── */
+
+.section {
+  margin-bottom: 28px;
+}
+
+.section-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--sw-text-muted);
+  margin-bottom: 10px;
+}
+
+.section-card {
+  background: var(--sw-bg-subtle);
+  border: 1px solid var(--sw-border-subtle);
+  border-radius: var(--sw-r-lg);
+  padding: 16px;
+}
+
+/* ── WPM Slider ──────────────────────────────────────────────────────── */
+
+.wpm-display {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.wpm-value {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--sw-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.wpm-unit {
+  font-size: 13px;
+  color: var(--sw-text-secondary);
+}
+
+.slider-track {
+  position: relative;
+  width: 100%;
+  height: 36px;
+  display: flex;
+  align-items: center;
+}
+
+.slider-input {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 6px;
+  background: var(--sw-border);
+  border-radius: 3px;
+  outline: none;
+  position: relative;
+  z-index: 2;
+}
+
+.slider-input::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--sw-primary);
+  cursor: pointer;
+  border: 2px solid var(--sw-bg);
+  box-shadow: var(--sw-shadow);
+  transition: transform 0.12s ease;
+}
+
+.slider-input::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+}
+
+.slider-input::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--sw-primary);
+  cursor: pointer;
+  border: 2px solid var(--sw-bg);
+  box-shadow: var(--sw-shadow);
+}
+
+.slider-input:focus-visible {
+  outline: 2px solid var(--sw-primary);
+  outline-offset: 4px;
+  box-shadow: 0 0 0 4px var(--sw-focus-ring);
+}
+
+.safe-zone {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 10px;
+  background: var(--sw-primary-subtle);
+  border: 1px solid var(--sw-primary);
+  border-radius: 2px;
+  opacity: 0.5;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.safe-zone-label {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--sw-text-muted);
+}
+
+/* ── Content Type Presets ────────────────────────────────────────────── */
+
+.presets {
+  display: flex;
+  gap: 0;
+  background: var(--sw-bg-muted);
+  border-radius: var(--sw-r-md);
+  padding: 3px;
+}
+
+.preset-btn {
+  flex: 1;
+  padding: 7px 0;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--sw-text-secondary);
+  background: transparent;
+  border: none;
+  border-radius: var(--sw-r-sm);
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.preset-btn:hover {
+  color: var(--sw-text);
+}
+
+.preset-btn[aria-pressed="true"] {
+  background: var(--sw-bg);
+  color: var(--sw-text);
+  box-shadow: var(--sw-shadow);
+}
+
+.preset-btn:focus-visible {
+  outline: 2px solid var(--sw-primary);
+  outline-offset: 1px;
+}
+
+/* ── Site Overrides ──────────────────────────────────────────────────── */
+
+.override-list {
+  list-style: none;
+  margin-bottom: 12px;
+}
+
+.override-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--sw-border-subtle);
+  font-size: 13px;
+}
+
+.override-item:last-child {
+  border-bottom: none;
+}
+
+.override-hostname {
+  font-weight: 500;
+}
+
+.override-type {
+  font-size: 12px;
+  color: var(--sw-text-secondary);
+  margin-left: 8px;
+}
+
+.override-remove {
+  font-size: 12px;
+  color: var(--sw-danger);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: var(--sw-r-sm);
+  font-family: inherit;
+}
+
+.override-remove:hover {
+  background: var(--sw-danger-subtle);
+}
+
+.override-remove:focus-visible {
+  outline: 2px solid var(--sw-danger);
+  outline-offset: 1px;
+}
+
+.add-override {
+  display: flex;
+  gap: 8px;
+}
+
+.add-override input {
+  flex: 1;
+  padding: 7px 10px;
+  font-family: inherit;
+  font-size: 13px;
+  background: var(--sw-bg);
+  border: 1px solid var(--sw-border);
+  border-radius: var(--sw-r-md);
+  color: var(--sw-text);
+  outline: none;
+}
+
+.add-override input:focus {
+  border-color: var(--sw-primary);
+  box-shadow: 0 0 0 3px var(--sw-focus-ring);
+}
+
+.add-override button {
+  padding: 7px 14px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  background: var(--sw-primary);
+  color: var(--sw-bg);
+  border: none;
+  border-radius: var(--sw-r-md);
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+
+.add-override button:hover {
+  background: var(--sw-primary-hover);
+}
+
+.add-override button:focus-visible {
+  outline: 2px solid var(--sw-primary);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px var(--sw-focus-ring);
+}
+
+.empty-note {
+  font-size: 12px;
+  color: var(--sw-text-muted);
+  padding: 8px 0;
+}
+
+/* ── Habits Report ───────────────────────────────────────────────────── */
+
+.habits-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.habit-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.habit-stat .stat-value {
+  font-size: 20px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--sw-text);
+}
+
+.habit-stat .stat-label {
+  font-size: 11px;
+  color: var(--sw-text-secondary);
+}
+
+.habit-list {
+  margin-top: 12px;
+  list-style: none;
+}
+
+.habit-list li {
+  display: flex;
+  justify-content: space-between;
+  padding: 5px 0;
+  font-size: 12px;
+  color: var(--sw-text-secondary);
+  border-bottom: 1px solid var(--sw-border-subtle);
+}
+
+.habit-list li:last-child {
+  border-bottom: none;
+}
+
+/* ── Tier Info ───────────────────────────────────────────────────────── */
+
+.tier-list {
+  list-style: none;
+}
+
+.tier-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 0;
+}
+
+.tier-item + .tier-item {
+  border-top: 1px solid var(--sw-border-subtle);
+}
+
+.tier-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: var(--sw-r-pill);
+  background: var(--sw-primary-subtle);
+  color: var(--sw-primary);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.tier-desc {
+  font-size: 12px;
+  color: var(--sw-text-secondary);
+  line-height: 1.45;
+}
+
+/* ── Audio Probe (preserved from Lane B) ─────────────────────────────── */
+
+.probe-section {
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid var(--sw-border);
+}
+
+.probe-section h2 {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.probe-section > p {
+  font-size: 12px;
+  color: var(--sw-text-secondary);
+  margin-bottom: 14px;
+  line-height: 1.5;
+}
+
+#toggle {
+  padding: 8px 16px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  background: var(--sw-primary);
+  color: var(--sw-bg);
+  border: none;
+  border-radius: var(--sw-r-md);
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+
+#toggle:hover {
+  background: var(--sw-primary-hover);
+}
+
+#toggle:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+#toggle:focus-visible {
+  outline: 2px solid var(--sw-primary);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px var(--sw-focus-ring);
+}
+
+#status {
+  margin: 10px 0;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+#meter {
+  width: 100%;
+  height: 8px;
+  background: var(--sw-bg-muted);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+#meter-fill {
+  height: 100%;
+  width: 0%;
+  background: var(--sw-primary);
+  transition: width 80ms linear;
+  border-radius: 4px;
+}
+
+#wasm {
+  margin: 6px 0;
+  font-size: 12px;
+  color: var(--sw-text-secondary);
+}
+
+#log {
+  font-family: ui-monospace, "Cascadia Code", Menlo, monospace;
+  font-size: 11px;
+  white-space: pre-wrap;
+  background: var(--sw-bg-muted);
+  padding: 10px;
+  border-radius: var(--sw-r-md);
+  max-height: 260px;
+  overflow-y: auto;
+  color: var(--sw-text-secondary);
+  margin-top: 8px;
+  line-height: 1.5;
+}

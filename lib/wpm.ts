@@ -1,10 +1,11 @@
-import type { CaptionCue, WordToken } from './captions';
+import type { Segment } from './captions';
+import { countWordTokens, isBracketMarker } from './tokenizer';
 
 export function countWords(text: string): number {
   return text.match(/\S+/g)?.length ?? 0;
 }
 
-export function totalWords(items: readonly (WordToken | CaptionCue)[]): number {
+export function totalWords(items: readonly Segment[]): number {
   return items.reduce((sum, item) => sum + countWords(item.text), 0);
 }
 
@@ -14,7 +15,7 @@ export function totalWords(items: readonly (WordToken | CaptionCue)[]): number {
  * (safe direction: recommends a lower multiplier); the error is one word
  * per speech span, under 5% for clips longer than ~10 s.
  */
-export function wordLevelWpm(words: WordToken[]): number | null {
+export function wordLevelWpm(words: Segment[]): number | null {
   const first = words[0]?.startSec;
   const last = words.at(-1)?.startSec;
   if (first === undefined || last === undefined || last <= first) return null;
@@ -22,11 +23,11 @@ export function wordLevelWpm(words: WordToken[]): number | null {
 }
 
 /** Wall-clock span from the first cue start to the last cue end, in seconds. */
-export function cueSpanSec(cues: CaptionCue[]): number | null {
+export function cueSpanSec(cues: Segment[]): number | null {
   const first = cues[0];
   const last = cues.at(-1);
   if (!first || !last) return null;
-  const span = last.startSec + last.durSec - first.startSec;
+  const span = last.startSec + (last.durSec ?? 0) - first.startSec;
   return span > 0 ? span : null;
 }
 
@@ -35,7 +36,7 @@ export function cueSpanSec(cues: CaptionCue[]): number | null {
  * Auto-generated cue boundaries usually fall at pauses, so this
  * underestimates the true speech rate — the dangerous direction.
  */
-export function cueLevelWpm(cues: CaptionCue[]): number | null {
+export function cueLevelWpm(cues: Segment[]): number | null {
   const span = cueSpanSec(cues);
   if (span === null) return null;
   return (totalWords(cues) / span) * 60;
@@ -45,20 +46,51 @@ export function cueLevelWpm(cues: CaptionCue[]): number | null {
  * Speech-duration estimate from cue timing: sum of cue durations, capped at
  * the cue span. Assumes inter-cue gaps are pure silence and treats pauses
  * inside a cue as speech, since cue-level data cannot localize them.
- * Leading/trailing silence inside the first/last cue stays uncorrected.
+ * Cues without a duration contribute zero, which runs the rate high (safe).
  */
-export function estimateSpeechDurationSec(cues: CaptionCue[]): number | null {
+export function estimateSpeechDurationSec(cues: Segment[]): number | null {
   const span = cueSpanSec(cues);
   if (span === null) return null;
   return Math.min(
-    cues.reduce((sum, cue) => sum + cue.durSec, 0),
+    cues.reduce((sum, cue) => sum + (cue.durSec ?? 0), 0),
     span,
   );
 }
 
 /** Words per minute over the silence-corrected speech-duration estimate. */
-export function correctedCueLevelWpm(cues: CaptionCue[]): number | null {
+export function correctedCueLevelWpm(cues: Segment[]): number | null {
   const speech = estimateSpeechDurationSec(cues);
   if (speech === null || speech <= 0) return null;
   return (totalWords(cues) / speech) * 60;
+}
+
+function spokenCues(cues: readonly Segment[]): Segment[] {
+  return cues.filter((cue) => !isBracketMarker(cue.text));
+}
+
+/**
+ * Unified ASR rate rule: letter/digit tokens of non-bracket cues over the
+ * span from the first to the last such cue's start. Word timing stays a
+ * coverage sanity check (wordLevelWpm) — naive word-level rates undercount
+ * by ~16% (measured), which over-speeds playback.
+ */
+export function filteredTokensOverTrimmedSpan(cues: readonly Segment[]): number | null {
+  const spoken = spokenCues(cues);
+  const first = spoken[0]?.startSec;
+  const last = spoken.at(-1)?.startSec;
+  if (first === undefined || last === undefined || last <= first) return null;
+  const tokens = spoken.reduce((sum, cue) => sum + countWordTokens(cue.text), 0);
+  return (tokens / (last - first)) * 60;
+}
+
+/**
+ * Manual-cue rate: filtered tokens over the silence-corrected speech
+ * duration. The ≤1.5x clamp for this tier lives in recommend().
+ */
+export function manualCueRate(cues: readonly Segment[]): number | null {
+  const spoken = spokenCues(cues);
+  const speech = estimateSpeechDurationSec(spoken);
+  if (speech === null || speech <= 0) return null;
+  const tokens = spoken.reduce((sum, cue) => sum + countWordTokens(cue.text), 0);
+  return (tokens / speech) * 60;
 }

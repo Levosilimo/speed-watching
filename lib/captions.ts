@@ -1,27 +1,21 @@
 // Parser for YouTube caption payloads served at captionTracks baseUrl
 // (fmt=json3). Handles both layouts found in the wild: per-word timings in
 // the `windows` array or as per-seg tOffsetMs inside `events`, and cue-level
-// timing from `events` (tStartMs + dDurationMs).
+// timing from `events` (tStartMs + dDurationMs) or from `windows` entries
+// carrying direct text ({startMs, durMs?, text}).
 
-export interface WordToken {
-  /** Segment text; may hold several whitespace-separated tokens. */
+export interface Segment {
   text: string;
   startSec: number;
-  /** Gap to the next word start; absent for the final word (end unknown). */
+  /** Duration in seconds; absent when the payload does not carry one. */
   durSec?: number;
-}
-
-export interface CaptionCue {
-  text: string;
-  startSec: number;
-  durSec: number;
 }
 
 export interface ParsedCaptions {
   /** Empty when the payload carries no per-word timings. */
-  words: WordToken[];
+  words: Segment[];
   /** Empty when the payload carries no cue events. */
-  cues: CaptionCue[];
+  cues: Segment[];
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -40,7 +34,7 @@ function asArray(value: unknown): unknown[] {
   return Array.isArray(value) ? value : [];
 }
 
-function pushTimedSeg(tokens: WordToken[], seg: unknown, baseMs: number): void {
+function pushTimedSeg(tokens: Segment[], seg: unknown, baseMs: number): void {
   if (!isRecord(seg)) return;
   const text = asString(seg.utf8);
   const offset = asNumber(seg.tOffsetMs);
@@ -48,8 +42,8 @@ function pushTimedSeg(tokens: WordToken[], seg: unknown, baseMs: number): void {
   tokens.push({ text, startSec: (baseMs + offset) / 1000 });
 }
 
-function wordTokens(payload: Record<string, unknown>): WordToken[] {
-  const tokens: WordToken[] = [];
+function wordTokens(payload: Record<string, unknown>): Segment[] {
+  const tokens: Segment[] = [];
   for (const window of asArray(payload.windows)) {
     if (!isRecord(window)) continue;
     const base =
@@ -74,22 +68,49 @@ function wordTokens(payload: Record<string, unknown>): WordToken[] {
   return tokens;
 }
 
-function captionCues(payload: Record<string, unknown>): CaptionCue[] {
-  const cues: CaptionCue[] = [];
+/** Joined seg text, whitespace-collapsed; null when the segs carry no text. */
+function textFromSegs(segs: unknown[]): string | null {
+  const text = segs
+    .map((seg) => (isRecord(seg) ? asString(seg.utf8) : null))
+    .filter((t): t is string => t !== null)
+    .join('')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return text === '' ? null : text;
+}
+
+function pushWindowCues(cues: Segment[], windows: unknown[]): void {
+  for (const window of windows) {
+    if (!isRecord(window)) continue;
+    const text = asString(window.text);
+    const startMs = asNumber(window.startMs);
+    if (text === null || text.trim() === '' || startMs === null) continue;
+    const durMs = asNumber(window.durMs);
+    cues.push({
+      text: text.replace(/\s+/g, ' ').trim(),
+      startSec: startMs / 1000,
+      durSec: durMs === null ? undefined : durMs / 1000,
+    });
+  }
+}
+
+function captionCues(payload: Record<string, unknown>): Segment[] {
+  const cues: Segment[] = [];
   for (const event of asArray(payload.events)) {
     if (!isRecord(event)) continue;
-    const startMs = asNumber(event.tStartMs);
-    const durMs = asNumber(event.dDurationMs);
-    if (startMs === null || durMs === null) continue;
-    const text = asArray(event.segs)
-      .map((seg) => (isRecord(seg) ? asString(seg.utf8) : null))
-      .filter((t): t is string => t !== null)
-      .join('')
-      .replace(/\s+/g, ' ')
-      .trim();
-    if (text === '') continue;
-    cues.push({ text, startSec: startMs / 1000, durSec: durMs / 1000 });
+    const text = textFromSegs(asArray(event.segs));
+    if (text !== null) {
+      const startMs = asNumber(event.tStartMs);
+      const durMs = asNumber(event.dDurationMs);
+      if (startMs === null || durMs === null) continue;
+      cues.push({ text, startSec: startMs / 1000, durSec: durMs / 1000 });
+    } else {
+      pushWindowCues(cues, asArray(event.windows));
+    }
   }
+  // Payloads that omit `events` entirely carry their cues as top-level windows.
+  if (cues.length === 0) pushWindowCues(cues, asArray(payload.windows));
+  cues.sort((a, b) => a.startSec - b.startSec);
   return cues;
 }
 

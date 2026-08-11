@@ -1,0 +1,154 @@
+{
+ "wireMagic": "pb3",
+ "_synthetic": "converted from real/asr-word.json (TED talk) to the WEB windows shape",
+ "events": [
+  {
+   "tStartMs": 0,
+   "dDurationMs": 1205280
+  },
+  {
+   "tStartMs": 6260,
+   "dDurationMs": 3880,
+   "windows": [
+    {
+     "startMs": 6260,
+     "text": "[Music]",
+     "durMs": 3880
+    }
+   ]
+  },
+  {
+   "tStartMs": 26550
+  },
+  {
+   "tStartMs": 26560,
+   "dDurationMs": 6400,
+   "windows": [
+    {
+     "startMs": 26560,
+     "text": "good morning",
+     "durMs": 6400
+    }
+   ]
+  },
+  {
+   "tStartMs": 28390,
+   "dDurationMs": 4570
+  },
+  {
+   "tStartMs": 28400,
+   "dDurationMs": 6240,
+   "windows": [
+    {
+     "startMs": 28400,
+     "text": "how are you it's been great hasn't it",
+     "durMs": 6240
+    }
+   ]
+  },
+  {
+   "tStartMs": 32950,
+   "dDurationMs": 1690
+  },
+  {
+   "tStartMs": 32960,
+   "dDurationMs": 5200,
+   "windows": [
+    {
+     "startMs": 32960,
+     "text": "it's been i've been blown away by the",
+     "durMs": 5200
+    }
+   ]
+  },
+  {
+   "tStartMs": 34630,
+   "dDurationMs": 3530
+  },
+  {
+   "tStartMs": 34640,
+   "dDurationMs": 3520,
+   "windows": [
+    {
+     "startMs": 34640,
+     "text": "whole thing in fact i'm leaving",
+     "durMs": 3520
+    }
+   ]
+  },
+  {
+   "tStartMs": 40389
+  },
+  {
+   "tStartMs": 40399,
+   "dDurationMs": 5521,
+   "windows": [
+    {
+     "startMs": 40399,
+     "text": "um there have been three themes haven't",
+     "durMs": 5521
+    }
+   ]
+  },
+  {
+   "tStartMs": 44069,
+   "dDurationMs": 1851
+  },
+  {
+   "tStartMs": 44079,
+   "dDurationMs": 3681,
+   "windows": [
+    {
+     "startMs": 44079,
+     "text": "they running through the conference",
+     "durMs": 3681
+    }
+   ]
+  },
+  {
+   "tStartMs": 45910,
+   "dDurationMs": 1850
+  },
+  {
+   "tStartMs": 45920,
+   "dDurationMs": 3479,
+   "windows": [
+    {
+     "startMs": 45920,
+     "text": "uh which are rather relevant to what i",
+     "durMs": 3479
+    }
+   ]
+  },
+  {
+   "tStartMs": 47750,
+   "dDurationMs": 1649
+  },
+  {
+   "tStartMs": 47760,
+   "dDurationMs": 4000,
+   "windows": [
+    {
+     "startMs": 47760,
+     "text": "want to talk about one is the",
+     "durMs": 4000
+    }
+   ]
+  },
+  {
+   "tStartMs": 49389,
+   "dDurationMs": 2371
+  },
+  {
+   "tStartMs": 49399,
+   "dDurationMs": 3721,
+   "windows": [
+    {
+     "startMs": 49399,
+     "text": "extraordinary evidence of human",
+     "durMs": 3721
+    }
+   ]
+  }
+ ]
+}

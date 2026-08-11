@@ -82,6 +82,46 @@ describe('parseYouTubeJson3 — edge cases', () => {
   });
 });
 
+describe('parseYouTubeJson3 — WEB windows format', () => {
+  it('parses event-level windows ({startMs, durMs?, text}) into the same cues as segs', () => {
+    // Synthetic fixture: the real ASR payload's texts/timings converted to
+    // the WEB windows shape (see the _synthetic marker in the fixture).
+    const real = parseYouTubeJson3(readFixture('real/asr-word.json'));
+    const windows = parseYouTubeJson3(readFixture('synthetic/windows-format.json'));
+    expect(windows.cues).toEqual(real.cues);
+    expect(windows.words).toEqual([]);
+  });
+
+  it('falls back to top-level windows when events carry no text', () => {
+    const parsed = parseYouTubeJson3({
+      events: [{ tStartMs: 0, dDurationMs: 500 }],
+      windows: [{ startMs: 1000, durMs: 2000, text: 'first  cue' }],
+    });
+    expect(parsed.cues).toEqual([{ text: 'first cue', startSec: 1, durSec: 2 }]);
+  });
+
+  it('leaves durSec absent when a window has no durMs', () => {
+    const parsed = parseYouTubeJson3({
+      windows: [{ startMs: 4000, text: 'second cue' }],
+    });
+    expect(parsed.cues).toEqual([{ text: 'second cue', startSec: 4, durSec: undefined }]);
+  });
+
+  it('prefers event segs over event windows when both carry text', () => {
+    const parsed = parseYouTubeJson3({
+      events: [
+        {
+          tStartMs: 0,
+          dDurationMs: 1000,
+          segs: [{ utf8: 'from segs' }],
+          windows: [{ startMs: 0, durMs: 1000, text: 'from windows' }],
+        },
+      ],
+    });
+    expect(parsed.cues).toEqual([{ text: 'from segs', startSec: 0, durSec: 1 }]);
+  });
+});
+
 describe('parseYouTubeJson3 — real captured payloads', () => {
   it('parses a real ASR payload (TED talk) into sorted timed words and cues', () => {
     const { words, cues } = parseYouTubeJson3(readFixture('real/asr-word.json'));
@@ -97,7 +137,7 @@ describe('parseYouTubeJson3 — real captured payloads', () => {
     const { words, cues } = parseYouTubeJson3(readFixture('real/manual-cue.json'));
     expect(words).toEqual([]);
     expect(cues.length).toBeGreaterThan(0);
-    expect(cues.every((c) => c.text.length > 0 && c.durSec > 0)).toBe(true);
+    expect(cues.every((c) => c.text.length > 0 && c.durSec !== undefined && c.durSec > 0)).toBe(true);
   });
 
   it('parses a real music-video payload with sparse word timing', () => {
