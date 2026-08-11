@@ -6,7 +6,7 @@ export default defineConfig({
     name: 'Speed Watcher',
     description: 'WPM-based speed-watching extension',
     version: '0.0.1',
-    permissions: ['storage'],
+    permissions: ['storage', 'tabCapture'],
     min_chrome_version: '116',
   },
 });

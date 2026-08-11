@@ -4,9 +4,62 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Speed Watcher Options</title>
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        max-width: 640px;
+        margin: 2rem auto;
+        padding: 0 1rem;
+      }
+      button {
+        padding: 0.5rem 1rem;
+        font-size: 1rem;
+      }
+      #status {
+        margin: 1rem 0;
+        font-weight: 600;
+      }
+      #meter {
+        width: 100%;
+        height: 12px;
+        background: #eee;
+        border-radius: 6px;
+        overflow: hidden;
+      }
+      #meter-fill {
+        height: 100%;
+        width: 0%;
+        background: #4caf50;
+        transition: width 80ms linear;
+      }
+      #wasm {
+        margin: 0.5rem 0;
+        font-size: 0.85rem;
+        color: #555;
+      }
+      #log {
+        font-family: ui-monospace, monospace;
+        font-size: 12px;
+        white-space: pre-wrap;
+        background: #fafafa;
+        padding: 0.75rem;
+        border-radius: 6px;
+        max-height: 320px;
+        overflow-y: auto;
+      }
+    </style>
   </head>
   <body>
-    <div id="app"></div>
+    <h1>Speed Watcher — audio capture probe</h1>
+    <p>
+      Phase 0 throwaway: proves the tab → offscreen document → AudioContext
+      path that Phase 2 STT depends on.
+    </p>
+    <button id="toggle" type="button">Test audio capture</button>
+    <div id="status">idle</div>
+    <div id="meter"><div id="meter-fill"></div></div>
+    <div id="wasm"></div>
+    <pre id="log"></pre>
     <script type="module" src="./main.ts"></script>
   </body>
 </html>

@@ -3,10 +3,11 @@
   "entry": [
     "entrypoints/background.ts",
     "entrypoints/content.ts",
+    "entrypoints/offscreen/main.ts",
     "entrypoints/options/*.ts",
     "wxt.config.ts",
     "scripts/*.ts"
   ],
   "project": ["**/*.ts"],
-  "ignoreDependencies": ["block-no-verify", "@ast-grep/cli"]
+  "ignoreDependencies": ["block-no-verify", "@ast-grep/cli", "vitest-chrome"]
 }
