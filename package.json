@@ -1,0 +1,32 @@
+{
+  "name": "speed-watcher",
+  "description": "WPM-based speed-watching extension",
+  "private": true,
+  "version": "0.0.1",
+  "type": "module",
+  "scripts": {
+    "dev": "wxt",
+    "build": "wxt build",
+    "zip": "wxt zip",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "lint": "oxlint",
+    "check": "bunx aislop scan . --format sarif | bun run scripts/aislop-gate.ts",
+    "knip": "knip",
+    "postinstall": "wxt prepare"
+  },
+  "devDependencies": {
+    "@ast-grep/cli": "^0.36.0",
+    "aislop": "^0.14.1",
+    "block-no-verify": "^1.3.0",
+    "knip": "^5.57.0",
+    "oxlint": "^0.16.0",
+    "typescript": "^5.9.3",
+    "vite": "^8.1.5",
+    "vitest": "^3.2.0",
+    "wxt": "^0.21.3"
+  },
+  "trustedDependencies": [
+    "@ast-grep/cli"
+  ]
+}

@@ -1,0 +1,170 @@
+# ast-grep rules for proximity-based comment-quality detection.
+#
+# Rules use the `precedes` relational constraint to match comments that
+# immediately precede function/arrow-function declarations in source code.
+#
+# Bypass convention: append `lce-allow-restating-comment` to the comment text.
+# Since ast-grep's rule DSL doesn't support cross-variable regex constraints
+# in this shape, exclusion via rule config is by file (use `--exclude` in
+# lefthook) rather than per-line.
+#
+# Reference: http://astgrep.com/guide/rule-config.html
+# Verified working on ast-grep 0.44.1.
+#
+# Run:  bunx ast-grep scan --rule scripts/check-restatement-comments.yml src/ scripts/
+
+---
+id: numbered-procedure-comment
+language: TypeScript
+severity: warning
+rule:
+  kind: comment
+  regex: '^\s*//\s*\d+\.\s+\w'
+  precedes:
+    kind: function_declaration
+    stopBy: end
+message: 'Numbered procedure comment immediately above function'
+note: |
+  Catches LLM-generated step-by-step comments like `// 1. Check cache`
+  directly above `function checkCache()`. These restate the function's
+  purpose and add no information.
+
+---
+id: jsdoc-before-function
+language: TypeScript
+severity: warning
+rule:
+  kind: comment
+  regex: '^\/\*\*'
+  precedes:
+    kind: function_declaration
+    stopBy: neighbor
+message: 'JSDoc block immediately above function declaration'
+note: |
+  Catches the structural pattern of `/** ... */` directly above a function.
+  Many AI-generated JSDocs restate the function name (e.g., `/** VerbNoun */`
+  above `function verbNoun()`).
+
+  LIMITATION: ast-grep cannot check semantic token-overlap between the
+  comment text and the function name. Detection is structural only.
+
+---
+id: jsdoc-before-arrow-function
+language: TypeScript
+severity: warning
+rule:
+  kind: comment
+  regex: '^\/\*\*'
+  precedes:
+    kind: arrow_function
+    stopBy: neighbor
+message: 'JSDoc block immediately above arrow function'
+note: |
+  Same logic as jsdoc-before-function but for `const x = () => {}` style.
+
+---
+id: jsdoc-before-method
+language: TypeScript
+severity: warning
+rule:
+  kind: comment
+  regex: '^\/\*\*'
+  precedes:
+    kind: method_definition
+    stopBy: neighbor
+message: 'JSDoc block immediately above class method'
+note: |
+  Catches AI-generated JSDoc above class methods that may restate the
+  method name (e.g., `/** Format string */` above `formatString()`).
+
+---
+id: numbered-procedure-before-method
+language: TypeScript
+severity: warning
+rule:
+  kind: comment
+  regex: '^\s*//\s*\d+\.\s+\w'
+  precedes:
+    kind: method_definition
+    stopBy: end
+message: 'Numbered procedure comment immediately above class method'
+note: |
+  Catches LLM-generated step-by-step comments like `// 1. Check cache`
+  directly above class method definitions.
+
+---
+id: jsdoc-before-generator-function
+language: TypeScript
+severity: warning
+rule:
+  kind: comment
+  regex: '^\/\*\*'
+  precedes:
+    kind: generator_function_declaration
+    stopBy: neighbor
+message: 'JSDoc block immediately above generator function'
+note: |
+  Catches JSDoc above `function* name() {}` declarations.
+
+---
+id: comment-before-decorator
+language: TypeScript
+severity: warning
+rule:
+  kind: comment
+  precedes:
+    kind: decorator
+    stopBy: neighbor
+message: 'Comment immediately preceding a decorator — likely restating @decorator purpose'
+note: |
+  Catches structural pattern of // comment directly above a @decorator.
+  E.g., `// Cache the result` above `@cache()`.
+
+---
+id: comment-between-decorators
+language: TypeScript
+severity: warning
+rule:
+  all:
+    - kind: comment
+    - follows:
+        kind: decorator
+        stopBy: neighbor
+    - precedes:
+        kind: decorator
+        stopBy: neighbor
+message: 'Comment sandwiched between two decorators — likely an LLM artifact'
+note: |
+  Catches comments like:
+    @first()
+    // Comment
+    @second()
+  These are often AI-generated separator comments.
+
+---
+id: as-unknown-as
+language: TypeScript
+severity: error
+rule:
+  pattern: $A as unknown as $B
+message: 'Avoid `as unknown as X` — prefer proper type narrowing'
+note: |
+  Catches the `as unknown as X` double assertion pattern which bypasses
+  TypeScript's type system. Use proper type guards instead.
+
+  Catches both single-line (`foo as unknown as Bar`) and multi-line
+  (with newlines between tokens) patterns via AST matching.
+
+---
+id: as-unknown-as
+language: TypeScript
+severity: error
+rule:
+  pattern: $A as unknown as $B
+message: 'Avoid `as unknown as X` — prefer proper type narrowing'
+note: |
+  Catches the `as unknown as X` double assertion pattern which bypasses
+  TypeScript's type system. Use proper type guards instead.
+
+  Catches both single-line (`foo as unknown as Bar`) and multi-line
+  (with newlines between tokens) patterns via AST matching.

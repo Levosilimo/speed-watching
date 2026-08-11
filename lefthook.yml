@@ -1,0 +1,8 @@
+# lce-setup: AI-slop quality gates
+pre-commit:
+  parallel: true
+  commands:
+    aislop:
+      run: (bunx aislop scan . --format sarif || true) | bun run scripts/aislop-gate.ts
+    ast-grep:
+      run: bun run scripts/run-ast-grep-checks.ts

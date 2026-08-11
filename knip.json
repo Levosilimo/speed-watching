@@ -1,0 +1,12 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "entry": [
+    "entrypoints/background.ts",
+    "entrypoints/content.ts",
+    "entrypoints/options/*.ts",
+    "wxt.config.ts",
+    "scripts/*.ts"
+  ],
+  "project": ["**/*.ts"],
+  "ignoreDependencies": ["block-no-verify", "@ast-grep/cli"]
+}
