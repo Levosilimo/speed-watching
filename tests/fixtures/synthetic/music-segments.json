@@ -1,0 +1,12 @@
+{
+  "events": [
+    { "tStartMs": 0, "dDurationMs": 4000, "segs": [{ "utf8": "la" }] },
+    { "tStartMs": 5000, "dDurationMs": 9000, "segs": [{ "utf8": "do do do do" }] },
+    { "tStartMs": 16000, "dDurationMs": 6000, "segs": [{ "utf8": "mi mi" }] }
+  ],
+  "windows": [
+    { "wpWinStartMs": 0, "wWinOffsetMs": 0, "segs": [{ "utf8": "la", "tOffsetMs": 0 }] },
+    { "wpWinStartMs": 0, "wWinOffsetMs": 5000, "segs": [{ "utf8": "do do do do", "tOffsetMs": 0 }] },
+    { "wpWinStartMs": 0, "wWinOffsetMs": 16000, "segs": [{ "utf8": "mi mi", "tOffsetMs": 0 }] }
+  ]
+}

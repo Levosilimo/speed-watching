@@ -1,0 +1,6 @@
+{
+  "events": [
+    { "tStartMs": 1000, "dDurationMs": 800, "segs": [{ "utf8": "solo", "tOffsetMs": 0 }] }
+  ],
+  "windows": []
+}

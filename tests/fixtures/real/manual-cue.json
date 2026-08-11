@@ -1,0 +1,195 @@
+{
+ "wireMagic": "pb3",
+ "pens": [
+  {}
+ ],
+ "wsWinStyles": [
+  {}
+ ],
+ "wpWinPositions": [
+  {}
+ ],
+ "events": [
+  {
+   "tStartMs": 16257,
+   "dDurationMs": 3966,
+   "segs": [
+    {
+     "utf8": "How do you explain\nwhen things don't go as we assume?"
+    }
+   ]
+  },
+  {
+   "tStartMs": 20257,
+   "dDurationMs": 2966,
+   "segs": [
+    {
+     "utf8": "Or better, how do you explain"
+    }
+   ]
+  },
+  {
+   "tStartMs": 23257,
+   "dDurationMs": 3966,
+   "segs": [
+    {
+     "utf8": "when others are able to achieve things\nthat seem to defy all of the assumptions?"
+    }
+   ]
+  },
+  {
+   "tStartMs": 27257,
+   "dDurationMs": 1966,
+   "segs": [
+    {
+     "utf8": "For example:"
+    }
+   ]
+  },
+  {
+   "tStartMs": 29257,
+   "dDurationMs": 1966,
+   "segs": [
+    {
+     "utf8": "Why is Apple so innovative?"
+    }
+   ]
+  },
+  {
+   "tStartMs": 31257,
+   "dDurationMs": 1966,
+   "segs": [
+    {
+     "utf8": "Year after year, after year,"
+    }
+   ]
+  },
+  {
+   "tStartMs": 33257,
+   "dDurationMs": 2966,
+   "segs": [
+    {
+     "utf8": "they're more innovative\nthan all their competition."
+    }
+   ]
+  },
+  {
+   "tStartMs": 36257,
+   "dDurationMs": 1966,
+   "segs": [
+    {
+     "utf8": "And yet, they're just a computer company."
+    }
+   ]
+  },
+  {
+   "tStartMs": 38257,
+   "dDurationMs": 1966,
+   "segs": [
+    {
+     "utf8": "They're just like everyone else."
+    }
+   ]
+  },
+  {
+   "tStartMs": 40257,
+   "dDurationMs": 2200,
+   "segs": [
+    {
+     "utf8": "They have the same access\nto the same talent,"
+    }
+   ]
+  },
+  {
+   "tStartMs": 42457,
+   "dDurationMs": 1000,
+   "segs": [
+    {
+     "utf8": "the same agencies,"
+    }
+   ]
+  },
+  {
+   "tStartMs": 43490,
+   "dDurationMs": 1867,
+   "segs": [
+    {
+     "utf8": "the same consultants, the same media."
+    }
+   ]
+  },
+  {
+   "tStartMs": 45390,
+   "dDurationMs": 3433,
+   "segs": [
+    {
+     "utf8": "Then why is it that they seem\nto have something different?"
+    }
+   ]
+  },
+  {
+   "tStartMs": 50257,
+   "dDurationMs": 3966,
+   "segs": [
+    {
+     "utf8": "Why is it that Martin Luther King\nled the Civil Rights Movement?"
+    }
+   ]
+  },
+  {
+   "tStartMs": 54257,
+   "dDurationMs": 3966,
+   "segs": [
+    {
+     "utf8": "He wasn't the only man\nwho suffered in pre-civil rights America,"
+    }
+   ]
+  },
+  {
+   "tStartMs": 58257,
+   "dDurationMs": 2733,
+   "segs": [
+    {
+     "utf8": "and he certainly wasn't\nthe only great orator of the day."
+    }
+   ]
+  },
+  {
+   "tStartMs": 61023,
+   "dDurationMs": 1200,
+   "segs": [
+    {
+     "utf8": "Why him?"
+    }
+   ]
+  },
+  {
+   "tStartMs": 62257,
+   "dDurationMs": 2966,
+   "segs": [
+    {
+     "utf8": "And why is it that the Wright brothers"
+    }
+   ]
+  },
+  {
+   "tStartMs": 65257,
+   "dDurationMs": 2966,
+   "segs": [
+    {
+     "utf8": "were able to figure out controlled,\npowered man flight"
+    }
+   ]
+  },
+  {
+   "tStartMs": 68257,
+   "dDurationMs": 2166,
+   "segs": [
+    {
+     "utf8": "when there were certainly other teams"
+    }
+   ]
+  }
+ ],
+ "windows": []
+}
