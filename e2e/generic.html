@@ -1,0 +1,19 @@
+<!doctype html>
+<!-- E2E fixture for the generic player matcher: a plain <video> on a
+     non-YouTube origin plus an HLS master playlist registered in the
+     resource timeline (the video has no src — MSE-style players leave
+     blob: srcs, and only the resource entries name the manifest). The
+     content script (matches <all_urls>) harvests the subtitle track from
+     the network layer, renders the pill, and applies/re-asserts the rate. -->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Generic player fixture</title>
+  </head>
+  <body>
+    <video id="generic-video"></video>
+    <script>
+      fetch('/fixtures/hls/talk/master.m3u8');
+    </script>
+  </body>
+</html>

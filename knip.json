@@ -3,6 +3,7 @@
   "entry": [
     "entrypoints/background.ts",
     "entrypoints/content.ts",
+    "entrypoints/generic.content.ts",
     "entrypoints/bridge.content.ts",
     "entrypoints/offscreen/main.ts",
     "entrypoints/options/*.ts",
@@ -20,5 +21,6 @@
     "vitest-chrome",
     "@huggingface/transformers"
   ],
-  "ignoreBinaries": ["ffmpeg"]
+  "ignoreBinaries": ["ffmpeg"],
+  "ignoreExportsUsedInFile": true
 }

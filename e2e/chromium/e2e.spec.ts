@@ -16,12 +16,15 @@ import { mkdtempSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import {
+  runBridgeSpecs,
+  runGenericSpecs,
   runMeasurementSpecs,
   runPillSpecs,
   type CaptionSource,
   type E2EDriver,
 } from '../shared/specs';
 import { FIXTURE_PORT } from '../server';
+import type { Settings } from '../../lib/settings';
 
 const extensionPath = resolve('.output/chrome-mv3');
 const fixtureBase = `http://127.0.0.1:${FIXTURE_PORT}`;
@@ -132,6 +135,45 @@ test.beforeAll(async () => {
         () => (window.__speedwatcherCaptionSource as CaptionSource) ?? null,
       );
     },
+    async navigateToGeneric() {
+      await page.goto(`${fixtureBase}/generic`);
+    },
+    async readCaptionTier() {
+      await page.waitForFunction(
+        () => window.__speedwatcherCaptionTier !== undefined,
+        undefined,
+        { timeout: 15_000 },
+      );
+      return page.evaluate(
+        () => (window.__speedwatcherCaptionTier as 'captions' | 'estimated') ?? null,
+      );
+    },
+    async resetPlaybackRate() {
+      await page.evaluate(() => {
+        const video = document.querySelector('video');
+        if (video !== null) video.playbackRate = 1;
+      });
+    },
+    async waitForPlaybackRate(expected, timeoutMs = 8_000) {
+      await page.waitForFunction(
+        (target) => {
+          const rate = document.querySelector('video')?.playbackRate ?? null;
+          return rate !== null && Math.abs(rate - target) < 0.01;
+        },
+        expected,
+        { timeout: timeoutMs },
+      );
+    },
+    async sleep(ms) {
+      await new Promise((resolve) => setTimeout(resolve, ms));
+    },
+    async writeSettings(settings: Settings) {
+      await page.evaluate(async (next) => {
+        const hook = window.__speedwatcherSettings;
+        if (hook === undefined) throw new Error('__speedwatcherSettings hook missing');
+        await hook.set(next);
+      }, settings);
+    },
   };
 });
 
@@ -145,47 +187,32 @@ test('extension loads and service worker answers', async () => {
   expect(name).toBe('Speed Watcher');
 });
 
-test('manifest registers the measurement script (MAIN) and its chrome bridge (ISOLATED)', async () => {
-  // If WXT ever mis-registers the bridge (wrong name/merge), the pill falls
-  // back to default settings silently — this guard catches that.
+test('manifest registers the measurement scripts and the chrome bridge', async () => {
+  // If WXT ever mis-registers a script (wrong name/merge/world/all_frames),
+  // the pill falls back to default settings silently or embedded players go
+  // unhandled — this guard pins the whole content-script registration
+  // contract: the youtube measurement script (MAIN, top frame only), the
+  // generic matcher (MAIN, all frames), and the chrome bridge (ISOLATED).
   const scripts = await serviceWorker.evaluate(
     () =>
-      (chrome.runtime.getManifest() as { content_scripts?: Array<{ world?: string }> })
-        .content_scripts ?? [],
+      (chrome.runtime.getManifest() as {
+        content_scripts?: Array<{ world?: string; all_frames?: boolean; matches?: string[] }>;
+      }).content_scripts ?? [],
   );
-  const worlds = scripts.map((script) => script.world ?? 'ISOLATED').sort();
-  expect(worlds).toEqual(['ISOLATED', 'MAIN']);
-});
-
-test('settings overrides flow from storage through the bridge into the pill', async () => {
-  // Write exactly what the options page writes (lib/settings.ts Settings
-  // object at 'sw.settings'), then assert the pill reflects the override —
-  // with a dead bridge it would render the 250-wpm defaults instead.
-  await serviceWorker.evaluate(async () => {
-    await chrome.storage.local.set({
-      'sw.settings': {
-        target: 300,
-        conservative: false,
-        platformMax: 2,
-        sites: {},
-        contentTypes: {},
-      },
-    });
-  });
-  try {
-    await driver.navigateToWatch('real/asr-word.json');
-    const state = await driver.readPillState();
-    // 300 / 160.25 rounded to 0.05 → 1.85; the default target would give 1.55.
-    expect(state?.multiplier).toBeCloseTo(1.85, 2);
-  } finally {
-    await serviceWorker.evaluate(async () => chrome.storage.local.remove('sw.settings'));
-  }
-});
-
-test('content script measures fixture wpm; console hook agrees with event hook', async () => {
-  await runMeasurementSpecs(driver);
-  const last = await page.evaluate(() => window.__speedwatcherLastMeasure);
-  expect(consoleLines).toContain(last?.line);
+  expect(scripts).toHaveLength(3);
+  const registration = (script: (typeof scripts)[number]): string =>
+    `${script.world ?? 'ISOLATED'}|${script.all_frames === true ? 'all-frames' : 'top-only'}|${script.matches?.join(',')}`;
+  expect(scripts.map(registration).sort()).toEqual(
+    [
+      // chrome-backed settings bridge (entrypoints/bridge.content.ts)
+      'ISOLATED|all-frames|<all_urls>',
+      // generic matcher (entrypoints/generic.content.ts) — all frames so
+      // cross-origin embed players are reachable
+      'MAIN|all-frames|<all_urls>',
+      // youtube measurement pipeline (entrypoints/content.ts)
+      'MAIN|top-only|*://*.youtube.com/*',
+    ].sort(),
+  );
 });
 
 test('pill renders, applies, dismisses; music/unreachable suppress Apply; WEB-blocked fixture triggers the ANDROID fallback', async () => {
@@ -205,8 +232,6 @@ test('estimated renders increment the local demand counter (zero egress)', async
     byContentType?: Record<string, number>;
   } | null> =>
     serviceWorker.evaluate(async () => {
-      // @types/chrome here types storage.get callback-style only; MV3 still
-      // resolves it as a promise at runtime.
       const items = await new Promise<Record<string, unknown>>((resolve) =>
         chrome.storage.local.get('sw.demand', (items) => resolve(items)),
       );
@@ -223,4 +248,18 @@ test('estimated renders increment the local demand counter (zero egress)', async
   const after = await readDemand();
   expect(after?.estimatedCount).toBe((before?.estimatedCount ?? 0) + 1);
   expect(after?.byContentType?.generic).toBe((before?.byContentType?.generic ?? 0) + 1);
+});
+
+test('content script measures fixture wpm; console hook agrees with event hook', async () => {
+  await runMeasurementSpecs(driver);
+  const last = await page.evaluate(() => window.__speedwatcherLastMeasure);
+  expect(consoleLines).toContain(last?.line);
+});
+
+test('bridge settings write flows into the pill (shared with firefox single-world)', async () => {
+  await runBridgeSpecs(driver);
+});
+
+test('generic matcher harvests captions, applies, and re-asserts after a reset', async () => {
+  await runGenericSpecs(driver);
 });

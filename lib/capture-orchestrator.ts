@@ -21,7 +21,9 @@ interface OrchestratorApi {
     onRemoved: { addListener(listener: (tabId: number) => void): void };
   };
   tabCapture: { getMediaStreamId(options: { targetTabId: number }): Promise<string> };
-  offscreen: {
+  // Optional: chrome.offscreen does not exist in Firefox — startCapture
+  // degrades to a 'not supported' error instead of throwing (see guard).
+  offscreen?: {
     createDocument(options: {
       url: string;
       reasons: string[];
@@ -137,6 +139,16 @@ class CaptureOrchestrator {
     // The stream id is only usable by the renderer running the offscreen
     // document, so the document must exist first and every recreation needs a
     // fresh id.
+    // The offscreen API is Chrome-only (Firefox has no offscreen documents):
+    // report the probe as unsupported instead of throwing a TypeError on
+    // ensureOffscreenDocument. The options page renders the error state.
+    if (this.api.offscreen === undefined) {
+      return {
+        state: 'error',
+        level: 0,
+        error: 'audio probe not supported in this browser (offscreen API absent)',
+      };
+    }
     await this.ensureOffscreenDocument();
     let streamId: string;
     try {
@@ -230,9 +242,13 @@ class CaptureOrchestrator {
   }
 
   private async ensureOffscreenDocument(): Promise<void> {
+    // Only reachable after the startCapture guard, but TS cannot see across
+    // methods — Firefox (offscreen undefined) never gets here.
+    const offscreen = this.api.offscreen;
+    if (offscreen === undefined) return;
     const contexts = await this.api.runtime.getContexts({ contextTypes: ['OFFSCREEN_DOCUMENT'] });
     if (contexts.length === 0) {
-      await this.api.offscreen.createDocument({
+      await offscreen.createDocument({
         url: this.offscreenUrl,
         reasons: ['USER_MEDIA'],
         justification: 'Phase 0 probe: capture tab audio for the Phase 2 STT de-risk',

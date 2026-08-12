@@ -25,12 +25,15 @@ import { start as startGeckodriver } from 'geckodriver';
 import { createFixtureServer } from '../server';
 import type { PillState } from '../../ui/pill';
 import {
+  runBridgeSpecs,
+  runGenericSpecs,
   runMeasurementSpecs,
   runPillSpecs,
   type CaptionSource,
   type E2EDriver,
   type Measurement,
 } from '../shared/specs';
+import type { Settings } from '../../lib/settings';
 
 const GECKODRIVER_PORT = 4444;
 
@@ -145,9 +148,58 @@ async function main(): Promise<void> {
         }
         return null;
       },
+      async navigateToGeneric() {
+        await driver.get(`${server.baseUrl}/generic`);
+      },
+      async readCaptionTier() {
+        const deadline = Date.now() + 15_000;
+        while (Date.now() < deadline) {
+          const value = await driver.executeScript('return window.__speedwatcherCaptionTier');
+          if (value !== null && value !== undefined) {
+            return value as unknown as 'captions' | 'estimated';
+          }
+          await new Promise((resolve) => setTimeout(resolve, 250));
+        }
+        return null;
+      },
+      async resetPlaybackRate() {
+        await driver.executeScript(
+          'const v = document.querySelector("video"); if (v) v.playbackRate = 1;',
+        );
+      },
+      async waitForPlaybackRate(expected, timeoutMs = 8_000) {
+        const deadline = Date.now() + timeoutMs;
+        while (Date.now() < deadline) {
+          const rate = await driver.executeScript(
+            'return document.querySelector("video") ? document.querySelector("video").playbackRate : null',
+          );
+          if (typeof rate === 'number' && Math.abs(rate - expected) < 0.01) return;
+          await new Promise((resolve) => setTimeout(resolve, 250));
+        }
+        throw new Error(`playbackRate never reached ${expected} within ${timeoutMs}ms`);
+      },
+      async sleep(ms) {
+        await new Promise((resolve) => setTimeout(resolve, ms));
+      },
+      async writeSettings(settings: Settings) {
+        // The bridge hook lives on the current page (main-world content
+        // script); executeAsyncScript resolves when the write completes.
+        const result = await driver.executeAsyncScript(
+          'const done = arguments[arguments.length - 1];' +
+            'const hook = window.__speedwatcherSettings;' +
+            'if (!hook) { done("hook missing"); return; }' +
+            'hook.set(JSON.parse(arguments[0])).then(() => done());',
+          JSON.stringify(settings),
+        );
+        if (result !== null && result !== undefined) {
+          throw new Error(`writeSettings failed: ${String(result)}`);
+        }
+      },
     };
     await runMeasurementSpecs(e2e);
     await runPillSpecs(e2e);
+    await runBridgeSpecs(e2e);
+    await runGenericSpecs(e2e);
     if (server.androidPosts() === 0) {
       // The web-blocked fixture must have sent the ANDROID innertube POST
       // (same-origin, so the PAC proxy delivers it to this server).

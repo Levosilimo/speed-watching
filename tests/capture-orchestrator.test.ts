@@ -32,7 +32,10 @@ function makeApi() {
 
 type Api = ReturnType<typeof makeApi>;
 
-function makeOrchestrator(api: Api['api'], options: { forwardRetryMs?: number; forwardMaxTries?: number } = {}) {
+function makeOrchestrator(
+  api: Parameters<typeof createCaptureOrchestrator>[0],
+  options: { forwardRetryMs?: number; forwardMaxTries?: number } = {},
+) {
   return createCaptureOrchestrator(api, { offscreenUrl: OFFSCREEN_URL, ...options });
 }
 
@@ -50,6 +53,26 @@ async function startCapture(orch: ReturnType<typeof makeOrchestrator>, api: Api[
 }
 
 describe('start', () => {
+  it('reports the probe as unsupported when offscreen is absent (Firefox)', async () => {
+    const { api } = makeApi();
+    const orch = makeOrchestrator({
+      // offscreen omitted — Firefox has no offscreen API
+      tabs: api.tabs,
+      tabCapture: api.tabCapture,
+      runtime: api.runtime,
+      storage: api.storage,
+    });
+    const response = await orch.handleMessage({ kind: 'probe-start' });
+    expect(response).toMatchObject({
+      state: 'error',
+      error: expect.stringContaining('not supported'),
+    });
+    // Nothing else ran: no stream id, no document, no forward.
+    expect(api.tabCapture.getMediaStreamId).not.toHaveBeenCalled();
+    expect(api.offscreen.createDocument).not.toHaveBeenCalled();
+    expect(api.runtime.sendMessage).not.toHaveBeenCalled();
+  });
+
   it('walks idle → starting → capturing and mirrors the state', async () => {
     const { api } = makeApi();
     const orch = makeOrchestrator(api);

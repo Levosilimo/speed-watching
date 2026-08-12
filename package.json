@@ -42,6 +42,9 @@
     "@ast-grep/cli",
     "geckodriver"
   ],
+  "dependencies": {
+    "vtt.js": "^0.13.0"
+  },
   "overrides": {
     "adm-zip": "0.6.0",
     "sharp": "0.35.3",
