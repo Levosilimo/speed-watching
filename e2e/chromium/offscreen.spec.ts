@@ -6,19 +6,28 @@
 // getContexts and closeDocument all work, headless and headed — so the
 // phase-0 "#26693: offscreen impossible in Playwright" claim is stale.
 //
-// The capture chain itself is gated one hop before the offscreen document:
-// chrome.tabCapture.getMediaStreamId rejects with "Extension has not been
-// invoked for the current page (see activeTab permission)" because the
-// extension declares neither activeTab nor scripting and has no action
-// entrypoint (Chrome docs: only tabs with a granted activeTab permission can
-// be target tabs). The orchestrator therefore lands on its documented error
-// path; the mirror never leaves idle because the saveMirror write happens
-// after getMediaStreamId. This suite pins that behavior — if the string
-// below ever changes, the invocation gate moved and the assertions should be
-// upgraded to expect 'starting'/'capturing'.
+// The capture chain is gated on tabCapture invocation (lib-7 verdict, sourced
+// to Chrome docs + sample.tabcapture-recorder): getMediaStreamId accepts a
+// target tab only after the extension was invoked on it, and the action click
+// IS that invocation. The manifest now declares `action` WITHOUT
+// default_popup (a popup would consume the click and onClicked would never
+// fire) and the background wires chrome.action.onClicked to the orchestrator
+// (entrypoints/background.ts).
 //
-// The full audio chain (level > 0) needs a real capture and is covered by
-// the manual gate in docs/manual-gates-runbook.md.
+// This suite cannot click the toolbar: Playwright has no browser-UI
+// action-click synthesis and chrome.action exposes no programmatic click
+// (openPopup needs a user gesture and a popup). A fake invocation is not
+// possible either — the invocation state is browser-side, tied to the real
+// gesture. So the suite pins the honest split:
+//   (a) the manifest contract that makes onClicked fire (action key, no
+//       default_popup, permissions unchanged),
+//   (b) the pre-invocation state: probe-start lands on the documented
+//       guidance error, the mirror stays idle, the offscreen document is
+//       still created,
+//   (c) offscreen createDocument/lifecycle (unchanged).
+// The invoked path (real click → streamId → getUserMedia → level) is unit-
+// covered in tests/capture-orchestrator.test.ts (startFromAction) and needs
+// a real click + real tab audio — gate 2 of docs/manual-gates-runbook.md.
 
 import { test, expect, chromium, type BrowserContext, type Page, type Worker } from '@playwright/test';
 import { mkdtempSync, existsSync } from 'node:fs';
@@ -30,8 +39,10 @@ const extensionPath = resolve('.output/chrome-mv3');
 const fixtureBase = `http://127.0.0.1:${FIXTURE_PORT}`;
 const watchUrl = 'http://www.youtube.com/watch?v=e2e-fixture&fixture=real/manual-cue.json';
 
-// Pinned measured error: tabCapture gated on activeTab-style invocation.
-const TAB_CAPTURE_BLOCKED = 'tabCapture failed: Extension has not been invoked for the current page (see activeTab permission). Chrome pages cannot be captured.';
+// Pinned orchestrator guidance: tabCapture rejected because no invocation
+// gesture (action click) happened on the target tab.
+const INVOCATION_GUIDANCE =
+  'tabCapture not invoked: click the Speed Watcher toolbar icon on the video tab, then retry';
 
 // The pinned @types/chrome (0.0.114) predates the promise-based MV3 APIs,
 // chrome.offscreen, runtime.getContexts and storage.session — all present at
@@ -166,14 +177,37 @@ test('offscreen document lifecycle: getContexts reflects create and close', asyn
   expect(counts).toEqual({ before: 0, during: 1, after: 0 });
 });
 
-test('capture orchestrator: probe-start lands on the documented tabCapture error; mirror stays idle', async () => {
-  // The mirror is the storage.session state the orchestrator writes after
-  // getMediaStreamId succeeds. On this build the invocation gate blocks that
-  // hop, so the observable contract is: error response, no mirror write, and
-  // the offscreen document still created (ensureOffscreenDocument ran first).
+test('manifest exposes the action entrypoint (no popup) that makes onClicked fire', async () => {
+  const manifest = await serviceWorker.evaluate(async () => {
+    const m = await chrome.runtime.getManifest();
+    return {
+      action: m.action,
+      permissions: m.permissions,
+    };
+  });
+  // The action click is the tabCapture invocation gesture; a default_popup
+  // would swallow the click and onClicked would never fire.
+  expect(manifest.action?.default_title).toBe('Speed Watcher');
+  expect(manifest.action?.default_popup).toBeUndefined();
+  expect(manifest.action?.default_icon).toMatchObject({
+    '16': 'icon/16.png',
+    '32': 'icon/32.png',
+    '48': 'icon/48.png',
+    '128': 'icon/128.png',
+  });
+  // action is not a permission; the set stays exactly as before.
+  expect(manifest.permissions).toEqual(['storage', 'tabCapture', 'offscreen']);
+});
+
+test('capture orchestrator: probe-start without invocation lands on the guidance error; mirror stays idle', async () => {
+  // Without a toolbar click the invocation never happens (a runtime message
+  // is not one of the four invocation gestures), so the options Test button
+  // reaches the documented error path. The observable contract: guidance
+  // error response, no mirror write, and the offscreen document still
+  // created (ensureOffscreenDocument ran first).
   const start = await optionsPage.evaluate(() => chrome.runtime.sendMessage({ kind: 'probe-start' }));
   expect(start.state).toBe('error');
-  expect(start.error).toBe(TAB_CAPTURE_BLOCKED);
+  expect(start.error).toBe(INVOCATION_GUIDANCE);
 
   const after = await serviceWorker.evaluate(async () => {
     const items = await chrome.storage.session.get('probeCapture');
