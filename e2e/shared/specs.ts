@@ -74,8 +74,9 @@ export interface E2EDriver {
   applyPill(): Promise<void>;
   /** Trigger the pill's Dismiss handler. */
   dismissPill(): Promise<void>;
-  /** The page's <video> playbackRate, or null when no video element exists. */
-  readPlaybackRate(): Promise<number | null>;
+  /** The page's <video> playbackRate (index picks the element on
+   * multi-video pages), or null when no video element exists. */
+  readPlaybackRate(index?: number): Promise<number | null>;
   /** Which caption path served the page: 'web', 'android', or 'none'. */
   readCaptionSource(): Promise<CaptionSource | null>;
   /** Navigate to the generic player fixture page (non-YouTube origin). */
@@ -84,6 +85,12 @@ export interface E2EDriver {
   readCaptionTier(): Promise<'captions' | 'estimated' | null>;
   /** Set the page video's playbackRate to 1 (simulates a player reset). */
   resetPlaybackRate(): Promise<void>;
+  /** Set the page video's playbackRate to an explicit value (user manual). */
+  setPlaybackRate(rate: number): Promise<void>;
+  /** Navigate to a watch page with two <video> elements. */
+  navigateToMultiVideo(fixture: string): Promise<void>;
+  /** Dispatch a media event on the index-th <video> element. */
+  fireMediaEvent(index: number, type: string): Promise<void>;
   /** Poll readPlaybackRate until it equals expected (re-assert evidence). */
   waitForPlaybackRate(expected: number, timeoutMs?: number): Promise<void>;
   /** Wait ms (for asserting that a stopped loop does NOT re-assert). */
@@ -369,13 +376,46 @@ export async function runGenericSpecs(driver: E2EDriver): Promise<void> {
   await driver.resetPlaybackRate();
   await driver.waitForPlaybackRate(state.multiplier);
 
-  // (d) Dismiss stops the loop: after dismiss, a reset sticks.
+  // (d) A user's manual rate is respected: the loop only re-asserts resets
+  // to 1.0, so a manual 1.25 must stick past a re-check interval.
+  await driver.setPlaybackRate(1.25);
+  await driver.sleep(3500); // > one re-check interval (2s)
+  const manual = await driver.readPlaybackRate();
+  if (manual === null || Math.abs(manual - 1.25) > RATE_TOLERANCE) {
+    throw new Error(
+      `generic: playbackRate ${manual} after manual 1.25, expected 1.25 (loop must not fight the user)`,
+    );
+  }
+
+  // (e) Dismiss stops the loop: after dismiss, a reset sticks.
   await driver.dismissPill();
   await driver.resetPlaybackRate();
   await driver.sleep(3500); // > one re-check interval (2s)
   const after = await driver.readPlaybackRate();
   if (after === null || Math.abs(after - 1) > RATE_TOLERANCE) {
     throw new Error(`generic: playbackRate ${after} after dismiss + reset, expected 1 (loop stopped)`);
+  }
+}
+
+/** Multi-video watch page: the active element follows the video that
+ * actually plays, and Apply targets only that element. */
+export async function runMultiVideoSpecs(driver: E2EDriver): Promise<void> {
+  const fixture = 'real/asr-word.json';
+  await driver.navigateToMultiVideo(fixture);
+  const state = expectState(await driver.readPillState(), fixture);
+  await driver.fireMediaEvent(1, 'playing');
+  await driver.applyPill();
+  const first = await driver.readPlaybackRate(0);
+  const second = await driver.readPlaybackRate(1);
+  if (first === null || Math.abs(first - 1) > RATE_TOLERANCE) {
+    throw new Error(
+      `multi-video: video[0] playbackRate ${first} after apply on video[1], expected 1 (untouched)`,
+    );
+  }
+  if (second === null || Math.abs(second - state.multiplier) > RATE_TOLERANCE) {
+    throw new Error(
+      `multi-video: video[1] playbackRate ${second}, expected ${state.multiplier} (the playing video)`,
+    );
   }
 }
 

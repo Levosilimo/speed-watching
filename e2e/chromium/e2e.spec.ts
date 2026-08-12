@@ -19,6 +19,7 @@ import {
   runBridgeSpecs,
   runGenericSpecs,
   runMeasurementSpecs,
+  runMultiVideoSpecs,
   runPillSpecs,
   type CaptionSource,
   type E2EDriver,
@@ -83,7 +84,10 @@ test.beforeAll(async () => {
       return;
     }
     const fixture = url.searchParams.get('fixture');
-    const response = await fetch(`${fixtureBase}/watch?fixture=${fixture}`);
+    const multi = url.searchParams.get('multi');
+    const response = await fetch(
+      `${fixtureBase}/watch?fixture=${fixture}&multi=${multi ?? ''}`,
+    );
     await route.fulfill({
       status: response.status,
       contentType: 'text/html',
@@ -122,8 +126,28 @@ test.beforeAll(async () => {
     async dismissPill() {
       await page.evaluate(() => window.__speedwatcherPill?.dismiss());
     },
-    async readPlaybackRate() {
-      return page.evaluate(() => document.querySelector('video')?.playbackRate ?? null);
+    async readPlaybackRate(index = 0) {
+      return page.evaluate((i) => {
+        const video = document.querySelectorAll('video')[i];
+        return video?.playbackRate ?? null;
+      }, index);
+    },
+    async setPlaybackRate(rate) {
+      await page.evaluate((value) => {
+        const video = document.querySelector('video');
+        if (video !== null) video.playbackRate = value;
+      }, rate);
+    },
+    async navigateToMultiVideo(fixture) {
+      await page.goto(`${watchUrl(fixture)}&multi=1`);
+    },
+    async fireMediaEvent(index, type) {
+      await page.evaluate(
+        ({ i, eventType }) => {
+          document.querySelectorAll('video')[i]?.dispatchEvent(new Event(eventType));
+        },
+        { i: index, eventType: type },
+      );
     },
     async readCaptionSource() {
       await page.waitForFunction(
@@ -262,4 +286,83 @@ test('bridge settings write flows into the pill (shared with firefox single-worl
 
 test('generic matcher harvests captions, applies, and re-asserts after a reset', async () => {
   await runGenericSpecs(driver);
+});
+
+test('multi-video page: Apply targets the video that actually plays', async () => {
+  await runMultiVideoSpecs(driver);
+});
+
+test('SPA race: an Apply between yt-navigate-start and the fresh pill is a no-op', async () => {
+  const fixture = 'real/asr-word.json';
+  await driver.navigateToWatch(fixture);
+  const state = await driver.readPillState();
+  // The old video's recommendation is live; a fast Apply right after
+  // navigation starts must not apply the previous multiplier.
+  const rateBefore = await driver.readPlaybackRate();
+  await page.evaluate(() => {
+    document.dispatchEvent(new Event('yt-navigate-start'));
+    window.__speedwatcherPill?.apply();
+  });
+  const rateAfter = await driver.readPlaybackRate();
+  expect(rateBefore).toBe(1);
+  expect(rateAfter).toBe(1);
+  expect(rateAfter).not.toBeCloseTo(state?.multiplier ?? -1, 2);
+  const pillState = await driver.readPillState();
+  expect(pillState?.mode).toBe('none');
+});
+
+test('demand and override-log records survive a service-worker restart; the SW re-answers', async () => {
+  // Seed records through the bridge (chrome.storage.local writes need no SW).
+  await driver.navigateToWatch('synthetic/no-tracks.json');
+  await driver.readPillState();
+  await driver.applyPill();
+  await driver.sleep(300); // let the log append land
+
+  const readStorage = (worker: Worker, key: string): Promise<unknown> =>
+    worker.evaluate(async (storageKey) => {
+      const items = await new Promise<Record<string, unknown>>((resolve) =>
+        chrome.storage.local.get(storageKey, (items) => resolve(items)),
+      );
+      return items[storageKey];
+    }, key);
+
+  const demand = await readStorage(serviceWorker, 'sw.demand');
+  const log = await readStorage(serviceWorker, 'sw.overrideLog');
+  expect(demand).not.toBeNull();
+  expect(log).not.toBeNull();
+
+  // Stop the worker as the browser would on idle. newCDPSession accepts
+  // only Page/Frame in this playwright version, so the versionId comes from
+  // the ServiceWorker domain's workerVersionUpdated events.
+  const session = await context.newCDPSession(page);
+  const extensionUrl = serviceWorker.url();
+  const statusLog: Array<{ versionId: string; runningStatus?: string }> = [];
+  session.on('ServiceWorker.workerVersionUpdated', (event: {
+    versions: Array<{ scriptURL?: string; versionId: string; runningStatus?: string }>;
+  }) => {
+    for (const version of event.versions) {
+      if (version.scriptURL === extensionUrl) {
+        statusLog.push({ versionId: version.versionId, runningStatus: version.runningStatus });
+      }
+    }
+  });
+  await session.send('ServiceWorker.enable');
+  await expect.poll(() => statusLog.length, { timeout: 10_000 }).toBeGreaterThan(0);
+  const latest = statusLog[statusLog.length - 1];
+  if (latest === undefined) throw new Error('no service-worker version observed');
+  await session.send('ServiceWorker.stopWorker', { versionId: latest.versionId });
+  await expect.poll(() => statusLog.at(-1)?.runningStatus, { timeout: 10_000 }).toBe('stopped');
+
+  // Wake it: the options page's probe-state round trip targets the SW.
+  const extensionId = new URL(serviceWorker.url()).host;
+  const optionsPage = await context.newPage();
+  await optionsPage.goto(`chrome-extension://${extensionId}/options.html`);
+  await expect.poll(() => statusLog.at(-1)?.runningStatus, { timeout: 15_000 }).toBe('running');
+
+  // Records live in chrome.storage.local, so they survive the restart; the
+  // re-answering worker reads them back.
+  expect(await readStorage(serviceWorker, 'sw.demand')).toEqual(demand);
+  expect(await readStorage(serviceWorker, 'sw.overrideLog')).toEqual(log);
+  expect(await serviceWorker.evaluate(() => chrome.runtime.getManifest().name)).toBe('Speed Watcher');
+  await optionsPage.close();
 });
