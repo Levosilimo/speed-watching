@@ -6,6 +6,23 @@ audio can be routed through an offscreen document into an AudioContext, and
 answer the three known failure modes. The code is a throwaway probe, not
 production.
 
+## Status update (2026-08-12) — invocation blocker resolved
+
+The `getMediaStreamId` blocker this report documents is **resolved** by the
+action entrypoint: `wxt.config.ts` now declares `action` (default_icon +
+default_title, **no default_popup** — a popup would consume the click and
+`chrome.action.onClicked` would never fire) and `entrypoints/background.ts`
+wires the click to the orchestrator (`startFromAction`). Per the lib-7
+verdict (sourced to Chrome docs + sample.tabcapture-recorder + Cap/Vexa/
+Interceptor): **no `activeTab` permission is needed** — the action click IS
+the invocation gesture, and `getMediaStreamId({targetTabId})` succeeds for
+the clicked tab. The orchestrator maps Chrome's raw `has not been invoked`
+rejection to a guidance error (click the toolbar icon); the options-page
+Test button remains non-invoking (runtime messages are not among the four
+invocation gestures). The CfT e2e lane now pins the manifest contract +
+pre-invocation state; the **residual is human/runbook** — a real user click
+on a real tab with real audio, gate 2 of `docs/manual-gates-runbook.md`.
+
 ## What was built
 
 | file | role |
@@ -105,18 +122,19 @@ part 2026-08-12):**
   Every variant (`targetTabId`, default active tab, `consumerTabId`) rejects
   with `Extension has not been invoked for the current page (see activeTab
   permission). Chrome pages cannot be captured.` — even with the extension's
-  content scripts running in the target tab. The extension declares neither
-  `activeTab` nor `scripting` and has no action entrypoint, so the
-  orchestrator cannot obtain a streamId; the probe lands on its documented
-  `tabCapture failed:` error path. **Implication for the manual test below:
-  the same failure is expected on real Chrome until the manifest gains
-  `activeTab` (or `scripting`) and an invocation path** (action-icon click /
-  keyboard shortcut, or a no-op `executeScript` on the target tab — the
-  Cap/ScriptCat pattern). The manual gate documents this exact error as the
-  expected blocked-by-design result (`docs/manual-gates-runbook.md`).
+  content scripts running in the target tab. ~~The extension declares neither
+  `activeTab` nor `scripting` and has no action entrypoint~~ —
+  **SUPERSEDED.** The manifest now declares `action` (no `default_popup`)
+  and the background wires `chrome.action.onClicked` → orchestrator; the
+  click is the invocation, so `getMediaStreamId({targetTabId: tab.id})`
+  succeeds for the clicked tab without any permission change (lib-7
+  verdict). The orchestrator's error path now carries the toolbar-icon
+  guidance instead of the raw Chrome string.
 - Consequently: the `streamId → getUserMedia → AudioContext` chain, the level
   meter reading a real tab, tab-switch degradation live, and the 30 s idle
   behavior are all unverified. Nothing in this report claims audio flowed.
+  The residual gap is a real user click + real tab audio — the manual gate
+  (`docs/manual-gates-runbook.md` gate 2) covers it.
 - The user-gesture requirement on `getMediaStreamId` (call from the options
   page click, through the background) — code path exercised, real gesture
   unverified.
@@ -145,13 +163,17 @@ Prereqs: real Chrome ≥ 116 with audio output, a video with speech.
    → Load unpacked → `.output/chrome-mv3/`.
 2. Keep a video tab playing (this is the capture source) and open the options
    page in another tab.
-3. Click **Test audio capture**. Expected: status goes `starting` →
-   `capturing` within ~2 s; the meter bar tracks speech; the wasm line reads
-   `wasm: BLOCKED` (until Phase 2 adds the CSP) and a SharedArrayBuffer
-   verdict. If instead the status shows an error, the log explains which hop
-   failed — `tabCapture failed: ...` means the gesture didn't propagate, and
-   anything mentioning `getUserMedia` means the streamId was rejected in the
-   offscreen document.
+3. Click the **Speed Watcher toolbar icon** on the video tab (via the puzzle
+   menu if unpinned). This click is the invocation that lets
+   `getMediaStreamId` target the tab — the options Test button alone cannot
+   invoke. Then, in the options page tab, click **Test audio capture**.
+   Expected: status goes `starting` → `capturing` within ~2 s; the meter bar
+   tracks speech; the wasm line reads `wasm: BLOCKED` (until Phase 2 adds the
+   CSP) and a SharedArrayBuffer verdict. If instead the status shows an
+   error, the log explains which hop failed — `tabCapture not invoked:`
+   means the icon click did not happen on this tab (or the tab navigated
+   since), and anything mentioning `getUserMedia` means the streamId was
+   rejected in the offscreen document.
 4. Pause the video or play silence: meter must drop to ~0 while status stays
    `capturing`.
 5. Switch to a third tab: status must show `degraded — tab switched away`
@@ -188,9 +210,11 @@ to be researched).
   user's Chrome; if it holds, ORT Web's threaded WASM may work, which matters
   for real-time transcription latency.
 - **The audio path itself remains the open question.** Everything up to the
-  offscreen API boundary is proven; the boundary and the audio flow need the
-  manual test above. The offscreen doc already reports a numeric level, so
-  the user's run produces a yes/no answer, not a log to interpret.
+  offscreen API boundary is proven; the invocation gate is now resolved (the
+  action entrypoint), and the boundary + audio flow need the manual test
+  above — a real click and real tab audio. The offscreen doc already reports
+  a numeric level, so the user's run produces a yes/no answer, not a log to
+  interpret.
 
 ## Deviations and notes
 
