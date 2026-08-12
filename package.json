@@ -7,6 +7,7 @@
   "scripts": {
     "dev": "wxt",
     "build": "wxt build",
+    "build:e2e": "wxt build --mode e2e",
     "zip": "wxt zip",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
@@ -16,6 +17,7 @@
     "knip": "knip",
     "ci": "bun run scripts/run-ci.ts",
     "build:firefox": "wxt build -b firefox",
+    "build:firefox:e2e": "wxt build -b firefox --mode e2e",
     "e2e:chromium": "playwright test -c playwright.config.chromium.ts",
     "e2e:cft": "playwright test -c playwright.config.chromium.cft.ts",
     "e2e:firefox": "bun run e2e/firefox/run.ts",

@@ -1,5 +1,5 @@
-// The console.info lines in this file are the Phase-0 measurement hook
-// (one-line wpm summary per video, per spike-lane spec) — not leftovers.
+// The console.info lines are the E2E measurement hook (one-line wpm
+// summary per video), compiled out of the store bundle (SEC-2).
 // aislop-ignore-file console-leftover
 //
 // World choice: the WEB caption fetch (signed timedtext baseUrl with pot)
@@ -100,22 +100,25 @@ export default defineContentScript({
     document.addEventListener('play', onMediaEvent, true);
     document.addEventListener('playing', onMediaEvent, true);
     document.addEventListener('timeupdate', onMediaEvent, true);
-    window.__speedwatcherPill = {
-      state: null,
-      // Mirrors the pill's own Apply gate (ui/pill.ts wireEvents): music and
-      // unreachable states must not touch playbackRate.
-      apply: () => {
-        if (current === null) return;
-        if (current.recommendation.mode === 'music' || current.recommendation.mode === 'unreachable') {
-          return;
-        }
-        applyMultiplier(current.recommendation.multiplier);
-      },
-      dismiss: () => dismissCurrent(),
-    };
-    window.__speedwatcherSettings = {
-      set: (settings) => bridge.request({ type: 'settings:set', settings }).then(() => undefined),
-    };
+    // E2E-only hooks (SEC-2): the store bundle ships without these.
+    if (__E2E__) {
+      window.__speedwatcherPill = {
+        state: null,
+        // Mirrors the pill's own Apply gate (ui/pill.ts wireEvents): music and
+        // unreachable states must not touch playbackRate.
+        apply: () => {
+          if (current === null) return;
+          if (current.recommendation.mode === 'music' || current.recommendation.mode === 'unreachable') {
+            return;
+          }
+          applyMultiplier(current.recommendation.multiplier);
+        },
+        dismiss: () => dismissCurrent(),
+      };
+      window.__speedwatcherSettings = {
+        set: (settings) => bridge.request({ type: 'settings:set', settings }).then(() => undefined),
+      };
+    }
     void measure();
     // SPA navigation: invalidate the old video's recommendation before the
     // next measure lands, so a fast Apply cannot use the previous multiplier.
@@ -143,11 +146,11 @@ function isLive(): boolean {
 async function measure(): Promise<void> {
   const response = await waitForPlayerResponse();
   if (!response) {
-    console.info('[speed-watcher] wpm: player response never appeared');
+    if (__E2E__) console.info('[speed-watcher] wpm: player response never appeared');
     return;
   }
   if (isLive()) {
-    console.info('[speed-watcher] wpm: live stream — pill suppressed');
+    if (__E2E__) console.info('[speed-watcher] wpm: live stream — pill suppressed');
     showPill(NONE_STATE);
     return;
   }
@@ -157,13 +160,13 @@ async function measure(): Promise<void> {
   const site = location.hostname.replace(/^www\./, '');
   const track = response.captions?.playerCaptionsTracklistRenderer?.captionTracks?.[0];
   if (track === undefined) {
-    console.info('[speed-watcher] wpm: no caption tracks for this video — estimated');
+    if (__E2E__) console.info('[speed-watcher] wpm: no caption tracks for this video — estimated');
     showEstimatedPill(videoId, settings, site);
     return;
   }
   const json = await fetchCaptions(track, videoId);
   if (json === null) {
-    console.info('[speed-watcher] wpm: caption fetch failed — estimated');
+    if (__E2E__) console.info('[speed-watcher] wpm: caption fetch failed — estimated');
     showEstimatedPill(videoId, settings, site);
     return;
   }
@@ -184,9 +187,9 @@ async function measure(): Promise<void> {
       nWords: totalWords(cues),
     });
   } else {
-    console.info(
-      `[speed-watcher] video=${videoId} kind=${kind} lang=${lang}: captions parsed but empty — estimated`,
-    );
+    if (__E2E__) {
+      console.info(`[speed-watcher] video=${videoId} kind=${kind} lang=${lang}: captions parsed but empty — estimated`);
+    }
     showEstimatedPill(videoId, settings, site);
     return;
   }
@@ -266,15 +269,15 @@ async function loadSettings(): Promise<Settings> {
 async function fetchCaptions(track: CaptionTrack, videoId: string): Promise<unknown | null> {
   const web = await fetchJson3(track.baseUrl);
   if (web !== null) {
-    window.__speedwatcherCaptionSource = 'web';
+    if (__E2E__) window.__speedwatcherCaptionSource = 'web';
     return web;
   }
   const android = await fetchAndroidCaptions(videoId);
   if (android !== null) {
-    window.__speedwatcherCaptionSource = 'android';
+    if (__E2E__) window.__speedwatcherCaptionSource = 'android';
     return android;
   }
-  window.__speedwatcherCaptionSource = 'none';
+  if (__E2E__) window.__speedwatcherCaptionSource = 'none';
   return null;
 }
 
@@ -335,7 +338,7 @@ function ensurePill(): PillApi {
 
 function showPill(state: PillState): void {
   ensurePill().update(state);
-  if (window.__speedwatcherPill !== undefined) window.__speedwatcherPill.state = state;
+  if (__E2E__ && window.__speedwatcherPill !== undefined) window.__speedwatcherPill.state = state;
 }
 
 function applyMultiplier(multiplier: number): void {
@@ -391,7 +394,7 @@ function logWpm(
     `[speed-watcher] video=${videoId} kind=${kind} lang=${lang} ` +
     `wpm word-level=${fmt(stats.word)} cue-level=${fmt(stats.cue)} ` +
     `corrected=${fmt(stats.corrected)} nWords=${stats.nWords}`;
-  console.info(line);
+  if (__E2E__) console.info(line);
   // E2E hook: the fixture page listens for this event; the console line
   // alone is not assertable from WebDriver (no console API in Selenium).
   window.dispatchEvent(
