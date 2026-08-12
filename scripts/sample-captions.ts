@@ -1,30 +1,53 @@
-// One-off local measurement harness for the Phase 0 caption-WPM spike.
-// NOT part of the vitest suite: it drives a real browser against real
-// YouTube videos. Run: bun run scripts/sample-captions.ts [--headed] [--limit N]
-// Re-analyze an existing results file without network: --analyze
-// Re-capture only the fixture videos: --refixture
+// POT-aware caption re-run harness (runbook gate 1). Drives a real browser
+// against YouTube watch pages and captures the PLAYER'S OWN signed
+// /api/timedtext response — the only WEB path that carries a valid POT token
+// + signature bound to the video. The ANDROID innertube fetch stays as the
+// fallback/control for the windows==segs parity assertion.
 //
-// Method (documented in docs/phase0-caption-wpm.md):
+// Run: bun run scripts/sample-captions.ts [--headed] [--limit N]
+//      [--out-dir=DIR] [--capture-web-only] [--refixture] [--analyze]
+//
+// Method:
 // 1. Load the watch page, read ytInitialPlayerResponse for track metadata.
-// 2. POST youtubei/v1/player with the ANDROID client to obtain caption
-//    track URLs (the WEB-client timedtext endpoint returns empty 200s from
-//    this datacenter IP; the player's own WEB fetch fails the same way).
-// 3. Fetch the chosen track's baseUrl as fmt=json3 inside the page context.
+// 2. Toggle captions on (CC pill; menu track pick as fallback) and intercept
+//    the player's /api/timedtext request via page.on('response')
+//    (scripts/web-capture.ts).
+// 3. Parse the intercepted WEB payload (windows layout) with lib/captions.ts.
+// 4. Fetch the chosen track via the ANDROID innertube client (segs layout,
+//    scripts/captions-android.ts) as the control for parity.
 
 import { mkdirSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { isAbsolute, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { chromium, type BrowserContext, type Page } from 'playwright';
-import { parseYouTubeJson3 } from '../lib/captions';
-import type { PlayerResponse } from '../lib/youtube';
 import {
-  analyze,
+  chromium,
+  type Browser,
+  type BrowserContext,
+  type Page,
+} from 'playwright';
+import { parseYouTubeJson3 } from '../lib/captions';
+import {
   analyzeExisting,
+  cuesParity,
+  emitWebFixtures,
   FIXTURE_SLOTS,
   printReport,
+  ratesFor,
   saveFixtures,
+  truncateForFixture,
+  wordsParity,
   type SampleRecord,
 } from './sample-analysis';
+import { androidControl } from './captions-android';
+import {
+  dismissConsentIfPresent,
+  enableCaptions,
+  hookTimedtext,
+  pageErrorHint,
+  readPlayerInfo,
+  waitForTimedtext,
+  type TimedtextCapture,
+} from './web-capture';
 
 interface SampleVideo {
   videoId: string;
@@ -59,217 +82,202 @@ const VIDEOS: SampleVideo[] = [
 ];
 
 const ROOT = fileURLToPath(new URL('.', import.meta.url));
-const RESULTS_DIR = join(ROOT, 'data');
-const RESULTS_FILE = join(RESULTS_DIR, 'sample-results.jsonl');
+const DEFAULT_OUT_DIR = join(ROOT, 'data', 'web-rerun');
 const FIXTURES_DIR = join(ROOT, '..', 'tests', 'fixtures', 'real');
 
-const ANDROID_CLIENT = {
-  clientName: 'ANDROID',
-  clientVersion: '20.10.31',
-  androidSdkVersion: 30,
-  hl: 'en',
-  gl: 'US',
-};
-
-interface ExtractResult {
-  json: unknown;
-  kind: string;
-  lang: string;
-  trackCount: number;
-}
-
-async function extractCaptionsInPage(input: {
-  videoId: string;
-  client: Record<string, unknown>;
-}): Promise<ExtractResult | { error: string }> {
-  const playerRes = await fetch('https://www.youtube.com/youtubei/v1/player?prettyPrint=false', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      context: { client: input.client },
-      videoId: input.videoId,
-    }),
-  });
-  if (!playerRes.ok) {
-    return { error: `android-player-http-${playerRes.status}` };
-  }
-  const playerJson = (await playerRes.json()) as {
-    captions?: {
-      playerCaptionsTracklistRenderer?: {
-        captionTracks?: Array<{
-          kind?: string;
-          languageCode?: string;
-          baseUrl: string;
-        }>;
-      };
-    };
-  };
-  const tracks =
-    playerJson.captions?.playerCaptionsTracklistRenderer?.captionTracks ?? [];
-  const pick =
-    tracks.find((t) => t.kind === 'asr' && t.languageCode === 'en') ??
-    tracks.find((t) => t.kind !== 'asr' && t.languageCode === 'en') ??
-    tracks.find((t) => t.kind === 'asr') ??
-    tracks[0];
-  if (!pick) return { error: 'no-caption-tracks' };
-  const url = new URL(pick.baseUrl, location.href);
-  url.searchParams.set('fmt', 'json3');
-  const response = await fetch(url);
-  if (!response.ok) return { error: `caption-fetch-http-${response.status}` };
-  const text = await response.text();
-  if (text.length === 0) return { error: 'caption-fetch-empty' };
-  let json: unknown;
-  try {
-    json = JSON.parse(text) as unknown;
-  } catch {
-    return { error: 'caption-fetch-not-json' };
-  }
+function initRecord(video: SampleVideo): SampleRecord {
   return {
-    json,
-    kind: pick.kind ?? 'manual',
-    lang: pick.languageCode ?? '?',
-    trackCount: tracks.length,
-  };
-}
-
-async function sampleVideo(
-  context: BrowserContext,
-  video: SampleVideo,
-): Promise<{ record: SampleRecord; rawJson: unknown | null }> {
-  const url = `https://www.youtube.com/watch?v=${video.videoId}`;
-  const record: SampleRecord = {
     videoId: video.videoId,
-    url,
+    url: `https://www.youtube.com/watch?v=${video.videoId}`,
     category: video.category,
     status: 'error',
     error: null,
     landedUrl: '',
     title: null,
-    kind: null,
-    lang: null,
-    trackCount: null,
     webTrackCount: null,
     webAsrCount: null,
     webManualCount: null,
-    nCues: null,
-    nWordsTimed: null,
-    textTokens: null,
-    icuTokens: null,
-    tokenDeltaPct: null,
-    coveragePct: null,
-    spanSec: null,
-    speechEstSec: null,
-    wordWpm: null,
-    cueWpm: null,
-    cueWpmCorrected: null,
-    monotonicPct: null,
-    nBracketMarkers: null,
-    firstCue: null,
-    lastCue: null,
+    webPayloadSaved: false,
+    webBytes: null,
+    webFormat: null,
+    windowsWords: null,
+    windowsCues: null,
+    androidKind: null,
+    androidLang: null,
+    androidTrackCount: null,
+    segsCues: null,
+    segsWords: null,
+    wordsParity: null,
+    cuesParity: null,
+    unifiedRate: null,
+    wordAccurateRate: null,
+    pauseBiasPct: null,
+    pauseBiasSource: null,
   };
-  const page = await context.newPage();
-  let rawJson: unknown | null = null;
-  try {
-    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60_000 });
-    record.landedUrl = page.url();
-    await dismissConsentIfPresent(page);
-    await page.waitForFunction(
-      () => window.ytInitialPlayerResponse !== undefined,
-      undefined,
-      { timeout: 25_000 },
-    );
-    const web = await page.evaluate((): {
-      title: string | null;
-      trackCount: number;
-      asrCount: number;
-      manualCount: number;
-    } => {
-      const pr: PlayerResponse | undefined = window.ytInitialPlayerResponse;
-      const tracks =
-        pr?.captions?.playerCaptionsTracklistRenderer?.captionTracks ?? [];
-      return {
-        title: pr?.videoDetails?.title ?? null,
-        trackCount: tracks.length,
-        asrCount: tracks.filter((t) => t.kind === 'asr').length,
-        manualCount: tracks.filter((t) => t.kind !== 'asr').length,
-      };
-    });
-    record.title = web.title;
-    record.webTrackCount = web.trackCount;
-    record.webAsrCount = web.asrCount;
-    record.webManualCount = web.manualCount;
-    const extracted = await page.evaluate(extractCaptionsInPage, {
-      videoId: video.videoId,
-      client: ANDROID_CLIENT,
-    });
-    if ('error' in extracted) {
-      record.error = extracted.error;
-      return { record, rawJson: null };
+}
+
+async function loadWatchPage(
+  page: Page,
+  record: SampleRecord,
+  url: string,
+): Promise<{ title: string | null; trackCount: number; asrCount: number }> {
+  await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60_000 });
+  record.landedUrl = page.url();
+  await dismissConsentIfPresent(page);
+  await page.waitForFunction(
+    () => window.ytInitialPlayerResponse !== undefined,
+    undefined,
+    { timeout: 25_000 },
+  );
+  const web = await readPlayerInfo(page);
+  record.title = web.title;
+  record.webTrackCount = web.trackCount;
+  record.webAsrCount = web.asrCount;
+  record.webManualCount = web.manualCount;
+  return web;
+}
+
+/**
+ * Toggle captions on, wait for the player's signed timedtext request, and
+ * classify the outcome into the record. Returns the parsed WEB payload, or
+ * null when the request never landed, was empty, or was not json3.
+ */
+async function captureWebPayload(
+  page: Page,
+  record: SampleRecord,
+  captures: TimedtextCapture[],
+  asrBearing: boolean,
+): Promise<unknown | null> {
+  await enableCaptions(page);
+  let timedtext = await waitForTimedtext(captures, 5000);
+  if (timedtext === null) {
+    // a play toggle forces the player to (re)issue its caption request
+    await page.keyboard.press('k').catch(() => undefined);
+    timedtext = await waitForTimedtext(captures, 3000);
+  }
+  if (timedtext === null) {
+    if (asrBearing) {
+      record.status = 'web-empty';
+      record.error = 'no-timedtext-request';
     }
-    rawJson = extracted.json;
-    record.kind = extracted.kind;
-    record.lang = extracted.lang;
-    record.trackCount = extracted.trackCount;
-    const parsed = parseYouTubeJson3(extracted.json);
-    Object.assign(record, analyze(parsed));
-    record.status = 'ok';
+    return null;
+  }
+  record.webBytes = timedtext.bytes;
+  record.webFormat = timedtext.format;
+  if (timedtext.body.length === 0) {
+    if (asrBearing) record.status = 'web-empty';
+    record.error = `timedtext-empty (http ${timedtext.httpStatus})`;
+    return null;
+  }
+  if (timedtext.format !== 'json3') {
+    if (asrBearing) record.status = 'web-empty';
+    record.error = `timedtext-${timedtext.format}-only (${timedtext.bytes} bytes)`;
+    return null;
+  }
+  let json: unknown = null;
+  try {
+    json = JSON.parse(timedtext.body) as unknown;
+  } catch {
+    json = null;
+  }
+  if (json === null) {
+    if (asrBearing) record.status = 'web-empty';
+    record.error = 'web-captured-not-json';
+    return null;
+  }
+  const parsed = parseYouTubeJson3(json);
+  record.windowsWords = parsed.words.length;
+  record.windowsCues = parsed.cues.length;
+  if (asrBearing) {
+    record.status = parsed.words.length > 0 ? 'web-captured' : 'parse-failed';
+    if (record.status === 'parse-failed') {
+      record.error = 'windows-parse-zero-words';
+    }
+  }
+  return json;
+}
+
+function applyRatesAndParity(
+  record: SampleRecord,
+  webJson: unknown | null,
+  androidJson: unknown | null,
+  asrBearing: boolean,
+): void {
+  if (webJson !== null && androidJson !== null && asrBearing) {
+    const webParsed = parseYouTubeJson3(webJson);
+    const androidParsed = parseYouTubeJson3(androidJson);
+    record.cuesParity = cuesParity(webParsed, androidParsed);
+    record.wordsParity = wordsParity(webParsed, androidParsed);
+  }
+  // rates + pause bias: WEB payload preferred, ANDROID control fallback
+  const webRates = webJson !== null ? ratesFor(parseYouTubeJson3(webJson)) : null;
+  if (webRates !== null) {
+    record.unifiedRate = webRates.unifiedRate;
+    record.wordAccurateRate = webRates.wordAccurateRate;
+    record.pauseBiasPct = webRates.pauseBiasPct;
+    record.pauseBiasSource = 'web';
+  } else if (androidJson !== null) {
+    const androidRates = ratesFor(parseYouTubeJson3(androidJson));
+    if (androidRates !== null) {
+      record.unifiedRate = androidRates.unifiedRate;
+      record.wordAccurateRate = androidRates.wordAccurateRate;
+      record.pauseBiasPct = androidRates.pauseBiasPct;
+      record.pauseBiasSource = 'android';
+    }
+  }
+}
+
+async function sampleVideo(
+  context: BrowserContext,
+  video: SampleVideo,
+  captureWebOnly: boolean,
+): Promise<{ record: SampleRecord; webJson: unknown | null; androidJson: unknown | null }> {
+  const record = initRecord(video);
+  const page = await context.newPage();
+  const captures: TimedtextCapture[] = [];
+  hookTimedtext(page, captures);
+  let webJson: unknown | null = null;
+  let androidJson: unknown | null = null;
+  try {
+    const web = await loadWatchPage(page, record, record.url);
+    if (web.trackCount === 0) {
+      record.status = 'no-track';
+      if (!captureWebOnly) {
+        await androidControl(page, record, video.videoId, (json) => {
+          androidJson = json;
+        });
+      }
+      return { record, webJson, androidJson };
+    }
+    const asrBearing = web.asrCount > 0;
+    if (!asrBearing) record.status = 'manual-only';
+    webJson = await captureWebPayload(page, record, captures, asrBearing);
+    if (!captureWebOnly) {
+      await androidControl(page, record, video.videoId, (json) => {
+        androidJson = json;
+      });
+    }
+    applyRatesAndParity(record, webJson, androidJson, asrBearing);
   } catch (err) {
-    record.error = err instanceof Error && err.message ? err.message : String(err);
+    record.status = 'error';
+    record.error =
+      err instanceof Error && err.message ? err.message : String(err);
     const hint = await pageErrorHint(page);
     if (hint) record.error = `${record.error} (${hint})`;
   } finally {
     await page.close();
   }
-  return { record, rawJson };
+  return { record, webJson, androidJson };
 }
 
-async function dismissConsentIfPresent(page: Page): Promise<void> {
-  try {
-    await page.waitForSelector('ytd-consent-bump-v2-lightbox', { timeout: 3000 });
-    await page
-      .locator('ytd-consent-bump-v2-lightbox button')
-      .filter({ hasText: 'Accept all' })
-      .click({ timeout: 5000 });
-    await page.waitForSelector('ytd-consent-bump-v2-lightbox', {
-      state: 'detached',
-      timeout: 5000,
-    });
-  } catch {
-    // dialog absent or already dismissed
-  }
-}
-
-async function pageErrorHint(page: Page): Promise<string | null> {
-  try {
-    const bodyText = await page.evaluate(
-      () => document.body?.innerText?.slice(0, 400) ?? '',
-    );
-    if (/not a bot|sign in to confirm/i.test(bodyText)) return 'bot-wall';
-    if (page.url().includes('consent')) return 'consent-page';
-  } catch {
-    return null;
-  }
-  return null;
-}
-
-async function main(): Promise<void> {
-  const args = process.argv.slice(2);
-  if (args.includes('--analyze')) {
-    analyzeExisting(RESULTS_FILE);
-    return;
-  }
-  const headed = args.includes('--headed');
-  const refixture = args.includes('--refixture');
-  const limitArg = args.find((a) => a.startsWith('--limit='));
-  const limit = limitArg ? Number(limitArg.slice(8)) : VIDEOS.length;
-  const videos = refixture
-    ? VIDEOS.filter((v) => FIXTURE_SLOTS.some((s) => s.preferred === v.videoId))
-    : VIDEOS.slice(0, limit);
-
-  mkdirSync(RESULTS_DIR, { recursive: true });
-  mkdirSync(FIXTURES_DIR, { recursive: true });
-
-  const browser = await chromium.launch({ headless: !headed });
+async function setupBrowser(headed: boolean): Promise<{
+  browser: Browser;
+  context: BrowserContext;
+}> {
+  const browser = await chromium.launch({
+    headless: !headed,
+    args: ['--disable-blink-features=AutomationControlled'],
+  });
   const chromeVersion = browser.version();
   const userAgent =
     `Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) ` +
@@ -288,37 +296,114 @@ async function main(): Promise<void> {
     },
     {
       name: 'SOCS',
-      value: 'CAISNQgDEitib3FfaWRlbnRpdHlmcm9udGVuZHVpc2VydmVyXzIwMjMwODI5LjA3X3AxGgJlbiACGgYIgLC_pwY',
+      value:
+        'CAISNQgDEitib3FfaWRlbnRpdHlmcm9udGVuZHVpc2VydmVyXzIwMjMwODI5LjA3X3AxGgJlbiACGgYIgLC_pwY',
       domain: '.youtube.com',
       path: '/',
     },
   ]);
+  return { browser, context };
+}
 
-  const payloads = new Map<string, unknown>();
+function finalizeRun(input: {
+  results: SampleRecord[];
+  webPayloads: Map<string, unknown>;
+  androidPayloads: Map<string, unknown>;
+  originalBytes: Map<string, number>;
+  resultsFile: string;
+  refixture: boolean;
+  captureWebOnly: boolean;
+}): void {
+  const { results, webPayloads, androidPayloads, originalBytes, resultsFile, refixture, captureWebOnly } =
+    input;
+  if (!refixture) {
+    writeFileSync(
+      resultsFile,
+      results.map((r) => JSON.stringify(r)).join('\n') + '\n',
+      'utf8',
+    );
+    console.log(`\nresults -> ${resultsFile}`);
+  }
+  if (!captureWebOnly) {
+    saveFixtures(results, androidPayloads, FIXTURES_DIR);
+  }
+  emitWebFixtures({
+    records: results,
+    webPayloads,
+    originalBytes,
+    fixturesDir: FIXTURES_DIR,
+    captureDate: new Date().toISOString().slice(0, 10),
+  });
+  if (!refixture) printReport(results);
+}
+
+async function main(): Promise<void> {
+  const args = process.argv.slice(2);
+  if (args.includes('--analyze')) {
+    analyzeExisting(join(DEFAULT_OUT_DIR, 'rerun-results.jsonl'));
+    return;
+  }
+  const headed = args.includes('--headed');
+  const captureWebOnly = args.includes('--capture-web-only');
+  const refixture = args.includes('--refixture');
+  const limitArg = args.find((a) => a.startsWith('--limit='));
+  const limit = limitArg ? Number(limitArg.slice(8)) : VIDEOS.length;
+  const outDirArg = args.find((a) => a.startsWith('--out-dir='));
+  const outDir = outDirArg
+    ? isAbsolute(outDirArg.slice(9))
+      ? outDirArg.slice(9)
+      : join(ROOT, outDirArg.slice(9))
+    : DEFAULT_OUT_DIR;
+  const resultsFile = join(outDir, 'rerun-results.jsonl');
+  const videos = refixture
+    ? VIDEOS.filter((v) => FIXTURE_SLOTS.some((s) => s.preferred === v.videoId))
+    : VIDEOS.slice(0, limit);
+
+  mkdirSync(outDir, { recursive: true });
+  mkdirSync(FIXTURES_DIR, { recursive: true });
+
+  const { browser, context } = await setupBrowser(headed);
+  const webPayloads = new Map<string, unknown>();
+  const androidPayloads = new Map<string, unknown>();
+  const originalBytes = new Map<string, number>();
   const results: SampleRecord[] = [];
   for (const video of videos) {
     process.stdout.write(`sampling ${video.videoId} [${video.category}] ... `);
-    const { record, rawJson } = await sampleVideo(context, video);
+    const { record, webJson, androidJson } = await sampleVideo(
+      context,
+      video,
+      captureWebOnly,
+    );
+    if (webJson !== null) {
+      writeFileSync(
+        join(outDir, `web-${video.videoId}.json3`),
+        JSON.stringify(truncateForFixture(webJson), null, 1),
+        'utf8',
+      );
+      record.webPayloadSaved = true;
+      webPayloads.set(video.videoId, webJson);
+      originalBytes.set(video.videoId, record.webBytes ?? 0);
+    }
+    if (androidJson !== null) androidPayloads.set(video.videoId, androidJson);
     results.push(record);
-    if (rawJson !== null) payloads.set(video.videoId, rawJson);
     const state =
-      record.status === 'ok'
-        ? `cue=${(record.cueWpm ?? 0).toFixed(1)} words=${record.nWordsTimed}`
-        : `ERR ${record.error}`;
+      record.status === 'web-captured'
+        ? `web windows=${record.windowsWords} cues=${record.windowsCues}`
+        : `${record.status}${record.error ? ` (${record.error})` : ''}`;
     console.log(state);
     await new Promise((resolve) => setTimeout(resolve, 1500));
   }
   await browser.close();
 
-  const lines: string[] = [];
-  for (const r of results) lines.push(JSON.stringify(r));
-  if (!refixture) {
-    writeFileSync(RESULTS_FILE, lines.join('\n') + '\n', 'utf8');
-    console.log(`\nresults -> ${RESULTS_FILE}`);
-  }
-
-  await saveFixtures(results, payloads, FIXTURES_DIR);
-  if (!refixture) printReport(results);
+  finalizeRun({
+    results,
+    webPayloads,
+    androidPayloads,
+    originalBytes,
+    resultsFile,
+    refixture,
+    captureWebOnly,
+  });
 }
 
 main().catch((err) => {
