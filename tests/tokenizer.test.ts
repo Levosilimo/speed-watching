@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { countHangulSyllables, countWordTokens, hasNoteSymbol, isBracketMarker } from '../lib/tokenizer';
+import { countDevanagariSyllables, countHangulSyllables, countMorae, countTurkishVowels, countVowelNuclei, countWordTokens, hasNoteSymbol, isBracketMarker } from '../lib/tokenizer';
 
 describe('countWordTokens', () => {
   it('counts letter/digit runs, ignoring every other character', () => {
@@ -53,6 +53,77 @@ describe('countWordTokens — chars mode', () => {
     // consonant and the tone mark merges into ล.
     expect(countWordTokens('กำลัง', 'chars')).toBe(3);
     expect(countWordTokens('สวัสดี', 'chars')).toBe(4);
+  });
+});
+
+describe('countMorae', () => {
+  it('counts each kana code point as one mora, incl. ー and っ', () => {
+    expect(countMorae('こんにちは')).toBe(5);
+    expect(countMorae('スーパー')).toBe(4); // ス ー パ ー
+    expect(countMorae('がっこう')).toBe(4); // が っ こ う
+  });
+
+  it('counts kanji at 1.85 morae each', () => {
+    expect(countMorae('漢字')).toBeCloseTo(3.7, 6);
+    expect(countMorae('日本')).toBeCloseTo(3.7, 6);
+  });
+
+  it('hand-computed mixed kanji+kana string', () => {
+    // 日本語の字幕です: 5 kanji × 1.85 + 3 kana = 12.25 morae (8 graphemes
+    // understate this ~53% — the chars-mode error the estimator fixes).
+    expect(countMorae('日本語の字幕です')).toBeCloseTo(12.25, 6);
+  });
+
+  it('skips punctuation, whitespace, symbols, Latin, digits', () => {
+    expect(countMorae('こんにちは、世界！')).toBeCloseTo(8.7, 6); // 5 kana + 2 kanji
+    expect(countMorae('♪ 123 ABC')).toBe(0);
+    expect(countMorae('')).toBe(0);
+  });
+});
+
+describe('countTurkishVowels', () => {
+  it('counts vowel letters, both cases', () => {
+    expect(countTurkishVowels('merhaba dünya')).toBe(5); // e a a ü a
+    expect(countTurkishVowels('Türkçe')).toBe(2); // ü e
+    expect(countTurkishVowels('İstanbul')).toBe(3); // İ a u
+  });
+
+  it('returns zero without vowels', () => {
+    expect(countTurkishVowels('krk 123!')).toBe(0);
+    expect(countTurkishVowels('')).toBe(0);
+  });
+});
+
+describe('countDevanagariSyllables', () => {
+  it('counts consonants-with-vowel and standalone vowel letters', () => {
+    expect(countDevanagariSyllables('मैं जा रहा हूँ')).toBe(5); // 1 1 2 1
+    expect(countDevanagariSyllables('वह ठीक है')).toBe(3); // vah ṭhīk hai — final schwas dropped
+    expect(countDevanagariSyllables('अच्छा')).toBe(2); // अ + च्छा
+    expect(countDevanagariSyllables('हिन्दी')).toBe(2); // हिन् + दी
+  });
+
+  it('halant removes the preceding consonant\'s vowel', () => {
+    expect(countDevanagariSyllables('क्या')).toBe(1); // क् + या
+    expect(countDevanagariSyllables('कर्म')).toBe(1); // karm — क + र्म्
+  });
+
+  it('counts halant clusters by the orthographic rule', () => {
+    // नमस्ते (न + म् + स् + ते, escapes pin the halants): 2 counted vs
+    // 3 spoken (epenthetic schwa) — the documented deviation, inside ±10%.
+    expect(countDevanagariSyllables('\u0928\u092E\u094D\u0938\u094D\u0924\u0947')).toBe(2);
+  });
+
+  it('skips matras, marks, punctuation, and non-Devanagari text', () => {
+    expect(countDevanagariSyllables('')).toBe(0);
+    expect(countDevanagariSyllables('123!')).toBe(0);
+    expect(countDevanagariSyllables('hello world')).toBe(0);
+  });
+});
+
+describe('countVowelNuclei', () => {
+  it('dispatches on the language code', () => {
+    expect(countVowelNuclei('merhaba', 'tr')).toBe(3);
+    expect(countVowelNuclei('राम', 'hi')).toBe(1);
   });
 });
 
