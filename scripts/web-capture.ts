@@ -41,12 +41,14 @@ export function hookTimedtext(page: Page, captures: TimedtextCapture[]): void {
   });
 }
 
-/** Prefer a non-empty json3 capture, then any non-empty, then the first. */
+/** Prefer the newest non-empty json3 capture, then any non-empty, then the
+ * last — a track re-pick lands a fresh request that must win over the
+ * default track's payload. */
 export function pickCapture(captures: TimedtextCapture[]): TimedtextCapture | null {
   return (
-    captures.find((c) => c.format === 'json3' && c.body.length > 0) ??
-    captures.find((c) => c.body.length > 0) ??
-    captures[0] ??
+    captures.findLast((c) => c.format === 'json3' && c.body.length > 0) ??
+    captures.findLast((c) => c.body.length > 0) ??
+    captures[captures.length - 1] ??
     null
   );
 }
@@ -64,30 +66,68 @@ export async function waitForTimedtext(
   return pickCapture(captures);
 }
 
-async function pickTrackFromMenu(page: Page): Promise<boolean> {
-  await page.waitForTimeout(300);
+/** Wait for a capture that landed after `baseline` (a track re-pick). */
+export async function waitForFreshTimedtext(
+  captures: TimedtextCapture[],
+  baseline: number,
+  timeoutMs: number,
+): Promise<TimedtextCapture | null> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const fresh = captures.slice(baseline);
+    const picked = pickCapture(fresh);
+    if (picked !== null) return picked;
+    await new Promise((r) => setTimeout(r, 250));
+  }
+  return pickCapture(captures.slice(baseline));
+}
+
+/**
+ * Open the settings gear → Subtitles/CC panel and pick the ASR-preferred
+ * track (auto-generated, else English, else the first non-Off/non-Options
+ * item). Returns false when no menu or no pickable track exists.
+ */
+export async function pickAsrTrackFromMenu(page: Page): Promise<boolean> {
   try {
-    return await page.evaluate((): boolean => {
-      const items = Array.from(document.querySelectorAll('.ytp-menuitem'));
+    await page
+      .click('button.ytp-settings-button', { timeout: 4000 })
+      .catch(() => undefined);
+    await page.waitForTimeout(400);
+    const ccItem = await page.evaluate((): boolean => {
       const label = (el: Element): string =>
         (el.getAttribute('aria-label') ?? el.textContent ?? '').trim();
-      const offIndex = items.findIndex((el) => /^off$/i.test(label(el)));
+      const item = Array.from(document.querySelectorAll('.ytp-menuitem')).find(
+        (el) => /subtitles|captions/i.test(label(el)),
+      );
+      if (!item) return false;
+      (item as HTMLElement).click();
+      return true;
+    });
+    if (!ccItem) return false;
+    await page.waitForTimeout(400);
+    const picked = await page.evaluate((): boolean => {
+      const label = (el: Element): string =>
+        (el.getAttribute('aria-label') ?? el.textContent ?? '').trim();
+      const items = Array.from(document.querySelectorAll('.ytp-menuitem'));
+      const skip = (el: Element): boolean =>
+        /^off$/i.test(label(el)) || /^options?$/i.test(label(el));
       const pick =
+        items.find((el) => /auto[- ]?generated|\(asr\)/i.test(label(el))) ??
         items.find((el) => /english/i.test(label(el))) ??
-        items.find((el, i) => i !== offIndex);
+        items.find((el, _i) => !skip(el));
       if (!pick) return false;
       (pick as HTMLElement).click();
       return true;
     });
+    await page.keyboard.press('Escape').catch(() => undefined);
+    return picked;
   } catch {
     return false;
   }
 }
 
 /**
- * Turn captions on so the player issues its signed timedtext request. When
- * CC is already on (context persistence), reopen the menu and re-pick the
- * track to force a fresh request.
+ * Turn captions on so the player issues its signed timedtext request.
  */
 export async function enableCaptions(page: Page): Promise<void> {
   const pill = page.locator('button.ytp-subtitles-button');
@@ -97,10 +137,7 @@ export async function enableCaptions(page: Page): Promise<void> {
     return;
   }
   const pressed = await pill.getAttribute('aria-pressed').catch(() => null);
-  if (pressed === 'true') {
-    await pill.click({ timeout: 3000 }).catch(() => undefined);
-    await pickTrackFromMenu(page);
-  } else {
+  if (pressed !== 'true') {
     await pill.click({ timeout: 3000 }).catch(() => undefined);
     await page.waitForTimeout(1200);
   }

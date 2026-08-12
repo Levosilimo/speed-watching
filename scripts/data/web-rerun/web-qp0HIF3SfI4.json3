@@ -1,0 +1,413 @@
+{
+ "wireMagic": "pb3",
+ "pens": [
+  {}
+ ],
+ "wsWinStyles": [
+  {},
+  {
+   "mhModeHint": 2,
+   "juJustifCode": 0,
+   "sdScrollDir": 3
+  }
+ ],
+ "wpWinPositions": [
+  {},
+  {
+   "apPoint": 6,
+   "ahHorPos": 20,
+   "avVerPos": 100,
+   "rcRows": 2,
+   "ccCols": 40
+  }
+ ],
+ "events": [
+  {
+   "tStartMs": 0,
+   "dDurationMs": 21960,
+   "id": 1,
+   "wpWinPosId": 1,
+   "wsWinStyleId": 1
+  },
+  {
+   "tStartMs": 40,
+   "dDurationMs": 3399,
+   "wWinId": 1,
+   "segs": [
+    {
+     "utf8": "Może",
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " coś",
+     "tOffsetMs": 200,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " pysznego",
+     "tOffsetMs": 480,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " [muzyka]",
+     "tOffsetMs": 614
+    },
+    {
+     "utf8": " sobie",
+     "tOffsetMs": 1120,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " zjem.",
+     "tOffsetMs": 1440,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " U",
+     "tOffsetMs": 2119,
+     "acAsrConf": 0
+    }
+   ]
+  },
+  {
+   "tStartMs": 2950,
+   "dDurationMs": 489,
+   "wWinId": 1,
+   "aAppend": 1,
+   "segs": [
+    {
+     "utf8": "\n"
+    }
+   ]
+  },
+  {
+   "tStartMs": 2960,
+   "dDurationMs": 4240,
+   "wWinId": 1,
+   "segs": [
+    {
+     "utf8": "globo.",
+     "acAsrConf": 0
+    }
+   ]
+  },
+  {
+   "tStartMs": 3429,
+   "dDurationMs": 3771,
+   "wWinId": 1,
+   "aAppend": 1,
+   "segs": [
+    {
+     "utf8": "\n"
+    }
+   ]
+  },
+  {
+   "tStartMs": 3439,
+   "dDurationMs": 4721,
+   "wWinId": 1,
+   "segs": [
+    {
+     "utf8": ">> Dziś",
+     "acAsrConf": 0,
+     "isSpeakerChange": 1
+    },
+    {
+     "utf8": " gotować",
+     "tOffsetMs": 321,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " chęci",
+     "tOffsetMs": 961,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " nie",
+     "tOffsetMs": 1400,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " mam.",
+     "tOffsetMs": 1561,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " Też",
+     "tOffsetMs": 1840,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " a",
+     "tOffsetMs": 2840,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " globo.",
+     "tOffsetMs": 3201,
+     "acAsrConf": 0
+    }
+   ]
+  },
+  {
+   "tStartMs": 7190,
+   "dDurationMs": 970,
+   "wWinId": 1,
+   "aAppend": 1,
+   "segs": [
+    {
+     "utf8": "\n"
+    }
+   ]
+  },
+  {
+   "tStartMs": 7200,
+   "dDurationMs": 3680,
+   "wWinId": 1,
+   "segs": [
+    {
+     "utf8": ">> Zapomniałem",
+     "acAsrConf": 0,
+     "isSpeakerChange": 1
+    },
+    {
+     "utf8": " [muzyka]",
+     "tOffsetMs": 20
+    }
+   ]
+  },
+  {
+   "tStartMs": 8150,
+   "dDurationMs": 2730,
+   "wWinId": 1,
+   "aAppend": 1,
+   "segs": [
+    {
+     "utf8": "\n"
+    }
+   ]
+  },
+  {
+   "tStartMs": 8160,
+   "dDurationMs": 5479,
+   "wWinId": 1,
+   "segs": [
+    {
+     "utf8": "kupić",
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " jedną",
+     "tOffsetMs": 479,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " rzecz.",
+     "tOffsetMs": 760,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " Glowo.",
+     "tOffsetMs": 2200,
+     "acAsrConf": 0
+    }
+   ]
+  },
+  {
+   "tStartMs": 10870,
+   "dDurationMs": 2769,
+   "wWinId": 1,
+   "aAppend": 1,
+   "segs": [
+    {
+     "utf8": "\n"
+    }
+   ]
+  },
+  {
+   "tStartMs": 10880,
+   "dDurationMs": 4840,
+   "wWinId": 1,
+   "segs": [
+    {
+     "utf8": ">> Coś",
+     "acAsrConf": 0,
+     "isSpeakerChange": 1
+    },
+    {
+     "utf8": " sobie",
+     "tOffsetMs": 240,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " zamówię",
+     "tOffsetMs": 679,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " i",
+     "tOffsetMs": 1360,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " po",
+     "tOffsetMs": 1600,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " chwili",
+     "tOffsetMs": 1759,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " już",
+     "tOffsetMs": 2320,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " to",
+     "tOffsetMs": 2560,
+     "acAsrConf": 0
+    }
+   ]
+  },
+  {
+   "tStartMs": 13629,
+   "dDurationMs": 2091,
+   "wWinId": 1,
+   "aAppend": 1,
+   "segs": [
+    {
+     "utf8": "\n"
+    }
+   ]
+  },
+  {
+   "tStartMs": 13639,
+   "dDurationMs": 2640,
+   "wWinId": 1,
+   "segs": [
+    {
+     "utf8": "jest.",
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " Mówię",
+     "tOffsetMs": 481,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " glowo.",
+     "tOffsetMs": 801,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " Klikam",
+     "tOffsetMs": 1401,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " glowo.",
+     "tOffsetMs": 1801,
+     "acAsrConf": 0
+    }
+   ]
+  },
+  {
+   "tStartMs": 15710,
+   "dDurationMs": 569,
+   "wWinId": 1,
+   "aAppend": 1,
+   "segs": [
+    {
+     "utf8": "\n"
+    }
+   ]
+  },
+  {
+   "tStartMs": 15720,
+   "dDurationMs": 2520,
+   "wWinId": 1,
+   "segs": [
+    {
+     "utf8": "[muzyka]"
+    }
+   ]
+  },
+  {
+   "tStartMs": 16269,
+   "dDurationMs": 1971,
+   "wWinId": 1,
+   "aAppend": 1,
+   "segs": [
+    {
+     "utf8": "\n"
+    }
+   ]
+  },
+  {
+   "tStartMs": 16279,
+   "dDurationMs": 5681,
+   "wWinId": 1,
+   "segs": [
+    {
+     "utf8": "Ściągnij",
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " aplikację.",
+     "tOffsetMs": 401,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " Cokolwiek",
+     "tOffsetMs": 961,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " zamówisz,",
+     "tOffsetMs": 1401,
+     "acAsrConf": 0
+    }
+   ]
+  },
+  {
+   "tStartMs": 18230,
+   "dDurationMs": 3730,
+   "wWinId": 1,
+   "aAppend": 1,
+   "segs": [
+    {
+     "utf8": "\n"
+    }
+   ]
+  },
+  {
+   "tStartMs": 18240,
+   "dDurationMs": 3720,
+   "wWinId": 1,
+   "segs": [
+    {
+     "utf8": "chwila",
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " i",
+     "tOffsetMs": 280,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " masz.",
+     "tOffsetMs": 440,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " M.",
+     "tOffsetMs": 1560,
+     "acAsrConf": 0
+    }
+   ]
+  }
+ ],
+ "windows": []
+}

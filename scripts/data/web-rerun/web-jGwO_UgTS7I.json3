@@ -1,0 +1,195 @@
+{
+ "wireMagic": "pb3",
+ "pens": [
+  {}
+ ],
+ "wsWinStyles": [
+  {}
+ ],
+ "wpWinPositions": [
+  {}
+ ],
+ "events": [
+  {
+   "tStartMs": 3140,
+   "dDurationMs": 3265,
+   "segs": [
+    {
+     "utf8": "Welcome to CS229 Machine Learning."
+    }
+   ]
+  },
+  {
+   "tStartMs": 6405,
+   "dDurationMs": 3520,
+   "segs": [
+    {
+     "utf8": "Uh, some of you know that this class has been taught at Stanford for a long time."
+    }
+   ]
+  },
+  {
+   "tStartMs": 9925,
+   "dDurationMs": 2555,
+   "segs": [
+    {
+     "utf8": "And this is often the course that, um,"
+    }
+   ]
+  },
+  {
+   "tStartMs": 12480,
+   "dDurationMs": 4600,
+   "segs": [
+    {
+     "utf8": "I most look forward to teaching each year because this is where we've helped I think,"
+    }
+   ]
+  },
+  {
+   "tStartMs": 17080,
+   "dDurationMs": 4485,
+   "segs": [
+    {
+     "utf8": "several generations of Stanford students become experts in machine learning, go on to build"
+    }
+   ]
+  },
+  {
+   "tStartMs": 21565,
+   "dDurationMs": 2685,
+   "segs": [
+    {
+     "utf8": "many of their products and services and startups that I'm"
+    }
+   ]
+  },
+  {
+   "tStartMs": 24250,
+   "dDurationMs": 4390,
+   "segs": [
+    {
+     "utf8": "sure many of you are pre- or all of you are using, uh, uh, today."
+    }
+   ]
+  },
+  {
+   "tStartMs": 28640,
+   "dDurationMs": 6550,
+   "segs": [
+    {
+     "utf8": "Um, so what I want to do today was spend some time talking over, uh, logistics,"
+    }
+   ]
+  },
+  {
+   "tStartMs": 35190,
+   "dDurationMs": 2135,
+   "segs": [
+    {
+     "utf8": "and then, uh, spend some time, you know,"
+    }
+   ]
+  },
+  {
+   "tStartMs": 37325,
+   "dDurationMs": 1925,
+   "segs": [
+    {
+     "utf8": "giving you a beginning of a intro,"
+    }
+   ]
+  },
+  {
+   "tStartMs": 39250,
+   "dDurationMs": 2625,
+   "segs": [
+    {
+     "utf8": "talk a little bit about machine learning."
+    }
+   ]
+  },
+  {
+   "tStartMs": 41875,
+   "dDurationMs": 3135,
+   "segs": [
+    {
+     "utf8": "So about 229."
+    }
+   ]
+  },
+  {
+   "tStartMs": 45010,
+   "dDurationMs": 2705,
+   "segs": [
+    {
+     "utf8": "Um, you know,"
+    }
+   ]
+  },
+  {
+   "tStartMs": 47715,
+   "dDurationMs": 3065,
+   "segs": [
+    {
+     "utf8": "all of you have been reading about AI in the news,"
+    }
+   ]
+  },
+  {
+   "tStartMs": 50780,
+   "dDurationMs": 2160,
+   "segs": [
+    {
+     "utf8": "uh, about machine learning in the news."
+    }
+   ]
+  },
+  {
+   "tStartMs": 52940,
+   "dDurationMs": 5560,
+   "segs": [
+    {
+     "utf8": "Um, and you probably heard me or others say, AI is the new electricity."
+    }
+   ]
+  },
+  {
+   "tStartMs": 58500,
+   "dDurationMs": 2870,
+   "segs": [
+    {
+     "utf8": "Uh, the emergence and rise of electricity about 100 years ago,"
+    }
+   ]
+  },
+  {
+   "tStartMs": 61370,
+   "dDurationMs": 2010,
+   "segs": [
+    {
+     "utf8": "it transformed every major industry."
+    }
+   ]
+  },
+  {
+   "tStartMs": 63380,
+   "dDurationMs": 4410,
+   "segs": [
+    {
+     "utf8": "I think AI already we call machine learning for the rest of the world seems to call AI."
+    }
+   ]
+  },
+  {
+   "tStartMs": 67790,
+   "dDurationMs": 1020,
+   "segs": [
+    {
+     "utf8": "[NOISE]"
+    }
+   ]
+  }
+ ],
+ "windows": []
+}

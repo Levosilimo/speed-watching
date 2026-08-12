@@ -44,7 +44,9 @@ import {
   enableCaptions,
   hookTimedtext,
   pageErrorHint,
+  pickAsrTrackFromMenu,
   readPlayerInfo,
+  waitForFreshTimedtext,
   waitForTimedtext,
   type TimedtextCapture,
 } from './web-capture';
@@ -138,9 +140,10 @@ async function loadWatchPage(
 }
 
 /**
- * Toggle captions on, wait for the player's signed timedtext request, and
- * classify the outcome into the record. Returns the parsed WEB payload, or
- * null when the request never landed, was empty, or was not json3.
+ * Toggle captions on, wait for the player's signed timedtext request, then
+ * re-pick the ASR-preferred track from the CC menu — the default track is
+ * often a manual transcript without word timing. Returns the parsed WEB
+ * payload, or null when no request ever landed, was empty, or was not json3.
  */
 async function captureWebPayload(
   page: Page,
@@ -154,6 +157,12 @@ async function captureWebPayload(
     // a play toggle forces the player to (re)issue its caption request
     await page.keyboard.press('k').catch(() => undefined);
     timedtext = await waitForTimedtext(captures, 3000);
+  }
+  const baseline = captures.length;
+  const menuPicked = await pickAsrTrackFromMenu(page);
+  if (menuPicked) {
+    const fresh = await waitForFreshTimedtext(captures, baseline, 4000);
+    if (fresh !== null) timedtext = fresh;
   }
   if (timedtext === null) {
     if (asrBearing) {
@@ -346,8 +355,10 @@ async function main(): Promise<void> {
   const headed = args.includes('--headed');
   const captureWebOnly = args.includes('--capture-web-only');
   const refixture = args.includes('--refixture');
-  const limitArg = args.find((a) => a.startsWith('--limit='));
-  const limit = limitArg ? Number(limitArg.slice(8)) : VIDEOS.length;
+  const limitArg =
+    args.find((a) => a.startsWith('--limit=')) ??
+    (args.includes('--limit') ? args[args.indexOf('--limit') + 1] : undefined);
+  const limit = limitArg ? Number(limitArg) : VIDEOS.length;
   const outDirArg = args.find((a) => a.startsWith('--out-dir='));
   const outDir = outDirArg
     ? isAbsolute(outDirArg.slice(9))

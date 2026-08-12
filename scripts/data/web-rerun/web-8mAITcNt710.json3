@@ -1,0 +1,195 @@
+{
+ "wireMagic": "pb3",
+ "pens": [
+  {}
+ ],
+ "wsWinStyles": [
+  {}
+ ],
+ "wpWinPositions": [
+  {}
+ ],
+ "events": [
+  {
+   "tStartMs": 0,
+   "dDurationMs": 4000,
+   "segs": [
+    {
+     "utf8": "If you want to learn about computer science and the art\nof programming, this course is where to start."
+    }
+   ]
+  },
+  {
+   "tStartMs": 4000,
+   "dDurationMs": 5300,
+   "segs": [
+    {
+     "utf8": "CS50 is considered by many to be one of the\nbest computer science courses in the world."
+    }
+   ]
+  },
+  {
+   "tStartMs": 9300,
+   "dDurationMs": 3700,
+   "segs": [
+    {
+     "utf8": "This is a Harvard University course\ntaught by Dr. David Malan"
+    }
+   ]
+  },
+  {
+   "tStartMs": 13000,
+   "dDurationMs": 4000,
+   "segs": [
+    {
+     "utf8": "and we are proud to bring it to\nthe freeCodeCamp YouTube channel."
+    }
+   ]
+  },
+  {
+   "tStartMs": 17000,
+   "dDurationMs": 6000,
+   "segs": [
+    {
+     "utf8": "Throughout a series of lectures, Dr. Malan will teach you \nhow to think algorithmically and solve problems efficiently."
+    }
+   ]
+  },
+  {
+   "tStartMs": 23000,
+   "dDurationMs": 4300,
+   "segs": [
+    {
+     "utf8": "And make sure to check the description for a lot of\nextra resources that go along with the course."
+    }
+   ]
+  },
+  {
+   "tStartMs": 27300,
+   "dDurationMs": 77581,
+   "segs": [
+    {
+     "utf8": "[MUSIC PLAYING]"
+    }
+   ]
+  },
+  {
+   "tStartMs": 105801,
+   "dDurationMs": 4480,
+   "segs": [
+    {
+     "utf8": "DAVID MALAN: All right, this is CS50,\nHarvard University's introduction"
+    }
+   ]
+  },
+  {
+   "tStartMs": 110281,
+   "dDurationMs": 2310,
+   "segs": [
+    {
+     "utf8": "to the intellectual\nenterprises of computer science"
+    }
+   ]
+  },
+  {
+   "tStartMs": 112591,
+   "dDurationMs": 3750,
+   "segs": [
+    {
+     "utf8": "and the art of programming, back here\non campus in beautiful Sanders Theatre"
+    }
+   ]
+  },
+  {
+   "tStartMs": 116341,
+   "dDurationMs": 2070,
+   "segs": [
+    {
+     "utf8": "for the first time in quite a while."
+    }
+   ]
+  },
+  {
+   "tStartMs": 118411,
+   "dDurationMs": 2590,
+   "segs": [
+    {
+     "utf8": "So welcome to the class."
+    }
+   ]
+  },
+  {
+   "tStartMs": 121001,
+   "dDurationMs": 1380,
+   "segs": [
+    {
+     "utf8": "My name is David--"
+    }
+   ]
+  },
+  {
+   "tStartMs": 122381,
+   "dDurationMs": 766,
+   "segs": [
+    {
+     "utf8": "OK."
+    }
+   ]
+  },
+  {
+   "tStartMs": 123147,
+   "dDurationMs": 3402,
+   "segs": [
+    {
+     "utf8": "[CHEERING AND APPLAUSE]"
+    }
+   ]
+  },
+  {
+   "tStartMs": 131901,
+   "dDurationMs": 1410,
+   "segs": [
+    {
+     "utf8": "So my name is David Malan."
+    }
+   ]
+  },
+  {
+   "tStartMs": 133311,
+   "dDurationMs": 3600,
+   "segs": [
+    {
+     "utf8": "And I took this class myself\nsome time ago, but almost didn't."
+    }
+   ]
+  },
+  {
+   "tStartMs": 136911,
+   "dDurationMs": 3210,
+   "segs": [
+    {
+     "utf8": "It was sophomore fall and I\nwas sitting in on the class."
+    }
+   ]
+  },
+  {
+   "tStartMs": 140121,
+   "dDurationMs": 2310,
+   "segs": [
+    {
+     "utf8": "And I was a little curious\nbut, eh, it didn't really"
+    }
+   ]
+  },
+  {
+   "tStartMs": 142431,
+   "dDurationMs": 2077,
+   "segs": [
+    {
+     "utf8": "feel like the field for me."
+    }
+   ]
+  }
+ ],
+ "windows": []
+}

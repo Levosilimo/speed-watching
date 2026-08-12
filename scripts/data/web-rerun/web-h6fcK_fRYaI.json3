@@ -1,0 +1,195 @@
+{
+ "wireMagic": "pb3",
+ "pens": [
+  {}
+ ],
+ "wsWinStyles": [
+  {}
+ ],
+ "wpWinPositions": [
+  {}
+ ],
+ "events": [
+  {
+   "tStartMs": 3000,
+   "dDurationMs": 2720,
+   "segs": [
+    {
+     "utf8": "You were on your way home, when you died."
+    }
+   ]
+  },
+  {
+   "tStartMs": 6100,
+   "dDurationMs": 2100,
+   "segs": [
+    {
+     "utf8": "It was a car accident."
+    }
+   ]
+  },
+  {
+   "tStartMs": 8920,
+   "dDurationMs": 2280,
+   "segs": [
+    {
+     "utf8": "Nothing particularly remarkable."
+    }
+   ]
+  },
+  {
+   "tStartMs": 11480,
+   "dDurationMs": 1680,
+   "segs": [
+    {
+     "utf8": "But fatal, none the less."
+    }
+   ]
+  },
+  {
+   "tStartMs": 13740,
+   "dDurationMs": 1520,
+   "segs": [
+    {
+     "utf8": "It was a painless death."
+    }
+   ]
+  },
+  {
+   "tStartMs": 15460,
+   "dDurationMs": 3980,
+   "segs": [
+    {
+     "utf8": "The medics tried their best to save you... but to no avail."
+    }
+   ]
+  },
+  {
+   "tStartMs": 19900,
+   "dDurationMs": 4660,
+   "segs": [
+    {
+     "utf8": "Your body was so utterly shattered, you were better off. Trust me."
+    }
+   ]
+  },
+  {
+   "tStartMs": 25335,
+   "dDurationMs": 1930,
+   "segs": [
+    {
+     "utf8": "And that's when you met me."
+    }
+   ]
+  },
+  {
+   "tStartMs": 28215,
+   "dDurationMs": 1190,
+   "segs": [
+    {
+     "utf8": "What happened?"
+    }
+   ]
+  },
+  {
+   "tStartMs": 30205,
+   "dDurationMs": 1050,
+   "segs": [
+    {
+     "utf8": "Where am I?"
+    }
+   ]
+  },
+  {
+   "tStartMs": 31740,
+   "dDurationMs": 879,
+   "segs": [
+    {
+     "utf8": "You died."
+    }
+   ]
+  },
+  {
+   "tStartMs": 33100,
+   "dDurationMs": 1792,
+   "segs": [
+    {
+     "utf8": "I said, matter of factly."
+    }
+   ]
+  },
+  {
+   "tStartMs": 35260,
+   "dDurationMs": 2080,
+   "segs": [
+    {
+     "utf8": "No point in mincing words."
+    }
+   ]
+  },
+  {
+   "tStartMs": 37600,
+   "dDurationMs": 2520,
+   "segs": [
+    {
+     "utf8": "There was... there was a truck."
+    }
+   ]
+  },
+  {
+   "tStartMs": 40468,
+   "dDurationMs": 1272,
+   "segs": [
+    {
+     "utf8": "And it was skidding."
+    }
+   ]
+  },
+  {
+   "tStartMs": 43140,
+   "dDurationMs": 1000,
+   "segs": [
+    {
+     "utf8": "Yes."
+    }
+   ]
+  },
+  {
+   "tStartMs": 44580,
+   "dDurationMs": 2180,
+   "segs": [
+    {
+     "utf8": "I... I died?"
+    }
+   ]
+  },
+  {
+   "tStartMs": 47640,
+   "dDurationMs": 780,
+   "segs": [
+    {
+     "utf8": "Yes."
+    }
+   ]
+  },
+  {
+   "tStartMs": 49000,
+   "dDurationMs": 1740,
+   "segs": [
+    {
+     "utf8": "But don't feel bad about it."
+    }
+   ]
+  },
+  {
+   "tStartMs": 51400,
+   "dDurationMs": 1283,
+   "segs": [
+    {
+     "utf8": "Everyone dies."
+    }
+   ]
+  }
+ ],
+ "windows": []
+}

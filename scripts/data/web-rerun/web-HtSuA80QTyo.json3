@@ -1,0 +1,195 @@
+{
+ "wireMagic": "pb3",
+ "pens": [
+  {}
+ ],
+ "wsWinStyles": [
+  {}
+ ],
+ "wpWinPositions": [
+  {}
+ ],
+ "events": [
+  {
+   "tStartMs": 50,
+   "dDurationMs": 1720,
+   "segs": [
+    {
+     "utf8": "The following\ncontent is provided"
+    }
+   ]
+  },
+  {
+   "tStartMs": 1770,
+   "dDurationMs": 2240,
+   "segs": [
+    {
+     "utf8": "under a Creative\nCommons license."
+    }
+   ]
+  },
+  {
+   "tStartMs": 4010,
+   "dDurationMs": 2850,
+   "segs": [
+    {
+     "utf8": "Your support will help MIT\nOpenCourseWare continue"
+    }
+   ]
+  },
+  {
+   "tStartMs": 6860,
+   "dDurationMs": 3860,
+   "segs": [
+    {
+     "utf8": "to offer high quality\neducational resources for free."
+    }
+   ]
+  },
+  {
+   "tStartMs": 10720,
+   "dDurationMs": 2610,
+   "segs": [
+    {
+     "utf8": "To make a donation or\nview additional materials"
+    }
+   ]
+  },
+  {
+   "tStartMs": 13330,
+   "dDurationMs": 3877,
+   "segs": [
+    {
+     "utf8": "from hundreds of MIT courses,\nvisit MIT OpenCourseWare"
+    }
+   ]
+  },
+  {
+   "tStartMs": 17207,
+   "dDurationMs": 625,
+   "segs": [
+    {
+     "utf8": "at ocw.mit.edu."
+    }
+   ]
+  },
+  {
+   "tStartMs": 22730,
+   "dDurationMs": 660,
+   "segs": [
+    {
+     "utf8": "PROFESSOR: Hi."
+    }
+   ]
+  },
+  {
+   "tStartMs": 23390,
+   "dDurationMs": 1360,
+   "segs": [
+    {
+     "utf8": "I'm Srini Devadas."
+    }
+   ]
+  },
+  {
+   "tStartMs": 24750,
+   "dDurationMs": 2290,
+   "segs": [
+    {
+     "utf8": "I'm a professor of electrical\nengineering and computer"
+    }
+   ]
+  },
+  {
+   "tStartMs": 27040,
+   "dDurationMs": 610,
+   "segs": [
+    {
+     "utf8": "science."
+    }
+   ]
+  },
+  {
+   "tStartMs": 27650,
+   "dDurationMs": 3320,
+   "segs": [
+    {
+     "utf8": "I'm going to be co-lecturing\n6.006-- Introduction"
+    }
+   ]
+  },
+  {
+   "tStartMs": 30970,
+   "dDurationMs": 3980,
+   "segs": [
+    {
+     "utf8": "to Algorithms-- this term\nwith professor Erik Domane."
+    }
+   ]
+  },
+  {
+   "tStartMs": 34950,
+   "dDurationMs": 1051,
+   "segs": [
+    {
+     "utf8": "Eric, say hi."
+    }
+   ]
+  },
+  {
+   "tStartMs": 36001,
+   "dDurationMs": 882,
+   "segs": [
+    {
+     "utf8": "ERIK DOMANE: Hi."
+    }
+   ]
+  },
+  {
+   "tStartMs": 36883,
+   "dDurationMs": 1767,
+   "segs": [
+    {
+     "utf8": "[LAUGHTER]"
+    }
+   ]
+  },
+  {
+   "tStartMs": 38650,
+   "dDurationMs": 1560,
+   "segs": [
+    {
+     "utf8": "PROFESSOR: And we\nhope you're going"
+    }
+   ]
+  },
+  {
+   "tStartMs": 40210,
+   "dDurationMs": 3500,
+   "segs": [
+    {
+     "utf8": "to have a fun time\nin 6.006 learning"
+    }
+   ]
+  },
+  {
+   "tStartMs": 43710,
+   "dDurationMs": 2050,
+   "segs": [
+    {
+     "utf8": "a variety of algorithms."
+    }
+   ]
+  },
+  {
+   "tStartMs": 45760,
+   "dDurationMs": 5000,
+   "segs": [
+    {
+     "utf8": "What I want to do today is\nspend literally a minute or so"
+    }
+   ]
+  }
+ ],
+ "windows": []
+}

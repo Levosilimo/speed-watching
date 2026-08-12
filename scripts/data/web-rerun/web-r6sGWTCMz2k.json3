@@ -1,0 +1,195 @@
+{
+ "wireMagic": "pb3",
+ "pens": [
+  {}
+ ],
+ "wsWinStyles": [
+  {}
+ ],
+ "wpWinPositions": [
+  {}
+ ],
+ "events": [
+  {
+   "tStartMs": 5120,
+   "dDurationMs": 3337,
+   "segs": [
+    {
+     "utf8": "Here, we look at the math behind an animation like this one, "
+    }
+   ]
+  },
+  {
+   "tStartMs": 8457,
+   "dDurationMs": 2243,
+   "segs": [
+    {
+     "utf8": "what's known as a complex Fourier series."
+    }
+   ]
+  },
+  {
+   "tStartMs": 11240,
+   "dDurationMs": 3781,
+   "segs": [
+    {
+     "utf8": "Each little vector is rotating at some constant integer frequency, "
+    }
+   ]
+  },
+  {
+   "tStartMs": 15021,
+   "dDurationMs": 5079,
+   "segs": [
+    {
+     "utf8": "and when you add them together, tip to tail, the final tip draws out some shape over time."
+    }
+   ]
+  },
+  {
+   "tStartMs": 21220,
+   "dDurationMs": 3155,
+   "segs": [
+    {
+     "utf8": "By tweaking the initial size and angle of each vector, "
+    }
+   ]
+  },
+  {
+   "tStartMs": 24375,
+   "dDurationMs": 4245,
+   "segs": [
+    {
+     "utf8": "we can make it draw pretty much anything we want, and here you'll see how."
+    }
+   ]
+  },
+  {
+   "tStartMs": 31120,
+   "dDurationMs": 2446,
+   "segs": [
+    {
+     "utf8": "Before diving into it all, I want you to take "
+    }
+   ]
+  },
+  {
+   "tStartMs": 33566,
+   "dDurationMs": 2554,
+   "segs": [
+    {
+     "utf8": "a moment to just linger on how striking this is."
+    }
+   ]
+  },
+  {
+   "tStartMs": 37200,
+   "dDurationMs": 3700,
+   "segs": [
+    {
+     "utf8": "This particular animation has 300 rotating arrows in total."
+    }
+   ]
+  },
+  {
+   "tStartMs": 41420,
+   "dDurationMs": 3540,
+   "segs": [
+    {
+     "utf8": "Go full screen for this if you can, the intricacy is worth it."
+    }
+   ]
+  },
+  {
+   "tStartMs": 50440,
+   "dDurationMs": 3789,
+   "segs": [
+    {
+     "utf8": "Think about this, the action of each individual arrow is perhaps "
+    }
+   ]
+  },
+  {
+   "tStartMs": 54229,
+   "dDurationMs": 3731,
+   "segs": [
+    {
+     "utf8": "the simplest thing you could imagine, rotation at a steady rate."
+    }
+   ]
+  },
+  {
+   "tStartMs": 58600,
+   "dDurationMs": 3627,
+   "segs": [
+    {
+     "utf8": "And yet the collection of all added together is anything but simple, "
+    }
+   ]
+  },
+  {
+   "tStartMs": 62227,
+   "dDurationMs": 4311,
+   "segs": [
+    {
+     "utf8": "and the mind-boggling complexity is put into an even sharper focus the farther we "
+    }
+   ]
+  },
+  {
+   "tStartMs": 66538,
+   "dDurationMs": 3364,
+   "segs": [
+    {
+     "utf8": "zoom in, revealing the contributions of the littlest, quickest, "
+    }
+   ]
+  },
+  {
+   "tStartMs": 69902,
+   "dDurationMs": 1578,
+   "segs": [
+    {
+     "utf8": "and downright frenetic arrows."
+    }
+   ]
+  },
+  {
+   "tStartMs": 72300,
+   "dDurationMs": 2974,
+   "segs": [
+    {
+     "utf8": "When you consider the chaotic frenzy you're looking at, "
+    }
+   ]
+  },
+  {
+   "tStartMs": 75274,
+   "dDurationMs": 2921,
+   "segs": [
+    {
+     "utf8": "and the clockwork rigidity underlying all the motions, "
+    }
+   ]
+  },
+  {
+   "tStartMs": 78195,
+   "dDurationMs": 3664,
+   "segs": [
+    {
+     "utf8": "it's bizarre how the swarm acts with a kind of coordination to trace "
+    }
+   ]
+  },
+  {
+   "tStartMs": 81859,
+   "dDurationMs": 1541,
+   "segs": [
+    {
+     "utf8": "out some very specific shape."
+    }
+   ]
+  }
+ ],
+ "windows": []
+}

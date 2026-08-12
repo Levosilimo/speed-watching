@@ -1,0 +1,195 @@
+{
+ "wireMagic": "pb3",
+ "pens": [
+  {}
+ ],
+ "wsWinStyles": [
+  {}
+ ],
+ "wpWinPositions": [
+  {}
+ ],
+ "events": [
+  {
+   "tStartMs": 30,
+   "dDurationMs": 4970,
+   "segs": [
+    {
+     "utf8": "Why 0! equals to 1?"
+    }
+   ]
+  },
+  {
+   "tStartMs": 5340,
+   "dDurationMs": 3700,
+   "segs": [
+    {
+     "utf8": "Okay. Because it does seem to defy the idea of"
+    }
+   ]
+  },
+  {
+   "tStartMs": 9640,
+   "dDurationMs": 2340,
+   "segs": [
+    {
+     "utf8": "you multiply down"
+    }
+   ]
+  },
+  {
+   "tStartMs": 12120,
+   "dDurationMs": 2000,
+   "segs": [
+    {
+     "utf8": "until you get down to whatever"
+    }
+   ]
+  },
+  {
+   "tStartMs": 14530,
+   "dDurationMs": 5659,
+   "segs": [
+    {
+     "utf8": "one, and then you stop. I'm going to argue for this the same way I would argue"
+    }
+   ]
+  },
+  {
+   "tStartMs": 20710,
+   "dDurationMs": 4190,
+   "segs": [
+    {
+     "utf8": "a very sort of reverse of.. Oh no, not that."
+    }
+   ]
+  },
+  {
+   "tStartMs": 24900,
+   "dDurationMs": 520,
+   "segs": [
+    {
+     "utf8": "How would i do this?"
+    }
+   ]
+  },
+  {
+   "tStartMs": 25420,
+   "dDurationMs": 2000,
+   "segs": [
+    {
+     "utf8": "How do you argue that?"
+    }
+   ]
+  },
+  {
+   "tStartMs": 27430,
+   "dDurationMs": 5899,
+   "segs": [
+    {
+     "utf8": "Because you'll take it to be true, right? But it's the same problem when you say on"
+    }
+   ]
+  },
+  {
+   "tStartMs": 34149,
+   "dDurationMs": 7400,
+   "segs": [
+    {
+     "utf8": "'a' square, but we define powers as you multiply this number by itself that number of times and"
+    }
+   ]
+  },
+  {
+   "tStartMs": 41739,
+   "dDurationMs": 3290,
+   "segs": [
+    {
+     "utf8": "That makes sense to you, but the definition breaks down"
+    }
+   ]
+  },
+  {
+   "tStartMs": 45610,
+   "dDurationMs": 4429,
+   "segs": [
+    {
+     "utf8": "The U7 definition breaks down when you go to cases like this"
+    }
+   ]
+  },
+  {
+   "tStartMs": 51060,
+   "dDurationMs": 3880,
+   "segs": [
+    {
+     "utf8": "So how do you argue it, or do you just accept it and don't think about it?"
+    }
+   ]
+  },
+  {
+   "tStartMs": 55380,
+   "dDurationMs": 2000,
+   "segs": [
+    {
+     "utf8": "*Laughs* Don't think 'bout it"
+    }
+   ]
+  },
+  {
+   "tStartMs": 58820,
+   "dDurationMs": 2060,
+   "segs": [
+    {
+     "utf8": "All right people let's play a game, okay"
+    }
+   ]
+  },
+  {
+   "tStartMs": 60880,
+   "dDurationMs": 1949,
+   "segs": [
+    {
+     "utf8": "Someone at the audience: Mario! *laughs*"
+    }
+   ]
+  },
+  {
+   "tStartMs": 62829,
+   "dDurationMs": 2000,
+   "segs": [
+    {
+     "utf8": "No"
+    }
+   ]
+  },
+  {
+   "tStartMs": 64989,
+   "dDurationMs": 5180,
+   "segs": [
+    {
+     "utf8": "I still with a number, shall we? Okay. Let's go. To power of one?"
+    }
+   ]
+  },
+  {
+   "tStartMs": 70169,
+   "dDurationMs": 1571,
+   "segs": [
+    {
+     "utf8": "Everyone: 2."
+    }
+   ]
+  },
+  {
+   "tStartMs": 72960,
+   "dDurationMs": 1400,
+   "segs": [
+    {
+     "utf8": "2 squared?"
+    }
+   ]
+  }
+ ],
+ "windows": []
+}

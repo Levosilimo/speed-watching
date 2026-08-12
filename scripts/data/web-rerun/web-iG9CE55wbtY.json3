@@ -1,0 +1,195 @@
+{
+ "wireMagic": "pb3",
+ "pens": [
+  {}
+ ],
+ "wsWinStyles": [
+  {}
+ ],
+ "wpWinPositions": [
+  {}
+ ],
+ "events": [
+  {
+   "tStartMs": 27103,
+   "dDurationMs": 2575,
+   "segs": [
+    {
+     "utf8": "Good morning. How are you?"
+    }
+   ]
+  },
+  {
+   "tStartMs": 29702,
+   "dDurationMs": 1403,
+   "segs": [
+    {
+     "utf8": "(Audience) Good."
+    }
+   ]
+  },
+  {
+   "tStartMs": 31129,
+   "dDurationMs": 1668,
+   "segs": [
+    {
+     "utf8": "It's been great, hasn't it?"
+    }
+   ]
+  },
+  {
+   "tStartMs": 33408,
+   "dDurationMs": 2321,
+   "segs": [
+    {
+     "utf8": "I've been blown away by the whole thing."
+    }
+   ]
+  },
+  {
+   "tStartMs": 35753,
+   "dDurationMs": 1492,
+   "segs": [
+    {
+     "utf8": "In fact, I'm leaving."
+    }
+   ]
+  },
+  {
+   "tStartMs": 37269,
+   "dDurationMs": 3906,
+   "segs": [
+    {
+     "utf8": "(Laughter)"
+    }
+   ]
+  },
+  {
+   "tStartMs": 43096,
+   "dDurationMs": 3567,
+   "segs": [
+    {
+     "utf8": "There have been three themes\nrunning through the conference,"
+    }
+   ]
+  },
+  {
+   "tStartMs": 46687,
+   "dDurationMs": 2286,
+   "segs": [
+    {
+     "utf8": "which are relevant\nto what I want to talk about."
+    }
+   ]
+  },
+  {
+   "tStartMs": 48997,
+   "dDurationMs": 4470,
+   "segs": [
+    {
+     "utf8": "One is the extraordinary\nevidence of human creativity"
+    }
+   ]
+  },
+  {
+   "tStartMs": 53491,
+   "dDurationMs": 2413,
+   "segs": [
+    {
+     "utf8": "in all of the presentations that we've had"
+    }
+   ]
+  },
+  {
+   "tStartMs": 55928,
+   "dDurationMs": 1952,
+   "segs": [
+    {
+     "utf8": "and in all of the people here;"
+    }
+   ]
+  },
+  {
+   "tStartMs": 57904,
+   "dDurationMs": 2651,
+   "segs": [
+    {
+     "utf8": "just the variety of it\nand the range of it."
+    }
+   ]
+  },
+  {
+   "tStartMs": 61158,
+   "dDurationMs": 2143,
+   "segs": [
+    {
+     "utf8": "The second is that it's put us in a place"
+    }
+   ]
+  },
+  {
+   "tStartMs": 63325,
+   "dDurationMs": 2497,
+   "segs": [
+    {
+     "utf8": "where we have no idea\nwhat's going to happen"
+    }
+   ]
+  },
+  {
+   "tStartMs": 65846,
+   "dDurationMs": 1391,
+   "segs": [
+    {
+     "utf8": "in terms of the future."
+    }
+   ]
+  },
+  {
+   "tStartMs": 67261,
+   "dDurationMs": 2985,
+   "segs": [
+    {
+     "utf8": "No idea how this may play out."
+    }
+   ]
+  },
+  {
+   "tStartMs": 70270,
+   "dDurationMs": 1622,
+   "segs": [
+    {
+     "utf8": "I have an interest in education."
+    }
+   ]
+  },
+  {
+   "tStartMs": 71916,
+   "dDurationMs": 4412,
+   "segs": [
+    {
+     "utf8": "Actually, what I find is,\neverybody has an interest in education."
+    }
+   ]
+  },
+  {
+   "tStartMs": 76352,
+   "dDurationMs": 1317,
+   "segs": [
+    {
+     "utf8": "Don't you?"
+    }
+   ]
+  },
+  {
+   "tStartMs": 77693,
+   "dDurationMs": 1402,
+   "segs": [
+    {
+     "utf8": "I find this very interesting."
+    }
+   ]
+  }
+ ],
+ "windows": []
+}

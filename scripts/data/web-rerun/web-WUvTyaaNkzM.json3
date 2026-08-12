@@ -1,0 +1,195 @@
+{
+ "wireMagic": "pb3",
+ "pens": [
+  {}
+ ],
+ "wsWinStyles": [
+  {}
+ ],
+ "wpWinPositions": [
+  {}
+ ],
+ "events": [
+  {
+   "tStartMs": 14980,
+   "dDurationMs": 1480,
+   "segs": [
+    {
+     "utf8": "Hey everyone, Grant here."
+    }
+   ]
+  },
+  {
+   "tStartMs": 16820,
+   "dDurationMs": 3008,
+   "segs": [
+    {
+     "utf8": "This is the first video in a series on the essence of calculus,"
+    }
+   ]
+  },
+  {
+   "tStartMs": 19828,
+   "dDurationMs": 3772,
+   "segs": [
+    {
+     "utf8": "and I'll be publishing the following videos once per day for the next 10 days."
+    }
+   ]
+  },
+  {
+   "tStartMs": 24300,
+   "dDurationMs": 2611,
+   "segs": [
+    {
+     "utf8": "The goal here, as the name suggests, is to really get"
+    }
+   ]
+  },
+  {
+   "tStartMs": 26911,
+   "dDurationMs": 2809,
+   "segs": [
+    {
+     "utf8": "the heart of the subject out in one binge-watchable set."
+    }
+   ]
+  },
+  {
+   "tStartMs": 30320,
+   "dDurationMs": 3859,
+   "segs": [
+    {
+     "utf8": "But with a topic that's as broad as calculus, there's a lot of things that can mean,"
+    }
+   ]
+  },
+  {
+   "tStartMs": 34179,
+   "dDurationMs": 2021,
+   "segs": [
+    {
+     "utf8": "so here's what I have in mind specifically."
+    }
+   ]
+  },
+  {
+   "tStartMs": 36940,
+   "dDurationMs": 2473,
+   "segs": [
+    {
+     "utf8": "Calculus has a lot of rules and formulas which"
+    }
+   ]
+  },
+  {
+   "tStartMs": 39413,
+   "dDurationMs": 2527,
+   "segs": [
+    {
+     "utf8": "are often presented as things to be memorized."
+    }
+   ]
+  },
+  {
+   "tStartMs": 42480,
+   "dDurationMs": 3274,
+   "segs": [
+    {
+     "utf8": "Lots of derivative formulas, the product rule, the chain rule,"
+    }
+   ]
+  },
+  {
+   "tStartMs": 45754,
+   "dDurationMs": 4224,
+   "segs": [
+    {
+     "utf8": "implicit differentiation, the fact that integrals and derivatives are opposite,"
+    }
+   ]
+  },
+  {
+   "tStartMs": 49978,
+   "dDurationMs": 2482,
+   "segs": [
+    {
+     "utf8": "Taylor series, just a lot of things like that."
+    }
+   ]
+  },
+  {
+   "tStartMs": 52960,
+   "dDurationMs": 2173,
+   "segs": [
+    {
+     "utf8": "And my goal is for you to come away feeling like"
+    }
+   ]
+  },
+  {
+   "tStartMs": 55133,
+   "dDurationMs": 1947,
+   "segs": [
+    {
+     "utf8": "you could have invented calculus yourself."
+    }
+   ]
+  },
+  {
+   "tStartMs": 57640,
+   "dDurationMs": 3998,
+   "segs": [
+    {
+     "utf8": "That is, cover all those core ideas, but in a way that makes clear where they"
+    }
+   ]
+  },
+  {
+   "tStartMs": 61638,
+   "dDurationMs": 4362,
+   "segs": [
+    {
+     "utf8": "actually come from, and what they really mean, using an all-around visual approach."
+    }
+   ]
+  },
+  {
+   "tStartMs": 66920,
+   "dDurationMs": 3507,
+   "segs": [
+    {
+     "utf8": "Inventing math is no joke, and there is a difference between being"
+    }
+   ]
+  },
+  {
+   "tStartMs": 70427,
+   "dDurationMs": 3613,
+   "segs": [
+    {
+     "utf8": "told why something's true, and actually generating it from scratch."
+    }
+   ]
+  },
+  {
+   "tStartMs": 74680,
+   "dDurationMs": 4411,
+   "segs": [
+    {
+     "utf8": "But at all points, I want you to think to yourself, if you were an early mathematician,"
+    }
+   ]
+  },
+  {
+   "tStartMs": 79091,
+   "dDurationMs": 2941,
+   "segs": [
+    {
+     "utf8": "pondering these ideas and drawing out the right diagrams,"
+    }
+   ]
+  }
+ ],
+ "windows": []
+}

@@ -1,0 +1,195 @@
+{
+ "wireMagic": "pb3",
+ "pens": [
+  {}
+ ],
+ "wsWinStyles": [
+  {}
+ ],
+ "wpWinPositions": [
+  {}
+ ],
+ "events": [
+  {
+   "tStartMs": 28244,
+   "dDurationMs": 1335,
+   "segs": [
+    {
+     "utf8": "Oh,"
+    }
+   ]
+  },
+  {
+   "tStartMs": 30288,
+   "dDurationMs": 1001,
+   "segs": [
+    {
+     "utf8": "Fonsi!"
+    }
+   ]
+  },
+  {
+   "tStartMs": 31790,
+   "dDurationMs": 1001,
+   "segs": [
+    {
+     "utf8": "DY!"
+    }
+   ]
+  },
+  {
+   "tStartMs": 33542,
+   "dDurationMs": 5090,
+   "segs": [
+    {
+     "utf8": "<i>Ooh, oh, no, oh, no, oh</i>"
+    }
+   ]
+  },
+  {
+   "tStartMs": 38715,
+   "dDurationMs": 1293,
+   "segs": [
+    {
+     "utf8": "<i>Hey, yeah!</i>"
+    }
+   ]
+  },
+  {
+   "tStartMs": 40092,
+   "dDurationMs": 1794,
+   "segs": [
+    {
+     "utf8": "Dididiri Daddy, go!"
+    }
+   ]
+  },
+  {
+   "tStartMs": 42011,
+   "dDurationMs": 4714,
+   "segs": [
+    {
+     "utf8": "<i>Yeah, you know that I’ve been looking at you for a long time</i>"
+    }
+   ]
+  },
+  {
+   "tStartMs": 47601,
+   "dDurationMs": 3254,
+   "segs": [
+    {
+     "utf8": "<i>I must dance with you today</i>"
+    }
+   ]
+  },
+  {
+   "tStartMs": 51481,
+   "dDurationMs": 1001,
+   "segs": [
+    {
+     "utf8": "DY!"
+    }
+   ]
+  },
+  {
+   "tStartMs": 52649,
+   "dDurationMs": 4631,
+   "segs": [
+    {
+     "utf8": "<i>I saw that the look in your eyes was calling me</i>"
+    }
+   ]
+  },
+  {
+   "tStartMs": 57906,
+   "dDurationMs": 3754,
+   "segs": [
+    {
+     "utf8": "<i>Show me the path that I will take</i>"
+    }
+   ]
+  },
+  {
+   "tStartMs": 62411,
+   "dDurationMs": 1002,
+   "segs": [
+    {
+     "utf8": "<i>Oh!</i>"
+    }
+   ]
+  },
+  {
+   "tStartMs": 63955,
+   "dDurationMs": 2879,
+   "segs": [
+    {
+     "utf8": "<i>You, you're the magnet, and I'm</i>\n<i>the metal,</i>"
+    }
+   ]
+  },
+  {
+   "tStartMs": 67000,
+   "dDurationMs": 2420,
+   "segs": [
+    {
+     "utf8": "<i>I am getting closer and making a plan</i>"
+    }
+   ]
+  },
+  {
+   "tStartMs": 69504,
+   "dDurationMs": 3128,
+   "segs": [
+    {
+     "utf8": "<i>Simply thinking about it makes my heart race</i>"
+    }
+   ]
+  },
+  {
+   "tStartMs": 73008,
+   "dDurationMs": 1210,
+   "segs": [
+    {
+     "utf8": "Oh, yeah!"
+    }
+   ]
+  },
+  {
+   "tStartMs": 74301,
+   "dDurationMs": 3338,
+   "segs": [
+    {
+     "utf8": "<i>Now, I'm already liking it more than usual</i>"
+    }
+   ]
+  },
+  {
+   "tStartMs": 77722,
+   "dDurationMs": 2670,
+   "segs": [
+    {
+     "utf8": "<i>All my senses are asking for more</i>"
+    }
+   ]
+  },
+  {
+   "tStartMs": 80476,
+   "dDurationMs": 3170,
+   "segs": [
+    {
+     "utf8": "<i>We cannot do this in a rush</i>"
+    }
+   ]
+  },
+  {
+   "tStartMs": 83855,
+   "dDurationMs": 2420,
+   "segs": [
+    {
+     "utf8": "<i>Slowly</i>"
+    }
+   ]
+  }
+ ],
+ "windows": []
+}

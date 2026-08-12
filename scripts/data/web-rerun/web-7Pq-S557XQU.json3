@@ -1,0 +1,195 @@
+{
+ "wireMagic": "pb3",
+ "pens": [
+  {}
+ ],
+ "wsWinStyles": [
+  {}
+ ],
+ "wpWinPositions": [
+  {}
+ ],
+ "events": [
+  {
+   "tStartMs": 3770,
+   "dDurationMs": 5220,
+   "segs": [
+    {
+     "utf8": "Every human used to have to hunt or gather to survive. But humans are smart...ly lazy so"
+    }
+   ]
+  },
+  {
+   "tStartMs": 8990,
+   "dDurationMs": 4690,
+   "segs": [
+    {
+     "utf8": "we made tools to make our work easier. From sticks, to plows, to tractors we’ve gone"
+    }
+   ]
+  },
+  {
+   "tStartMs": 13680,
+   "dDurationMs": 4460,
+   "segs": [
+    {
+     "utf8": "from everyone needing to make food to, modern agriculture with almost no one needing to"
+    }
+   ]
+  },
+  {
+   "tStartMs": 18140,
+   "dDurationMs": 2220,
+   "segs": [
+    {
+     "utf8": "make food — and yet, we still have abundance."
+    }
+   ]
+  },
+  {
+   "tStartMs": 20400,
+   "dDurationMs": 3680,
+   "segs": [
+    {
+     "utf8": "Of course, it’s not just farming, it’s\neverything. We’ve spent the last several"
+    }
+   ]
+  },
+  {
+   "tStartMs": 24080,
+   "dDurationMs": 5500,
+   "segs": [
+    {
+     "utf8": "thousand years building tools to reduce physical\nlabor of all kinds. These are mechanical muscles."
+    }
+   ]
+  },
+  {
+   "tStartMs": 29580,
+   "dDurationMs": 4560,
+   "segs": [
+    {
+     "utf8": "Stronger, more reliable, and more tireless\nthan human muscles ever could be."
+    }
+   ]
+  },
+  {
+   "tStartMs": 34140,
+   "dDurationMs": 4520,
+   "segs": [
+    {
+     "utf8": "And that's a good thing. Replacing human labor\nwith mechanical muscles frees people to specialize"
+    }
+   ]
+  },
+  {
+   "tStartMs": 38660,
+   "dDurationMs": 5710,
+   "segs": [
+    {
+     "utf8": "and that leaves everyone better off - even those\nstill doing physical labor. This is how economies"
+    }
+   ]
+  },
+  {
+   "tStartMs": 44370,
+   "dDurationMs": 2240,
+   "segs": [
+    {
+     "utf8": "grow and standards of living rise."
+    }
+   ]
+  },
+  {
+   "tStartMs": 46610,
+   "dDurationMs": 4620,
+   "segs": [
+    {
+     "utf8": "Some people have specialized to be programmers\nand engineers whose job is to build mechanical"
+    }
+   ]
+  },
+  {
+   "tStartMs": 51230,
+   "dDurationMs": 4890,
+   "segs": [
+    {
+     "utf8": "minds. Just as mechanical muscles made human\nlabor less in demand so are mechanical minds"
+    }
+   ]
+  },
+  {
+   "tStartMs": 56120,
+   "dDurationMs": 2980,
+   "segs": [
+    {
+     "utf8": "making human brain labor less in demand."
+    }
+   ]
+  },
+  {
+   "tStartMs": 59100,
+   "dDurationMs": 4709,
+   "segs": [
+    {
+     "utf8": "This is an economic revolution. You may think\nwe've been here before, but we haven't."
+    }
+   ]
+  },
+  {
+   "tStartMs": 63809,
+   "dDurationMs": 1690,
+   "segs": [
+    {
+     "utf8": "This time is different."
+    }
+   ]
+  },
+  {
+   "tStartMs": 65500,
+   "dDurationMs": 1630,
+   "segs": [
+    {
+     "utf8": "## Physical Labor"
+    }
+   ]
+  },
+  {
+   "tStartMs": 67130,
+   "dDurationMs": 4489,
+   "segs": [
+    {
+     "utf8": "When you think of automation, you probably\nthink of this: giant, custom-built, expensive,"
+    }
+   ]
+  },
+  {
+   "tStartMs": 71620,
+   "dDurationMs": 4830,
+   "segs": [
+    {
+     "utf8": "efficient, but really dumb robots blind to\nthe world and their own work. They were a"
+    }
+   ]
+  },
+  {
+   "tStartMs": 76450,
+   "dDurationMs": 4000,
+   "segs": [
+    {
+     "utf8": "scary kind of automation but they haven't\ntaken over the world because they're only"
+    }
+   ]
+  },
+  {
+   "tStartMs": 80450,
+   "dDurationMs": 2860,
+   "segs": [
+    {
+     "utf8": "cost effective in narrow situations."
+    }
+   ]
+  }
+ ],
+ "windows": []
+}

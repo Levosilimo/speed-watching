@@ -1,0 +1,195 @@
+{
+ "wireMagic": "pb3",
+ "pens": [
+  {}
+ ],
+ "wsWinStyles": [
+  {}
+ ],
+ "wpWinPositions": [
+  {}
+ ],
+ "events": [
+  {
+   "tStartMs": 8570,
+   "dDurationMs": 3370,
+   "segs": [
+    {
+     "utf8": "This video is sponsored by Caseta by Lutron"
+    }
+   ]
+  },
+  {
+   "tStartMs": 17480,
+   "dDurationMs": 4520,
+   "segs": [
+    {
+     "utf8": "According to the general theory of relativity, gravity is not a force."
+    }
+   ]
+  },
+  {
+   "tStartMs": 22000,
+   "dDurationMs": 5820,
+   "segs": [
+    {
+     "utf8": "There are no gravitational fields, gravity is kind of an illusion."
+    }
+   ]
+  },
+  {
+   "tStartMs": 27820,
+   "dDurationMs": 8400,
+   "segs": [
+    {
+     "utf8": "And in this video, I will prove it to you by blasting off into outer space in 321"
+    }
+   ]
+  },
+  {
+   "tStartMs": 50050,
+   "dDurationMs": 3770,
+   "segs": [
+    {
+     "utf8": "Albert Einstein said the happiest thought of his life"
+    }
+   ]
+  },
+  {
+   "tStartMs": 53820,
+   "dDurationMs": 4920,
+   "segs": [
+    {
+     "utf8": "was imagining a man falling off the roof of a house."
+    }
+   ]
+  },
+  {
+   "tStartMs": 58740,
+   "dDurationMs": 4340,
+   "segs": [
+    {
+     "utf8": "What made Einstein so happy about this wasn't Schadenfreude,"
+    }
+   ]
+  },
+  {
+   "tStartMs": 63080,
+   "dDurationMs": 5430,
+   "segs": [
+    {
+     "utf8": "It was the realization that this man, while he was falling wouldn't feel his own weight."
+    }
+   ]
+  },
+  {
+   "tStartMs": 68510,
+   "dDurationMs": 3710,
+   "segs": [
+    {
+     "utf8": "He would be weightless and anything he dropped on his way down,"
+    }
+   ]
+  },
+  {
+   "tStartMs": 72220,
+   "dDurationMs": 4860,
+   "segs": [
+    {
+     "utf8": "Well, it would remain stationary relative to him or moving in uniform motion."
+    }
+   ]
+  },
+  {
+   "tStartMs": 78050,
+   "dDurationMs": 5090,
+   "segs": [
+    {
+     "utf8": "The whole situation would be just like.."
+    }
+   ]
+  },
+  {
+   "tStartMs": 83140,
+   "dDurationMs": 3710,
+   "segs": [
+    {
+     "utf8": "If you were in deep space, not near any large masses."
+    }
+   ]
+  },
+  {
+   "tStartMs": 88850,
+   "dDurationMs": 4520,
+   "segs": [
+    {
+     "utf8": "With your spaceship at rest or coasting along at constant velocity"
+    }
+   ]
+  },
+  {
+   "tStartMs": 94220,
+   "dDurationMs": 3150,
+   "segs": [
+    {
+     "utf8": "Here, you would feel no weight"
+    }
+   ]
+  },
+  {
+   "tStartMs": 97370,
+   "dDurationMs": 8570,
+   "segs": [
+    {
+     "utf8": "Objects would remain stationary relative to you or if you give them a push, they would move in a straight line at constant velocity"
+    }
+   ]
+  },
+  {
+   "tStartMs": 105940,
+   "dDurationMs": 4570,
+   "segs": [
+    {
+     "utf8": "And you would be the very definition of an inertial observer,"
+    }
+   ]
+  },
+  {
+   "tStartMs": 110510,
+   "dDurationMs": 3550,
+   "segs": [
+    {
+     "utf8": "you're not accelerating, not in a gravitational field,"
+    }
+   ]
+  },
+  {
+   "tStartMs": 114060,
+   "dDurationMs": 3480,
+   "segs": [
+    {
+     "utf8": "all the laws of physics apply in your reference frame,"
+    }
+   ]
+  },
+  {
+   "tStartMs": 117540,
+   "dDurationMs": 6680,
+   "segs": [
+    {
+     "utf8": "meaning there is no experiment, you could do to distinguish your initial reference frame from any other"
+    }
+   ]
+  },
+  {
+   "tStartMs": 127020,
+   "dDurationMs": 2000,
+   "segs": [
+    {
+     "utf8": "Now here comes the big leap:"
+    }
+   ]
+  }
+ ],
+ "windows": []
+}

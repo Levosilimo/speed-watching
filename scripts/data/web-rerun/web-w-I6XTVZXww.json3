@@ -1,0 +1,195 @@
+{
+ "wireMagic": "pb3",
+ "pens": [
+  {}
+ ],
+ "wsWinStyles": [
+  {}
+ ],
+ "wpWinPositions": [
+  {}
+ ],
+ "events": [
+  {
+   "tStartMs": 200,
+   "dDurationMs": 2140,
+   "segs": [
+    {
+     "utf8": "I'm gonna give you an astounding result"
+    }
+   ]
+  },
+  {
+   "tStartMs": 2840,
+   "dDurationMs": 640,
+   "segs": [
+    {
+     "utf8": "Astounding?"
+    }
+   ]
+  },
+  {
+   "tStartMs": 3480,
+   "dDurationMs": 880,
+   "segs": [
+    {
+     "utf8": "An astounding result"
+    }
+   ]
+  },
+  {
+   "tStartMs": 4400,
+   "dDurationMs": 2000,
+   "segs": [
+    {
+     "utf8": "So I'm just gonna write down a little sum"
+    }
+   ]
+  },
+  {
+   "tStartMs": 6400,
+   "dDurationMs": 2000,
+   "segs": [
+    {
+     "utf8": "I'm just gonna see what answer it gives."
+    }
+   ]
+  },
+  {
+   "tStartMs": 8500,
+   "dDurationMs": 5420,
+   "segs": [
+    {
+     "utf8": "1 + 2 + 3 + 4 + duh duh duh duh duh"
+    }
+   ]
+  },
+  {
+   "tStartMs": 13920,
+   "dDurationMs": 4250,
+   "segs": [
+    {
+     "utf8": "And I include all the \nnatural numbers, so all the way up to infinity"
+    }
+   ]
+  },
+  {
+   "tStartMs": 18500,
+   "dDurationMs": 2760,
+   "segs": [
+    {
+     "utf8": "So what do you reckon the answer to this is, Brady?"
+    }
+   ]
+  },
+  {
+   "tStartMs": 21260,
+   "dDurationMs": 3800,
+   "segs": [
+    {
+     "utf8": "-Well I would say it would go to tend towards infinity."
+    }
+   ]
+  },
+  {
+   "tStartMs": 25400,
+   "dDurationMs": 1539,
+   "segs": [
+    {
+     "utf8": "Yeah, that makes sense, doesn't\nit."
+    }
+   ]
+  },
+  {
+   "tStartMs": 26939,
+   "dDurationMs": 4201,
+   "segs": [
+    {
+     "utf8": "The answer to this sum is -- remarkably -- minus a twelfth."
+    }
+   ]
+  },
+  {
+   "tStartMs": 32610,
+   "dDurationMs": 4800,
+   "segs": [
+    {
+     "utf8": "It's amazing! I mean, I first saw this result\nwhen I start learning a bit of String Theory"
+    }
+   ]
+  },
+  {
+   "tStartMs": 37410,
+   "dDurationMs": 6590,
+   "segs": [
+    {
+     "utf8": "And what's even more bizarre is that this\nresult is used in many areas of physics"
+    }
+   ]
+  },
+  {
+   "tStartMs": 44020,
+   "dDurationMs": 4539,
+   "segs": [
+    {
+     "utf8": "This is a very well known string theory\ntextbook by Joe Polchinski.  As you can see,"
+    }
+   ]
+  },
+  {
+   "tStartMs": 48559,
+   "dDurationMs": 5081,
+   "segs": [
+    {
+     "utf8": "sort of quite early on, page 22, we have this\nstatement here which is that the sum of"
+    }
+   ]
+  },
+  {
+   "tStartMs": 53640,
+   "dDurationMs": 2689,
+   "segs": [
+    {
+     "utf8": "all this is --- basically saying the sum of\nall the integers ---"
+    }
+   ]
+  },
+  {
+   "tStartMs": 56329,
+   "dDurationMs": 4151,
+   "segs": [
+    {
+     "utf8": "all natural numbers all the way up to infinity, is, minus a twelfth."
+    }
+   ]
+  },
+  {
+   "tStartMs": 60480,
+   "dDurationMs": 2040,
+   "segs": [
+    {
+     "utf8": "Alright so we're going to prove now,"
+    }
+   ]
+  },
+  {
+   "tStartMs": 62760,
+   "dDurationMs": 3640,
+   "segs": [
+    {
+     "utf8": "Without getting our knickers in a twist with Riemann zeta functions, we gonna prove"
+    }
+   ]
+  },
+  {
+   "tStartMs": 66920,
+   "dDurationMs": 4899,
+   "segs": [
+    {
+     "utf8": "in quite simple way, why the sum of all the natural numbers is indeed minus a twelfth."
+    }
+   ]
+  }
+ ],
+ "windows": []
+}

@@ -243,7 +243,7 @@ export function emitWebFixtures(input: {
       `web fixture ${file} <- ${record.videoId} (${record.title ?? '?'}, ${original} -> ${size} bytes)`,
     );
     rows.push(
-      `| ${file} | ${record.videoId} | ${record.title ?? '?'} | ${captureDate} | player-signed intercept (page.on('response'), CC toggled on) | ${original} | ${size} | word-level windows parsing (words > 0); windows==segs cue parity |`,
+      `| ${file} | ${record.videoId} | ${record.title ?? '?'} | ${captureDate} | player-signed intercept (page.on('response'), CC toggled on) | ${original} | ${size} | word timing parsing (words > 0 on a real WEB payload); windows==segs cue parity |`,
     );
   }
   const readmePath = join(fixturesDir, '..', 'README.md');
@@ -384,7 +384,9 @@ function printParity(results: SampleRecord[]): void {
 
 function printPauseBias(results: SampleRecord[]): void {
   const biased = results.filter((r) => r.pauseBiasPct !== null);
-  console.log(`\n=== PAUSE-BIAS (median; >25% flags the unified-rate rule) ===`);
+  console.log(
+    `\n=== PAUSE-BIAS (median; |bias| > 25% flags the unified-rate rule) ===`,
+  );
   if (biased.length > 0) {
     const sorted = biased.map((r) => r.pauseBiasPct as number).sort((a, b) => a - b);
     const mid = Math.floor(sorted.length / 2);
@@ -398,9 +400,12 @@ function printPauseBias(results: SampleRecord[]): void {
               const b = sorted[mid - 1];
               return b === undefined ? null : (a + b) / 2;
             })();
+    // Negative bias: word-accurate rate exceeds the unified estimate because
+    // pauses inflate the cue-span denominator — the rule over-speeds by
+    // |bias|. Runbook flags > 25% pause share.
     console.log(
       `median pauseBias=${median === null ? 'n/a' : `${median.toFixed(1)}%`} ` +
-        `${median !== null && median > 25 ? 'FLAG (>25%)' : ''}`,
+        `${median !== null && Math.abs(median) > 25 ? 'FLAG (|bias|>25%)' : ''}`,
     );
   }
   console.log('videoId       unifiedRate wordAccurateRate pauseBias% source');

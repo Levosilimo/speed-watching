@@ -1,0 +1,195 @@
+{
+ "wireMagic": "pb3",
+ "pens": [
+  {}
+ ],
+ "wsWinStyles": [
+  {}
+ ],
+ "wpWinPositions": [
+  {}
+ ],
+ "events": [
+  {
+   "tStartMs": 1840,
+   "dDurationMs": 2400,
+   "segs": [
+    {
+     "utf8": "Hey, Vsauce. Michael here."
+    }
+   ]
+  },
+  {
+   "tStartMs": 4240,
+   "dDurationMs": 3540,
+   "segs": [
+    {
+     "utf8": "Nyctophobia is the fear of the dark."
+    }
+   ]
+  },
+  {
+   "tStartMs": 7780,
+   "dDurationMs": 2260,
+   "segs": [
+    {
+     "utf8": "But there's another fear that's more chilling."
+    }
+   ]
+  },
+  {
+   "tStartMs": 10050,
+   "dDurationMs": 5130,
+   "segs": [
+    {
+     "utf8": "It's the fear that darkness will go away."
+    }
+   ]
+  },
+  {
+   "tStartMs": 15180,
+   "dDurationMs": 3510,
+   "segs": [
+    {
+     "utf8": "Optophobia, the fear of opening your eyes."
+    }
+   ]
+  },
+  {
+   "tStartMs": 18690,
+   "dDurationMs": 5580,
+   "segs": [
+    {
+     "utf8": "Light travels at the fastest speed possible for\na physical object."
+    }
+   ]
+  },
+  {
+   "tStartMs": 24270,
+   "dDurationMs": 4090,
+   "segs": [
+    {
+     "utf8": "Darkness is erased when light appears, and returns"
+    }
+   ]
+  },
+  {
+   "tStartMs": 28360,
+   "dDurationMs": 3060,
+   "segs": [
+    {
+     "utf8": "when light leaves. The speed of dark"
+    }
+   ]
+  },
+  {
+   "tStartMs": 31420,
+   "dDurationMs": 3350,
+   "segs": [
+    {
+     "utf8": "is the speed of light but there are\nother types of darkness"
+    }
+   ]
+  },
+  {
+   "tStartMs": 34770,
+   "dDurationMs": 3810,
+   "segs": [
+    {
+     "utf8": "that can move faster than light speed. For\ninstance,"
+    }
+   ]
+  },
+  {
+   "tStartMs": 40000,
+   "dDurationMs": 1680,
+   "segs": [
+    {
+     "utf8": "a shadow."
+    }
+   ]
+  },
+  {
+   "tStartMs": 41680,
+   "dDurationMs": 4580,
+   "segs": [
+    {
+     "utf8": "Across a distance, a shadow can become\nmuch larger than the object creating it,"
+    }
+   ]
+  },
+  {
+   "tStartMs": 46260,
+   "dDurationMs": 5310,
+   "segs": [
+    {
+     "utf8": "but still mimic its source, moving in the\nsame way for the same amount of time."
+    }
+   ]
+  },
+  {
+   "tStartMs": 51570,
+   "dDurationMs": 4620,
+   "segs": [
+    {
+     "utf8": "So when a shadow is bigger than the object casting it, it moves a greater distance"
+    }
+   ]
+  },
+  {
+   "tStartMs": 56190,
+   "dDurationMs": 4270,
+   "segs": [
+    {
+     "utf8": "when the object moves but in the same amount of time. Make a shadow large enough"
+    }
+   ]
+  },
+  {
+   "tStartMs": 60460,
+   "dDurationMs": 3400,
+   "segs": [
+    {
+     "utf8": "and it can travel across the surface faster than light."
+    }
+   ]
+  },
+  {
+   "tStartMs": 63860,
+   "dDurationMs": 4530,
+   "segs": [
+    {
+     "utf8": "If you, here on Earth, cast a shadow onto\nthe Moon,"
+    }
+   ]
+  },
+  {
+   "tStartMs": 68390,
+   "dDurationMs": 3680,
+   "segs": [
+    {
+     "utf8": "not an easy thing to do, that pointed\nfrom, say, point A"
+    }
+   ]
+  },
+  {
+   "tStartMs": 72070,
+   "dDurationMs": 4310,
+   "segs": [
+    {
+     "utf8": "on the moon's surface, and then you moved\nyour finger so that the shadow moved"
+    }
+   ]
+  },
+  {
+   "tStartMs": 76380,
+   "dDurationMs": 3690,
+   "segs": [
+    {
+     "utf8": "to point B, your finger would only move a\nfew centimetres"
+    }
+   ]
+  }
+ ],
+ "windows": []
+}
