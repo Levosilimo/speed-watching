@@ -1,6 +1,16 @@
 import { browser } from 'wxt/browser';
 import type { ProbeState } from '../../lib/audio-probe';
-import { DEMAND_STORAGE_KEY, DemandStore, type DemandRecord } from '../../lib/demand';
+import {
+  computeDemandGate,
+  DAYS_THRESHOLD,
+  DEMAND_STORAGE_KEY,
+  DemandStore,
+  ELAPSED_CAP_DAYS,
+  RENDER_THRESHOLD,
+  SPEECH_ELIGIBLE_TYPES,
+  type DemandGateState,
+  type DemandRecord,
+} from '../../lib/demand';
 import type { ContentType } from '../../lib/music';
 import {
   OVERRIDE_LOG_STORAGE_KEY,
@@ -306,6 +316,69 @@ function renderDemand(record: DemandRecord): void {
   }
 }
 
+// ── STT Demand Gate (lib-9 interpretation of the raw counts above) ───────
+
+const gateStatus = el('gate-status');
+const gateCount = el('gate-count');
+const gateDays = el('gate-days');
+const gateElapsed = el('gate-elapsed');
+const gateSpan = el('gate-span');
+const gateList = el('gate-list');
+
+el('gate-count-label').textContent = `Speech-eligible renders (of ${RENDER_THRESHOLD})`;
+el('gate-days-label').textContent = `Distinct render days (of ${DAYS_THRESHOLD})`;
+el('gate-elapsed-label').textContent = `Days since first render (of ${ELAPSED_CAP_DAYS})`;
+
+function formatRenderDate(ts: number | undefined): string {
+  if (ts === undefined) return '—';
+  return new Date(ts).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
+
+function gateStatusText(gate: DemandGateState): string {
+  if (gate.reason === 'elapsed') {
+    return `Tripped — ${ELAPSED_CAP_DAYS}+ days since the first estimated render without reaching the adoption threshold. Review whether to close the STT question.`;
+  }
+  if (gate.reason !== null) {
+    return `Tripped — ${RENDER_THRESHOLD}+ speech-eligible renders across ${DAYS_THRESHOLD}+ render days. Review the evidence; nothing starts automatically.`;
+  }
+  if (gate.elapsedDays === null) {
+    return 'Not tripped — no estimated renders yet.';
+  }
+  return `Not tripped — ${gate.speechEligibleCount}/${RENDER_THRESHOLD} speech-eligible renders across ${gate.renderDays}/${DAYS_THRESHOLD} days, ${gate.elapsedDays}/${ELAPSED_CAP_DAYS} days elapsed.`;
+}
+
+function renderGate(record: DemandRecord): void {
+  const gate = computeDemandGate(record, Date.now());
+  gateCount.textContent = String(gate.speechEligibleCount);
+  gateDays.textContent = String(gate.renderDays);
+  gateElapsed.textContent = gate.elapsedDays === null ? '—' : String(gate.elapsedDays);
+  gateSpan.textContent =
+    record.firstSeenTs === undefined
+      ? '—'
+      : `${formatRenderDate(record.firstSeenTs)} → ${formatRenderDate(record.lastSeenTs)}`;
+  gateStatus.textContent = gateStatusText(gate);
+  gateStatus.classList.toggle('tripped', gate.tripped);
+
+  gateList.innerHTML = '';
+  for (const type of SPEECH_ELIGIBLE_TYPES) {
+    const count = record.byContentType[type] ?? 0;
+    if (count === 0) continue;
+    const li = document.createElement('li');
+    const name = document.createElement('span');
+    name.textContent = type;
+    const countEl = document.createElement('span');
+    countEl.textContent = String(count);
+    li.append(name, countEl);
+    gateList.appendChild(li);
+  }
+}
+
+async function refreshDemand(): Promise<void> {
+  const record = await demandStore.get();
+  renderDemand(record);
+  renderGate(record);
+}
+
 // ── Load persisted state ─────────────────────────────────────────────────
 
 async function loadSettings(): Promise<void> {
@@ -321,6 +394,7 @@ async function loadSettings(): Promise<void> {
   renderOverrides(siteList(settings));
   renderHabits(habits);
   renderDemand(demand);
+  renderGate(demand);
 }
 
 void loadSettings();
@@ -333,13 +407,13 @@ browser.storage.local.onChanged.addListener((changes) => {
     void overrideLog.entries().then(renderHabits);
   }
   if (changes[DEMAND_STORAGE_KEY] !== undefined) {
-    void demandStore.get().then(renderDemand);
+    void refreshDemand();
   }
 });
 
 function refreshFromStorage(): void {
   void overrideLog.entries().then(renderHabits);
-  void demandStore.get().then(renderDemand);
+  void refreshDemand();
 }
 
 window.addEventListener('focus', refreshFromStorage);

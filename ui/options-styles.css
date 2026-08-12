@@ -396,6 +396,24 @@ body {
   border-bottom: none;
 }
 
+/* ── STT Demand Gate ──────────────────────────────────────────────────── */
+
+.gate-status {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.45;
+  color: var(--sw-text);
+  background: var(--sw-bg-muted);
+  border-radius: var(--sw-r-md);
+  padding: 10px 12px;
+  margin-bottom: 12px;
+}
+
+.gate-status.tripped {
+  background: var(--sw-warning-subtle);
+  color: var(--sw-warning);
+}
+
 /* ── Tier Info ───────────────────────────────────────────────────────── */
 
 .tier-list {
