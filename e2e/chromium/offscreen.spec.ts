@@ -33,6 +33,38 @@ const watchUrl = 'http://www.youtube.com/watch?v=e2e-fixture&fixture=real/manual
 // Pinned measured error: tabCapture gated on activeTab-style invocation.
 const TAB_CAPTURE_BLOCKED = 'tabCapture failed: Extension has not been invoked for the current page (see activeTab permission). Chrome pages cannot be captured.';
 
+// The pinned @types/chrome (0.0.114) predates the promise-based MV3 APIs,
+// chrome.offscreen, runtime.getContexts and storage.session — all present at
+// runtime in CfT 151. Augment the ambient types so the evaluated calls
+// typecheck; the runtime shape is verified by these very tests.
+declare global {
+  namespace chrome {
+    namespace runtime {
+      // Overloads for the exact messages this suite sends; everything else
+      // stays loosely typed.
+      function sendMessage(
+        message: { kind: 'probe-start' } | { kind: 'probe-stop' },
+      ): Promise<{ state: string; level: number; error?: string }>;
+      function sendMessage(message: { kind: 'offscreen-wasm-check' }): Promise<{ received: boolean }>;
+      function sendMessage(message: unknown): Promise<unknown>;
+      function getContexts(filter: { contextTypes?: string[] }): Promise<unknown[]>;
+    }
+    namespace storage {
+      namespace session {
+        function get(key: string): Promise<Record<string, unknown>>;
+      }
+    }
+    namespace offscreen {
+      function createDocument(options: {
+        url: string;
+        reasons: string[];
+        justification: string;
+      }): Promise<void>;
+      function closeDocument(): Promise<void>;
+    }
+  }
+}
+
 let context: BrowserContext;
 let serviceWorker: Worker;
 let optionsPage: Page;

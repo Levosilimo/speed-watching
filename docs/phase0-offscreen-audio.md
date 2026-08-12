@@ -86,14 +86,34 @@ Playwright probe headed under Xvfb, and the CSP checks below.
   report `SharedArrayBuffer is not defined`. Extension contexts are exempt
   from the COI requirement in these builds.
 
-**NOT-PROVEN (impossible in this environment):**
+**NOT-PROVEN (impossible in this environment at the time; superseded in
+part 2026-08-12):**
 
-- `chrome.offscreen` does not exist in Playwright's Chromium builds (checked
-  Chromium 149 and 151, headless and headed, with and without
-  `--enable-features=OffscreenDocuments` /
-  `--enable-experimental-extension-apis`). Playwright compiles offscreen
-  documents out of its builds. Real Chrome ≥ 109 exposes it, so the entire
-  capture flow below could not run here.
+- ~~`chrome.offscreen` does not exist in Playwright's Chromium builds~~ —
+  **SUPERSEDED.** Playwright 1.62.1's managed Chromium build is Chrome for
+  Testing 151.0.7922.34 (Playwright ≥ 1.57 ships CfT as its default managed
+  Chromium; `playwright install chrome` installs nothing — it expects a
+  system Chrome). CfT is real Chrome: `chrome.offscreen` is present and
+  `createDocument`/`getContexts`/`closeDocument` work, headless and headed.
+  The offscreen API and the orchestrator's error path are now E2E-covered on
+  the CfT lane (`e2e/chromium/offscreen.spec.ts`, CI job `e2e-chromium-cft`;
+  see `docs/ci-e2e.md`).
+- **`chrome.tabCapture.getMediaStreamId` is gated on activeTab-style
+  invocation** (measured 2026-08-12 on CfT 151, headless and headed, and
+  matching the current Chrome docs: "Only tabs for which the extension has
+  been granted the activeTab permission can be used as the target tab").
+  Every variant (`targetTabId`, default active tab, `consumerTabId`) rejects
+  with `Extension has not been invoked for the current page (see activeTab
+  permission). Chrome pages cannot be captured.` — even with the extension's
+  content scripts running in the target tab. The extension declares neither
+  `activeTab` nor `scripting` and has no action entrypoint, so the
+  orchestrator cannot obtain a streamId; the probe lands on its documented
+  `tabCapture failed:` error path. **Implication for the manual test below:
+  the same failure is expected on real Chrome until the manifest gains
+  `activeTab` (or `scripting`) and an invocation path** (action-icon click /
+  keyboard shortcut, or a no-op `executeScript` on the target tab — the
+  Cap/ScriptCat pattern). The manual gate documents this exact error as the
+  expected blocked-by-design result (`docs/manual-gates-runbook.md`).
 - Consequently: the `streamId → getUserMedia → AudioContext` chain, the level
   meter reading a real tab, tab-switch degradation live, and the 30 s idle
   behavior are all unverified. Nothing in this report claims audio flowed.
@@ -180,10 +200,12 @@ to be researched).
   (`tests/chrome-mock.ts`, same Bitwarden shape); vitest-chrome stays in
   `package.json` with a knip ignore and this explanation. Worth revisiting
   when vitest-chrome ships a vitest-3-compatible release.
-- Playwright's Chromium builds disable the offscreen API — a general
+- ~~Playwright's Chromium builds disable the offscreen API — a general
   limitation, not specific to this repo. E2E coverage of offscreen documents
   is impossible on these builds regardless of the test framework (matches
-  Playwright #26693).
+  Playwright #26693).~~ **Stale as of 2026-08-12** — Playwright 1.62.1's
+  managed build is CfT 151 with `chrome.offscreen` fully functional (see
+  NOT-PROVEN above).
 - The options page polls instead of receiving pushes; state transitions show
   within 400 ms. Good enough for a probe, revisit for production UX.
 - `scripts/phase0-audio-probe.ts` exits 0 with the verdict
