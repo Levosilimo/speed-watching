@@ -90,6 +90,25 @@
       </div>
     </div>
 
+    <!-- Estimated Usage (STT demand proxy) -->
+    <div class="section">
+      <div class="section-label">Estimated usage</div>
+      <div class="section-card">
+        <p class="section-note">
+          Videos where no captions were found, so the rate was estimated. Stored
+          locally only — this powers the Phase-2 speech-to-text decision.
+        </p>
+        <div class="habits-grid">
+          <div class="habit-stat">
+            <span class="stat-value" id="demand-total">0</span>
+            <span class="stat-label">Estimated recommendations</span>
+          </div>
+        </div>
+        <p class="empty-note" id="demand-empty" hidden>No estimated recommendations yet.</p>
+        <ul class="habit-list" id="demand-list"></ul>
+      </div>
+    </div>
+
     <!-- Tier Info -->
     <div class="section">
       <div class="section-label">Tier labels</div>

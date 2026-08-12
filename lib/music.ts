@@ -11,6 +11,22 @@ export type ContentType =
   | 'generic'
   | 'unknown';
 
+const CONTENT_TYPES: readonly ContentType[] = [
+  'lecture',
+  'talk',
+  'explainer',
+  'news',
+  'podcast',
+  'music',
+  'generic',
+  'unknown',
+];
+
+/** Runtime membership check for the ContentType union (bridge boundary). */
+export function isContentType(value: unknown): value is ContentType {
+  return typeof value === 'string' && (CONTENT_TYPES as readonly string[]).includes(value);
+}
+
 /** Fraction of cues that are bracket markers; 0 for an empty cue list. */
 export function markerRatio(cues: readonly Segment[]): number {
   if (cues.length === 0) return 0;

@@ -200,6 +200,11 @@ function showEstimatedPill(
 ): void {
   const contentType = resolveContentType(settings, site, 'generic');
   renderRecommendation(videoId, priorMidpoint(contentType), 'estimated', contentType, settings, site);
+  // Demand proxy (Phase-2 STT gate): one local count per estimated render.
+  // Best-effort like logAction — a dead bridge must not suppress the pill.
+  void bridge
+    .request({ type: 'demand:increment', contentType })
+    .catch(() => undefined);
 }
 
 function renderRecommendation(

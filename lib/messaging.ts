@@ -1,10 +1,13 @@
 // Window-event bridge between the MAIN-world content script (no chrome.*
 // access) and its ISOLATED-world sibling (entrypoints/bridge.ts), which owns
-// a chrome-backed SettingsStore + OverrideLog. Requests and responses travel
-// as CustomEvents on the shared window; the isolated side answers directly
-// from chrome.storage.local, so no service-worker round trip is involved.
-// World choice documented in entrypoints/content.ts.
+// a chrome-backed SettingsStore + OverrideLog + DemandStore. Requests and
+// responses travel as CustomEvents on the shared window; the isolated side
+// answers directly from chrome.storage.local, so no service-worker round
+// trip is involved. World choice documented in entrypoints/content.ts.
 
+import { DemandStore } from './demand';
+import { isContentType } from './music';
+import type { ContentType } from './music';
 import type { OverrideLogEntry } from './override-log';
 import { OverrideLog } from './override-log';
 import type { Settings } from './settings';
@@ -16,13 +19,16 @@ export const BRIDGE_TIMEOUT_MS = 1500;
 
 export type BridgeRequest =
   | { type: 'settings:get' }
-  | { type: 'log:append'; entry: Omit<OverrideLogEntry, 'ts'> };
+  | { type: 'log:append'; entry: Omit<OverrideLogEntry, 'ts'> }
+  | { type: 'demand:increment'; contentType: ContentType };
 
 export type BridgeResult<T extends BridgeRequest> = T extends { type: 'settings:get' }
   ? Settings
   : T extends { type: 'log:append' }
     ? void
-    : never;
+    : T extends { type: 'demand:increment' }
+      ? void
+      : never;
 
 export interface BridgeResponse<T extends BridgeRequest = BridgeRequest> {
   id: number;
@@ -42,16 +48,24 @@ export interface EventHost {
   dispatchEvent(event: Event): boolean;
 }
 
-/** Isolated-world side: resolves a request against the shared store + log. */
+/** Isolated-world side: resolves a request against the shared stores. */
 export async function handleBridgeRequest(
   request: BridgeRequest,
-  deps: { settings: SettingsStore; log: OverrideLog },
+  deps: { settings: SettingsStore; log: OverrideLog; demand: DemandStore },
 ): Promise<Settings | void> {
   switch (request.type) {
     case 'settings:get':
       return deps.settings.load();
     case 'log:append':
       await deps.log.append(request.entry);
+      break;
+    case 'demand:increment':
+      // Shape validation: reject unknown content types instead of counting
+      // them under a garbage key.
+      if (!isContentType(request.contentType)) {
+        throw new Error(`demand:increment: unknown content type ${request.contentType}`);
+      }
+      await deps.demand.increment(request.contentType);
   }
 }
 

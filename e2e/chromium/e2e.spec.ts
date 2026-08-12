@@ -194,3 +194,33 @@ test('pill renders, applies, dismisses; music/unreachable suppress Apply; WEB-bl
   // web-blocked fixture must have produced one youtubei/v1/player POST.
   expect(androidPosts).toBeGreaterThan(0);
 });
+
+test('estimated renders increment the local demand counter (zero egress)', async () => {
+  // The shared specs assert tierLabel 'estimated' in both browsers; the
+  // counter itself lives in chrome.storage.local, reachable only from the
+  // extension (firefox's WebDriver cannot read it — documented split).
+  // Read around a fresh navigation so the assertion is order-independent.
+  const readDemand = (): Promise<{
+    estimatedCount?: number;
+    byContentType?: Record<string, number>;
+  } | null> =>
+    serviceWorker.evaluate(async () => {
+      // @types/chrome here types storage.get callback-style only; MV3 still
+      // resolves it as a promise at runtime.
+      const items = await new Promise<Record<string, unknown>>((resolve) =>
+        chrome.storage.local.get('sw.demand', (items) => resolve(items)),
+      );
+      const record = items['sw.demand'];
+      return record === undefined
+        ? null
+        : (record as { estimatedCount?: number; byContentType?: Record<string, number> });
+    });
+
+  const before = await readDemand();
+  await driver.navigateToWatch('synthetic/no-tracks.json');
+  const state = await driver.readPillState();
+  expect(state?.tierLabel).toBe('estimated');
+  const after = await readDemand();
+  expect(after?.estimatedCount).toBe((before?.estimatedCount ?? 0) + 1);
+  expect(after?.byContentType?.generic).toBe((before?.byContentType?.generic ?? 0) + 1);
+});

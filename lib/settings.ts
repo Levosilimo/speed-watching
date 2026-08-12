@@ -1,9 +1,10 @@
-// Storage namespace: chrome.storage.local holds exactly two keys, both
+// Storage namespace: chrome.storage.local holds exactly three keys, all
 // prefixed 'sw.' and owned by their lib module — 'sw.settings' (this file,
-// via SettingsStore) and 'sw.overrideLog' (lib/override-log.ts). The options
-// page, the isolated-world bridge, and the background all read/write through
-// SettingsStore/OverrideLog over browser.storage.local; ui/storage.ts's
-// parallel 'sw:' schema is retired. No other key may be introduced.
+// via SettingsStore), 'sw.overrideLog' (lib/override-log.ts), and 'sw.demand'
+// (lib/demand.ts, the local STT demand proxy). The options page, the
+// isolated-world bridge, and the background all read/write through the lib
+// stores over browser.storage.local; ui/storage.ts's parallel 'sw:' schema
+// is retired. No other key may be introduced.
 
 import type { ContentType } from './music';
 

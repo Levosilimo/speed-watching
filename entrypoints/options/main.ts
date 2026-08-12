@@ -1,5 +1,6 @@
 import { browser } from 'wxt/browser';
 import type { ProbeState } from '../../lib/audio-probe';
+import { DEMAND_STORAGE_KEY, DemandStore, type DemandRecord } from '../../lib/demand';
 import type { ContentType } from '../../lib/music';
 import {
   OVERRIDE_LOG_STORAGE_KEY,
@@ -109,6 +110,7 @@ void refreshProbe();
 
 const settingsStore = new SettingsStore(browser.storage.local, SETTINGS_STORAGE_KEY);
 const overrideLog = new OverrideLog(browser.storage.local);
+const demandStore = new DemandStore(browser.storage.local);
 
 // ── Settings: WPM Slider ─────────────────────────────────────────────────
 
@@ -272,16 +274,48 @@ function renderHabits(habits: OverrideLogEntry[]): void {
   }
 }
 
+// ── Estimated Usage (STT demand proxy) ───────────────────────────────────
+
+const demandTotal = el('demand-total');
+const demandEmpty = el('demand-empty');
+const demandList = el('demand-list');
+
+function renderDemand(record: DemandRecord): void {
+  demandTotal.textContent = String(record.estimatedCount);
+
+  const byType = Object.entries(record.byContentType).sort((a, b) => b[1] - a[1]);
+  demandList.innerHTML = '';
+  if (byType.length === 0) {
+    demandEmpty.hidden = false;
+    return;
+  }
+  demandEmpty.hidden = true;
+  for (const [type, count] of byType) {
+    const li = document.createElement('li');
+    const name = document.createElement('span');
+    name.textContent = type;
+    const countEl = document.createElement('span');
+    countEl.textContent = String(count);
+    li.append(name, countEl);
+    demandList.appendChild(li);
+  }
+}
+
 // ── Load persisted state ─────────────────────────────────────────────────
 
 async function loadSettings(): Promise<void> {
-  const [settings, habits] = await Promise.all([settingsStore.load(), overrideLog.entries()]);
+  const [settings, habits, demand] = await Promise.all([
+    settingsStore.load(),
+    overrideLog.entries(),
+    demandStore.get(),
+  ]);
   const target = settings.target ?? DEFAULT_TARGET_WPM;
   wpmSlider.value = String(target);
   wpmValue.textContent = String(target);
   setActivePreset(settings.contentType ?? 'generic');
   renderOverrides(siteList(settings));
   renderHabits(habits);
+  renderDemand(demand);
 }
 
 void loadSettings();
@@ -290,5 +324,8 @@ void loadSettings();
 browser.storage.local.onChanged.addListener((changes) => {
   if (changes[OVERRIDE_LOG_STORAGE_KEY] !== undefined) {
     void overrideLog.entries().then(renderHabits);
+  }
+  if (changes[DEMAND_STORAGE_KEY] !== undefined) {
+    void demandStore.get().then(renderDemand);
   }
 });

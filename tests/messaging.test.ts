@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { DemandStore } from '../lib/demand';
 import {
   BRIDGE_TIMEOUT_MS,
   createBridgeClient,
@@ -6,6 +7,7 @@ import {
   type BridgeRequest,
   type EventHost,
 } from '../lib/messaging';
+import type { ContentType } from '../lib/music';
 import { OverrideLog } from '../lib/override-log';
 import { defaultSettings, SettingsStore } from '../lib/settings';
 import { mockStorage } from './fixtures/helpers';
@@ -27,10 +29,11 @@ function fakeWindow(): { host: EventHost; events: Event[] } {
   };
 }
 
-function serve(host: EventHost): { settings: SettingsStore; log: OverrideLog } {
+function serve(host: EventHost): { settings: SettingsStore; log: OverrideLog; demand: DemandStore } {
   const deps = {
     settings: new SettingsStore(mockStorage()),
     log: new OverrideLog(mockStorage()),
+    demand: new DemandStore(mockStorage()),
   };
   host.addEventListener('speedwatcher:bridge-request', (event) => {
     const detail = (event as CustomEvent<BridgeRequest & { id: number }>).detail;
@@ -98,6 +101,27 @@ describe('messaging bridge', () => {
     });
     const client = createBridgeClient(host);
     await expect(client.request({ type: 'settings:get' })).rejects.toThrow('boom');
+  });
+
+  it('round-trips demand:increment into the DemandStore', async () => {
+    const { host } = fakeWindow();
+    const { demand } = serve(host);
+    const client = createBridgeClient(host);
+    await client.request({ type: 'demand:increment', contentType: 'generic' });
+    await client.request({ type: 'demand:increment', contentType: 'podcast' });
+    const record = await demand.get();
+    expect(record.estimatedCount).toBe(2);
+    expect(record.byContentType).toEqual({ generic: 1, podcast: 1 });
+  });
+
+  it('rejects demand:increment with an unknown content type (shape validation)', async () => {
+    const { host } = fakeWindow();
+    const { demand } = serve(host);
+    const client = createBridgeClient(host);
+    await expect(
+      client.request({ type: 'demand:increment', contentType: 'bogus' as ContentType }),
+    ).rejects.toThrow('unknown content type');
+    expect((await demand.get()).estimatedCount).toBe(0);
   });
 
   it('times out when no response arrives', async () => {

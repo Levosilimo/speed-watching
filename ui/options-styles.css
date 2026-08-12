@@ -345,6 +345,13 @@ body {
   padding: 8px 0;
 }
 
+.section-note {
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--sw-text-secondary);
+  margin-bottom: 12px;
+}
+
 /* ── Habits Report ───────────────────────────────────────────────────── */
 
 .habits-grid {

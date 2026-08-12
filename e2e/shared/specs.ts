@@ -266,6 +266,9 @@ export async function runPillSpecs(driver: E2EDriver): Promise<void> {
   }
 
   // (g) No caption tracks at all → estimated tier from the generic prior.
+  // The tierLabel assertion here is the firefox-side evidence; the local
+  // counter increment is asserted chromium-only (e2e.spec.ts) because
+  // WebDriver cannot read chrome.storage.
   {
     const fixture = 'synthetic/no-tracks.json';
     await driver.navigateToWatch(fixture);
