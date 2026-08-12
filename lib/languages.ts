@@ -9,10 +9,12 @@
 //     ru 5.31 syl/s, pl 6.9 syl/s, sr 7.08 syl/s), es/pt/it short-word
 //     Romance → 165–180, fr dense short words ≈ English → 250, de
 //     compounding undercounts token runs ~25–30 % → 0.7 × English → 175.
-//   - char-unit (cpm): the 1 char ≈ 1 mora approximation — ja ~360–400 cpm
-//     band, th ~282 cpm derived; zh 240–258 cpm, where the 258 ceiling
+//   - char-unit (cpm): zh 240–258 cpm, where the 258 ceiling
 //     (Lee & Chan, 4.3 char/s) is the only comprehension-measured ceiling
-//     in the set.
+//     in the set; th ~282 cpm derived.
+//   - mora-unit (morae/min): ja 380–400 in the same band as the old
+//     char estimate, measured by the mora estimator — each kana = 1 mora,
+//     kanji × ~1.85 (on-yomi-dominant average; ±5–8% of a true analyzer).
 //   - syllable-unit (syl/min): measured speech syllabic rates — ko/tr
 //     330–350, ar 300–360 (low confidence), hi 240 (6.55 syl/s class),
 //     id/ms ~400 (≈ 267 wpm at 1.5 syl/word, the English band with a small
@@ -21,13 +23,15 @@
 // Ceilings on target-only entries apply the ≈1.03 target:ceiling ratio of
 // the researched pairs. Priors (estimated-tier natural-rate ranges) scale
 // the English generic-prior ratio (0.52–0.76 × target) to each target.
-// syllable-per-word factors are typological approximations, documented as
-// such; the multiplier itself is factor-invariant (target and rate share
-// the unit), so only the displayed rate depends on them.
+// syllable-per-word factors (ar 2.0, id/ms/tl 1.5) are typological
+// approximations, documented as such; the multiplier itself is
+// factor-invariant (target and rate share the unit), so only the displayed
+// rate depends on them. tr's 2.3 and hi's 1.5 factors were retired when
+// the vowel-nucleus counters replaced them; ko counts Hangul blocks.
 
 import type { TokenizerMode } from './tokenizer';
 
-export type RateUnit = 'wpm' | 'cpm' | 'syl';
+export type RateUnit = 'wpm' | 'cpm' | 'syl' | 'mora';
 
 export interface LanguageModel {
   /** Normalized caption-track language code (lowercase, region stripped). */
@@ -55,13 +59,13 @@ export const LANGUAGES: Record<string, LanguageModel> = {
   fr: { code: 'fr', unit: 'wpm', target: 250, ceiling: 253, tokenizerMode: 'words', derived: true, priors: { min: 130, max: 190 } },
   de: { code: 'de', unit: 'wpm', target: 175, ceiling: 181, tokenizerMode: 'words', derived: true, priors: { min: 91, max: 133 } },
   it: { code: 'it', unit: 'wpm', target: 180, ceiling: 184, tokenizerMode: 'words', derived: true, priors: { min: 94, max: 137 } },
-  ja: { code: 'ja', unit: 'cpm', target: 380, ceiling: 400, tokenizerMode: 'chars', derived: true, priors: { min: 198, max: 289 } },
+  ja: { code: 'ja', unit: 'mora', target: 380, ceiling: 400, tokenizerMode: 'mora', derived: true, priors: { min: 198, max: 289 } },
   zh: { code: 'zh', unit: 'cpm', target: 240, ceiling: 258, tokenizerMode: 'chars', derived: false, priors: { min: 125, max: 182 } },
   th: { code: 'th', unit: 'cpm', target: 282, ceiling: 290, tokenizerMode: 'chars', derived: true, priors: { min: 147, max: 214 } },
   ko: { code: 'ko', unit: 'syl', target: 340, ceiling: 350, tokenizerMode: 'words', derived: true, priors: { min: 177, max: 258 }, hangulBlocks: true },
   ar: { code: 'ar', unit: 'syl', target: 330, ceiling: 360, tokenizerMode: 'words', derived: true, priors: { min: 172, max: 251 }, syllablesPerWord: 2.0 },
-  tr: { code: 'tr', unit: 'syl', target: 340, ceiling: 350, tokenizerMode: 'words', derived: true, priors: { min: 177, max: 258 }, syllablesPerWord: 2.3 },
-  hi: { code: 'hi', unit: 'syl', target: 240, ceiling: 247, tokenizerMode: 'words-marks', derived: true, priors: { min: 125, max: 182 }, syllablesPerWord: 1.5 },
+  tr: { code: 'tr', unit: 'syl', target: 340, ceiling: 350, tokenizerMode: 'vowels', derived: true, priors: { min: 177, max: 258 } },
+  hi: { code: 'hi', unit: 'syl', target: 240, ceiling: 247, tokenizerMode: 'vowels', derived: true, priors: { min: 125, max: 182 } },
   vi: { code: 'vi', unit: 'wpm', target: 280, ceiling: 290, tokenizerMode: 'words', derived: true, priors: { min: 146, max: 213 } },
   id: { code: 'id', unit: 'syl', target: 400, ceiling: 412, tokenizerMode: 'words', derived: true, priors: { min: 208, max: 304 }, syllablesPerWord: 1.5 },
   ms: { code: 'ms', unit: 'syl', target: 400, ceiling: 412, tokenizerMode: 'words', derived: true, priors: { min: 208, max: 304 }, syllablesPerWord: 1.5 },
@@ -73,11 +77,13 @@ export const LANGUAGES: Record<string, LanguageModel> = {
   sr: { code: 'sr', unit: 'wpm', target: 185, ceiling: 200, tokenizerMode: 'words', derived: true, priors: { min: 96, max: 141 } },
 };
 
-/** Pill label suffixes per rate unit. */
+/** Pill label suffixes per rate unit. 'morae' — the standard plural of
+ * mora in Japanese linguistics — reads naturally in the pill. */
 export const UNIT_LABELS: Record<RateUnit, string> = {
   wpm: 'wpm',
   cpm: 'cpm',
   syl: 'syl/min',
+  mora: 'morae/min',
 };
 
 /**

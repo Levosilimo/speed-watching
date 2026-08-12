@@ -317,7 +317,7 @@ describe('recommend — labels', () => {
 });
 
 describe('recommend — language-aware targets', () => {
-  it('ja: cpm target 380 — a 200 cpm track recommends ~1.9x', () => {
+  it('ja: mora target 380 — a 200 mora/min track recommends ~1.9x', () => {
     const r = recommend({
       naturalRate: 200,
       tier: 'asr-cue',
@@ -327,7 +327,7 @@ describe('recommend — language-aware targets', () => {
     });
     expect(r.multiplier).toBeCloseTo(1.9, 6); // 380/200
     expect(r.mode).toBe('recommend');
-    expect(r.label).toContain('≈ 380 cpm');
+    expect(r.label).toContain('≈ 380 morae/min');
   });
 
   it('de: compounding factor — a 125 wpm track recommends ~1.4x', () => {
@@ -392,7 +392,7 @@ describe('recommend — language-aware targets', () => {
       language: LANGUAGES['ja'],
     });
     expect(r.mode).toBe('unreachable');
-    expect(r.label).toContain('≈ 200 cpm');
+    expect(r.label).toContain('≈ 200 morae/min');
   });
 
   it('userTarget overrides the language target', () => {

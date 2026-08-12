@@ -277,23 +277,33 @@ describe('totalWords', () => {
 });
 
 describe('language-aware token units', () => {
-  it('ja: counts graphemes per minute over the trimmed span (cpm)', () => {
+  it('ja: estimates morae per minute over the trimmed span', () => {
     const cues = [
-      { text: 'こんにちは世界', startSec: 0, durSec: 3 }, // 7 graphemes
-      { text: '元気ですか', startSec: 2, durSec: 2 }, // 5 graphemes
+      { text: 'こんにちは世界', startSec: 0, durSec: 3 }, // 5 kana + 2 kanji = 8.7 morae
+      { text: '元気ですか', startSec: 2, durSec: 2 }, // 2 kanji + 3 kana = 6.7 morae
     ];
-    // 12 chars over a 2 s span → 360 cpm; word runs would say 2.
-    expect(filteredTokensOverTrimmedSpan(cues, LANGUAGES['ja'])).toBeCloseTo(360, 6);
+    // 15.4 morae over a 2 s span → 462 mora/min; the default path still
+    // counts 2 word runs.
+    expect(filteredTokensOverTrimmedSpan(cues, LANGUAGES['ja'])).toBeCloseTo(462, 6);
     expect(filteredTokensOverTrimmedSpan(cues)).toBeCloseTo(60, 6);
   });
 
-  it('hi: converts words-marks tokens to syllables', () => {
+  it('hi: counts Devanagari vowel nuclei instead of the word factor', () => {
     const cues = [
-      { text: 'मैं जा रहा हूँ', startSec: 0, durSec: 2 }, // 4 words × 1.5 = 6 syl
-      { text: 'मैं ठीक हूँ', startSec: 1, durSec: 1 }, // 3 words × 1.5 = 4.5 syl
+      { text: 'मैं जा रहा हूँ', startSec: 0, durSec: 2 }, // 5 nuclei
+      { text: 'मैं ठीक हूँ', startSec: 1, durSec: 1 }, // 3 nuclei — final schwa dropped
     ];
-    // 10.5 syl over a 1 s span → 630 syl/min.
-    expect(filteredTokensOverTrimmedSpan(cues, LANGUAGES['hi'])).toBeCloseTo(630, 6);
+    // 8 nuclei over a 1 s span → 480 syl/min.
+    expect(filteredTokensOverTrimmedSpan(cues, LANGUAGES['hi'])).toBeCloseTo(480, 6);
+  });
+
+  it('tr: counts Turkish vowel letters instead of the word factor', () => {
+    const cues = [
+      { text: 'merhaba dünya', startSec: 0, durSec: 2 }, // 5 vowels
+      { text: 'bugün nasılsın', startSec: 1, durSec: 1 }, // 5 vowels
+    ];
+    // 10 vowels over a 1 s span → 600 syl/min.
+    expect(filteredTokensOverTrimmedSpan(cues, LANGUAGES['tr'])).toBeCloseTo(600, 6);
   });
 
   it('ko: counts Hangul syllable blocks instead of the factor', () => {

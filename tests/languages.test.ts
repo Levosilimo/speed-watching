@@ -57,13 +57,16 @@ describe('language table', () => {
     expect(LANGUAGES['pt']).toMatchObject({ target: 165, ceiling: 167 });
     expect(LANGUAGES['fr']).toMatchObject({ target: 250, ceiling: 253 });
     expect(LANGUAGES['de']).toMatchObject({ target: 175, ceiling: 181 });
-    expect(LANGUAGES['ja']).toMatchObject({ unit: 'cpm', target: 380, ceiling: 400, tokenizerMode: 'chars' });
+    expect(LANGUAGES['ja']).toMatchObject({ unit: 'mora', target: 380, ceiling: 400, tokenizerMode: 'mora' });
     expect(LANGUAGES['zh']).toMatchObject({ unit: 'cpm', target: 240, ceiling: 258, tokenizerMode: 'chars' });
     expect(LANGUAGES['th']).toMatchObject({ unit: 'cpm', tokenizerMode: 'chars' });
     expect(LANGUAGES['ko']).toMatchObject({ unit: 'syl', target: 340, ceiling: 350, hangulBlocks: true });
-    expect(LANGUAGES['ar']).toMatchObject({ unit: 'syl', target: 330, ceiling: 360 });
-    expect(LANGUAGES['tr']).toMatchObject({ unit: 'syl', target: 340, ceiling: 350 });
-    expect(LANGUAGES['hi']).toMatchObject({ unit: 'syl', target: 240, tokenizerMode: 'words-marks' });
+    expect(LANGUAGES['ar']).toMatchObject({ unit: 'syl', target: 330, ceiling: 360, syllablesPerWord: 2.0 });
+    expect(LANGUAGES['tr']).toMatchObject({ unit: 'syl', target: 340, ceiling: 350, tokenizerMode: 'vowels' });
+    expect(LANGUAGES['hi']).toMatchObject({ unit: 'syl', target: 240, tokenizerMode: 'vowels' });
+    // The vowel-nucleus counters replaced tr's 2.3 and hi's 1.5 factors.
+    expect(LANGUAGES['tr']?.syllablesPerWord).toBeUndefined();
+    expect(LANGUAGES['hi']?.syllablesPerWord).toBeUndefined();
     expect(LANGUAGES['ru']).toMatchObject({ target: 168, ceiling: 185 });
     expect(LANGUAGES['uk']).toMatchObject({ target: 168, ceiling: 185 });
     expect(LANGUAGES['pl']).toMatchObject({ target: 185, ceiling: 200 });
@@ -82,7 +85,15 @@ describe('language table', () => {
     }
   });
 
+  it('uses the script counters only where intended', () => {
+    for (const [code, model] of Object.entries(LANGUAGES)) {
+      if (code === 'ja') expect(model.tokenizerMode).toBe('mora');
+      else if (code === 'tr' || code === 'hi') expect(model.tokenizerMode).toBe('vowels');
+      else expect(['words', 'words-marks', 'chars']).toContain(model.tokenizerMode);
+    }
+  });
+
   it('labels the units for the pill', () => {
-    expect(UNIT_LABELS).toEqual({ wpm: 'wpm', cpm: 'cpm', syl: 'syl/min' });
+    expect(UNIT_LABELS).toEqual({ wpm: 'wpm', cpm: 'cpm', syl: 'syl/min', mora: 'morae/min' });
   });
 });
