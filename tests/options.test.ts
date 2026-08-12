@@ -96,7 +96,10 @@ describe('options storage refresh wiring', () => {
 
   it('re-renders the demand counter from the onChanged listener', async () => {
     storageData.set(DEMAND_KEY, { estimatedCount: 2, byContentType: { generic: 2 } });
-    await import('../entrypoints/options/main');
+    // dev.ts owns both the demand markup and its onChanged listener; import
+    // it directly so this test does not depend on main.ts's guarded dynamic
+    // import re-running (vitest's module cache makes that nondeterministic).
+    await import('../entrypoints/options/dev');
     await flush();
     expect(document.getElementById('demand-total')?.textContent).toBe('2');
     storageData.set(DEMAND_KEY, { estimatedCount: 5, byContentType: { generic: 5 } });
