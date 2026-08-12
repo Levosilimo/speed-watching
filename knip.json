@@ -9,7 +9,7 @@
     "entrypoints/options/*.ts",
     "ui/pill.ts",
     "wxt.config.ts",
-    "scripts/*.ts",
+    "scripts/**/*.ts",
     "e2e/**/*.ts"
   ],
   "project": [

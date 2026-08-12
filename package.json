@@ -36,6 +36,7 @@
     "knip": "^5.57.0",
     "oxlint": "^0.16.0",
     "playwright": "^1.62.1",
+    "puppeteer": "^25.6.0",
     "selenium-webdriver": "^4.47.0",
     "sharp": "^0.35.3",
     "typescript": "^5.9.3",

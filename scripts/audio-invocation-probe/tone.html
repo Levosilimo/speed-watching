@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>tone</title>
+</head>
+<body>
+<script>
+// Spike fixture: a 440 Hz tone the extension's tabCapture chain must pick up.
+// The page's own analyser is the sanity check that WebAudio renders at all on
+// a sink-less box — independent of the extension.
+const ctx = new AudioContext();
+const oscillator = ctx.createOscillator();
+const gain = ctx.createGain();
+gain.gain.value = 0.4;
+oscillator.frequency.value = 440;
+oscillator.connect(gain);
+const analyser = ctx.createAnalyser();
+gain.connect(analyser);
+analyser.connect(ctx.destination);
+oscillator.start();
+
+let rms = 0;
+const samples = new Float32Array(analyser.fftSize);
+setInterval(() => {
+  analyser.getFloatTimeDomainData(samples);
+  let sum = 0;
+  for (const sample of samples) sum += sample * sample;
+  rms = Math.sqrt(sum / samples.length);
+}, 250);
+window.__toneRms = 0;
+setInterval(() => {
+  window.__toneRms = rms;
+}, 250);
+</script>
+</body>
+</html>
