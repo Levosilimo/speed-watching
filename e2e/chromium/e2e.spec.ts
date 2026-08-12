@@ -28,7 +28,7 @@ import {
 import { FIXTURE_PORT } from '../server';
 import type { Settings } from '../../lib/settings';
 
-const extensionPath = resolve('.output/chrome-mv3');
+const extensionPath = resolve('.output/chrome-mv3-e2e');
 const fixtureBase = `http://127.0.0.1:${FIXTURE_PORT}`;
 const watchUrl = (fixture: string): string =>
   `http://www.youtube.com/watch?v=e2e-fixture&fixture=${fixture}`;
@@ -43,7 +43,9 @@ let driver: E2EDriver;
 
 test.beforeAll(async () => {
   if (!existsSync(join(extensionPath, 'manifest.json'))) {
-    throw new Error(`built extension not found at ${extensionPath} — run \`bun run build\` first`);
+    throw new Error(
+      `built extension not found at ${extensionPath} — run \`bun run build:e2e\` first (the e2e build keeps the window test hooks)`,
+    );
   }
   const userDataDir = mkdtempSync(join(tmpdir(), 'speedwatcher-e2e-'));
   context = await chromium.launchPersistentContext(userDataDir, {

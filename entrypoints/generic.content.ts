@@ -14,7 +14,8 @@
 //
 // Same world/wiring pattern as content.ts: MAIN world, chrome-backed
 // settings via the window-event bridge (lib/messaging.ts), and the
-// __speedwatcherPill test hook the shared e2e specs assert on.
+// __speedwatcherPill test hook the shared e2e specs assert on (E2E builds
+// only — SEC-2, same gate as content.ts).
 
 import { defineContentScript } from 'wxt/utils/define-content-script';
 import { harvestCaptions, type VttHost } from '@/lib/captions-harvest';
@@ -93,17 +94,21 @@ export default defineContentScript({
     document.addEventListener('play', onMediaEvent, true);
     document.addEventListener('playing', onMediaEvent, true);
     document.addEventListener('timeupdate', onMediaEvent, true);
-    window.__speedwatcherPill = {
-      state: null,
-      apply: () => {
-        if (current === null) return;
-        if (current.recommendation.mode === 'music' || current.recommendation.mode === 'unreachable') {
-          return;
-        }
-        applyMultiplier(current.recommendation.multiplier);
-      },
-      dismiss: () => dismissCurrent(),
-    };
+    // E2E-only hook (SEC-2): the store bundle must not expose page-callable
+    // playback controls — see entrypoints/content.ts for the gate.
+    if (__E2E__) {
+      window.__speedwatcherPill = {
+        state: null,
+        apply: () => {
+          if (current === null) return;
+          if (current.recommendation.mode === 'music' || current.recommendation.mode === 'unreachable') {
+            return;
+          }
+          applyMultiplier(current.recommendation.multiplier);
+        },
+        dismiss: () => dismissCurrent(),
+      };
+    }
     // Player elements appear and disappear dynamically (embeds mount late,
     // SPA navigation swaps them): re-measure when the active element changes.
     // The callback runs on every DOM mutation on every page, so it skips the
@@ -172,7 +177,7 @@ async function measureOnce(): Promise<void> {
     fetchImpl: (url) => fetch(url),
   });
   if (segments !== null) {
-    window.__speedwatcherCaptionTier = 'captions';
+    if (__E2E__) window.__speedwatcherCaptionTier = 'captions';
     const naturalRate = manualCueRate(segments);
     if (naturalRate !== null) {
       const detected = detectMusic(segments, naturalRate) ? 'music' : 'generic';
@@ -180,7 +185,7 @@ async function measureOnce(): Promise<void> {
       return;
     }
   }
-  window.__speedwatcherCaptionTier = 'estimated';
+  if (__E2E__) window.__speedwatcherCaptionTier = 'estimated';
   const contentType = resolveContentType(settings, site, 'generic');
   renderRecommendation(priorMidpoint(contentType), 'estimated', contentType, settings, site);
 }
@@ -267,7 +272,7 @@ function ensurePill(): PillApi {
 
 function showPill(state: PillState): void {
   ensurePill().update(state);
-  if (window.__speedwatcherPill !== undefined) window.__speedwatcherPill.state = state;
+  if (__E2E__ && window.__speedwatcherPill !== undefined) window.__speedwatcherPill.state = state;
 }
 
 function applyMultiplier(multiplier: number): void {

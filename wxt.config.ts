@@ -1,4 +1,5 @@
 import { defineConfig } from 'wxt';
+import type { ConfigEnv } from 'vite';
 
 // Match-pattern scope (Phase 3, documented in docs/phase0-generic-probe.md
 // and docs/amo-listing.md):
@@ -8,11 +9,11 @@ import { defineConfig } from 'wxt';
 //     unlisted host. `<all_urls>` with all_frames is the only pattern that
 //     reaches the cross-origin embed frames where every embedded player
 //     lives (probe: all embedded players are in cross-origin iframes).
-//   - host_permissions names the measured embed/target origins explicitly.
-//     The `<all_urls>` content-script match already grants host access, so
-//     these add no functional scope — they make the caption-harvest fetch
-//     rights explicit and reviewable for CWS/AMO (vimeo.com covers
-//     player.vimeo.com; twitch.tv covers player.twitch.tv).
+//   - No host_permissions (STORE-4): the `<all_urls>` content-script match
+//     already grants host access, and every fetch the extension makes
+//     (YouTube timedtext, generic caption harvest) runs from the MAIN world
+//     — the page's own context — so no extra permission exists. Declaring
+//     them would only inflate the permission count CWS reviewers see.
 //   - The YouTube script stays on *://*.youtube.com/* (unchanged); the
 //     generic script bails on youtube.com /watch pages so the two never
 //     both drive a watch page. youtube-nocookie.com embeds are NOT covered
@@ -43,13 +44,6 @@ export default defineConfig({
       default_title: 'Speed Watcher',
     },
     permissions: ['storage', 'tabCapture', 'offscreen'],
-    host_permissions: [
-      '*://*.vimeo.com/*',
-      '*://*.twitch.tv/*',
-      '*://*.coursera.org/*',
-      '*://*.edx.org/*',
-      '*://*.youtube-nocookie.com/*',
-    ],
     min_chrome_version: '116',
     browser_specific_settings: {
       gecko: {
@@ -67,7 +61,13 @@ export default defineConfig({
   // ESM the commonjs transform turns `this` into void 0 and the module
   // exports nothing (import throws / WebVTT undefined). Rewrite the call to
   // module.exports before the commonjs transform sees the module.
-  vite: () => ({
+  //
+  // SEC-2 e2e-hooks toggle: the window test hooks (__speedwatcherPill etc.)
+  // exist only in e2e builds. `wxt build --mode e2e` defines __E2E__ as
+  // true (kept for the e2e suites); production builds define it as false
+  // and rollup dead-code-eliminates the hooks. The key cannot be
+  // `import.meta.env.*`: vite reserves that namespace for env vars.
+  vite: (env: ConfigEnv) => ({
     plugins: [
       {
         name: 'vttjs-this-exports',
@@ -78,5 +78,8 @@ export default defineConfig({
         },
       },
     ],
+    define: {
+      __E2E__: env.mode === 'e2e' ? 'true' : 'false',
+    },
   }),
 });

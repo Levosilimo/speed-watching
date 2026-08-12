@@ -1,17 +1,10 @@
-// The console.info lines in this file are the Phase-0 measurement hook
-// (one-line wpm summary per video, per spike-lane spec) — not leftovers.
+// E2E hooks: one-line console.info wpm summaries compiled out of the store
+// bundle (SEC-2). The signed timedtext fetch needs the page context, so the
+// pipeline runs in the MAIN world; entrypoints/bridge.ts is the ISOLATED
+// sibling hosting the chrome-backed SettingsStore + OverrideLog.
 // aislop-ignore-file console-leftover
-//
-// World choice: the WEB caption fetch (signed timedtext baseUrl with pot)
-// only succeeds from the page context, so the measurement pipeline runs in
-// the MAIN world — where chrome.* is unavailable. A single ISOLATED-world
-// sibling (entrypoints/bridge.ts) hosts a chrome-backed SettingsStore +
-// OverrideLog and answers the window postMessage envelopes defined in
-// lib/messaging.ts. Routing through the background was rejected because
-// chrome.storage.local already satisfies lib's StorageLike: the bridge
-// needs no SW round trip and the background stays the audio-probe
-// orchestrator.
 import { defineContentScript } from 'wxt/utils/define-content-script';
+import { fetchAndroidCaptions, fetchJson3 } from '@/lib/caption-fetch';
 import { parseYouTubeJson3 } from '@/lib/captions';
 import { priorMidpoint } from '@/lib/heuristics';
 import { SerializedRunner } from '@/lib/measure-guard';
@@ -39,15 +32,6 @@ import type { CaptionTrack, PlayerResponse } from '@/lib/youtube';
 import { createPill, type PillApi, type PillState } from '@/ui/pill';
 
 const PLAYER_RESPONSE_TIMEOUT_MS = 10_000;
-
-// ANDROID innertube fallback (plan-v3): the WEB timedtext endpoint returns
-// 200-with-empty-body / 400/403 from some IPs, while the ANDROID
-// youtubei/v1/player POST returns real caption tracks (proven from hostile
-// IPs in Phase 0). ToS gray area: the ANDROID client designation is not a
-// public API. The fallback only reads captions — the same data the WEB path
-// would serve — and never touches playback or DRM surfaces.
-const ANDROID_CLIENT_NAME = 'ANDROID';
-const ANDROID_CLIENT_VERSION = '20.10.31';
 
 const bridge = createBridgeClient(window);
 
@@ -104,21 +88,25 @@ export default defineContentScript({
     document.addEventListener('play', onMediaEvent, true);
     document.addEventListener('playing', onMediaEvent, true);
     document.addEventListener('timeupdate', onMediaEvent, true);
-    window.__speedwatcherPill = {
-      state: null,
-      // Mirrors the pill's own Apply gate (ui/pill.ts wireEvents): music and unreachable must not touch playbackRate.
-      apply: () => {
-        if (current === null) return;
-        if (current.recommendation.mode === 'music' || current.recommendation.mode === 'unreachable') {
-          return;
-        }
-        applyMultiplier(current.recommendation.multiplier);
-      },
-      dismiss: () => dismissCurrent(),
-    };
-    window.__speedwatcherSettings = {
-      set: (settings) => bridge.request({ type: 'settings:set', settings }).then(() => undefined),
-    };
+    // E2E-only hooks (SEC-2): the store bundle ships without these.
+    if (__E2E__) {
+      window.__speedwatcherPill = {
+        state: null,
+        // Mirrors the pill's own Apply gate (ui/pill.ts wireEvents): music and
+        // unreachable states must not touch playbackRate.
+        apply: () => {
+          if (current === null) return;
+          if (current.recommendation.mode === 'music' || current.recommendation.mode === 'unreachable') {
+            return;
+          }
+          applyMultiplier(current.recommendation.multiplier);
+        },
+        dismiss: () => dismissCurrent(),
+      };
+      window.__speedwatcherSettings = {
+        set: (settings) => bridge.request({ type: 'settings:set', settings }).then(() => undefined),
+      };
+    }
     void measure();
     // SPA navigation: invalidate the old video's recommendation before the
     // next measure lands, so a fast Apply cannot use the previous multiplier.
@@ -150,11 +138,11 @@ function measure(): void {
 async function measureOnce(): Promise<void> {
   const response = await waitForPlayerResponse();
   if (!response) {
-    console.info('[speed-watcher] wpm: player response never appeared');
+    if (__E2E__) console.info('[speed-watcher] wpm: player response never appeared');
     return;
   }
   if (isLive()) {
-    console.info('[speed-watcher] wpm: live stream — pill suppressed');
+    if (__E2E__) console.info('[speed-watcher] wpm: live stream — pill suppressed');
     showPill(NONE_STATE);
     return;
   }
@@ -164,13 +152,13 @@ async function measureOnce(): Promise<void> {
   const site = location.hostname.replace(/^www\./, '');
   const track = response.captions?.playerCaptionsTracklistRenderer?.captionTracks?.[0];
   if (track === undefined) {
-    console.info('[speed-watcher] wpm: no caption tracks for this video — estimated');
+    if (__E2E__) console.info('[speed-watcher] wpm: no caption tracks for this video — estimated');
     showEstimatedPill(videoId, settings, site);
     return;
   }
   const json = await fetchCaptions(track, videoId);
   if (json === null) {
-    console.info('[speed-watcher] wpm: caption fetch failed — estimated');
+    if (__E2E__) console.info('[speed-watcher] wpm: caption fetch failed — estimated');
     showEstimatedPill(videoId, settings, site);
     return;
   }
@@ -191,9 +179,9 @@ async function measureOnce(): Promise<void> {
       nWords: totalWords(cues),
     });
   } else {
-    console.info(
-      `[speed-watcher] video=${videoId} kind=${kind} lang=${lang}: captions parsed but empty — estimated`,
-    );
+    if (__E2E__) {
+      console.info(`[speed-watcher] video=${videoId} kind=${kind} lang=${lang}: captions parsed but empty — estimated`);
+    }
     showEstimatedPill(videoId, settings, site);
     return;
   }
@@ -269,42 +257,16 @@ async function loadSettings(): Promise<Settings> {
 async function fetchCaptions(track: CaptionTrack, videoId: string): Promise<unknown | null> {
   const web = await fetchJson3(track.baseUrl);
   if (web !== null) {
-    window.__speedwatcherCaptionSource = 'web';
+    if (__E2E__) window.__speedwatcherCaptionSource = 'web';
     return web;
   }
   const android = await fetchAndroidCaptions(videoId);
   if (android !== null) {
-    window.__speedwatcherCaptionSource = 'android';
+    if (__E2E__) window.__speedwatcherCaptionSource = 'android';
     return android;
   }
-  window.__speedwatcherCaptionSource = 'none';
+  if (__E2E__) window.__speedwatcherCaptionSource = 'none';
   return null;
-}
-
-async function fetchAndroidCaptions(videoId: string): Promise<unknown | null> {
-  try {
-    // youtubei/v1/player is the watch page's own innertube endpoint, so it
-    // is built from the page origin (works on m./other youtube hosts; in
-    // E2E the fixture's http origin keeps the POST inside the PAC proxy /
-    // route interception instead of hitting real YouTube).
-    const response = await fetch(new URL('/youtubei/v1/player', location.origin), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        context: {
-          client: { clientName: ANDROID_CLIENT_NAME, clientVersion: ANDROID_CLIENT_VERSION },
-        },
-        videoId,
-      }),
-    });
-    if (!response.ok) return null;
-    const data = (await response.json()) as PlayerResponse;
-    const track = data.captions?.playerCaptionsTracklistRenderer?.captionTracks?.[0];
-    if (track === undefined) return null;
-    return fetchJson3(track.baseUrl);
-  } catch {
-    return null;
-  }
 }
 
 // ── Pill ──────────────────────────────────────────────────────────────────
@@ -338,7 +300,7 @@ function ensurePill(): PillApi {
 
 function showPill(state: PillState): void {
   ensurePill().update(state);
-  if (window.__speedwatcherPill !== undefined) window.__speedwatcherPill.state = state;
+  if (__E2E__ && window.__speedwatcherPill !== undefined) window.__speedwatcherPill.state = state;
 }
 
 function applyMultiplier(multiplier: number): void {
@@ -394,7 +356,7 @@ function logWpm(
     `[speed-watcher] video=${videoId} kind=${kind} lang=${lang} ` +
     `wpm word-level=${fmt(stats.word)} cue-level=${fmt(stats.cue)} ` +
     `corrected=${fmt(stats.corrected)} nWords=${stats.nWords}`;
-  console.info(line);
+  if (__E2E__) console.info(line);
   // E2E hook: the fixture page listens for this event; the console line
   // alone is not assertable from WebDriver (no console API in Selenium).
   window.dispatchEvent(
@@ -426,14 +388,4 @@ async function waitForPlayerResponse(): Promise<PlayerResponse | undefined> {
   return undefined;
 }
 
-async function fetchJson3(baseUrl: string): Promise<unknown | null> {
-  const url = new URL(baseUrl, location.href);
-  if (!url.searchParams.has('fmt')) url.searchParams.set('fmt', 'json3');
-  try {
-    const response = await fetch(url);
-    if (!response.ok) return null;
-    return await response.json();
-  } catch {
-    return null;
-  }
-}
+

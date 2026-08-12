@@ -17,6 +17,11 @@ import type { StorageLike } from './settings';
 
 export const DEMAND_STORAGE_KEY = 'sw.demand';
 
+/** SEC-4: the proxy saturates at this total count. The gate trips at 40
+ * renders / 3 days / 42 days — far below — so the cap only bounds storage
+ * and stops the per-increment write at saturation. */
+export const MAX_ESTIMATED_COUNT = 10_000;
+
 /** Types whose estimated renders indicate transcribable speech (lib-9). */
 export const SPEECH_ELIGIBLE_TYPES: readonly ContentType[] = [
   'talk',
@@ -58,13 +63,14 @@ function nonNegativeInt(value: unknown): number {
   return typeof value === 'number' && Number.isFinite(value) ? Math.max(0, Math.floor(value)) : 0;
 }
 
-/** Counts with unknown or corrupt content-type keys are dropped. */
+/** Counts with unknown or corrupt content-type keys are dropped; values are
+ * clamped to MAX_ESTIMATED_COUNT so the cap is a record invariant. */
 function normalizeByType(raw: unknown): DemandRecord['byContentType'] {
   if (!isRecord(raw)) return {};
   const byType: DemandRecord['byContentType'] = {};
   for (const [type, count] of Object.entries(raw)) {
     if (!isContentType(type)) continue;
-    const value = nonNegativeInt(count);
+    const value = Math.min(nonNegativeInt(count), MAX_ESTIMATED_COUNT);
     if (value > 0) byType[type] = value;
   }
   return byType;
@@ -74,7 +80,7 @@ function normalizeDemand(raw: unknown): DemandRecord {
   if (!isRecord(raw)) return { estimatedCount: 0, byContentType: {} };
   const renderDays = nonNegativeInt(raw.renderDays);
   return {
-    estimatedCount: nonNegativeInt(raw.estimatedCount),
+    estimatedCount: Math.min(nonNegativeInt(raw.estimatedCount), MAX_ESTIMATED_COUNT),
     byContentType: normalizeByType(raw.byContentType),
     ...(typeof raw.firstSeenTs === 'number' && Number.isFinite(raw.firstSeenTs)
       ? { firstSeenTs: raw.firstSeenTs }
@@ -99,8 +105,13 @@ function localDate(now: number): string {
 
 /**
  * Serialized read-modify-write: increments queue on a promise chain so
- * concurrent calls cannot lose updates (chrome.storage.local has no atomic
- * increment). The bridge is the single writer; the options page only reads.
+ * concurrent calls from ONE context cannot lose updates (chrome.storage.local
+ * has no atomic increment). The chain is per-instance: two contexts (tabs /
+ * frames) each run their own DemandStore, and their get→set pairs can still
+ * interleave and drop increments (lib-11#3, documented in
+ * tests/demand.test.ts 'two instances'). Accepted for the coarse adoption
+ * gate; the STT phase can route every increment through the background for
+ * single-writer atomicity.
  */
 export class DemandStore {
   private tail: Promise<void> = Promise.resolve();
@@ -121,6 +132,9 @@ export class DemandStore {
 
   private async incrementNow(contentType: ContentType, now: number): Promise<DemandRecord> {
     const current = normalizeDemand((await this.storage.get(this.key))[this.key]);
+    // SEC-4: at the cap further increments are no-ops — the record stays
+    // stable and no storage write happens (write-amplification bound).
+    if (current.estimatedCount >= MAX_ESTIMATED_COUNT) return current;
     const date = localDate(now);
     const speechEligible = SPEECH_ELIGIBLE_TYPES.includes(contentType);
     const renderDays =

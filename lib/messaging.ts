@@ -103,6 +103,35 @@ function isContentTypePrefs(value: unknown): boolean {
   );
 }
 
+// SEC-3 bounds for log:append entries: the pill recommends within
+// platformMax (<= 4) and no speech track runs above 1000 wpm, so anything
+// outside these ranges is forgery.
+const MULTIPLIER_MIN = 0.1;
+const MULTIPLIER_MAX = 10;
+const NATURAL_RATE_MIN = 1;
+const NATURAL_RATE_MAX = 1000;
+
+const USER_ACTIONS = new Set(['apply', 'dismiss', 'adjust']);
+const RECOMMENDATION_MODES = new Set(['recommend', 'warning', 'unreachable', 'music']);
+
+/** Runtime shape check for log:append payloads crossing the postMessage
+ * boundary (SEC-3): a page can post arbitrary JSON, so every field the
+ * habits report reads is validated before anything is appended. */
+export function isLogEntry(value: unknown): value is Omit<OverrideLogEntry, 'ts'> {
+  if (!isRecord(value)) return false;
+  if (!isContentType(value.contentType)) return false;
+  if (!isFiniteNumberIn(value.naturalRate, NATURAL_RATE_MIN, NATURAL_RATE_MAX)) return false;
+  if (!isFiniteNumberIn(value.multiplier, MULTIPLIER_MIN, MULTIPLIER_MAX)) return false;
+  if (typeof value.site !== 'string' || value.site.length === 0) return false;
+  if (typeof value.userAction !== 'string' || !USER_ACTIONS.has(value.userAction)) return false;
+  if (typeof value.mode !== 'string' || !RECOMMENDATION_MODES.has(value.mode)) return false;
+  if (value.videoId !== undefined && typeof value.videoId !== 'string') return false;
+  if (value.finalMultiplier !== undefined && !isFiniteNumberIn(value.finalMultiplier, MULTIPLIER_MIN, MULTIPLIER_MAX)) {
+    return false;
+  }
+  return true;
+}
+
 /** Runtime shape check for settings:set payloads crossing the postMessage
  * boundary — the type system cannot vouch for page-posted data. */
 export function isSettingsPayload(value: unknown): value is Settings {
@@ -120,10 +149,14 @@ export function isSettingsPayload(value: unknown): value is Settings {
   return true;
 }
 
-/** Isolated-world side: resolves a request against the shared stores. */
+/** Isolated-world side: resolves a request against the shared stores.
+ * siteHost is the requesting frame's bare hostname (see
+ * createBridgeListener); it bounds which sites overrides the page may
+ * write (SEC-1). */
 export async function handleBridgeRequest(
   request: BridgeRequest,
   deps: BridgeDeps,
+  siteHost: string,
 ): Promise<Settings | void> {
   switch (request.type) {
     case 'settings:get':
@@ -134,9 +167,22 @@ export async function handleBridgeRequest(
       if (!isSettingsPayload(request.settings)) {
         throw new Error('settings:set: invalid settings payload');
       }
+      // SEC-1: a page may only add overrides for its own host; other hosts
+      // are the options page's domain (it writes SettingsStore directly, so
+      // the restriction cannot lock legitimate writes out).
+      for (const host of Object.keys(request.settings.sites)) {
+        if (host !== siteHost) {
+          throw new Error(`settings:set: sites override for foreign host ${host}`);
+        }
+      }
       await deps.settings.save(request.settings);
       return undefined;
     case 'log:append':
+      // SEC-3: forged entries (NaN multipliers, unknown content types) must
+      // not pollute the habits report; nothing is appended on rejection.
+      if (!isLogEntry(request.entry)) {
+        throw new Error('log:append: invalid entry');
+      }
       await deps.log.append(request.entry);
       return undefined;
     case 'demand:increment':
@@ -158,12 +204,16 @@ export function createBridgeListener(
   deps: BridgeDeps,
   host: Window,
 ): (event: MessageEvent) => void {
+  // SEC-1: the frame's bare hostname is the only sites key its page may
+  // write — same normalization the measurement scripts apply
+  // (location.hostname.replace(/^www\./, '')).
+  const siteHost = host.location.hostname.replace(/^www\./, '');
   return (event) => {
     if (event.source !== host) return;
     const envelope = event.data;
     if (!isBridgeEnvelope(envelope) || envelope.direction !== 'request') return;
     const detail = envelope.payload as BridgeRequest & { id: number };
-    void handleBridgeRequest(detail, deps).then(
+    void handleBridgeRequest(detail, deps, siteHost).then(
       (result) => {
         host.postMessage(
           {

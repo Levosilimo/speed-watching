@@ -71,10 +71,10 @@ function findFirefox(): string {
 }
 
 async function main(): Promise<void> {
-  const extensionPath = resolve('.output/firefox-mv3');
+  const extensionPath = resolve('.output/firefox-mv3-e2e');
   if (!existsSync(join(extensionPath, 'manifest.json'))) {
     throw new Error(
-      `built firefox extension not found at ${extensionPath} — run \`bun run build:firefox\` first`,
+      `built firefox extension not found at ${extensionPath} — run \`bun run build:firefox:e2e\` first (the e2e build keeps the window test hooks)`,
     );
   }
 

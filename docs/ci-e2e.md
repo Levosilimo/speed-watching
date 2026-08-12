@@ -40,14 +40,20 @@ ubuntu-latest, Node 22 (actions/setup-node) + bun 1.3.14 (oven-sh/setup-bun),
    bun run scripts/aislop-gate.ts`, then `github/codeql-action/upload-sarif`
    (always, so findings are visible even when the gate fails).
 5. `bun run test` — vitest, unit only.
-6. `bun run build` — production chrome-mv3 build.
+6. `bun run build` — production chrome-mv3 build (dead-code-eliminates
+   the window test hooks; the SEC-2 CI step greps the output to prove it).
 7. Manifest-version gate — `.output/chrome-mv3/manifest.json` version must
    equal `package.json` version (screenpipe pattern; both are `0.0.1`).
 8. `bun run zip` + `actions/upload-artifact@v4` — the zip the publish
    workflow would upload.
 
 `e2e-chromium` and `e2e-firefox` depend on `ci` and build their own browser
-target (`bun run build` / `bun run build:firefox`) — the artifact download
+target with the e2e hooks toggle (`bun run build:e2e` /
+`bun run build:firefox:e2e` — `wxt build --mode e2e`, which compiles
+`__E2E__` to true so the window test hooks exist; production builds compile
+it to false, per wxt.config.ts). The e2e build lands in
+`.output/{browser}-mv3-e2e` (wxt suffixes unknown modes) and the specs load
+that dir — the prod `.output/chrome-mv3` stays the artifact — the artifact download
 path would save a few seconds but the firefox job needs its own build anyway,
 and each job stays self-contained. `e2e-chromium-cft` mirrors
 `e2e-chromium` (same build, `xvfb-run -a bun run e2e:cft`) — xvfb is
