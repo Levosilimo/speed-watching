@@ -303,6 +303,16 @@ test('measure race: a slow in-flight measure cannot overwrite a newer one', asyn
   await driver.navigateToWatch('real/asr-word.json');
   const initial = await driver.readPillState();
   expect(initial?.mode).toBe('warning'); // pause-diluted: the stale side
+  const manualCueResponse = {
+    videoDetails: { videoId: 'e2e-fixture', title: 'E2E fixture: real/manual-cue.json' },
+    captions: {
+      playerCaptionsTracklistRenderer: {
+        captionTracks: [
+          { baseUrl: '/api/timedtext?fixture=real/manual-cue.json', languageCode: 'en' },
+        ],
+      },
+    },
+  };
   await page.evaluate(() => {
     const realFetch = window.fetch.bind(window);
     let delayed = false;
@@ -318,27 +328,20 @@ test('measure race: a slow in-flight measure cannot overwrite a newer one', asyn
       }
       return realFetch(input, init);
     };
-    window.ytInitialPlayerResponse = {
-      videoDetails: { videoId: 'e2e-fixture', title: 'E2E fixture: real/manual-cue.json' },
-      captions: {
-        playerCaptionsTracklistRenderer: {
-          captionTracks: [
-            { baseUrl: '/api/timedtext?fixture=real/manual-cue.json', languageCode: 'en' },
-          ],
-        },
-      },
-    };
   });
-  // Measure 1: slow (its caption fetch is the delayed one).
+  // Measure 1: slow (its caption fetch is the delayed one), pinned to the
+  // asr-word response it reads before the swap below.
   await page.evaluate(() => {
     document.dispatchEvent(new Event('yt-navigate-start'));
     document.dispatchEvent(new Event('yt-navigate-finish'));
   });
-  // Measure 2: queued behind measure 1, fast, reads the manual-cue response.
-  await page.evaluate(() => {
+  // Point the player response at a different fixture, then measure 2: queued
+  // behind measure 1 (guard) or concurrent (no guard), fast, manual-cue.
+  await page.evaluate((response) => {
+    window.ytInitialPlayerResponse = response;
     document.dispatchEvent(new Event('yt-navigate-start'));
     document.dispatchEvent(new Event('yt-navigate-finish'));
-  });
+  }, manualCueResponse);
   // Both landed (the delayed fetch resolves at ~1500ms).
   await driver.sleep(2500);
   const state = await driver.readPillState();
@@ -346,7 +349,7 @@ test('measure race: a slow in-flight measure cannot overwrite a newer one', asyn
   if (
     state === null ||
     state.mode !== rec.mode ||
-    state.reason !== rec.reason ||
+    (state.reason ?? null) !== rec.reason ||
     Math.abs(state.multiplier - rec.multiplier) > 1e-9
   ) {
     throw new Error(

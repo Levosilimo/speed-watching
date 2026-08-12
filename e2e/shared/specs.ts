@@ -228,8 +228,9 @@ export async function runPillSpecs(driver: E2EDriver): Promise<void> {
     }
     // The warning reason (pause-diluted on word-timed ASR) must survive the
     // whole pipeline into the pill state — the e2e half of the production
-    // wiring for the articulatory warning.
-    if (state.reason !== rec.reason) {
+    // wiring for the articulatory warning. The hook serializes undefined as
+    // an absent field, so normalize before comparing.
+    if ((state.reason ?? null) !== rec.reason) {
       throw new Error(`${fixture}: pill reason ${state.reason} !== expected ${rec.reason}`);
     }
     const source = await driver.readCaptionSource();
