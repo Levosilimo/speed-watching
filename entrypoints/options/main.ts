@@ -27,9 +27,9 @@ function el(id: string): HTMLElement {
 }
 
 // ── Settings: single storage namespace ───────────────────────────────────
-// chrome.storage.local holds exactly two keys — 'sw.settings' (SettingsStore)
-// and 'sw.overrideLog' (OverrideLog); see the lib/settings.ts module doc.
-// ui/storage.ts's parallel 'sw:' schema is retired.
+// chrome.storage.local holds exactly three keys — 'sw.settings' (SettingsStore),
+// 'sw.overrideLog' (OverrideLog), and 'sw.demand' (DemandStore); see the
+// lib/settings.ts module doc. ui/storage.ts's parallel 'sw:' schema is retired.
 
 const settingsStore = new SettingsStore(browser.storage.local, SETTINGS_STORAGE_KEY);
 const overrideLog = new OverrideLog(browser.storage.local);

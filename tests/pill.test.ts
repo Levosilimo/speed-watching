@@ -216,4 +216,21 @@ describe('createPill', () => {
     pill.update(state()); // no-op after destroy
     expect(roots[0]!.querySelector('.pill')).toBeNull();
   });
+
+  it('destroy detaches the host so the next pill mounts clean (video churn)', () => {
+    const roots = capturedRoots();
+    const host = shadowHost();
+    document.body.appendChild(host);
+    const pill = createPill(host, {});
+    pill.mount();
+    pill.destroy();
+    // The content scripts re-resolve the host after churn (querySelector
+    // finds no .speedwatcher-pill-host): the destroyed host must be gone.
+    expect(host.isConnected).toBe(false);
+    const fresh = shadowHost();
+    document.body.appendChild(fresh);
+    // Remount on the fresh host — attachShadow on the old host would throw.
+    expect(() => createPill(fresh, {})).not.toThrow();
+    expect(roots).toHaveLength(2);
+  });
 });

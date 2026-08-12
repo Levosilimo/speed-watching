@@ -1,4 +1,5 @@
 import type { Segment } from './captions';
+import type { RateTier } from './recommend';
 import { countWordTokens, isBracketMarker } from './tokenizer';
 
 export function countWords(text: string): number {
@@ -119,6 +120,57 @@ export function speechDurationSec(words: readonly Segment[]): number | null {
  */
 export function articulatoryWpm(tokens: number, speechDuration: number): number {
   return (tokens / speechDuration) * 60;
+}
+
+/**
+ * Word-timing coverage floor for the articulatory warning: below half the
+ * cue words timed, the speech-duration estimate is too unreliable to warn
+ * on. Phase-0 coverage sits at 67.9–87.4% (mean 83.6%), so real payloads
+ * clear it; the warning is report-only, so missing it is the safe failure.
+ */
+export const MIN_WORD_TIMING_COVERAGE = 0.5;
+
+/**
+ * asr-word tier inputs: the pause-excluded articulatory rate over the timed
+ * words plus the word-timing coverage sanity. Null when fewer than two timed
+ * words or no measurable speech duration (speechDurationSec contract) —
+ * sparse word timing cannot localize pauses. Shared by the content script
+ * and the e2e specs so both feed recommend() the same numbers.
+ */
+export function wordTierInputs(
+  words: readonly Segment[],
+  cues: readonly Segment[],
+): { articulatoryWpm: number; timingCoverageOk: boolean } | null {
+  const speechDur = speechDurationSec(words);
+  if (speechDur === null) return null;
+  const tokens = cues.reduce(
+    (sum, cue) => (isBracketMarker(cue.text) ? sum : sum + countWordTokens(cue.text)),
+    0,
+  );
+  const coverage = totalWords(cues) === 0 ? 0 : totalWords(words) / totalWords(cues);
+  return {
+    articulatoryWpm: articulatoryWpm(tokens, speechDur),
+    timingCoverageOk: coverage >= MIN_WORD_TIMING_COVERAGE,
+  };
+}
+
+/**
+ * Tier + articulatory inputs for a caption track: word-timed ASR tracks
+ * (≥2 timed words) render asr-word with the pause-diluted inputs, other
+ * ASR tracks asr-cue, manual tracks manual-cue. Shared by the content
+ * script and the e2e specs so the tier choice cannot drift.
+ */
+export function asrTierInputs(
+  kind: string | undefined,
+  words: readonly Segment[],
+  cues: readonly Segment[],
+): {
+  tier: RateTier;
+  wordInputs: { articulatoryWpm: number; timingCoverageOk: boolean } | null;
+} {
+  if (kind !== 'asr') return { tier: 'manual-cue', wordInputs: null };
+  if (words.length < 2) return { tier: 'asr-cue', wordInputs: null };
+  return { tier: 'asr-word', wordInputs: wordTierInputs(words, cues) };
 }
 
 /**

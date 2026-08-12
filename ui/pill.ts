@@ -383,6 +383,10 @@ export function createPill(host: HTMLElement, events?: PillEvents): PillApi {
       mq?.removeEventListener('change', onThemeChange);
       shadow.innerHTML = '';
       host.innerHTML = '';
+      // The host keeps its shadow root after destroy; a second attachShadow
+      // on it would throw, so the content scripts re-resolve the host after
+      // video churn. Detach it (with the root) so the next pill mounts clean.
+      host.remove();
     },
   };
 }

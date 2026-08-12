@@ -19,6 +19,7 @@
 import { defineContentScript } from 'wxt/utils/define-content-script';
 import { harvestCaptions, type VttHost } from '@/lib/captions-harvest';
 import { priorMidpoint } from '@/lib/heuristics';
+import { SerializedRunner } from '@/lib/measure-guard';
 import { RateReapplier, selectVideo } from '@/lib/matcher';
 import { createBridgeClient } from '@/lib/messaging';
 import type { ContentType } from '@/lib/music';
@@ -36,6 +37,8 @@ import { createPill, type PillApi, type PillState } from '@/ui/pill';
 
 const RESOURCE_WAIT_MS = 2000;
 const RESOURCE_POLL_MS = 250;
+/** DOM-churn throttle for the video observer (see main()). */
+const OBSERVER_DEBOUNCE_MS = 300;
 
 const bridge = createBridgeClient(window);
 
@@ -50,9 +53,10 @@ let current: {
 
 let pill: { api: PillApi; host: HTMLElement } | null = null;
 let activeVideo: HTMLVideoElement | null = null;
-let measuring = false;
-let remeasureQueued = false;
+let observerTimer: ReturnType<typeof setTimeout> | null = null;
+let hasSeenVideo = false;
 const reapplier = new RateReapplier();
+const measureRunner = new SerializedRunner();
 
 const NONE_STATE: PillState = {
   mode: 'none',
@@ -102,27 +106,36 @@ export default defineContentScript({
     };
     // Player elements appear and disappear dynamically (embeds mount late,
     // SPA navigation swaps them): re-measure when the active element changes.
+    // The callback runs on every DOM mutation on every page, so it skips the
+    // full scan until a video has ever appeared and throttles it afterwards.
     const observer = new MutationObserver(() => {
-      const active = selectVideo([...document.querySelectorAll('video')], activeVideo);
-      if (active === null) {
-        if (pill !== null) {
-          pill.api.update(NONE_STATE);
-          pill.api.destroy();
-          pill = null;
-        }
-        reapplier.stop();
-        current = null;
-        return;
-      }
-      if (active !== activeVideo) {
-        activeVideo = active;
-        void measure();
-      }
+      if (!hasSeenVideo && document.querySelector('video') === null) return;
+      if (observerTimer !== null) clearTimeout(observerTimer);
+      observerTimer = setTimeout(handleVideoMutations, OBSERVER_DEBOUNCE_MS);
     });
     observer.observe(document.documentElement, { childList: true, subtree: true });
     void measure();
   },
 });
+
+function handleVideoMutations(): void {
+  hasSeenVideo = true;
+  const active = selectVideo([...document.querySelectorAll('video')], activeVideo);
+  if (active === null) {
+    if (pill !== null) {
+      pill.api.update(NONE_STATE);
+      pill.api.destroy();
+      pill = null;
+    }
+    reapplier.stop();
+    current = null;
+    return;
+  }
+  if (active !== activeVideo) {
+    activeVideo = active;
+    void measure();
+  }
+}
 
 function onMediaEvent(event: Event): void {
   // Multi-video pages: the last element to fire a media event is the one
@@ -133,21 +146,8 @@ function onMediaEvent(event: Event): void {
   }
 }
 
-async function measure(): Promise<void> {
-  if (measuring) {
-    remeasureQueued = true;
-    return;
-  }
-  measuring = true;
-  try {
-    await measureOnce();
-  } finally {
-    measuring = false;
-    if (remeasureQueued) {
-      remeasureQueued = false;
-      void measure();
-    }
-  }
+function measure(): void {
+  measureRunner.run(measureOnce);
 }
 
 async function measureOnce(): Promise<void> {

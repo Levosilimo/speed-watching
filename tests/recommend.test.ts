@@ -13,12 +13,10 @@ import {
   recommend,
 } from '../lib/recommend';
 import type { RateTier } from '../lib/recommend';
-import { isBracketMarker, countWordTokens } from '../lib/tokenizer';
 import {
-  articulatoryWpm,
   filteredTokensOverTrimmedSpan,
-  speechDurationSec,
   totalWords,
+  wordTierInputs,
 } from '../lib/wpm';
 import { readFixture } from './fixtures/helpers';
 
@@ -156,25 +154,21 @@ describe('recommend — pause-diluted articulatory warning (asr-word tier)', () 
   // iG9CE55wbtY pauseBias −75.2% (wordAccurateRate 312.8), Ks-_Mh1QhMc
   // −25.0% (242.6), arj7oStGLkU −57.5% (268.7). The fixtures hold the
   // first 20 events, so absolute numbers differ from the full payload;
-  // the fire/no-fire polarity holds.
+  // the fire/no-fire polarity holds. wordTierInputs is the exact helper
+  // entrypoints/content.ts feeds recommend() from (production path).
   function inputFrom(fixture: string): RecommendInput {
     const parsed = parseYouTubeJson3(readFixture(fixture));
     const naturalRate = filteredTokensOverTrimmedSpan(parsed.cues);
-    const speechDur = speechDurationSec(parsed.words);
-    if (naturalRate === null || speechDur === null) {
+    const wordInputs = wordTierInputs(parsed.words, parsed.cues);
+    if (naturalRate === null || wordInputs === null) {
       throw new Error(`${fixture}: rate or speech duration not measurable`);
     }
-    const tokens = parsed.cues.reduce(
-      (sum, cue) => (isBracketMarker(cue.text) ? sum : sum + countWordTokens(cue.text)),
-      0,
-    );
     return {
       naturalRate,
       tier: 'asr-word',
       contentType: 'talk',
       platformMax: 2,
-      articulatoryWpm: articulatoryWpm(tokens, speechDur),
-      timingCoverageOk: true,
+      ...wordInputs,
     };
   }
 

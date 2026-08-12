@@ -16,6 +16,7 @@ import { mkdtempSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import {
+  expectedRecommendation,
   runBridgeSpecs,
   runGenericSpecs,
   runMeasurementSpecs,
@@ -290,6 +291,72 @@ test('generic matcher harvests captions, applies, and re-asserts after a reset',
 
 test('multi-video page: Apply targets the video that actually plays', async () => {
   await runMultiVideoSpecs(driver);
+});
+
+test('measure race: a slow in-flight measure cannot overwrite a newer one', async () => {
+  // The measure() guard (mirror of generic.content.ts) serializes overlapping
+  // measures: yt-navigate-finish during an in-flight caption fetch queues a
+  // re-measure instead of running concurrently. Without it, the slow stale
+  // measure lands last and its pill wins. The slow fetch is injected by
+  // wrapping window.fetch (same MAIN world as the content script) and the
+  // player response is swapped so the two measures disagree on the result.
+  await driver.navigateToWatch('real/asr-word.json');
+  const initial = await driver.readPillState();
+  expect(initial?.mode).toBe('warning'); // pause-diluted: the stale side
+  const manualCueResponse = {
+    videoDetails: { videoId: 'e2e-fixture', title: 'E2E fixture: real/manual-cue.json' },
+    captions: {
+      playerCaptionsTracklistRenderer: {
+        captionTracks: [
+          { baseUrl: '/api/timedtext?fixture=real/manual-cue.json', languageCode: 'en' },
+        ],
+      },
+    },
+  };
+  await page.evaluate(() => {
+    const realFetch = window.fetch.bind(window);
+    let delayed = false;
+    window.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = input instanceof URL ? input.href : typeof input === 'string' ? input : input.url;
+      if (!delayed && url.includes('/api/timedtext')) {
+        delayed = true;
+        return new Promise<Response>((resolve, reject) => {
+          setTimeout(() => {
+            realFetch(input, init).then(resolve, reject);
+          }, 1500);
+        });
+      }
+      return realFetch(input, init);
+    };
+  });
+  // Measure 1: slow (its caption fetch is the delayed one), pinned to the
+  // asr-word response it reads before the swap below.
+  await page.evaluate(() => {
+    document.dispatchEvent(new Event('yt-navigate-start'));
+    document.dispatchEvent(new Event('yt-navigate-finish'));
+  });
+  // Point the player response at a different fixture, then measure 2: queued
+  // behind measure 1 (guard) or concurrent (no guard), fast, manual-cue.
+  await page.evaluate((response) => {
+    window.ytInitialPlayerResponse = response;
+    document.dispatchEvent(new Event('yt-navigate-start'));
+    document.dispatchEvent(new Event('yt-navigate-finish'));
+  }, manualCueResponse);
+  // Both landed (the delayed fetch resolves at ~1500ms).
+  await driver.sleep(2500);
+  const state = await driver.readPillState();
+  const { rec } = expectedRecommendation('real/manual-cue.json');
+  if (
+    state === null ||
+    state.mode !== rec.mode ||
+    (state.reason ?? null) !== rec.reason ||
+    Math.abs(state.multiplier - rec.multiplier) > 1e-9
+  ) {
+    throw new Error(
+      `measure race: final pill ${state?.mode}/${state?.reason}/${state?.multiplier}, ` +
+        `expected ${rec.mode}/${rec.reason}/${rec.multiplier} (stale measure must not win)`,
+    );
+  }
 });
 
 test('SPA race: an Apply between yt-navigate-start and the fresh pill is a no-op', async () => {

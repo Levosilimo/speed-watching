@@ -14,6 +14,7 @@
 import { defineContentScript } from 'wxt/utils/define-content-script';
 import { parseYouTubeJson3 } from '@/lib/captions';
 import { priorMidpoint } from '@/lib/heuristics';
+import { SerializedRunner } from '@/lib/measure-guard';
 import { createBridgeClient } from '@/lib/messaging';
 import type { ContentType } from '@/lib/music';
 import { detectMusic } from '@/lib/music';
@@ -26,6 +27,7 @@ import {
   type Settings,
 } from '@/lib/settings';
 import {
+  asrTierInputs,
   correctedCueLevelWpm,
   cueLevelWpm,
   filteredTokensOverTrimmedSpan,
@@ -65,6 +67,9 @@ let pill: { api: PillApi; host: HTMLElement } | null = null;
  * with more than one video. */
 let activeVideo: HTMLVideoElement | null = null;
 
+// Serializes measure() against overlapping triggers (initial load + SPA navigation).
+const measureRunner = new SerializedRunner();
+
 const NONE_STATE: PillState = {
   mode: 'none',
   rateWpm: 0,
@@ -86,8 +91,7 @@ declare global {
     __speedwatcherPill?: PillTestHook;
     __speedwatcherCaptionSource?: 'web' | 'android' | 'none';
     // E2E hook: settings write through the bridge (same path the options
-    // page uses) — lets the shared specs exercise the bridge in both
-    // browsers, including Firefox's single-world layout.
+    // page uses) — the shared specs exercise the bridge in both browsers.
     __speedwatcherSettings?: { set(settings: Settings): Promise<void> };
   }
 }
@@ -102,8 +106,7 @@ export default defineContentScript({
     document.addEventListener('timeupdate', onMediaEvent, true);
     window.__speedwatcherPill = {
       state: null,
-      // Mirrors the pill's own Apply gate (ui/pill.ts wireEvents): music and
-      // unreachable states must not touch playbackRate.
+      // Mirrors the pill's own Apply gate (ui/pill.ts wireEvents): music and unreachable must not touch playbackRate.
       apply: () => {
         if (current === null) return;
         if (current.recommendation.mode === 'music' || current.recommendation.mode === 'unreachable') {
@@ -140,7 +143,11 @@ function isLive(): boolean {
   return document.querySelector('.ytp-live-badge') !== null;
 }
 
-async function measure(): Promise<void> {
+function measure(): void {
+  measureRunner.run(measureOnce);
+}
+
+async function measureOnce(): Promise<void> {
   const response = await waitForPlayerResponse();
   if (!response) {
     console.info('[speed-watcher] wpm: player response never appeared');
@@ -199,14 +206,8 @@ async function measure(): Promise<void> {
   }
   const detected = detectMusic(cues, naturalRate) ? 'music' : 'generic';
   const contentType = resolveContentType(settings, site, detected);
-  renderRecommendation(
-    videoId,
-    naturalRate,
-    kind === 'asr' ? 'asr-cue' : 'manual-cue',
-    contentType,
-    settings,
-    site,
-  );
+  const { tier, wordInputs } = asrTierInputs(kind, words, cues);
+  renderRecommendation(videoId, naturalRate, tier, contentType, settings, site, wordInputs);
 }
 
 /** No usable caption rate: heuristic prior midpoint for the content type. */
@@ -231,6 +232,7 @@ function renderRecommendation(
   contentType: ContentType,
   settings: Settings,
   site: string,
+  wordInputs?: { articulatoryWpm: number; timingCoverageOk: boolean } | null,
 ): void {
   const platformMax = resolvePlatformMax(settings, site);
   const recommendation = recommend({
@@ -239,6 +241,7 @@ function renderRecommendation(
     contentType,
     platformMax,
     userTarget: resolveTarget(settings, site, contentType),
+    ...wordInputs,
   });
   current = { videoId, site, contentType, naturalRate, platformMax, recommendation };
   showPill({
