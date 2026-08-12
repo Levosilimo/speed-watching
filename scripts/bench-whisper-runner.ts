@@ -60,7 +60,13 @@ async function probeGpu() {
     if (!a) return 'no-adapter';
     let label = a.constructor.name;
     try {
-      if (a.info) label = a.info.vendor + '|' + a.info.architecture;
+      // Adapter identity is a fingerprinting surface: Chromium blanks
+      // adapter.info unless unsafe APIs are granted, so an empty info means
+      // 'unknown', not an empty name — keep the constructor fallback.
+      const info = a.info;
+      if (info && (info.vendor || info.architecture)) {
+        label = info.vendor + '|' + info.architecture;
+      }
     } catch (_) { /* info absent on some builds */ }
     return 'adapter:' + label;
   } catch (e) {
