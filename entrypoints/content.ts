@@ -117,9 +117,18 @@ export default defineContentScript({
       set: (settings) => bridge.request({ type: 'settings:set', settings }).then(() => undefined),
     };
     void measure();
+    // SPA navigation: invalidate the old video's recommendation before the
+    // next measure lands, so a fast Apply cannot use the previous multiplier.
+    document.addEventListener('yt-navigate-start', onNavigationStart);
     document.addEventListener('yt-navigate-finish', () => void measure());
   },
 });
+
+function onNavigationStart(): void {
+  current = null;
+  activeVideo = null;
+  showPill(NONE_STATE);
+}
 
 function onMediaEvent(event: Event): void {
   if (event.target instanceof HTMLVideoElement) activeVideo = event.target;
