@@ -11,10 +11,14 @@
     "scripts/*.ts",
     "e2e/**/*.ts"
   ],
-  "project": ["**/*.ts"],
+  "project": [
+    "**/*.ts"
+  ],
   "ignoreDependencies": [
     "block-no-verify",
     "@ast-grep/cli",
-    "vitest-chrome"
-  ]
+    "vitest-chrome",
+    "@huggingface/transformers"
+  ],
+  "ignoreBinaries": ["ffmpeg"]
 }

@@ -38,3 +38,14 @@ playwright-report
 
 # Env files
 .env*
+
+# Benchmark assets (downloaded once at dev time)
+scripts/data/whisper-bench/
+
+# cortexkit project cache (magic-context historian)
+.cortexkit/
+
+# BEGIN oh-my-opencode-slim worktrees
+.slim/worktrees/
+.slim/worktrees.json
+# END oh-my-opencode-slim worktrees

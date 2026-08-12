@@ -22,6 +22,7 @@
   },
   "devDependencies": {
     "@ast-grep/cli": "^0.36.0",
+    "@huggingface/transformers": "^4.2.0",
     "@playwright/test": "^1.62.1",
     "@types/selenium-webdriver": "^4.35.6",
     "aislop": "^0.14.1",
@@ -40,5 +41,10 @@
   "trustedDependencies": [
     "@ast-grep/cli",
     "geckodriver"
-  ]
+  ],
+  "overrides": {
+    "adm-zip": "0.6.0",
+    "sharp": "0.35.3",
+    "onnxruntime-web": "1.23.0"
+  }
 }
