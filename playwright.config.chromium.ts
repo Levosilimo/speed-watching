@@ -2,6 +2,9 @@ import { defineConfig } from '@playwright/test';
 
 export default defineConfig({
   testDir: './e2e/chromium',
+  // The offscreen spec runs on the CfT lane (playwright.config.chromium.cft.ts,
+  // channel 'chrome-for-testing'); this suite stays the bundled-channel specs.
+  testIgnore: 'offscreen.spec.ts',
   workers: 1,
   timeout: 60_000,
   reporter: 'line',

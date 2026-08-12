@@ -12,15 +12,17 @@ Two safety nets guard the extension before it ever reaches a store:
 
 | Path | Purpose |
 |---|---|
-| `.github/workflows/ci.yml` | CI: `ci`, `e2e-chromium`, `e2e-firefox` jobs |
+| `.github/workflows/ci.yml` | CI: `ci`, `e2e-chromium`, `e2e-chromium-cft`, `e2e-firefox` jobs |
 | `.github/workflows/publish.yml` | Draft store-submission workflow (inert until secrets exist) |
 | `scripts/run-ci.ts` | The `bun run ci` pipeline |
 | `e2e/server.ts` | Local fixture server: stub watch page, caption JSON, PAC proxy |
 | `e2e/shared/fixtures.ts` | Fixture metadata (caption-track kind, blocked captions) shared by server and specs |
 | `e2e/shared/specs.ts` | Browser-agnostic E2E specs (fixture wpm math + pill behavior) |
 | `e2e/chromium/e2e.spec.ts` | Playwright suite: SW reachability + shared specs + console hook |
+| `e2e/chromium/offscreen.spec.ts` | CfT lane: offscreen document API + orchestrator error path |
 | `e2e/firefox/run.ts` | selenium-webdriver runner for the shared specs |
-| `playwright.config.chromium.ts` | Playwright config (webServer, chromium channel) |
+| `playwright.config.chromium.ts` | Playwright config (webServer, chromium channel, ignores offscreen.spec.ts) |
+| `playwright.config.chromium.cft.ts` | CfT lane config (same webServer, offscreen.spec.ts only) |
 
 ## The `ci` job
 
@@ -47,7 +49,11 @@ ubuntu-latest, Node 22 (actions/setup-node) + bun 1.3.14 (oven-sh/setup-bun),
 `e2e-chromium` and `e2e-firefox` depend on `ci` and build their own browser
 target (`bun run build` / `bun run build:firefox`) — the artifact download
 path would save a few seconds but the firefox job needs its own build anyway,
-and each job stays self-contained.
+and each job stays self-contained. `e2e-chromium-cft` mirrors
+`e2e-chromium` (same build, `xvfb-run -a bun run e2e:cft`) — xvfb is
+installed by `playwright install --with-deps` and is a harmless wrapper:
+the offscreen spec defaults to headless (`E2E_CFT_HEADED=1` opts into
+headed, e.g. for debugging).
 
 ## E2E architecture
 
@@ -87,6 +93,29 @@ Chromium-only assertions (product guard): service worker reachability, and
 that the `console.info` measurement line equals the event payload's `line`
 field. Playwright cannot do Firefox add-ons, so the shared specs run there
 through WebDriver instead.
+
+### Chromium CfT lane (offscreen)
+
+Playwright ≥ 1.57 ships **Chrome for Testing** as its managed Chromium build
+(verified 151.0.7922.34 on this box; `channel: 'chromium'` and `channel:
+'chrome-for-testing'` resolve to the same binary, and `playwright install
+chrome` installs nothing — it expects a system Chrome). CfT is real Chrome:
+`chrome.offscreen` exists and `createDocument`/`getContexts`/`closeDocument`
+work headless and headed — the phase-0 claim that Playwright builds strip
+the offscreen API is stale. The lane (`e2e/chromium/offscreen.spec.ts`, run
+via `bun run e2e:cft`) asserts: offscreen document creation with the built
+extension (USER_MEDIA reason), document lifecycle through `getContexts`, and
+the capture orchestrator's documented error path through the `storage.session`
+mirror.
+
+The full capture chain (getMediaStreamId → getUserMedia → level > 0) does
+**not** run in this lane: `chrome.tabCapture.getMediaStreamId` rejects with
+"Extension has not been invoked for the current page (see activeTab
+permission)" because the extension declares neither `activeTab` nor
+`scripting` and has no action entrypoint — Chrome only allows activeTab-
+granted tabs as capture targets (measured on CfT 151, matches the current
+Chrome docs). The offscreen spec pins this exact error; the audio chain's
+pass/fail lives in the manual gate (`docs/manual-gates-runbook.md`).
 
 ### Firefox (WebDriver + geckodriver)
 
@@ -160,6 +189,7 @@ publish time, pinned to `@8`.
 |---|---|---|
 | Pipeline | `bun run ci` | `ci` job (same steps + SARIF upload + zip artifact) |
 | Chromium E2E | `bun run e2e:chromium` (needs `bun run build` first — the spec fails with instructions otherwise) | `e2e-chromium` job (`playwright install --with-deps chromium`) |
+| Chromium CfT E2E (offscreen) | `bun run e2e:cft` (same build requirement) | `e2e-chromium-cft` job (`xvfb-run -a bun run e2e:cft`) |
 | Firefox E2E | `bun run e2e:firefox` (needs `bun run build:firefox` + a Firefox binary) | `e2e-firefox` job (Mozilla APT Firefox) |
 | Both | `bun run e2e` | — |
 
@@ -168,11 +198,14 @@ publish time, pinned to `@8`.
 
 ## Known limitations
 
-- **Offscreen/tabCapture: unit-only.** Offscreen documents are not
-  E2E-able — Playwright #26693 (non-page contexts are not exposed as
-  targets), same in Firefox tooling. The audio pipeline is covered by the
-  vitest suite and the manual procedure in
-  `docs/phase0-offscreen-audio.md`.
+- **Offscreen documents: E2E-covered on the CfT lane, but the audio chain
+  itself is gated.** `e2e/chromium/offscreen.spec.ts` (headless, CI job
+  `e2e-chromium-cft`) asserts offscreen create/lifecycle and the
+  orchestrator's documented error path. The full tabCapture → getUserMedia
+  chain is blocked at `getMediaStreamId` on the current manifest (no
+  `activeTab`/`scripting` permission, no action entrypoint — see the CfT
+  lane section above) and is covered by the manual gate in
+  `docs/manual-gates-runbook.md` and the vitest suite.
 - **The stub page is not YouTube.** It mimics the watch page structure (a
   `<video>` element, `ytInitialPlayerResponse`, `yt-navigate-finish`) so the
   content script's real code path runs; it does not exercise the real
