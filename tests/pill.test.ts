@@ -291,4 +291,13 @@ describe('createPill', () => {
     expect(() => createPill(fresh, {})).not.toThrow();
     expect(fresh.shadowRoot).not.toBeNull();
   });
+
+  it('renders the label with the language rate unit (cpm)', () => {
+    const host = shadowHost();
+    const pill = createPill(host);
+    pill.mount();
+    pill.update(state({ label: '→ 1.9x ≈ 380 cpm' }));
+    expect(rootOf(host).querySelector('.label')?.textContent).toBe('→ 1.9x ≈ 380 cpm');
+    pill.destroy();
+  });
 });

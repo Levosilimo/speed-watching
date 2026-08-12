@@ -1,3 +1,4 @@
+import type { LanguageModel } from './languages';
 import type { ContentType } from './music';
 
 export interface WpmRange {
@@ -16,10 +17,13 @@ const GENERIC_PRIOR: WpmRange = { min: 130, max: 190 };
 const PODCAST_PRIOR: WpmRange = { min: 140, max: 200 };
 
 /**
- * Natural-rate range for the 'estimated' tier: measured anchors from the
- * Phase-0 corpus; unmeasured types fall back to the generic default.
+ * Natural-rate range for the 'estimated' tier. Language priors win for
+ * known non-English tracks — the Phase-0 anchors are an English-corpus
+ * measurement. English and unmapped tracks keep the measured anchors and
+ * the generic default.
  */
-export function priorRange(contentType: ContentType): WpmRange {
+export function priorRange(contentType: ContentType, language?: LanguageModel): WpmRange {
+  if (language !== undefined && language.code !== 'en') return language.priors;
   const measured = MEASURED_PRIORS[contentType];
   if (measured !== undefined) return measured;
   if (contentType === 'podcast') return PODCAST_PRIOR;
@@ -27,7 +31,7 @@ export function priorRange(contentType: ContentType): WpmRange {
 }
 
 /** Best-guess natural rate for the 'estimated' tier: prior-range midpoint. */
-export function priorMidpoint(contentType: ContentType): number {
-  const { min, max } = priorRange(contentType);
+export function priorMidpoint(contentType: ContentType, language?: LanguageModel): number {
+  const { min, max } = priorRange(contentType, language);
   return (min + max) / 2;
 }

@@ -7,6 +7,7 @@ import { defineContentScript } from 'wxt/utils/define-content-script';
 import { fetchAndroidCaptions, fetchJson3 } from '@/lib/caption-fetch';
 import { parseYouTubeJson3 } from '@/lib/captions';
 import { priorMidpoint } from '@/lib/heuristics';
+import { resolveLanguage, type LanguageModel } from '@/lib/languages';
 import { SerializedRunner } from '@/lib/measure-guard';
 import { createBridgeClient } from '@/lib/messaging';
 import type { ContentType } from '@/lib/music';
@@ -151,6 +152,7 @@ async function measureOnce(): Promise<void> {
   // Options-page overrides key on the bare hostname ('youtube.com').
   const site = location.hostname.replace(/^www\./, '');
   const track = response.captions?.playerCaptionsTracklistRenderer?.captionTracks?.[0];
+  const language = resolveLanguage(track?.languageCode) ?? undefined;
   if (track === undefined) {
     if (__E2E__) console.info('[speed-watcher] wpm: no caption tracks for this video — estimated');
     showEstimatedPill(videoId, settings, site);
@@ -159,7 +161,7 @@ async function measureOnce(): Promise<void> {
   const json = await fetchCaptions(track, videoId);
   if (json === null) {
     if (__E2E__) console.info('[speed-watcher] wpm: caption fetch failed — estimated');
-    showEstimatedPill(videoId, settings, site);
+    showEstimatedPill(videoId, settings, site, language);
     return;
   }
   const { words, cues } = parseYouTubeJson3(json);
@@ -182,30 +184,32 @@ async function measureOnce(): Promise<void> {
     if (__E2E__) {
       console.info(`[speed-watcher] video=${videoId} kind=${kind} lang=${lang}: captions parsed but empty — estimated`);
     }
-    showEstimatedPill(videoId, settings, site);
+    showEstimatedPill(videoId, settings, site, language);
     return;
   }
 
   const naturalRate =
-    kind === 'asr' ? filteredTokensOverTrimmedSpan(cues) : manualCueRate(cues);
+    kind === 'asr' ? filteredTokensOverTrimmedSpan(cues, language) : manualCueRate(cues, language);
   if (naturalRate === null) {
-    showEstimatedPill(videoId, settings, site);
+    showEstimatedPill(videoId, settings, site, language);
     return;
   }
   const detected = detectMusic(cues, naturalRate) ? 'music' : 'generic';
   const contentType = resolveContentType(settings, site, detected);
   const { tier, wordInputs } = asrTierInputs(kind, words, cues);
-  renderRecommendation(videoId, naturalRate, tier, contentType, settings, site, wordInputs);
+  renderRecommendation(videoId, naturalRate, tier, contentType, settings, site, wordInputs, language);
 }
 
-/** No usable caption rate: heuristic prior midpoint for the content type. */
+/** No usable caption rate: heuristic prior midpoint for the content type,
+ * in the language's unit when the track language is known. */
 function showEstimatedPill(
   videoId: string,
   settings: Settings,
   site: string,
+  language?: LanguageModel,
 ): void {
   const contentType = resolveContentType(settings, site, 'generic');
-  renderRecommendation(videoId, priorMidpoint(contentType), 'estimated', contentType, settings, site);
+  renderRecommendation(videoId, priorMidpoint(contentType, language), 'estimated', contentType, settings, site, null, language);
   // Demand proxy (Phase-2 STT gate): one local count per estimated render.
   // Best-effort like logAction — a dead bridge must not suppress the pill.
   void bridge
@@ -221,6 +225,7 @@ function renderRecommendation(
   settings: Settings,
   site: string,
   wordInputs?: { articulatoryWpm: number; timingCoverageOk: boolean } | null,
+  language?: LanguageModel,
 ): void {
   const platformMax = resolvePlatformMax(settings, site);
   const recommendation = recommend({
@@ -229,6 +234,7 @@ function renderRecommendation(
     contentType,
     platformMax,
     userTarget: resolveTarget(settings, site, contentType),
+    language,
     ...wordInputs,
   });
   current = { videoId, site, contentType, naturalRate, platformMax, recommendation };

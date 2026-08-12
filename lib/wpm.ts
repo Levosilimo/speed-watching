@@ -1,6 +1,7 @@
 import type { Segment } from './captions';
+import type { LanguageModel } from './languages';
 import type { RateTier } from './recommend';
-import { countWordTokens, isBracketMarker } from './tokenizer';
+import { countHangulSyllables, countWordTokens, isBracketMarker } from './tokenizer';
 
 export function countWords(text: string): number {
   return text.match(/\S+/g)?.length ?? 0;
@@ -69,9 +70,19 @@ function spokenCues(cues: readonly Segment[]): Segment[] {
   return cues.filter((cue) => !isBracketMarker(cue.text));
 }
 
+/** Token count in the language's rate unit: word runs, graphemes (chars),
+ * or word runs converted to syllables (factor or Hangul blocks). */
+function unitTokens(text: string, language: LanguageModel | undefined): number {
+  const n = countWordTokens(text, language?.tokenizerMode);
+  if (language?.hangulBlocks === true) return countHangulSyllables(text);
+  if (language?.syllablesPerWord !== undefined) return n * language.syllablesPerWord;
+  return n;
+}
+
 /**
- * Unified ASR presentation-rate rule: letter/digit tokens of non-bracket
- * cues over the span from the first to the last such cue's start. The
+ * Unified ASR presentation-rate rule: tokens of non-bracket cues over the
+ * span from the first to the last such cue's start — words, characters, or
+ * syllables per minute per the language model (default: words). The
  * span keeps its pauses, so this is the presentation rate the safe-zone
  * literature measures; TARGET_WPM and SAFE_ZONE_CEILING_WPM are defined
  * on it. Two measured biases bracket it: naive word-level rates
@@ -83,12 +94,15 @@ function spokenCues(cues: readonly Segment[]): Segment[] {
  * articulatoryWpm() expose the pause-excluded rate for the
  * pause-diluted warning.
  */
-export function filteredTokensOverTrimmedSpan(cues: readonly Segment[]): number | null {
+export function filteredTokensOverTrimmedSpan(
+  cues: readonly Segment[],
+  language?: LanguageModel,
+): number | null {
   const spoken = spokenCues(cues);
   const first = spoken[0]?.startSec;
   const last = spoken.at(-1)?.startSec;
   if (first === undefined || last === undefined || last <= first) return null;
-  const tokens = spoken.reduce((sum, cue) => sum + countWordTokens(cue.text), 0);
+  const tokens = spoken.reduce((sum, cue) => sum + unitTokens(cue.text, language), 0);
   return (tokens / (last - first)) * 60;
 }
 
@@ -140,11 +154,12 @@ export const MIN_WORD_TIMING_COVERAGE = 0.5;
 export function wordTierInputs(
   words: readonly Segment[],
   cues: readonly Segment[],
+  language?: LanguageModel,
 ): { articulatoryWpm: number; timingCoverageOk: boolean } | null {
   const speechDur = speechDurationSec(words);
   if (speechDur === null) return null;
   const tokens = cues.reduce(
-    (sum, cue) => (isBracketMarker(cue.text) ? sum : sum + countWordTokens(cue.text)),
+    (sum, cue) => (isBracketMarker(cue.text) ? sum : sum + unitTokens(cue.text, language)),
     0,
   );
   const coverage = totalWords(cues) === 0 ? 0 : totalWords(words) / totalWords(cues);
@@ -175,12 +190,13 @@ export function asrTierInputs(
 
 /**
  * Manual-cue rate: filtered tokens over the silence-corrected speech
- * duration. The ≤1.5x clamp for this tier lives in recommend().
+ * duration, in the language's unit. The ≤1.5x clamp for this tier lives
+ * in recommend().
  */
-export function manualCueRate(cues: readonly Segment[]): number | null {
+export function manualCueRate(cues: readonly Segment[], language?: LanguageModel): number | null {
   const spoken = spokenCues(cues);
   const speech = estimateSpeechDurationSec(spoken);
   if (speech === null || speech <= 0) return null;
-  const tokens = spoken.reduce((sum, cue) => sum + countWordTokens(cue.text), 0);
+  const tokens = spoken.reduce((sum, cue) => sum + unitTokens(cue.text, language), 0);
   return (tokens / speech) * 60;
 }

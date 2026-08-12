@@ -1,3 +1,4 @@
+import { UNIT_LABELS, type LanguageModel } from './languages';
 import type { ContentType } from './music';
 
 export type RecommendationMode = 'recommend' | 'warning' | 'unreachable' | 'music';
@@ -42,6 +43,8 @@ export interface RecommendInput {
   contentType: ContentType;
   platformMax: number;
   userTarget?: number;
+  /** Language model for non-English tracks; absent → English defaults. */
+  language?: LanguageModel;
   /**
    * Pause-excluded articulatory rate (asr-word tier only): filtered cue
    * tokens over speechDurationSec(words). Null/absent when word timing is
@@ -77,18 +80,28 @@ function formatMultiplier(value: number): string {
 }
 
 /**
- * Multiplier = userTarget / naturalRate, rounded to 0.05 and clamped per
+ * Multiplier = target / naturalRate, rounded to 0.05 and clamped per
  * tier: manual-cue ≤1.5x, every tier within [slow-down floor, platformMax].
- * Unreachable when even platformMax cannot reach the target; music never
- * recommends a speed. Warning when the effective rate crosses the ~275 wpm
- * comprehension cliff ('above-zone'), when a clamp keeps it below the
+ * Target and ceiling come from the language model when present (English
+ * defaults otherwise), so naturalRate must be measured in the language's
+ * unit. Unreachable when even platformMax cannot reach the target; music
+ * never recommends a speed. Warning when the effective rate crosses the
+ * comprehension ceiling ('above-zone'), when a clamp keeps it below the
  * target ('capped-below'), or — asr-word tier only, and only when word
  * timing is adequate — when the multiplier pushes the pause-excluded
  * articulatory rate past its ceiling ('pause-diluted').
  */
 export function recommend(input: RecommendInput): Recommendation {
-  const { naturalRate, tier, contentType, platformMax, userTarget, articulatoryWpm, timingCoverageOk } = input;
-  const target = userTarget ?? TARGET_WPM;
+  const { naturalRate, tier, contentType, platformMax, userTarget, articulatoryWpm, timingCoverageOk, language } = input;
+  const unit = language?.unit ?? 'wpm';
+  const unitLabel = UNIT_LABELS[unit];
+  // userTarget is interpreted in the language's unit when set on a
+  // non-English track (the options slider is wpm-labeled regardless).
+  const target = userTarget ?? language?.target ?? TARGET_WPM;
+  const ceiling = language?.ceiling ?? SAFE_ZONE_CEILING_WPM;
+  // The pause-diluted articulatory ceiling scales with the language
+  // ceiling: ceiling / (1 − P_STIMULUS).
+  const articulatoryCeiling = ceiling / (1 - P_STIMULUS);
   const tierLabel = TIER_LABELS[tier];
 
   if (contentType === 'music') {
@@ -108,7 +121,7 @@ export function recommend(input: RecommendInput): Recommendation {
       effectiveWpm: naturalRate * platformMax,
       mode: 'unreachable',
       reason: null,
-      label: `safe zone unreachable — ${formatMultiplier(platformMax)}x ≈ ${Math.round(naturalRate * platformMax)} wpm`,
+      label: `safe zone unreachable — ${formatMultiplier(platformMax)}x ≈ ${Math.round(naturalRate * platformMax)} ${unitLabel}`,
       tierLabel,
     };
   }
@@ -129,14 +142,14 @@ export function recommend(input: RecommendInput): Recommendation {
   // safety-critical message, the articulatory ceiling reports speech
   // outrunning comprehension, the clamp only says the target was missed.
   let reason: Recommendation['reason'] = null;
-  if (effectiveWpm > SAFE_ZONE_CEILING_WPM) {
+  if (effectiveWpm > ceiling) {
     reason = 'above-zone';
   } else if (
     tier === 'asr-word' &&
     timingCoverageOk === true &&
     articulatoryWpm !== null &&
     articulatoryWpm !== undefined &&
-    multiplier * articulatoryWpm > ARTICULATORY_CEILING_WPM
+    multiplier * articulatoryWpm > articulatoryCeiling
   ) {
     reason = 'pause-diluted';
   } else if (clampedBelowZone && effectiveWpm < target) {
@@ -144,7 +157,7 @@ export function recommend(input: RecommendInput): Recommendation {
   }
   const mode: RecommendationMode = reason === null ? 'recommend' : 'warning';
 
-  let label = `→ ${formatMultiplier(multiplier)}x ≈ ${Math.round(effectiveWpm)} wpm`;
+  let label = `→ ${formatMultiplier(multiplier)}x ≈ ${Math.round(effectiveWpm)} ${unitLabel}`;
   if (reason === 'capped-below') label += ' (capped below safe zone)';
   return { multiplier, effectiveWpm, mode, reason, label, tierLabel };
 }

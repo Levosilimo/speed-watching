@@ -13,6 +13,7 @@ import {
   recommend,
 } from '../lib/recommend';
 import type { RateTier } from '../lib/recommend';
+import { LANGUAGES } from '../lib/languages';
 import {
   filteredTokensOverTrimmedSpan,
   totalWords,
@@ -312,5 +313,102 @@ describe('recommend — labels', () => {
       const r = recommend({ naturalRate: 200, tier, contentType: 'talk', platformMax: 2 });
       expect(r.tierLabel).toBe(expected[i]);
     });
+  });
+});
+
+describe('recommend — language-aware targets', () => {
+  it('ja: cpm target 380 — a 200 cpm track recommends ~1.9x', () => {
+    const r = recommend({
+      naturalRate: 200,
+      tier: 'asr-cue',
+      contentType: 'lecture',
+      platformMax: 2,
+      language: LANGUAGES['ja'],
+    });
+    expect(r.multiplier).toBeCloseTo(1.9, 6); // 380/200
+    expect(r.mode).toBe('recommend');
+    expect(r.label).toContain('≈ 380 cpm');
+  });
+
+  it('de: compounding factor — a 125 wpm track recommends ~1.4x', () => {
+    const r = recommend({
+      naturalRate: 125,
+      tier: 'asr-cue',
+      contentType: 'lecture',
+      platformMax: 2,
+      language: LANGUAGES['de'],
+    });
+    expect(r.multiplier).toBeCloseTo(1.4, 6); // 175/125
+    expect(r.label).toContain('≈ 175 wpm');
+  });
+
+  it('uses the language ceiling for the above-zone warning', () => {
+    const r = recommend({
+      naturalRate: 160,
+      tier: 'asr-cue',
+      contentType: 'lecture',
+      platformMax: 2,
+      userTarget: 190,
+      language: LANGUAGES['es'],
+    });
+    // 160 × 1.2 = 192 > es ceiling 175
+    expect(r.mode).toBe('warning');
+    expect(r.reason).toBe('above-zone');
+  });
+
+  it('scales the articulatory ceiling with the language ceiling', () => {
+    const r = recommend({
+      naturalRate: 160,
+      tier: 'asr-word',
+      contentType: 'lecture',
+      platformMax: 2,
+      language: LANGUAGES['ru'],
+      articulatoryWpm: 300,
+      timingCoverageOk: true,
+    });
+    // 1.05 × 300 = 315 > 185 / 0.7 ≈ 264; effective 168 ≤ 185, so the
+    // pause-diluted warning fires, not above-zone.
+    expect(r.reason).toBe('pause-diluted');
+    expect(r.mode).toBe('warning');
+  });
+
+  it('labels syllable-unit recommendations syl/min', () => {
+    const r = recommend({
+      naturalRate: 200,
+      tier: 'asr-cue',
+      contentType: 'lecture',
+      platformMax: 2,
+      language: LANGUAGES['ko'],
+    });
+    expect(r.label).toContain('≈ 340 syl/min');
+  });
+
+  it('uses the unit in the unreachable label', () => {
+    const r = recommend({
+      naturalRate: 100,
+      tier: 'asr-cue',
+      contentType: 'lecture',
+      platformMax: 2,
+      language: LANGUAGES['ja'],
+    });
+    expect(r.mode).toBe('unreachable');
+    expect(r.label).toContain('≈ 200 cpm');
+  });
+
+  it('userTarget overrides the language target', () => {
+    const r = recommend({
+      naturalRate: 200,
+      tier: 'asr-cue',
+      contentType: 'lecture',
+      platformMax: 2,
+      userTarget: 300,
+      language: LANGUAGES['fr'],
+    });
+    expect(r.multiplier).toBeCloseTo(1.5, 6); // 300/200
+  });
+
+  it('defaults to the English target without a language', () => {
+    const r = asr(200);
+    expect(r.label).toContain('≈ 250 wpm');
   });
 });
