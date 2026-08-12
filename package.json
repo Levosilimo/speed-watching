@@ -12,6 +12,7 @@
     "test": "vitest run",
     "lint": "oxlint",
     "check": "bunx aislop scan . --format sarif | bun run scripts/aislop-gate.ts",
+    "check:cws": "sh scripts/cws-check.sh",
     "knip": "knip",
     "ci": "bun run scripts/run-ci.ts",
     "build:firefox": "wxt build -b firefox",
@@ -22,6 +23,7 @@
   },
   "devDependencies": {
     "@ast-grep/cli": "^0.36.0",
+    "@cws-check/cli": "^0.1.0",
     "@huggingface/transformers": "^4.2.0",
     "@playwright/test": "^1.62.1",
     "@types/selenium-webdriver": "^4.35.6",

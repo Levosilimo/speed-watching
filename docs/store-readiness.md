@@ -19,10 +19,80 @@ from caption speech rate). No secondary purposes are present or planned.
 | `tabCapture` | Required-not-optional: the Chrome API refuses this permission as optional, so it must sit in the manifest from day one. Used only by the audio probe (options-page "Test audio capture" button) and the future on-device STT feature. STT itself is feature-gated behind an explicit user opt-in and is not part of the MVP; `tabCapture` is never called without a user gesture. |
 | `offscreen` | `chrome.offscreen.createDocument` fails without this manifest permission (live Chrome docs); `lib/capture-orchestrator.ts` calls it with reason `USER_MEDIA` for the audio probe. Offscreen documents cannot be created lazily on Chrome 116–, hence the static declaration. |
 
-No other permissions: no `tabs`, no `<all_urls>`, no host permissions beyond
-the `*://*.youtube.com/*` content-script matches, no network access at all
-from the extension's own contexts (the content script fetches YouTube
-caption endpoints from the page context, same-origin).
+Host access is explicit and named: `host_permissions` lists only the
+measured-player origins (vimeo, twitch, coursera, edx, youtube-nocookie),
+and the content scripts match `<all_urls>` with `all_frames` because
+embedded players live in cross-origin iframes — the generic matcher and
+the message bridge must run in every frame. No `tabs`, no wildcard
+`host_permissions`, no network access from the extension's own contexts
+(the content script fetches YouTube caption endpoints from the page
+context, same-origin).
+
+## Pre-submission checklist
+
+Run `bun run check:cws` after every build. It runs the offline
+[`cws-check`](https://github.com/0prob/cws-check) CLI over
+`.output/chrome-mv3` — the bundle CWS reviewers actually scan — and exits 1
+on MV2, remote-code, or unsafe-CSP findings. Reference run on v0.0.1
+(2026-08-12):
+
+```
+cws-check — Speed Watcher v0.0.1
+
+Manifest version
+  ✓ manifest_version 3 — current.
+
+Remote code execution (MV3 hard ban)
+  ✓ No remote-code patterns detected in scanned files.
+
+Sensitive permissions & data-disclosure surface
+  ✓ Declared permissions are not on the high-scrutiny list.
+
+Content Security Policy
+  ✓ No explicit content_security_policy override — MV3 default (strict) applies.
+
+AI-guardrail-bypass / prediction-market ban (2026-08-01 policy)
+  ✓ No AI-guardrail-bypass or prediction-market language detected.
+
+Single-purpose statement (metadata completeness only)
+  ! 8 permissions/host_permissions declared.
+    Not a violation by itself, but a high permission count is the most common trigger for a CWS "does this serve a single purpose?" review question. Re-read CLAUDE.md's note on grab-bag rejection risk before adding more.
+
+Summary: 5 pass, 1 warn, 0 fail
+No hard blockers found, but review the warnings — several map to common review rejections.
+```
+
+### Reading the output for this extension
+
+- **remote-code / CSP** — expect 0 findings: no eval, no `new Function`, no
+  remote scripts, no `content_security_policy` override in the production
+  build (WXT dev mode injects one for HMR only).
+- **sensitive-permissions** — `tabCapture` + `offscreen` are not on the
+  checker's high-scrutiny list, but they are the declared surface a human
+  reviewer will question; the justification lives in the Permissions table
+  above (user-gesture-only audio probe, feature-gated STT).
+- **single-purpose warn (8 declared = 3 permissions + 5 named host
+  permissions)** — a warning, not a failure. Every host is an explicit
+  measured-player origin, and the `<all_urls>` content-script match exists
+  because embedded players live in cross-origin iframes. The count only
+  grows with new embed targets — re-check the single-purpose story before
+  adding any.
+
+### Packaging-error check (manual)
+
+CWS rejects bundles whose manifest references are missing or case-mismatched.
+Before upload, verify against the built bundle:
+
+1. Every `manifest.json` reference resolves in `.output/chrome-mv3`:
+   `icons` (16/32/48/96/128), `background.service_worker`,
+   `action.default_icon`, all `content_scripts.js` entries. A passing
+   `bun run build` is the primary guard — WXT emits the bundle from the
+   same paths the manifest references.
+2. Case sensitivity: names inside the zip must match the manifest exactly.
+   WXT emits lowercase hashed names, so this only breaks if a `public/`
+   asset is hand-added later.
+3. Upload the `bun run zip` artifact (`.output/*.zip`), not the unpacked
+   directory.
 
 ## No-remote-code declaration
 
