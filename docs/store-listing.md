@@ -39,13 +39,22 @@ Options page showing target WPM set to 250, Podcast content type selected, per-s
 
 Productivity
 
+## Permissions
+
+`storage`, `tabCapture`, and `offscreen` cover settings, the override log,
+and the user-gesture-gated audio probe. The content scripts match
+`<all_urls>` with `all_frames` because embedded players live in cross-origin
+iframes — a curated site list would miss them. The extension makes no
+outbound requests from its own contexts: caption data is fetched from the
+page context (same-origin), never through extension network calls.
+
 ## CWS data-safety form answers
 
 | Question | Answer |
 |---|---|
 | Does this extension collect personal data? | No |
 | Does this extension collect web browsing history? | No |
-| Does this extension collect content from the browser? | No |
+| Does this extension collect content from the browser? | Yes — reads caption/speech-rate data from the active video page; see note below |
 | Does this extension collect content from other apps? | No |
 | Is the data shared with third parties? | No |
 | Is the data used for purposes unrelated to the extension's main purpose? | No |
@@ -54,3 +63,8 @@ Productivity
 | Is the data encrypted in transit? | N/A — no data is transmitted |
 | Can users request data deletion? | N/A — no data is collected |
 | Is there a privacy policy URL? | _User must provide before submission_ |
+
+**Data-safety note:** "content from the browser" is Yes because the
+extension reads caption and speech-rate data from the active video page.
+That data is used only to compute the playback-speed recommendation,
+processed locally, and never transmitted. No personal data is collected.
