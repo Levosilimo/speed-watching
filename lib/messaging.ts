@@ -1,17 +1,22 @@
-// Window-event bridge between the MAIN-world content script (no chrome.*
-// access) and its ISOLATED-world sibling (entrypoints/bridge.ts), which owns
-// a chrome-backed SettingsStore + OverrideLog. Requests and responses travel
-// as CustomEvents on the shared window; the isolated side answers directly
-// from chrome.storage.local, so no service-worker round trip is involved.
-// World choice documented in entrypoints/content.ts.
+// Window postMessage bridge between the MAIN-world measurement scripts (no
+// chrome.* access) and the bridge script (entrypoints/bridge.content.ts),
+// which owns a chrome-backed SettingsStore + OverrideLog. Requests and
+// responses travel as postMessage envelopes on the shared window; the
+// bridge answers directly from chrome.storage.local, so no service-worker
+// round trip is involved. World choice documented in entrypoints/content.ts.
+//
+// Transport choice: postMessage, not CustomEvents. Firefox does not deliver
+// page-dispatched custom events to content-script sandboxes, so a
+// CustomEvent protocol dies in Firefox's single-world layout (the firefox
+// e2e settings spec caught it: the bridge never answered). postMessage is
+// the sanctioned cross-world channel in both browsers, in both directions.
 
 import type { OverrideLogEntry } from './override-log';
 import { OverrideLog } from './override-log';
 import type { Settings } from './settings';
 import { SettingsStore } from './settings';
 
-export const BRIDGE_REQUEST_EVENT = 'speedwatcher:bridge-request';
-export const BRIDGE_RESPONSE_EVENT = 'speedwatcher:bridge-response';
+export const BRIDGE_CHANNEL = 'speedwatcher:bridge';
 export const BRIDGE_TIMEOUT_MS = 1500;
 
 export type BridgeRequest =
@@ -23,22 +28,30 @@ export type BridgeResult<T extends BridgeRequest> = T extends { type: 'settings:
   ? Settings
   : void;
 
-export interface BridgeResponse<T extends BridgeRequest = BridgeRequest> {
-  id: number;
-  ok: true;
-  result: BridgeResult<T>;
+export interface BridgeEnvelope {
+  channel: typeof BRIDGE_CHANNEL;
+  direction: 'request' | 'response';
+  payload: Record<string, unknown>;
 }
 
-export interface BridgeErrorResponse {
-  id: number;
-  ok: false;
-  error: string;
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
 }
 
-/** addEventListener/dispatchEvent surface shared by Window and EventTarget. */
+export function isBridgeEnvelope(value: unknown): value is BridgeEnvelope {
+  return (
+    isRecord(value) &&
+    value.channel === BRIDGE_CHANNEL &&
+    (value.direction === 'request' || value.direction === 'response') &&
+    isRecord(value.payload)
+  );
+}
+
+/** postMessage/addEventListener('message') surface shared by Window
+ * (content scripts) and the unit-test fake host. */
 export interface EventHost {
-  addEventListener(type: string, listener: (event: Event) => void): void;
-  dispatchEvent(event: Event): boolean;
+  postMessage(message: unknown, targetOrigin: string): void;
+  addEventListener(type: string, listener: (event: MessageEvent) => void): void;
 }
 
 /** Isolated-world side: resolves a request against the shared store + log. */
@@ -58,7 +71,8 @@ export async function handleBridgeRequest(
   }
 }
 
-/** MAIN-world side: dispatches a request and awaits the matching response. */
+/** MAIN-world side: posts a request envelope and awaits the matching
+ * response envelope. */
 export function createBridgeClient(host: EventHost): {
   request<T extends BridgeRequest>(request: T): Promise<BridgeResult<T>>;
 } {
@@ -68,15 +82,18 @@ export function createBridgeClient(host: EventHost): {
     { resolve: (value: unknown) => void; reject: (error: Error) => void }
   >();
 
-  host.addEventListener(BRIDGE_RESPONSE_EVENT, (event) => {
-    const detail = (event as CustomEvent<BridgeResponse | BridgeErrorResponse>).detail;
-    const entry = pending.get(detail.id);
+  host.addEventListener('message', (event) => {
+    const envelope = event.data;
+    if (!isBridgeEnvelope(envelope) || envelope.direction !== 'response') return;
+    const detail = envelope.payload;
+    const id = Number(detail.id);
+    const entry = pending.get(id);
     if (entry === undefined) return;
-    pending.delete(detail.id);
-    if (detail.ok) {
+    pending.delete(id);
+    if (detail.ok === true) {
       entry.resolve(detail.result);
     } else {
-      entry.reject(new Error(detail.error));
+      entry.reject(new Error(String(detail.error)));
     }
   });
 
@@ -85,12 +102,14 @@ export function createBridgeClient(host: EventHost): {
       const id = nextId++;
       return new Promise<BridgeResult<T>>((resolve, reject) => {
         pending.set(id, {
-          // Wire boundary: the response carries the typed result by contract.
+          // Wire boundary: the response envelope carries the typed result
+          // by contract.
           resolve: resolve as (value: unknown) => void,
           reject,
         });
-        host.dispatchEvent(
-          new CustomEvent(BRIDGE_REQUEST_EVENT, { detail: { id, ...request } }),
+        host.postMessage(
+          { channel: BRIDGE_CHANNEL, direction: 'request', payload: { id, ...request } },
+          '*',
         );
         setTimeout(() => {
           if (pending.delete(id)) reject(new Error(`bridge timeout: ${request.type}`));

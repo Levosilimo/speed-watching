@@ -45,4 +45,21 @@ export default defineConfig({
       },
     },
   },
+  // vtt.js's lib files end `}(this));` — in node, top-level `this` is
+  // module.exports, which is how the parser exports itself; under strict
+  // ESM the commonjs transform turns `this` into void 0 and the module
+  // exports nothing (import throws / WebVTT undefined). Rewrite the call to
+  // module.exports before the commonjs transform sees the module.
+  vite: () => ({
+    plugins: [
+      {
+        name: 'vttjs-this-exports',
+        enforce: 'pre',
+        transform(code, id) {
+          if (!id.includes('node_modules/vtt.js/')) return undefined;
+          return code.replaceAll('}(this));', '}(module.exports));');
+        },
+      },
+    ],
+  }),
 });

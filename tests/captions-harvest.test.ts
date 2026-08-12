@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { VTTCue } from 'vtt.js';
+import vttjs from 'vtt.js';
 import {
   cleanVttText,
   harvestCaptions,
@@ -17,7 +17,7 @@ const fixture = (name: string): string =>
   readFileSync(fileURLToPath(new URL(`./fixtures/synthetic/${name}`, import.meta.url)), 'utf8');
 
 const VTT_HOST: VttHost = {
-  VTTCue,
+  VTTCue: vttjs.VTTCue,
   document: {
     createElement: (tagName: string) => ({ tagName, style: {}, children: [], appendChild() {}, setAttribute() {} }),
   },

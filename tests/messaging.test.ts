@@ -1,8 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
+  BRIDGE_CHANNEL,
   BRIDGE_TIMEOUT_MS,
   createBridgeClient,
   handleBridgeRequest,
+  isBridgeEnvelope,
   type BridgeRequest,
   type EventHost,
 } from '../lib/messaging';
@@ -10,20 +12,22 @@ import { OverrideLog } from '../lib/override-log';
 import { defaultSettings, SettingsStore } from '../lib/settings';
 import { mockStorage } from './fixtures/helpers';
 
-/** EventTarget-based host: the same addEventListener/dispatchEvent surface
- * the client and the isolated-world bridge share in the browser. */
-function fakeWindow(): { host: EventHost; events: Event[] } {
-  const target = new EventTarget();
-  const events: Event[] = [];
+/** postMessage-based host: the same surface the client and the bridge
+ * share in the browser (message events delivered synchronously). */
+function fakeWindow(): { host: EventHost; messages: unknown[] } {
+  const listeners = new Set<(event: MessageEvent) => void>();
+  const messages: unknown[] = [];
   return {
     host: {
-      addEventListener: (type, listener) => target.addEventListener(type, listener),
-      dispatchEvent: (event) => {
-        events.push(event);
-        return target.dispatchEvent(event);
+      postMessage: (message) => {
+        messages.push(message);
+        for (const listener of listeners) listener({ data: message } as MessageEvent);
+      },
+      addEventListener: (type, listener) => {
+        if (type === 'message') listeners.add(listener);
       },
     },
-    events,
+    messages,
   };
 }
 
@@ -32,21 +36,21 @@ function serve(host: EventHost): { settings: SettingsStore; log: OverrideLog } {
     settings: new SettingsStore(mockStorage()),
     log: new OverrideLog(mockStorage()),
   };
-  host.addEventListener('speedwatcher:bridge-request', (event) => {
-    const detail = (event as CustomEvent<BridgeRequest & { id: number }>).detail;
+  host.addEventListener('message', (event) => {
+    const envelope = event.data;
+    if (!isBridgeEnvelope(envelope) || envelope.direction !== 'request') return;
+    const detail = envelope.payload as BridgeRequest & { id: number };
     void handleBridgeRequest(detail, deps).then(
       (result) => {
-        host.dispatchEvent(
-          new CustomEvent('speedwatcher:bridge-response', {
-            detail: { id: detail.id, ok: true, result },
-          }),
+        host.postMessage(
+          { channel: BRIDGE_CHANNEL, direction: 'response', payload: { id: detail.id, ok: true, result } },
+          '*',
         );
       },
       (error: unknown) => {
-        host.dispatchEvent(
-          new CustomEvent('speedwatcher:bridge-response', {
-            detail: { id: detail.id, ok: false, error: String(error) },
-          }),
+        host.postMessage(
+          { channel: BRIDGE_CHANNEL, direction: 'response', payload: { id: detail.id, ok: false, error: String(error) } },
+          '*',
         );
       },
     );
@@ -97,12 +101,17 @@ describe('messaging bridge', () => {
 
   it('rejects with the handler error when the response is not ok', async () => {
     const { host } = fakeWindow();
-    host.addEventListener('speedwatcher:bridge-request', (event) => {
-      const detail = (event as CustomEvent<BridgeRequest & { id: number }>).detail;
-      host.dispatchEvent(
-        new CustomEvent('speedwatcher:bridge-response', {
-          detail: { id: detail.id, ok: false, error: 'boom' },
-        }),
+    host.addEventListener('message', (event) => {
+      const envelope = event.data;
+      if (!isBridgeEnvelope(envelope) || envelope.direction !== 'request') return;
+      const detail = envelope.payload;
+      host.postMessage(
+        {
+          channel: BRIDGE_CHANNEL,
+          direction: 'response',
+          payload: { id: detail.id, ok: false, error: 'boom' },
+        },
+        '*',
       );
     });
     const client = createBridgeClient(host);
@@ -112,10 +121,10 @@ describe('messaging bridge', () => {
   it('times out when no response arrives', async () => {
     vi.useFakeTimers();
     try {
-      const { host, events } = fakeWindow();
+      const { host, messages } = fakeWindow();
       const client = createBridgeClient(host);
       const pending = client.request({ type: 'settings:get' });
-      expect(events.length).toBe(1); // the request left the host
+      expect(messages.length).toBe(1); // the request left the host
       const assertion = expect(pending).rejects.toThrow('bridge timeout');
       vi.advanceTimersByTime(BRIDGE_TIMEOUT_MS + 1);
       await assertion;
@@ -127,12 +136,31 @@ describe('messaging bridge', () => {
   it('ignores responses with unknown ids', async () => {
     const { host } = fakeWindow();
     const client = createBridgeClient(host);
-    host.dispatchEvent(
-      new CustomEvent('speedwatcher:bridge-response', {
-        detail: { id: 999, ok: true, result: defaultSettings() },
-      }),
+    host.postMessage(
+      {
+        channel: BRIDGE_CHANNEL,
+        direction: 'response',
+        payload: { id: 999, ok: true, result: defaultSettings() },
+      },
+      '*',
     );
     // The stray response must not settle the pending request; it still times out.
+    vi.useFakeTimers();
+    try {
+      const pending = client.request({ type: 'settings:get' });
+      const assertion = expect(pending).rejects.toThrow('bridge timeout');
+      vi.advanceTimersByTime(BRIDGE_TIMEOUT_MS + 1);
+      await assertion;
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('ignores non-bridge messages on the window', async () => {
+    const { host } = fakeWindow();
+    const client = createBridgeClient(host);
+    host.postMessage({ channel: 'other-app', direction: 'request', payload: {} }, '*');
+    host.postMessage('plain string', '*');
     vi.useFakeTimers();
     try {
       const pending = client.request({ type: 'settings:get' });

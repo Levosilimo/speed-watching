@@ -25,8 +25,10 @@
 // trace of why a probe was skipped.
 // aislop-ignore-file console-leftover
 
-import { WebVTT } from 'vtt.js';
+import vttjs from 'vtt.js';
 import type { Segment } from './captions';
+
+const { WebVTT } = vttjs;
 
 export interface VttHost {
   VTTCue: new (startTime: number, endTime: number, text: string) => unknown;

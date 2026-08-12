@@ -28,7 +28,7 @@ class FakeVideo implements VideoLike {
   /** Fires a media event; returns how many listeners ran. */
   fire(type: string): number {
     const event = new Event(type);
-    for (const listener of [...(this.listeners.get(type) ?? [])]) listener(event);
+    for (const listener of this.listeners.get(type) ?? []) listener(event);
     return this.listeners.get(type)?.size ?? 0;
   }
 

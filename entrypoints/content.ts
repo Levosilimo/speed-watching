@@ -6,10 +6,11 @@
 // only succeeds from the page context, so the measurement pipeline runs in
 // the MAIN world — where chrome.* is unavailable. A single ISOLATED-world
 // sibling (entrypoints/bridge.ts) hosts a chrome-backed SettingsStore +
-// OverrideLog and answers the window CustomEvents defined in lib/messaging.ts.
-// Routing through the background was rejected because chrome.storage.local
-// already satisfies lib's StorageLike: the bridge needs no SW round trip and
-// the background stays the audio-probe orchestrator.
+// OverrideLog and answers the window postMessage envelopes defined in
+// lib/messaging.ts. Routing through the background was rejected because
+// chrome.storage.local already satisfies lib's StorageLike: the bridge
+// needs no SW round trip and the background stays the audio-probe
+// orchestrator.
 import { defineContentScript } from 'wxt/utils/define-content-script';
 import { parseYouTubeJson3 } from '@/lib/captions';
 import { priorMidpoint } from '@/lib/heuristics';
