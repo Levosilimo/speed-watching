@@ -8,12 +8,12 @@
   --sw-border: #dee2e6;
   --sw-border-subtle: #e9ecef;
   --sw-text: #212529;
-  --sw-text-secondary: #6c757d;
-  --sw-text-muted: #adb5bd;
-  --sw-primary: #1a9c8f;
-  --sw-primary-hover: #17897d;
+  --sw-text-secondary: #5a6268;
+  --sw-text-muted: #6c757d;
+  --sw-primary: #12796b;
+  --sw-primary-hover: #116960;
   --sw-primary-subtle: #e6f7f5;
-  --sw-warning: #d97706;
+  --sw-warning: #b45309;
   --sw-warning-subtle: #fef3c7;
   --sw-danger: #dc3545;
   --sw-danger-subtle: #fee2e2;
@@ -35,7 +35,7 @@
     --sw-border-subtle: #333333;
     --sw-text: #e8eaed;
     --sw-text-secondary: #9aa0a6;
-    --sw-text-muted: #6e7681;
+    --sw-text-muted: #8b949e;
     --sw-primary: #2dd4bf;
     --sw-primary-hover: #5eead4;
     --sw-primary-subtle: rgba(45, 212, 191, 0.12);
@@ -46,6 +46,10 @@
     --sw-focus-ring: rgba(45, 212, 191, 0.35);
     --sw-shadow: 0 1px 3px rgba(0,0,0,0.3);
     --sw-shadow-md: 0 4px 12px rgba(0,0,0,0.4);
+  }
+
+  .slider-input {
+    background: #707070;
   }
 }
 
@@ -144,7 +148,7 @@ body {
   appearance: none;
   width: 100%;
   height: 6px;
-  background: var(--sw-border);
+  background: #868e96;
   border-radius: 3px;
   outline: none;
   position: relative;
