@@ -283,7 +283,7 @@ export function warningNoteCopy(
   if (reason === 'pause-diluted') {
     return 'Speech runs fast at this speed — estimate uncertain';
   }
-  return 'Past the safe zone — comprehension drops above ~275 wpm';
+  return 'Past the 250–275 wpm range commonly cited for comfortable listening';
 }
 
 function render(dom: PillDom, state: PillState, destroyed: boolean): void {

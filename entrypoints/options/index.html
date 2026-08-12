@@ -4,7 +4,6 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Speed Watcher — Options</title>
-    <link rel="stylesheet" href="../ui/options-styles.css" />
   </head>
   <body>
     <div class="header">
@@ -34,7 +33,7 @@
         </div>
         <div class="safe-zone-label">
           <span>Slow</span>
-          <span>Safe zone (250–275)</span>
+          <span>Comfortable range (250–275)</span>
           <span>Fast</span>
         </div>
       </div>
@@ -90,60 +89,6 @@
       </div>
     </div>
 
-    <!-- Estimated Usage (STT demand proxy) -->
-    <div class="section">
-      <div class="section-label">Estimated usage</div>
-      <div class="section-card">
-        <p class="section-note">
-          Videos where no captions were found, so the rate was estimated. Stored
-          locally only — this powers the Phase-2 speech-to-text decision.
-        </p>
-        <div class="habits-grid">
-          <div class="habit-stat">
-            <span class="stat-value" id="demand-total">0</span>
-            <span class="stat-label">Estimated recommendations</span>
-          </div>
-        </div>
-        <p class="empty-note" id="demand-empty" hidden>No estimated recommendations yet.</p>
-        <ul class="habit-list" id="demand-list"></ul>
-      </div>
-    </div>
-
-    <!-- STT Demand Gate -->
-    <div class="section">
-      <div class="section-label">STT demand gate</div>
-      <div class="section-card">
-        <p class="section-note">
-          Interprets the estimated usage above: when enough speech-eligible
-          renders accumulate across enough distinct render days — or six
-          weeks pass — this flags for review whether on-device
-          speech-to-text is worth building. Music is excluded (captionless
-          music has no speech to transcribe). A trip only flags; nothing
-          starts automatically.
-        </p>
-        <p class="gate-status" id="gate-status">Not tripped</p>
-        <div class="habits-grid">
-          <div class="habit-stat">
-            <span class="stat-value" id="gate-count">0</span>
-            <span class="stat-label" id="gate-count-label">Speech-eligible renders</span>
-          </div>
-          <div class="habit-stat">
-            <span class="stat-value" id="gate-days">0</span>
-            <span class="stat-label" id="gate-days-label">Distinct render days</span>
-          </div>
-          <div class="habit-stat">
-            <span class="stat-value" id="gate-elapsed">—</span>
-            <span class="stat-label" id="gate-elapsed-label">Days since first render</span>
-          </div>
-          <div class="habit-stat">
-            <span class="stat-value" id="gate-span">—</span>
-            <span class="stat-label">First → last render</span>
-          </div>
-        </div>
-        <ul class="habit-list" id="gate-list"></ul>
-      </div>
-    </div>
-
     <!-- Tier Info -->
     <div class="section">
       <div class="section-label">Tier labels</div>
@@ -151,7 +96,7 @@
         <ul class="tier-list">
           <li class="tier-item">
             <span class="tier-badge">from captions</span>
-            <span class="tier-desc">Word-timed ASR captions. The most common tier — covers ~77% of YouTube videos.</span>
+            <span class="tier-desc">Word-timed ASR captions. The most common tier — ~94% of sampled videos with speech captions in our measurements.</span>
           </li>
           <li class="tier-item">
             <span class="tier-badge">from captions (corrected)</span>
@@ -163,20 +108,6 @@
           </li>
         </ul>
       </div>
-    </div>
-
-    <!-- Audio Capture Probe (preserved from Lane B) -->
-    <div class="probe-section">
-      <h2>Audio capture probe</h2>
-      <p>
-        Phase 0 throwaway: proves the tab → offscreen document → AudioContext
-        path that Phase 2 STT depends on.
-      </p>
-      <button id="toggle" type="button">Test audio capture</button>
-      <div id="status">idle</div>
-      <div id="meter"><div id="meter-fill"></div></div>
-      <div id="wasm"></div>
-      <pre id="log"></pre>
     </div>
 
     <script type="module" src="./main.ts"></script>
