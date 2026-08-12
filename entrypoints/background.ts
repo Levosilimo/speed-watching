@@ -30,6 +30,14 @@ export default defineBackground(() => {
       return false;
     },
   );
+  // The action click is the tabCapture invocation gesture — the only way
+  // getMediaStreamId accepts the target tab (lib-7 verdict). onClicked only
+  // fires when the manifest declares `action` without default_popup
+  // (wxt.config.ts). The clicked tab is the capture target.
+  browser.action.onClicked.addListener((tab) => {
+    if (tab.id === undefined) return;
+    void orchestrator.startFromAction(tab.id);
+  });
   void orchestrator.init();
 
   return orchestrator;

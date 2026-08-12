@@ -25,6 +25,23 @@ export default defineConfig({
     name: 'Speed Watcher',
     description: 'WPM-based speed-watching extension',
     version: '0.0.1',
+    // The action entrypoint is the tabCapture invocation path: clicking the
+    // toolbar icon is the user gesture that lets getMediaStreamId succeed
+    // (lib-7 verdict, docs/phase0-offscreen-audio.md). NO default_popup:
+    // chrome.action.onClicked never fires when a popup consumes the click, and
+    // without it the capture flow would be unreachable (the options-page Test
+    // button does not invoke — runtime messages are not among the four
+    // invocation gestures). action is not a permission; the permission list
+    // below stays unchanged.
+    action: {
+      default_icon: {
+        16: 'icon/16.png',
+        32: 'icon/32.png',
+        48: 'icon/48.png',
+        128: 'icon/128.png',
+      },
+      default_title: 'Speed Watcher',
+    },
     permissions: ['storage', 'tabCapture', 'offscreen'],
     host_permissions: [
       '*://*.vimeo.com/*',

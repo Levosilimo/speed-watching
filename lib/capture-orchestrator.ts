@@ -9,6 +9,13 @@ import type { OffscreenEvent, OffscreenMessage, ProbeState, WasmCheckResult } fr
 
 const MIRROR_KEY = 'probeCapture';
 
+// Chrome rejects getMediaStreamId with this message when the extension has
+// not been invoked on the target tab (no action click yet). The click itself
+// is the invocation; the message guides the user to it.
+function isInvocationError(message: string): boolean {
+  return message.includes('has not been invoked');
+}
+
 interface OrchestratorApi {
   tabs: {
     query(info: {
@@ -115,6 +122,13 @@ class CaptureOrchestrator {
     return undefined;
   }
 
+  // The toolbar-icon click (chrome.action.onClicked). The clicked tab is the
+  // capture target — the user pointed at it — and the click is what makes
+  // getMediaStreamId accept it as a target tab.
+  async startFromAction(tabId: number): Promise<ProbeState> {
+    return this.startCapture(undefined, tabId);
+  }
+
   async init(): Promise<void> {
     const stored = (await this.api.storage.session.get(MIRROR_KEY))[MIRROR_KEY];
     const mirror = parseMirror(stored);
@@ -130,9 +144,9 @@ class CaptureOrchestrator {
     }
   }
 
-  private async startCapture(senderTabId?: number): Promise<ProbeState> {
+  private async startCapture(senderTabId?: number, targetTabId?: number): Promise<ProbeState> {
     if (this.capture) await this.stopCaptureInternal();
-    const tabId = await this.pickCaptureTab(senderTabId);
+    const tabId = targetTabId ?? (await this.pickCaptureTab(senderTabId));
     if (!tabId) {
       return { state: 'error', level: 0, error: 'no tab to capture; keep a video tab open and audible' };
     }
@@ -154,7 +168,16 @@ class CaptureOrchestrator {
     try {
       streamId = await this.api.tabCapture.getMediaStreamId({ targetTabId: tabId });
     } catch (error) {
-      return { state: 'error', level: 0, error: `tabCapture failed: ${errorMessage(error)}` };
+      const message = errorMessage(error);
+      if (isInvocationError(message)) {
+        return {
+          state: 'error',
+          level: 0,
+          error:
+            'tabCapture not invoked: click the Speed Watcher toolbar icon on the video tab, then retry',
+        };
+      }
+      return { state: 'error', level: 0, error: `tabCapture failed: ${message}` };
     }
     this.capture = { state: 'starting', tabId, level: 0 };
     await this.saveMirror();
