@@ -19,7 +19,8 @@
     "block-no-verify",
     "@ast-grep/cli",
     "vitest-chrome",
-    "@huggingface/transformers"
+    "@huggingface/transformers",
+    "sharp"
   ],
   "ignoreBinaries": ["ffmpeg"],
   "ignoreExportsUsedInFile": true

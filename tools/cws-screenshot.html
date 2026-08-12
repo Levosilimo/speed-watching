@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Speed Watcher — Options</title>
+    <style>
+      :root {
+        --sw-bg: #ffffff;
+        --sw-bg-subtle: #f8f9fa;
+        --sw-bg-muted: #f1f3f5;
+        --sw-border: #dee2e6;
+        --sw-border-subtle: #e9ecef;
+        --sw-text: #212529;
+        --sw-text-secondary: #6c757d;
+        --sw-text-muted: #adb5bd;
+        --sw-primary: #1a9c8f;
+        --sw-primary-hover: #17897d;
+        --sw-primary-subtle: #e6f7f5;
+        --sw-warning: #d97706;
+        --sw-warning-subtle: #fef3c7;
+        --sw-danger: #dc3545;
+        --sw-danger-subtle: #fee2e2;
+        --sw-focus-ring: rgba(26, 156, 143, 0.35);
+        --sw-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        --sw-shadow-md: 0 4px 12px rgba(0,0,0,0.1);
+        --sw-r-sm: 4px;
+        --sw-r-md: 6px;
+        --sw-r-lg: 8px;
+        --sw-r-pill: 999px;
+      }
+
+      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+      body {
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        font-size: 14px;
+        line-height: 1.55;
+        color: var(--sw-text);
+        background: var(--sw-bg);
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 32px 20px 64px;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      .header { margin-bottom: 32px; }
+      .header h1 { font-size: 20px; font-weight: 600; letter-spacing: -0.01em; margin-bottom: 4px; }
+      .header p { font-size: 13px; color: var(--sw-text-secondary); }
+
+      .section { margin-bottom: 28px; }
+      .section-label {
+        font-size: 11px; font-weight: 600; text-transform: uppercase;
+        letter-spacing: 0.06em; color: var(--sw-text-muted); margin-bottom: 10px;
+      }
+      .section-card {
+        background: var(--sw-bg-subtle); border: 1px solid var(--sw-border-subtle);
+        border-radius: var(--sw-r-lg); padding: 16px;
+      }
+
+      .wpm-display { display: flex; align-items: baseline; gap: 6px; margin-bottom: 12px; }
+      .wpm-value {
+        font-size: 28px; font-weight: 700; letter-spacing: -0.02em;
+        color: var(--sw-primary); font-variant-numeric: tabular-nums;
+      }
+      .wpm-unit { font-size: 13px; color: var(--sw-text-secondary); }
+
+      .slider-track { position: relative; width: 100%; height: 36px; display: flex; align-items: center; }
+      .slider-input {
+        -webkit-appearance: none; appearance: none; width: 100%; height: 6px;
+        background: var(--sw-border); border-radius: 3px; outline: none; position: relative; z-index: 2;
+      }
+      .slider-input::-webkit-slider-thumb {
+        -webkit-appearance: none; appearance: none; width: 18px; height: 18px;
+        border-radius: 50%; background: var(--sw-primary); cursor: pointer;
+        border: 2px solid var(--sw-bg); box-shadow: var(--sw-shadow);
+      }
+      .safe-zone {
+        position: absolute; top: 50%; transform: translateY(-50%); height: 10px;
+        background: var(--sw-primary-subtle); border: 1px solid var(--sw-primary);
+        border-radius: 2px; opacity: 0.5; pointer-events: none; z-index: 1;
+        left: 50%; width: 8.33%;
+      }
+      .safe-zone-label {
+        display: flex; justify-content: space-between; margin-top: 2px;
+        font-size: 11px; color: var(--sw-text-muted);
+      }
+
+      .presets {
+        display: flex; gap: 0; background: var(--sw-bg-muted);
+        border-radius: var(--sw-r-md); padding: 3px;
+      }
+      .preset-btn {
+        flex: 1; padding: 7px 0; font-family: inherit; font-size: 12px; font-weight: 500;
+        color: var(--sw-text-secondary); background: transparent; border: none;
+        border-radius: var(--sw-r-sm); cursor: pointer;
+      }
+      .preset-btn[aria-pressed="true"] {
+        background: var(--sw-bg); color: var(--sw-text); box-shadow: var(--sw-shadow);
+      }
+
+      .override-list { list-style: none; margin-bottom: 12px; }
+      .override-item {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 8px 0; border-bottom: 1px solid var(--sw-border-subtle); font-size: 13px;
+      }
+      .override-item:last-child { border-bottom: none; }
+      .override-hostname { font-weight: 500; }
+      .override-type { font-size: 12px; color: var(--sw-text-secondary); margin-left: 8px; }
+      .override-remove {
+        font-size: 12px; color: var(--sw-danger); background: none; border: none;
+        cursor: pointer; padding: 2px 6px; border-radius: var(--sw-r-sm); font-family: inherit;
+      }
+      .override-remove:hover { background: var(--sw-danger-subtle); }
+      .empty-note { font-size: 12px; color: var(--sw-text-muted); padding: 8px 0; }
+      .add-override { display: flex; gap: 8px; }
+      .add-override input {
+        flex: 1; padding: 7px 10px; font-family: inherit; font-size: 13px;
+        background: var(--sw-bg); border: 1px solid var(--sw-border);
+        border-radius: var(--sw-r-md); color: var(--sw-text); outline: none;
+      }
+      .add-override button {
+        padding: 7px 14px; font-family: inherit; font-size: 13px; font-weight: 500;
+        background: var(--sw-primary); color: var(--sw-bg); border: none;
+        border-radius: var(--sw-r-md); cursor: pointer;
+      }
+
+      .habits-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+      .habit-stat { display: flex; flex-direction: column; gap: 2px; }
+      .habit-stat .stat-value {
+        font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--sw-text);
+      }
+      .habit-stat .stat-label { font-size: 11px; color: var(--sw-text-secondary); }
+      .habit-list { margin-top: 12px; list-style: none; }
+      .habit-list li {
+        display: flex; justify-content: space-between; padding: 5px 0;
+        font-size: 12px; color: var(--sw-text-secondary);
+        border-bottom: 1px solid var(--sw-border-subtle);
+      }
+      .habit-list li:last-child { border-bottom: none; }
+
+      .tier-list { list-style: none; }
+      .tier-item { display: flex; align-items: flex-start; gap: 10px; padding: 8px 0; }
+      .tier-item + .tier-item { border-top: 1px solid var(--sw-border-subtle); }
+      .tier-badge {
+        font-size: 11px; font-weight: 600; padding: 2px 8px;
+        border-radius: var(--sw-r-pill); background: var(--sw-primary-subtle);
+        color: var(--sw-primary); white-space: nowrap; flex-shrink: 0;
+      }
+      .tier-desc { font-size: 12px; color: var(--sw-text-secondary); line-height: 1.45; }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <h1>Speed Watcher</h1>
+      <p>WPM-based playback speed recommendations</p>
+    </div>
+
+    <div class="section">
+      <div class="section-label">Target speech rate</div>
+      <div class="section-card">
+        <div class="wpm-display">
+          <span class="wpm-value" id="wpm-value">250</span>
+          <span class="wpm-unit">wpm</span>
+        </div>
+        <div class="slider-track">
+          <div class="safe-zone" id="safe-zone"></div>
+          <input type="range" class="slider-input" id="wpm-slider" min="100" max="400" step="5" value="250">
+        </div>
+        <div class="safe-zone-label">
+          <span>Slow</span>
+          <span>Safe zone (250–275)</span>
+          <span>Fast</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-label">Content type</div>
+      <div class="section-card">
+        <div class="presets" role="group" aria-label="Content type presets">
+          <button class="preset-btn" data-type="lecture" aria-pressed="false">Lecture</button>
+          <button class="preset-btn" data-type="talk" aria-pressed="false">Talk</button>
+          <button class="preset-btn" data-type="podcast" aria-pressed="true">Podcast</button>
+          <button class="preset-btn" data-type="music" aria-pressed="false">Music</button>
+          <button class="preset-btn" data-type="generic" aria-pressed="false">Generic</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-label">Per-site overrides</div>
+      <div class="section-card">
+        <ul class="override-list" id="override-list">
+          <li class="override-item">
+            <span><span class="override-hostname">ted.com</span><span class="override-type">talk</span></span>
+            <button class="override-remove" aria-label="Remove override for ted.com">Remove</button>
+          </li>
+          <li class="override-item">
+            <span><span class="override-hostname">coursera.org</span><span class="override-type">lecture</span></span>
+            <button class="override-remove" aria-label="Remove override for coursera.org">Remove</button>
+          </li>
+        </ul>
+        <p class="empty-note" id="override-empty" hidden>No site overrides set.</p>
+        <div class="add-override">
+          <input type="text" id="override-input" placeholder="e.g. ted.com" aria-label="Hostname to override">
+          <button type="button" id="override-add">Add</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-label">Your habits</div>
+      <div class="section-card">
+        <div class="habits-grid">
+          <div class="habit-stat">
+            <span class="stat-value" id="habit-total">47</span>
+            <span class="stat-label">Recommendations applied</span>
+          </div>
+          <div class="habit-stat">
+            <span class="stat-value" id="habit-avg-mult">1.32×</span>
+            <span class="stat-label">Average multiplier</span>
+          </div>
+        </div>
+        <ul class="habit-list" id="habit-list">
+          <li><span>podcast</span><span>28×</span></li>
+          <li><span>lecture</span><span>12×</span></li>
+          <li><span>talk</span><span>7×</span></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-label">Tier labels</div>
+      <div class="section-card">
+        <ul class="tier-list">
+          <li class="tier-item">
+            <span class="tier-badge">from captions</span>
+            <span class="tier-desc">Word-timed ASR captions. The most common tier — covers ~77% of YouTube videos.</span>
+          </li>
+          <li class="tier-item">
+            <span class="tier-badge">from captions (corrected)</span>
+            <span class="tier-desc">Manual captions with silence correction applied. Higher confidence, clamped to 1.5× max.</span>
+          </li>
+          <li class="tier-item">
+            <span class="tier-badge">estimated</span>
+            <span class="tier-desc">Heuristic estimate from content type and video metadata. Used when captions are unavailable.</span>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </body>
+</html>
