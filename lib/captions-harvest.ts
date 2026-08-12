@@ -1,0 +1,232 @@
+// Network-layer caption harvest for non-YouTube players.
+//
+// textTracks was empty on every measured generic player (Phase-0 probe,
+// docs/phase0-generic-probe.md), so captions cannot come from the standard
+// API. Instead the harvest probes the page's network layer — the same
+// requests the player itself made — and converts whatever it finds to our
+// Segment type (cue-level; no word timing on generic sites).
+//
+// Probe order, first non-empty result wins:
+//   1. Vimeo player config (player.vimeo.com embeds carry
+//      window.__vimeo_player_config__ → config_url → request.text_tracks)
+//   2. HLS: EXT-X-MEDIA TYPE=SUBTITLES URIs from the master playlist
+//      (manifest found via the video src or the resource timeline)
+//   3. WebVTT resource entries any site loaded directly (Coursera et al.)
+//   4. edX sjson transcripts (/api/transcripts/…, same-origin only)
+//
+// Every probe is defensive: a failure yields null and the caller falls back
+// to the heuristic estimated tier. Twitch and Coursera endpoints could not
+// be measured from the probe's datacenter IP (HTTP 429 / enrollment gate) —
+// the generic patterns above cover them; a residential-IP re-probe is the
+// follow-up (docs/phase0-generic-probe.md).
+
+// The console.debug in safe() is the harvest-failure surface — the user-
+// visible fallback is the estimated-tier pill, and this line is the only
+// trace of why a probe was skipped.
+// aislop-ignore-file console-leftover
+
+import { WebVTT } from 'vtt.js';
+import type { Segment } from './captions';
+
+export interface VttHost {
+  VTTCue: new (startTime: number, endTime: number, text: string) => unknown;
+  document: { createElement(tagName: string): unknown };
+}
+
+export interface FetchLike {
+  ok: boolean;
+  json(): Promise<unknown>;
+  text(): Promise<string>;
+}
+
+export interface HarvestOptions {
+  /** The active video's src attribute; null when the player uses MSE (blob:). */
+  videoSrc: string | null;
+  /** Resource-timeline URLs observed on the page (performance entries). */
+  resourceUrls: readonly string[];
+  /** Hostname of the current frame, e.g. 'player.vimeo.com'. */
+  hostname: string;
+  /** Frame origin for the same-origin transcript rule; null to skip it. */
+  pageOrigin: string | null;
+  /** Vimeo embed config global; null when absent (non-Vimeo pages). */
+  vimeoConfig: { __vimeo_player_config__?: { player?: { config_url?: string } } } | null;
+  /** Parser host: window in the content script, a shim in tests. */
+  vttHost: VttHost;
+  fetchImpl: (url: string) => Promise<FetchLike>;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+// ── WebVTT ────────────────────────────────────────────────────────────────
+
+const VTT_TAG = /<[^>]*>/g;
+
+/** Strips VTT inline tags (<v>, <c>, timestamps) and decodes entities. */
+export function cleanVttText(text: string): string {
+  return text
+    .replace(VTT_TAG, '')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/** Parses WebVTT text into cue-level segments (vtt.js, Apache-2.0). */
+export function parseVtt(text: string, host: VttHost): Segment[] {
+  const parser = new WebVTT.Parser(host, new WebVTT.StringDecoder());
+  const segments: Segment[] = [];
+  parser.oncue = (cue: { startTime: number; endTime: number; text: string }) => {
+    const cleaned = cleanVttText(cue.text);
+    if (cleaned === '') return;
+    segments.push({
+      text: cleaned,
+      startSec: cue.startTime,
+      durSec: cue.endTime - cue.startTime,
+    });
+  };
+  parser.parse(text);
+  parser.flush();
+  return segments;
+}
+
+// ── HLS ───────────────────────────────────────────────────────────────────
+
+function attributeValue(line: string, name: string): string | null {
+  const match = line.match(new RegExp(`\\b${name}="([^"]*)"`));
+  return match === null ? null : match[1] ?? null;
+}
+
+/** Subtitle URIs of an HLS master playlist: URI= of EXT-X-MEDIA
+ * TYPE=SUBTITLES entries (IMSC1 subtitles included — they carry
+ * TYPE=SUBTITLES too, though their TTML bodies fail VTT parsing). */
+export function parseHlsSubtitleUris(playlistText: string): string[] {
+  const uris: string[] = [];
+  for (const line of playlistText.split(/\r?\n/)) {
+    if (!line.startsWith('#EXT-X-MEDIA:')) continue;
+    // TYPE is an unquoted enum (TYPE=SUBTITLES); URI is always quoted.
+    if (!/\bTYPE=SUBTITLES\b/.test(line)) continue;
+    const uri = attributeValue(line, 'URI');
+    if (uri !== null) uris.push(uri);
+  }
+  return [...new Set(uris)];
+}
+
+// ── edX sjson ─────────────────────────────────────────────────────────────
+
+/** edX transcript JSON: parallel start[] (seconds) and text[] arrays. */
+export function parseEdxTranscript(payload: unknown): Segment[] {
+  const starts = isRecord(payload) ? payload.start : null;
+  const texts = isRecord(payload) ? payload.text : null;
+  if (!Array.isArray(starts) || !Array.isArray(texts) || starts.length !== texts.length) {
+    return [];
+  }
+  const segments: Segment[] = [];
+  starts.forEach((start, i) => {
+    const startSec = typeof start === 'number' && Number.isFinite(start) ? start : null;
+    const raw = typeof texts[i] === 'string' ? texts[i] : '';
+    if (startSec === null) return;
+    const text = cleanVttText(raw);
+    if (text === '') return;
+    segments.push({ text, startSec });
+  });
+  segments.forEach((segment, i) => {
+    const next = segments[i + 1];
+    if (next !== undefined) segment.durSec = next.startSec - segment.startSec;
+  });
+  return segments;
+}
+
+// ── Orchestration ─────────────────────────────────────────────────────────
+
+/** Best-effort probe wrapper: a probe error is logged and skipped, so one
+ * broken endpoint cannot sink the remaining probes. */
+async function safe<T>(run: () => Promise<T | null>, label: string): Promise<T | null> {
+  try {
+    return await run();
+  } catch (error) {
+    console.debug(`[speed-watcher] caption harvest ${label} failed: ${String(error)}`);
+    return null; // harvest is best-effort: a failed probe falls to the next
+  }
+}
+
+async function fetchVtt(options: HarvestOptions, url: string): Promise<Segment[]> {
+  const response = await options.fetchImpl(url);
+  if (!response.ok) return [];
+  return parseVtt(await response.text(), options.vttHost);
+}
+
+async function probeVimeoConfig(options: HarvestOptions): Promise<Segment[] | null> {
+  if (options.hostname !== 'vimeo.com' && !options.hostname.endsWith('.vimeo.com')) return null;
+  const configUrl = options.vimeoConfig?.__vimeo_player_config__?.player?.config_url;
+  if (configUrl === undefined) return null;
+  const response = await options.fetchImpl(configUrl);
+  if (!response.ok) return null;
+  const payload = await response.json();
+  const tracks = isRecord(payload)
+    ? isRecord(payload.request) && Array.isArray(payload.request.text_tracks)
+      ? payload.request.text_tracks.filter(isRecord).map((t) => t.url).filter((u): u is string => typeof u === 'string')
+      : []
+    : [];
+  for (const url of tracks) {
+    const segments = await fetchVtt(options, url);
+    if (segments.length > 0) return segments;
+  }
+  return null;
+}
+
+function m3u8Candidates(options: HarvestOptions): string[] {
+  const candidates = [options.videoSrc, ...options.resourceUrls].filter(
+    (url): url is string => url !== null && /\.m3u8(\?|$)/.test(url),
+  );
+  return [...new Set(candidates)];
+}
+
+async function probeHls(options: HarvestOptions): Promise<Segment[] | null> {
+  for (const m3u8Url of m3u8Candidates(options)) {
+    const response = await options.fetchImpl(m3u8Url);
+    if (!response.ok) continue;
+    const playlist = await response.text();
+    for (const uri of parseHlsSubtitleUris(playlist)) {
+      const subtitleUrl = new URL(uri, m3u8Url).href;
+      const segments = await fetchVtt(options, subtitleUrl);
+      if (segments.length > 0) return segments;
+    }
+  }
+  return null;
+}
+
+async function probeVttEntries(options: HarvestOptions): Promise<Segment[] | null> {
+  for (const url of options.resourceUrls) {
+    if (!/\.vtt(\?|$)/.test(url)) continue;
+    const segments = await fetchVtt(options, url);
+    if (segments.length > 0) return segments;
+  }
+  return null;
+}
+
+async function probeEdxTranscripts(options: HarvestOptions): Promise<Segment[] | null> {
+  for (const url of options.resourceUrls) {
+    if (!/\/api\/transcripts\//.test(url)) continue;
+    if (options.pageOrigin !== null && new URL(url).origin !== options.pageOrigin) continue;
+    const response = await options.fetchImpl(url);
+    if (!response.ok) continue;
+    const segments = parseEdxTranscript(await response.json());
+    if (segments.length > 0) return segments;
+  }
+  return null;
+}
+
+/** Runs every probe in order; returns the first non-empty harvest, or null
+ * when the page exposes no harvestable captions (→ estimated tier). */
+export async function harvestCaptions(options: HarvestOptions): Promise<Segment[] | null> {
+  const segments =
+    (await safe(() => probeVimeoConfig(options), 'vimeo config')) ??
+    (await safe(() => probeHls(options), 'hls')) ??
+    (await safe(() => probeVttEntries(options), 'vtt entries')) ??
+    (await safe(() => probeEdxTranscripts(options), 'edx transcript'));
+  return segments !== null && segments.length > 0 ? segments : null;
+}

@@ -40,5 +40,8 @@
   "trustedDependencies": [
     "@ast-grep/cli",
     "geckodriver"
-  ]
+  ],
+  "dependencies": {
+    "vtt.js": "^0.13.0"
+  }
 }
