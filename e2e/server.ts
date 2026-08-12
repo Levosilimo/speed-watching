@@ -20,9 +20,22 @@ import { BLOCKED_FIXTURES, KIND_BY_FIXTURE, NO_TRACK_FIXTURES } from './shared/f
 export const FIXTURE_PORT = 4319;
 
 const fixtureRoot = fileURLToPath(new URL('../tests/fixtures/', import.meta.url));
+const syntheticRoot = join(fixtureRoot, 'synthetic');
 const html = readFileSync(join(fileURLToPath(new URL('.', import.meta.url)), 'watch.html'), 'utf8');
+const genericHtml = readFileSync(
+  join(fileURLToPath(new URL('.', import.meta.url)), 'generic.html'),
+  'utf8',
+);
 
 const FIXTURE_NAME = /^(real|synthetic)\/[a-z0-9-]+\.json$/;
+/** Generic-matcher fixtures: safe path charset, resolved under syntheticRoot. */
+const FIXTURE_FILE = /^[a-z0-9/.-]+\.(vtt|m3u8|json)$/;
+
+const CONTENT_TYPE_BY_EXT: Record<string, string> = {
+  vtt: 'text/vtt',
+  m3u8: 'application/vnd.apple.mpegurl',
+  json: 'application/json',
+};
 
 interface FixtureServer {
   /** Base URL of this server, e.g. http://127.0.0.1:4319 */
@@ -49,6 +62,34 @@ export function createFixtureServer(port = FIXTURE_PORT): Promise<FixtureServer>
       androidPosts += 1;
       res.statusCode = 400;
       res.end('no player');
+      return;
+    }
+
+    if (path === '/generic') {
+      // Generic-matcher fixture page (non-YouTube origin).
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      res.end(genericHtml);
+      return;
+    }
+
+    if (path.startsWith('/fixtures/')) {
+      // Caption fixtures for the generic matcher: HLS manifests, VTT
+      // subtitles, transcripts. Resolve under syntheticRoot only.
+      const file = path.slice('/fixtures/'.length);
+      if (!FIXTURE_FILE.test(file)) {
+        res.statusCode = 400;
+        res.end('bad fixture path');
+        return;
+      }
+      const full = join(syntheticRoot, file);
+      if (!full.startsWith(syntheticRoot)) {
+        res.statusCode = 400;
+        res.end('bad fixture path');
+        return;
+      }
+      const ext = file.split('.').at(-1) ?? '';
+      res.setHeader('Content-Type', CONTENT_TYPE_BY_EXT[ext] ?? 'application/octet-stream');
+      res.end(readFileSync(full));
       return;
     }
 

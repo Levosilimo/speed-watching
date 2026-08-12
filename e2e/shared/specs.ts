@@ -17,10 +17,13 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import vttjs from 'vtt.js';
+import { parseVtt, type VttHost } from '../../lib/captions-harvest';
 import { parseYouTubeJson3 } from '../../lib/captions';
 import { priorMidpoint } from '../../lib/heuristics';
 import { detectMusic } from '../../lib/music';
 import { recommend, type Recommendation } from '../../lib/recommend';
+import { defaultSettings, type Settings } from '../../lib/settings';
 import type { PillState } from '../../ui/pill';
 import {
   correctedCueLevelWpm,
@@ -45,6 +48,21 @@ declare global {
 
 const fixtureRoot = fileURLToPath(new URL('../../tests/fixtures/', import.meta.url));
 
+// vtt.js needs a window-ish host to create cues; node has no DOM, so the
+// specs parse fixtures with the same minimal shim the unit tests use.
+const VTT_HOST: VttHost = {
+  VTTCue: vttjs.VTTCue,
+  document: {
+    createElement: (tagName: string) => ({
+      tagName,
+      style: {},
+      children: [],
+      appendChild() {},
+      setAttribute() {},
+    }),
+  },
+};
+
 export interface E2EDriver {
   /** Navigate to the fixture watch page at a *.youtube.com origin. */
   navigateToWatch(fixture: string): Promise<void>;
@@ -60,6 +78,18 @@ export interface E2EDriver {
   readPlaybackRate(): Promise<number | null>;
   /** Which caption path served the page: 'web', 'android', or 'none'. */
   readCaptionSource(): Promise<CaptionSource | null>;
+  /** Navigate to the generic player fixture page (non-YouTube origin). */
+  navigateToGeneric(): Promise<void>;
+  /** Which caption tier the generic matcher rendered. */
+  readCaptionTier(): Promise<'captions' | 'estimated' | null>;
+  /** Set the page video's playbackRate to 1 (simulates a player reset). */
+  resetPlaybackRate(): Promise<void>;
+  /** Poll readPlaybackRate until it equals expected (re-assert evidence). */
+  waitForPlaybackRate(expected: number, timeoutMs?: number): Promise<void>;
+  /** Wait ms (for asserting that a stopped loop does NOT re-assert). */
+  sleep(ms: number): Promise<void>;
+  /** Write settings through the bridge — same path the options page uses. */
+  writeSettings(settings: Settings): Promise<void>;
 }
 
 interface ExpectedStats {
@@ -283,5 +313,95 @@ export async function runPillSpecs(driver: E2EDriver): Promise<void> {
     if (state.label !== rec.label) {
       throw new Error(`${fixture}: pill label "${state.label}" !== expected "${rec.label}"`);
     }
+  }
+}
+
+/** The recommendation the generic matcher must produce from the talk
+ * fixture: harvest the HLS subtitle track, measure the manual-cue rate,
+ * recommend with default settings (mirror of entrypoints/generic.content.ts). */
+function expectedGenericRecommendation(): { rec: Recommendation; naturalRate: number } {
+  const vtt = readFileSync(join(fixtureRoot, 'synthetic/hls/talk/talk.vtt'), 'utf8');
+  const segments = parseVtt(vtt, VTT_HOST);
+  const naturalRate = manualCueRate(segments);
+  if (naturalRate === null) throw new Error('talk.vtt: no natural rate');
+  const rec = recommend({ naturalRate, tier: 'manual-cue', contentType: 'generic', platformMax: 2 });
+  return { rec, naturalRate };
+}
+
+/** Generic matcher e2e: harvest → pill → apply → re-assert → dismiss stops
+ * the loop. The re-apply evidence is behavioral: after a simulated player
+ * reset the rate must come back, and after dismiss it must stay. */
+export async function runGenericSpecs(driver: E2EDriver): Promise<void> {
+  // (a) The matcher harvests the HLS subtitle track and renders a tier-2 pill.
+  await driver.navigateToGeneric();
+  const state = expectState(await driver.readPillState(), 'generic');
+  const { rec, naturalRate } = expectedGenericRecommendation();
+  if (state.mode !== rec.mode) {
+    throw new Error(`generic: pill mode ${state.mode} !== expected ${rec.mode}`);
+  }
+  if (state.tierLabel !== rec.tierLabel) {
+    throw new Error(`generic: pill tierLabel ${state.tierLabel} !== expected ${rec.tierLabel}`);
+  }
+  if (Math.abs(state.rateWpm - naturalRate) > WPM_TOLERANCE) {
+    throw new Error(`generic: pill rateWpm ${state.rateWpm} outside tolerance of ${naturalRate}`);
+  }
+  if (Math.abs(state.multiplier - rec.multiplier) > 1e-9) {
+    throw new Error(`generic: pill multiplier ${state.multiplier} !== expected ${rec.multiplier}`);
+  }
+  const tier = await driver.readCaptionTier();
+  if (tier !== 'captions') {
+    throw new Error(`generic: caption tier ${tier}, expected captions`);
+  }
+
+  // (b) Apply sets the fixture video's playbackRate.
+  await driver.applyPill();
+  const applied = await driver.readPlaybackRate();
+  if (applied === null || Math.abs(applied - state.multiplier) > RATE_TOLERANCE) {
+    throw new Error(
+      `generic: playbackRate ${applied} after apply, expected ${state.multiplier} ± ${RATE_TOLERANCE}`,
+    );
+  }
+
+  // (c) Re-apply loop: a player-style reset (rate → 1) must be re-asserted.
+  await driver.resetPlaybackRate();
+  await driver.waitForPlaybackRate(state.multiplier);
+
+  // (d) Dismiss stops the loop: after dismiss, a reset sticks.
+  await driver.dismissPill();
+  await driver.resetPlaybackRate();
+  await driver.sleep(3500); // > one re-check interval (2s)
+  const after = await driver.readPlaybackRate();
+  if (after === null || Math.abs(after - 1) > RATE_TOLERANCE) {
+    throw new Error(`generic: playbackRate ${after} after dismiss + reset, expected 1 (loop stopped)`);
+  }
+}
+
+/** Settings write through the bridge, asserted via the pill. In Firefox the
+ * bridge shares the page world with the measurement script (no isolated
+ * worlds), so this spec is the single-world hardening evidence. */
+export async function runBridgeSpecs(driver: E2EDriver): Promise<void> {
+  const fixture = 'real/asr-word.json';
+  await driver.navigateToWatch(fixture);
+  // Wait for the content script (and its settings hook) to be up before
+  // writing through it.
+  expectState(await driver.readPillState(), fixture);
+  await driver.writeSettings({
+    target: 300,
+    conservative: false,
+    platformMax: 2,
+    sites: {},
+    contentTypes: {},
+  });
+  try {
+    await driver.navigateToWatch(fixture);
+    const state = expectState(await driver.readPillState(), fixture);
+    // 300 / 160.25 rounded to 0.05 → 1.85; the default target would give 1.55.
+    if (Math.abs(state.multiplier - 1.85) > RATE_TOLERANCE) {
+      throw new Error(
+        `${fixture}: pill multiplier ${state.multiplier}, expected 1.85 from bridge-written settings`,
+      );
+    }
+  } finally {
+    await driver.writeSettings(defaultSettings());
   }
 }
