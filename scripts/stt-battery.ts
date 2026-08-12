@@ -42,8 +42,9 @@ import {
   CLIPS_DIR,
   REFS_DIR,
   type ClipRef,
+  type BatteryModel,
 } from './stt-battery-lib';
-import { seamStep, transcribeStep } from './stt-battery-analysis';
+import { seamStep, smokeStep, transcribeStep } from './stt-battery-analysis';
 
 // ---------------------------------------------------------------------------
 // Model download (q8 onnx, same file set as the bench harness).
@@ -219,6 +220,15 @@ async function main(): Promise<void> {
   if (args.includes('--clips')) await clipStep();
   if (args.includes('--transcribe')) await transcribeStep();
   if (args.includes('--seam')) await seamStep();
+  if (args.includes('--smoke')) {
+    const i = args.indexOf('--smoke');
+    const clipId = args[i + 1] ?? BATTERY_VIDEOS[0].id;
+    const model = (args[i + 2] as BatteryModel) ?? 'Xenova/whisper-tiny.en';
+    if (!BATTERY_MODELS.includes(model)) {
+      throw new Error(`unknown model ${model} (expected ${BATTERY_MODELS.join(' or ')})`);
+    }
+    await smokeStep(clipId, model);
+  }
 }
 
 await main();

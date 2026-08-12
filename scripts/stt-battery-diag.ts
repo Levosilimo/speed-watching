@@ -22,7 +22,9 @@ async function main(): Promise<void> {
       console.log('--- no clip ref for', clipId);
     }
     const cfg = { chunkLengthS: chunkS, strideLengthS: strideS, forceFull: false };
+    console.error('--- diag: calling runInference');
     const result = await runInference(model, [clipId], cfg);
+    console.error('--- diag: runInference returned');
     const c = result.clips?.[0];
     if (!c) {
       console.error('no clip', result);
@@ -49,7 +51,9 @@ async function main(): Promise<void> {
     console.log('--- first 12 hyp chunks:');
     for (const ch of firsts) console.log(`  [${ch.start.toFixed(2)}-${ch.end.toFixed(2)}] ${JSON.stringify(ch.text)}`);
   } finally {
+    console.error('--- diag: closing server');
     await closeServer(server);
+    console.error('--- diag: server closed');
   }
 }
 

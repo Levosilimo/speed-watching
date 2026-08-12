@@ -87,70 +87,125 @@ export async function transcribeStep(): Promise<void> {
   const server = await startServer();
   try {
     const clips = BATTERY_VIDEOS.map((v) => v.id);
-  const records: V1Record[] = [];
-  const chunkConfig: ChunkConfig = { chunkLengthS: 30, strideLengthS: null, forceFull: false };
-  for (const model of BATTERY_MODELS) {
-    console.log(`\n[transcribe] ${model} (chunk_length_s=30)`);
-    const result = await runInference(model, clips, chunkConfig);
-    if (result.state !== 'done' || !result.clips) {
-      console.error(`[transcribe] ${model}: harness/runner failure: ${result.error ?? result.state}`);
-      process.exitCode = 1;
-      continue;
+    const records: V1Record[] = [];
+    // Same chunk config as the locked seam strategy (transformers.js #1358
+    // workaround): chunk 29 + stride 5 without force_full_sequences.
+    const chunkConfig: ChunkConfig = { chunkLengthS: 29, strideLengthS: 5, forceFull: false };
+    for (const model of BATTERY_MODELS) {
+      console.log(`\n[transcribe] ${model} (chunk_length_s=29, stride_length_s=5)`);
+      const result = await runInference(model, clips, chunkConfig);
+      if (result.state !== 'done' || !result.clips) {
+        console.error(`[transcribe] ${model}: harness/runner failure: ${result.error ?? result.state}`);
+        process.exitCode = 1;
+        continue;
+      }
+      for (const c of result.clips) {
+        const ref = loadClipRef(c.id);
+        const refText = ref.words.map((w) => w.text).join(' ');
+        const hyp = c.words ?? '';
+        const dec = werDecomposed(refText, hyp);
+        const refRates = ratesFor({ cues: ref.cues, words: ref.words });
+        const hypParsed = parsedFromChunks(c.chunks);
+        const hypRates = ratesFor(hypParsed);
+        const sanity = timestampSanity(c.chunks, c.durationSec ?? 60);
+        const record: V1Record = {
+          kind: 'v1',
+          ts: new Date().toISOString(),
+          videoId: c.id,
+          category: ref.category,
+          model,
+          chunkConfig,
+          refWords: ref.words.length,
+          S: dec.S,
+          D: dec.D,
+          I: dec.I,
+          wer: dec.wer,
+          countBias: dec.countBias,
+          refUnifiedRate: refRates?.unifiedRate ?? null,
+          hypUnifiedRate: hypRates?.unifiedRate ?? null,
+          rateErrorUnifiedPct: rateErrorPct(hypRates?.unifiedRate ?? null, refRates?.unifiedRate ?? null),
+          refWordAccurateRate: refRates?.wordAccurateRate ?? null,
+          hypWordAccurateRate: hypRates?.wordAccurateRate ?? null,
+          rateErrorWordAccuratePct: rateErrorPct(
+            hypRates?.wordAccurateRate ?? null,
+            refRates?.wordAccurateRate ?? null,
+          ),
+          tsMonotonic: c.chunks.length > 1 ? sanity.monotonic : null,
+          tsWithinDuration: c.chunks.length ? sanity.withinDuration : null,
+          tsLastEndSec: sanity.lastEndSec,
+          rtf: c.rtf,
+          loadError: result.loadError ?? null,
+          clipError: c.clipError,
+        };
+        records.push(record);
+        const ok =
+          Math.abs(record.rateErrorWordAccuratePct ?? 999) <= 10 &&
+          record.countBias >= -0.02 &&
+          record.countBias <= 0.08 &&
+          record.wer <= 0.15;
+        console.log(
+          `  ${c.id.padEnd(12)} wer=${(dec.wer * 100).toFixed(1)}% bias=${(dec.countBias * 100).toFixed(1)}% ` +
+            `rateErr(w)=${(record.rateErrorWordAccuratePct ?? NaN).toFixed(1)}% ` +
+            `rateErr(u)=${(record.rateErrorUnifiedPct ?? NaN).toFixed(1)}% ` +
+            `mono=${String(sanity.monotonic)} ${ok ? 'PASS' : 'FAIL'} ${c.clipError ?? ''}`,
+        );
+      }
     }
-    for (const c of result.clips) {
-      const ref = loadClipRef(c.id);
-      const refText = ref.words.map((w) => w.text).join(' ');
-      const hyp = c.words ?? '';
-      const dec = werDecomposed(refText, hyp);
-      const refRates = ratesFor({ cues: ref.cues, words: ref.words });
-      const hypParsed = parsedFromChunks(c.chunks);
-      const hypRates = ratesFor(hypParsed);
-      const sanity = timestampSanity(c.chunks, c.durationSec ?? 60);
-      const record: V1Record = {
-        kind: 'v1',
-        ts: new Date().toISOString(),
-        videoId: c.id,
-        category: ref.category,
-        model,
-        chunkConfig,
-        refWords: ref.words.length,
-        S: dec.S,
-        D: dec.D,
-        I: dec.I,
-        wer: dec.wer,
-        countBias: dec.countBias,
-        refUnifiedRate: refRates?.unifiedRate ?? null,
-        hypUnifiedRate: hypRates?.unifiedRate ?? null,
-        rateErrorUnifiedPct: rateErrorPct(hypRates?.unifiedRate ?? null, refRates?.unifiedRate ?? null),
-        refWordAccurateRate: refRates?.wordAccurateRate ?? null,
-        hypWordAccurateRate: hypRates?.wordAccurateRate ?? null,
-        rateErrorWordAccuratePct: rateErrorPct(
-          hypRates?.wordAccurateRate ?? null,
-          refRates?.wordAccurateRate ?? null,
-        ),
-        tsMonotonic: c.chunks.length > 1 ? sanity.monotonic : null,
-        tsWithinDuration: c.chunks.length ? sanity.withinDuration : null,
-        tsLastEndSec: sanity.lastEndSec,
-        rtf: c.rtf,
-        loadError: result.loadError ?? null,
-        clipError: c.clipError,
-      };
-      records.push(record);
-      const ok =
-        Math.abs(record.rateErrorWordAccuratePct ?? 999) <= 10 &&
-        record.countBias >= -0.02 &&
-        record.countBias <= 0.08 &&
-        record.wer <= 0.15;
-      console.log(
-        `  ${c.id.padEnd(12)} wer=${(dec.wer * 100).toFixed(1)}% bias=${(dec.countBias * 100).toFixed(1)}% ` +
-          `rateErr(w)=${(record.rateErrorWordAccuratePct ?? NaN).toFixed(1)}% ` +
-          `rateErr(u)=${(record.rateErrorUnifiedPct ?? NaN).toFixed(1)}% ` +
-          `mono=${String(sanity.monotonic)} ${ok ? 'PASS' : 'FAIL'} ${c.clipError ?? ''}`,
-      );
-    }
-  }
     await appendFile(join(BATTERY_DIR, 'results-v1.jsonl'), records.map((r) => JSON.stringify(r)).join('\n') + '\n');
     console.log(`[transcribe] ${records.length} records -> results-v1.jsonl`);
+  } finally {
+    await closeServer(server);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Phase-0 smoke: one clip through the full harness path (server + runner +
+// inference + V1 analysis), appended as a 'smoke' record to results-v2.jsonl.
+
+export async function smokeStep(clipId: string, model: BatteryModel): Promise<void> {
+  const server = await startServer();
+  try {
+    const chunkConfig: ChunkConfig = { chunkLengthS: 29, strideLengthS: 5, forceFull: false };
+    console.log(`[smoke] ${model} clip=${clipId} chunk=29 stride=5`);
+    const result = await runInference(model, [clipId], chunkConfig);
+    if (result.state !== 'done' || !result.clips) {
+      console.error(`[smoke] harness/runner failure: ${result.error ?? result.state}`);
+      process.exitCode = 1;
+      return;
+    }
+    const c = result.clips[0]!;
+    if (!c.words || c.clipError) {
+      console.error(`[smoke] FAIL clipError=${c.clipError} words=${JSON.stringify(c.words?.slice(0, 120))}`);
+      process.exitCode = 1;
+      return;
+    }
+    const ref = loadClipRef(c.id);
+    const dec = werDecomposed(ref.words.map((w) => w.text).join(' '), c.words);
+    const sanity = timestampSanity(c.chunks, c.durationSec ?? 60);
+    const record = {
+      kind: 'smoke',
+      ts: new Date().toISOString(),
+      videoId: c.id,
+      model,
+      chunkConfig,
+      refWords: ref.words.length,
+      hypWords: c.chunks.length,
+      S: dec.S,
+      D: dec.D,
+      I: dec.I,
+      wer: dec.wer,
+      countBias: dec.countBias,
+      tsMonotonic: sanity.monotonic,
+      rtf: c.rtf,
+      loadError: result.loadError ?? null,
+      clipError: c.clipError,
+    };
+    await appendFile(join(BATTERY_DIR, 'results-v2.jsonl'), JSON.stringify(record) + '\n');
+    console.log(
+      `[smoke] PASS words=${c.chunks.length} wer=${(dec.wer * 100).toFixed(1)}% ` +
+        `bias=${(dec.countBias * 100).toFixed(1)}% mono=${String(sanity.monotonic)} ` +
+        `rtf=${c.rtf?.toFixed(2) ?? 'n/a'} -> results-v2.jsonl`,
+    );
   } finally {
     await closeServer(server);
   }
@@ -261,67 +316,67 @@ export async function seamStep(): Promise<void> {
   try {
     const model: BatteryModel = 'Xenova/whisper-base.en';
     const clipId = SEAM_VIDEO;
-  const ref = loadClipRef(clipId);
-  // Clip-relative reference timestamps (whisper output is relative to the
-  // clip start).
-  const refWords = ref.words.map((w) => ({
-    text: w.text,
-    startSec: w.startSec - ref.window.startSec,
-  }));
-  const only = process.env.SEAM_CONFIG;
-  const allConfigs: Array<{ label: string; chunkConfig: ChunkConfig }> = [
-    { label: 'chunk=30 (production default)', chunkConfig: { chunkLengthS: 30, strideLengthS: null, forceFull: false } },
-    { label: 'chunk=29 stride=5 (workaround)', chunkConfig: { chunkLengthS: 29, strideLengthS: 5, forceFull: false } },
-  ];
-  const configs = only === undefined ? allConfigs : allConfigs.filter((c) => c.label.startsWith(only));
-  const records: V2Record[] = [];
-  for (const cfg of configs) {
-    console.log(`\n[seam] ${cfg.label}`);
-    const result = await runInference(model, [clipId], cfg.chunkConfig);
-    if (result.state !== 'done' || !result.clips) {
-      console.error(`[seam] harness/runner failure: ${result.error ?? result.state}`);
-      process.exitCode = 1;
-      continue;
-    }
-    const c = result.clips[0]!;
-    const seamSecs = cfg.chunkConfig.chunkLengthS === 29 ? [29] : [30];
-    const seams = seamSecs.map((s) => seamMetrics(s, refWords, c.chunks));
-    const decWhole = werDecomposed(
-      ref.words.map((w) => w.text).join(' '),
-      c.words ?? '',
-    );
-    const sanity = timestampSanity(c.chunks, c.durationSec ?? 60);
-    const record: V2Record = {
-      kind: 'v2',
-      ts: new Date().toISOString(),
-      videoId: clipId,
-      model,
-      chunkConfig: cfg.chunkConfig,
-      clipSec: c.durationSec ?? 60,
-      seams,
-      wholeClipCountBias: decWhole.countBias,
-      wholeClipDupPairs: wholeClipDupPairs(c.chunks),
-      tsMonotonic: c.chunks.length > 1 ? sanity.monotonic : null,
-      clipError: c.clipError,
-      loadError: result.loadError ?? null,
-      rtf: c.rtf,
-      overflowObserved: c.clipError !== null || c.chunks.length === 0 || c.words === '',
-    };
-    records.push(record);
-    for (const s of seams) {
+    const ref = loadClipRef(clipId);
+    // Clip-relative reference timestamps (whisper output is relative to the
+    // clip start).
+    const refWords = ref.words.map((w) => ({
+      text: w.text,
+      startSec: w.startSec - ref.window.startSec,
+    }));
+    const only = process.env.SEAM_CONFIG;
+    const allConfigs: Array<{ label: string; chunkConfig: ChunkConfig }> = [
+      { label: 'chunk=30 (production default)', chunkConfig: { chunkLengthS: 30, strideLengthS: null, forceFull: false } },
+      { label: 'chunk=29 stride=5 (workaround)', chunkConfig: { chunkLengthS: 29, strideLengthS: 5, forceFull: false } },
+    ];
+    const configs = only === undefined ? allConfigs : allConfigs.filter((c) => c.label.startsWith(only));
+    const records: V2Record[] = [];
+    for (const cfg of configs) {
+      console.log(`\n[seam] ${cfg.label}`);
+      const result = await runInference(model, [clipId], cfg.chunkConfig);
+      if (result.state !== 'done' || !result.clips) {
+        console.error(`[seam] harness/runner failure: ${result.error ?? result.state}`);
+        process.exitCode = 1;
+        continue;
+      }
+      const c = result.clips[0]!;
+      const seamSecs = cfg.chunkConfig.chunkLengthS === 29 ? [29] : [30];
+      const seams = seamSecs.map((s) => seamMetrics(s, refWords, c.chunks));
+      const decWhole = werDecomposed(
+        ref.words.map((w) => w.text).join(' '),
+        c.words ?? '',
+      );
+      const sanity = timestampSanity(c.chunks, c.durationSec ?? 60);
+      const record: V2Record = {
+        kind: 'v2',
+        ts: new Date().toISOString(),
+        videoId: clipId,
+        model,
+        chunkConfig: cfg.chunkConfig,
+        clipSec: c.durationSec ?? 60,
+        seams,
+        wholeClipCountBias: decWhole.countBias,
+        wholeClipDupPairs: wholeClipDupPairs(c.chunks),
+        tsMonotonic: c.chunks.length > 1 ? sanity.monotonic : null,
+        clipError: c.clipError,
+        loadError: result.loadError ?? null,
+        rtf: c.rtf,
+        overflowObserved: c.clipError !== null || c.chunks.length === 0 || c.words === '',
+      };
+      records.push(record);
+      for (const s of seams) {
+        console.log(
+          `  seam@${s.seamSec}s recall=${(s.recall * 100).toFixed(1)}% ` +
+            `(ref ${s.refInWindow}, match ${s.inOrderMatches}) boundary=${s.boundaryHyp}/${s.boundaryRef} ` +
+            `o3=${s.outOfOrderHyp} dup=${s.dupPairsHyp} wer=${(s.wer * 100).toFixed(1)}% ` +
+            `bias=${(s.countBias * 100).toFixed(1)}%`,
+        );
+      }
       console.log(
-        `  seam@${s.seamSec}s recall=${(s.recall * 100).toFixed(1)}% ` +
-          `(ref ${s.refInWindow}, match ${s.inOrderMatches}) boundary=${s.boundaryHyp}/${s.boundaryRef} ` +
-          `o3=${s.outOfOrderHyp} dup=${s.dupPairsHyp} wer=${(s.wer * 100).toFixed(1)}% ` +
-          `bias=${(s.countBias * 100).toFixed(1)}%`,
+        `  whole: words=${c.chunks.length} dup=${record.wholeClipDupPairs} ` +
+          `bias=${(record.wholeClipCountBias * 100).toFixed(1)}% mono=${String(sanity.monotonic)} ` +
+          `rtf=${c.rtf?.toFixed(2) ?? 'n/a'} overflow=${record.overflowObserved} ${c.clipError ?? ''}`,
       );
     }
-    console.log(
-      `  whole: words=${c.chunks.length} dup=${record.wholeClipDupPairs} ` +
-        `bias=${(record.wholeClipCountBias * 100).toFixed(1)}% mono=${String(sanity.monotonic)} ` +
-        `rtf=${c.rtf?.toFixed(2) ?? 'n/a'} overflow=${record.overflowObserved} ${c.clipError ?? ''}`,
-    );
-  }
     await appendFile(join(BATTERY_DIR, 'results-v2.jsonl'), records.map((r) => JSON.stringify(r)).join('\n') + '\n');
     console.log(`[seam] ${records.length} records -> results-v2.jsonl`);
   } finally {
