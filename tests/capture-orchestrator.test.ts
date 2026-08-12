@@ -178,6 +178,40 @@ describe('start', () => {
   });
 });
 
+describe('action click (startFromAction)', () => {
+  it('captures the clicked tab even when another tab is active', async () => {
+    const { api } = makeApi();
+    const orch = makeOrchestrator(api);
+    const response = await orch.startFromAction(9);
+    expect(response).toMatchObject({ state: 'starting', tabId: 9 });
+    expect(api.tabCapture.getMediaStreamId).toHaveBeenCalledWith({ targetTabId: 9 });
+    // The clicked tab is the target; no active-tab/audible-tab query runs.
+    expect(api.tabs.query).not.toHaveBeenCalled();
+  });
+
+  it('walks to capturing through the same offscreen ack path', async () => {
+    const { api } = makeApi();
+    const orch = makeOrchestrator(api);
+    await orch.startFromAction(9);
+    await orch.handleMessage({ kind: 'offscreen-event', event: 'started' });
+    expect(await orch.handleMessage({ kind: 'probe-state' })).toMatchObject({
+      state: 'capturing',
+      tabId: 9,
+    });
+    expect(api.runtime.sendMessage).toHaveBeenCalledWith({ kind: 'offscreen-start', streamId: 'stream-1' });
+  });
+
+  it('restarts an existing capture on the clicked tab', async () => {
+    const { api } = makeApi();
+    const orch = makeOrchestrator(api);
+    await startCapture(orch, api);
+    await orch.startFromAction(12);
+    expect(api.runtime.sendMessage).toHaveBeenCalledWith({ kind: 'offscreen-stop' });
+    expect(api.tabCapture.getMediaStreamId).toHaveBeenLastCalledWith({ targetTabId: 12 });
+    expect(await orch.handleMessage({ kind: 'probe-state' })).toMatchObject({ tabId: 12 });
+  });
+});
+
 describe('stop', () => {
   it('transitions to idle, forwards stop, and clears the mirror', async () => {
     const { api } = makeApi();

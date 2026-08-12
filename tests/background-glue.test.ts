@@ -82,4 +82,37 @@ describe('background wiring', () => {
     expect(chromeMock.runtime.sendMessage).toHaveBeenCalledWith({ kind: 'offscreen-stop' });
     expect(chromeMock.storage.session.remove).toHaveBeenCalledWith('probeCapture');
   });
+
+  it('wires the action click to a capture of the clicked tab', async () => {
+    const main = (backgroundModule as { main: () => unknown }).main;
+    main();
+    const click = chromeMock.action.onClicked.addListener.mock.calls[0]?.[0] as
+      | ((tab: { id?: number }) => void)
+      | undefined;
+    if (!click) throw new Error('no action click listener registered');
+
+    click({ id: 9 });
+    await vi.waitFor(() => {
+      expect(chromeMock.tabCapture.getMediaStreamId).toHaveBeenCalledWith({ targetTabId: 9 });
+    });
+    const listener = registeredListener();
+    await driveMessage(listener, { kind: 'offscreen-event', event: 'started' });
+    expect(await driveMessage(listener, { kind: 'probe-state' })).toMatchObject({
+      state: 'capturing',
+      tabId: 9,
+    });
+  });
+
+  it('ignores an action click without a tab id', async () => {
+    const main = (backgroundModule as { main: () => unknown }).main;
+    main();
+    const click = chromeMock.action.onClicked.addListener.mock.calls[0]?.[0] as
+      | ((tab: { id?: number }) => void)
+      | undefined;
+    if (!click) throw new Error('no action click listener registered');
+
+    click({});
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(chromeMock.tabCapture.getMediaStreamId).not.toHaveBeenCalled();
+  });
 });
