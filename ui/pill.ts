@@ -1,5 +1,6 @@
 // Overlay pill component — the primary user-facing surface.
-// Self-contained vanilla TS DOM. Closed shadow root for style isolation.
+// Self-contained vanilla TS DOM. Open shadow root for style isolation:
+// closed roots hide their content and ARIA from the accessibility tree.
 // No chrome.* imports. No lib/ logic imports.
 
 import { DARK, LIGHT, TOKENS, type Theme } from './styles';
@@ -210,12 +211,14 @@ interface PillDom {
 function buildDom(): PillDom {
   const pill = document.createElement('div');
   pill.className = 'pill';
-  pill.setAttribute('role', 'status');
-  pill.setAttribute('aria-live', 'polite');
   pill.dataset.mode = 'hidden';
 
   const mainText = document.createElement('div');
   mainText.className = 'main-text';
+  // Live region covers only the text: status regions announce atomically
+  // and swallow interactive children, so the buttons live outside it.
+  // role=status already implies aria-live=polite.
+  mainText.setAttribute('role', 'status');
 
   const labelEl = document.createElement('span');
   labelEl.className = 'label';
@@ -250,8 +253,19 @@ function buildDom(): PillDom {
   return { pill, labelEl, tierEl, warningNote, applyBtn, dismissBtn };
 }
 
+/** The player area that hosted the pill — #movie_player on YouTube, else the
+ * video element, else body. Moving focus here after Apply/Dismiss/Escape
+ * keeps it from stranding inside a pill that just hid itself. */
+function restoreFocus(host: HTMLElement): void {
+  const doc = host.ownerDocument;
+  const anchor = doc.querySelector<HTMLElement>('#movie_player');
+  const video = doc.querySelector<HTMLVideoElement>('video');
+  (anchor ?? video ?? doc.body).focus();
+}
+
 function wireEvents(
   dom: PillDom,
+  host: HTMLElement,
   events: PillEvents | undefined,
   getState: () => PillState | null,
 ): void {
@@ -259,17 +273,22 @@ function wireEvents(
     const state = getState();
     if (state && state.mode !== 'unreachable' && state.mode !== 'music') {
       events?.onApply?.(state.multiplier);
+      restoreFocus(host);
     }
   });
 
   dom.dismissBtn.addEventListener('click', () => {
     events?.onDismiss?.();
+    restoreFocus(host);
   });
 
-  // Keyboard: Enter on focused pill triggers apply
+  // Keyboard: Enter applies, Escape dismisses. Both route through the
+  // button handlers so the focus restoration is shared with clicks.
   dom.pill.addEventListener('keydown', (e: KeyboardEvent) => {
     if (e.key === 'Enter' && !e.defaultPrevented) {
       dom.applyBtn.click();
+    } else if (e.key === 'Escape' && !e.defaultPrevented) {
+      dom.dismissBtn.click();
     }
   });
 }
@@ -333,7 +352,7 @@ function render(dom: PillDom, state: PillState, destroyed: boolean): void {
 }
 
 export function createPill(host: HTMLElement, events?: PillEvents): PillApi {
-  const shadow = host.attachShadow({ mode: 'closed' });
+  const shadow = host.attachShadow({ mode: 'open' });
   let mounted = false;
   let destroyed = false;
   let currentState: PillState | null = null;
@@ -354,7 +373,7 @@ export function createPill(host: HTMLElement, events?: PillEvents): PillApi {
   style.textContent = pillCss(theme());
   shadow.append(style, dom.pill);
 
-  wireEvents(dom, events, () => currentState);
+  wireEvents(dom, host, events, () => currentState);
 
   // Theme listener
   const onThemeChange = (e: MediaQueryListEvent): void => {

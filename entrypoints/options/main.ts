@@ -127,7 +127,11 @@ function renderOverrides(overrides: DisplayedOverride[]): void {
           delete next.sites[item.hostname];
           return next;
         })
-        .then((next) => renderOverrides(siteList(next)));
+        .then((next) => {
+          renderOverrides(siteList(next));
+          // The removed button is gone; land focus on the stable add-input.
+          overrideInput.focus();
+        });
     });
 
     li.append(left, removeBtn);
