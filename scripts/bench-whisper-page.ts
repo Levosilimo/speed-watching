@@ -238,7 +238,23 @@ function launchArgs(combo: Combo): string[] {
   const args = ['--disable-dev-shm-usage'];
   if (combo.backend === 'webgpu') {
     args.push('--enable-unsafe-webgpu');
-    if (combo.gpuAttempt === 'swiftshader') args.push('--use-webgpu-adapter=swiftshader');
+    if (combo.gpuAttempt === 'swiftshader') {
+      args.push('--use-webgpu-adapter=swiftshader');
+    } else if (combo.gpuAttempt === 'hardware') {
+      // The first hardware attempt reported adapter:google|swiftshader — the
+      // GPU process silently fell back to software rendering. These switches
+      // pin it to the real Vulkan stack (ANGLE + Dawn backend), keep the
+      // adapter off Chromium's blocklist, and grant the unsafe APIs without
+      // which adapter.info is blanked and the probe cannot name the adapter.
+      // The swiftshader variant deliberately gets none of them: it must stay
+      // a pure software control.
+      args.push(
+        '--use-angle=vulkan',
+        '--ignore-gpu-blocklist',
+        '--enable-dawn-features=allow_unsafe_apis,disable_adapter_blocklist',
+        '--disable-dawn-features=disallow_unsafe_apis',
+      );
+    }
   }
   return args;
 }
