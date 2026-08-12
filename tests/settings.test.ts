@@ -4,6 +4,8 @@ import {
   CONSERVATIVE_TARGET_WPM,
   DEFAULT_PLATFORM_MAX,
   DEFAULT_TARGET_WPM,
+  PLATFORM_MAX_MAX,
+  PLATFORM_MAX_MIN,
   SettingsStore,
   defaultSettings,
   resolveContentType,
@@ -85,6 +87,17 @@ describe('SettingsStore', () => {
     expect(loaded.platformMax).toBe(DEFAULT_PLATFORM_MAX);
     expect(loaded.sites).toEqual({});
     expect(await new SettingsStore(mockStorage()).load()).toEqual(defaultSettings());
+  });
+
+  it('clamps out-of-range platformMax into [1, 4] on load', async () => {
+    const high = new SettingsStore(
+      mockStorage({ 'sw.settings': { conservative: false, platformMax: 10 } }),
+    );
+    expect((await high.load()).platformMax).toBe(PLATFORM_MAX_MAX);
+    const low = new SettingsStore(
+      mockStorage({ 'sw.settings': { conservative: false, platformMax: 0.5 } }),
+    );
+    expect((await low.load()).platformMax).toBe(PLATFORM_MAX_MIN);
   });
 
   it('update mutates and persists', async () => {

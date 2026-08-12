@@ -16,12 +16,7 @@
 import { browser } from 'wxt/browser';
 import { defineContentScript } from 'wxt/utils/define-content-script';
 import { DemandStore } from '@/lib/demand';
-import {
-  BRIDGE_CHANNEL,
-  handleBridgeRequest,
-  isBridgeEnvelope,
-  type BridgeRequest,
-} from '@/lib/messaging';
+import { createBridgeListener } from '@/lib/messaging';
 import { OverrideLog } from '@/lib/override-log';
 import { SettingsStore } from '@/lib/settings';
 
@@ -37,32 +32,6 @@ export default defineContentScript({
     const log = new OverrideLog(browser.storage.local);
     const demand = new DemandStore(browser.storage.local);
 
-    window.addEventListener('message', (event) => {
-      const envelope = event.data;
-      if (!isBridgeEnvelope(envelope) || envelope.direction !== 'request') return;
-      const detail = envelope.payload as BridgeRequest & { id: number };
-      void handleBridgeRequest(detail, { settings, log, demand }).then(
-        (result) => {
-          window.postMessage(
-            {
-              channel: BRIDGE_CHANNEL,
-              direction: 'response',
-              payload: { id: detail.id, ok: true, result },
-            },
-            '*',
-          );
-        },
-        (error: unknown) => {
-          window.postMessage(
-            {
-              channel: BRIDGE_CHANNEL,
-              direction: 'response',
-              payload: { id: detail.id, ok: false, error: String(error) },
-            },
-            '*',
-          );
-        },
-      );
-    });
+    window.addEventListener('message', createBridgeListener({ settings, log, demand }, window));
   },
 });

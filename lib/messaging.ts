@@ -17,8 +17,14 @@ import { isContentType } from './music';
 import type { ContentType } from './music';
 import type { OverrideLogEntry } from './override-log';
 import { OverrideLog } from './override-log';
-import type { Settings } from './settings';
-import { SettingsStore } from './settings';
+import {
+  PLATFORM_MAX_MAX,
+  PLATFORM_MAX_MIN,
+  SettingsStore,
+  TARGET_WPM_MAX,
+  TARGET_WPM_MIN,
+  type Settings,
+} from './settings';
 
 export const BRIDGE_CHANNEL = 'speedwatcher:bridge';
 export const BRIDGE_TIMEOUT_MS = 1500;
@@ -59,15 +65,75 @@ export interface EventHost {
   addEventListener(type: string, listener: (event: MessageEvent) => void): void;
 }
 
+export interface BridgeDeps {
+  settings: SettingsStore;
+  log: OverrideLog;
+  demand: DemandStore;
+}
+
+function isFiniteNumberIn(value: unknown, min: number, max: number): boolean {
+  return typeof value === 'number' && Number.isFinite(value) && value >= min && value <= max;
+}
+
+function isSiteOverride(value: unknown): boolean {
+  if (!isRecord(value)) return false;
+  if (value.target !== undefined && !isFiniteNumberIn(value.target, TARGET_WPM_MIN, TARGET_WPM_MAX)) {
+    return false;
+  }
+  if (
+    value.platformMax !== undefined &&
+    !isFiniteNumberIn(value.platformMax, PLATFORM_MAX_MIN, PLATFORM_MAX_MAX)
+  ) {
+    return false;
+  }
+  if (
+    value.multiplierOverride !== undefined &&
+    (typeof value.multiplierOverride !== 'number' || !Number.isFinite(value.multiplierOverride))
+  ) {
+    return false;
+  }
+  if (value.contentType !== undefined && !isContentType(value.contentType)) return false;
+  return true;
+}
+
+function isContentTypePrefs(value: unknown): boolean {
+  return (
+    isRecord(value) &&
+    (value.target === undefined || isFiniteNumberIn(value.target, TARGET_WPM_MIN, TARGET_WPM_MAX))
+  );
+}
+
+/** Runtime shape check for settings:set payloads crossing the postMessage
+ * boundary — the type system cannot vouch for page-posted data. */
+export function isSettingsPayload(value: unknown): value is Settings {
+  if (!isRecord(value)) return false;
+  if (typeof value.conservative !== 'boolean') return false;
+  if (!isFiniteNumberIn(value.platformMax, PLATFORM_MAX_MIN, PLATFORM_MAX_MAX)) return false;
+  if (value.target !== undefined && !isFiniteNumberIn(value.target, TARGET_WPM_MIN, TARGET_WPM_MAX)) {
+    return false;
+  }
+  if (value.contentType !== undefined && !isContentType(value.contentType)) return false;
+  if (!isRecord(value.sites) || !Object.values(value.sites).every(isSiteOverride)) return false;
+  if (!isRecord(value.contentTypes) || !Object.values(value.contentTypes).every(isContentTypePrefs)) {
+    return false;
+  }
+  return true;
+}
+
 /** Isolated-world side: resolves a request against the shared stores. */
 export async function handleBridgeRequest(
   request: BridgeRequest,
-  deps: { settings: SettingsStore; log: OverrideLog; demand: DemandStore },
+  deps: BridgeDeps,
 ): Promise<Settings | void> {
   switch (request.type) {
     case 'settings:get':
       return deps.settings.load();
     case 'settings:set':
+      // Forged payloads (out-of-range target/platformMax, wrong shapes) must
+      // not reach storage: reject instead of saving garbage.
+      if (!isSettingsPayload(request.settings)) {
+        throw new Error('settings:set: invalid settings payload');
+      }
       await deps.settings.save(request.settings);
       return undefined;
     case 'log:append':
@@ -82,6 +148,44 @@ export async function handleBridgeRequest(
       await deps.demand.increment(request.contentType);
       return undefined;
   }
+}
+
+/** Factory for the bridge's window listener: same-frame source guard, then
+ * envelope dispatch against handleBridgeRequest. host is the frame window
+ * the bridge serves; requests whose event.source is a different window
+ * (cross-frame forgery) are dropped before parsing. */
+export function createBridgeListener(
+  deps: BridgeDeps,
+  host: Window,
+): (event: MessageEvent) => void {
+  return (event) => {
+    if (event.source !== host) return;
+    const envelope = event.data;
+    if (!isBridgeEnvelope(envelope) || envelope.direction !== 'request') return;
+    const detail = envelope.payload as BridgeRequest & { id: number };
+    void handleBridgeRequest(detail, deps).then(
+      (result) => {
+        host.postMessage(
+          {
+            channel: BRIDGE_CHANNEL,
+            direction: 'response',
+            payload: { id: detail.id, ok: true, result },
+          },
+          '*',
+        );
+      },
+      (error: unknown) => {
+        host.postMessage(
+          {
+            channel: BRIDGE_CHANNEL,
+            direction: 'response',
+            payload: { id: detail.id, ok: false, error: String(error) },
+          },
+          '*',
+        );
+      },
+    );
+  };
 }
 
 /** MAIN-world side: posts a request envelope and awaits the matching

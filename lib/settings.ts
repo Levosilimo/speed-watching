@@ -13,6 +13,13 @@ export const DEFAULT_TARGET_WPM = 250;
 export const CONSERVATIVE_TARGET_WPM = 225;
 export const DEFAULT_PLATFORM_MAX = 2;
 
+// Bridge-accepted bounds: the pill recommends up to platformMax× and targets
+// near the 250–275 wpm safe zone, so values outside these ranges are forgery.
+export const TARGET_WPM_MIN = 100;
+export const TARGET_WPM_MAX = 400;
+export const PLATFORM_MAX_MIN = 1;
+export const PLATFORM_MAX_MAX = 4;
+
 export interface SiteOverride {
   target?: number;
   contentType?: ContentType;
@@ -60,12 +67,16 @@ function finiteOr<T>(value: unknown, fallback: T): number | T {
   return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
 }
 
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(Math.max(value, min), max);
+}
+
 function normalizeSettings(raw: unknown): Settings {
   const base = defaultSettings();
   if (!isRecord(raw)) return base;
   const settings: Settings = {
     conservative: raw.conservative === true,
-    platformMax: finiteOr(raw.platformMax, base.platformMax),
+    platformMax: clamp(finiteOr(raw.platformMax, base.platformMax), PLATFORM_MAX_MIN, PLATFORM_MAX_MAX),
     sites: isRecord(raw.sites) ? (raw.sites as Record<string, SiteOverride>) : {},
     contentTypes: isRecord(raw.contentTypes)
       ? (raw.contentTypes as Partial<Record<ContentType, ContentTypePrefs>>)

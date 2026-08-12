@@ -4,8 +4,9 @@ import {
   BRIDGE_CHANNEL,
   BRIDGE_TIMEOUT_MS,
   createBridgeClient,
-  handleBridgeRequest,
+  createBridgeListener,
   isBridgeEnvelope,
+  type BridgeDeps,
   type BridgeRequest,
   type EventHost,
 } from '../lib/messaging';
@@ -15,49 +16,43 @@ import { defaultSettings, SettingsStore } from '../lib/settings';
 import { mockStorage } from './fixtures/helpers';
 
 /** postMessage-based host: the same surface the client and the bridge
- * share in the browser (message events delivered synchronously). */
-function fakeWindow(): { host: EventHost; messages: unknown[] } {
+ * share in the browser. Messages posted from the host are delivered to
+ * listeners with source === host (same-frame), matching the real bridge's
+ * source guard; dispatch() delivers a caller-supplied event verbatim. */
+function fakeWindow(): {
+  host: EventHost;
+  messages: unknown[];
+  dispatch: (event: MessageEvent) => void;
+} {
   const listeners = new Set<(event: MessageEvent) => void>();
   const messages: unknown[] = [];
-  return {
-    host: {
-      postMessage: (message) => {
-        messages.push(message);
-        for (const listener of listeners) listener({ data: message } as MessageEvent);
-      },
-      addEventListener: (type, listener) => {
-        if (type === 'message') listeners.add(listener);
-      },
+  const host = {
+    postMessage: (message: unknown) => {
+      messages.push(message);
+      for (const listener of listeners) {
+        listener({ data: message, source: host } as MessageEvent);
+      }
     },
+    addEventListener: (type: string, listener: (event: MessageEvent) => void) => {
+      if (type === 'message') listeners.add(listener);
+    },
+  };
+  return {
+    host,
     messages,
+    dispatch: (event) => {
+      for (const listener of listeners) listener(event);
+    },
   };
 }
 
-function serve(host: EventHost): { settings: SettingsStore; log: OverrideLog; demand: DemandStore } {
-  const deps = {
+function serve(host: EventHost): BridgeDeps {
+  const deps: BridgeDeps = {
     settings: new SettingsStore(mockStorage()),
     log: new OverrideLog(mockStorage()),
     demand: new DemandStore(mockStorage()),
   };
-  host.addEventListener('message', (event) => {
-    const envelope = event.data;
-    if (!isBridgeEnvelope(envelope) || envelope.direction !== 'request') return;
-    const detail = envelope.payload as BridgeRequest & { id: number };
-    void handleBridgeRequest(detail, deps).then(
-      (result) => {
-        host.postMessage(
-          { channel: BRIDGE_CHANNEL, direction: 'response', payload: { id: detail.id, ok: true, result } },
-          '*',
-        );
-      },
-      (error: unknown) => {
-        host.postMessage(
-          { channel: BRIDGE_CHANNEL, direction: 'response', payload: { id: detail.id, ok: false, error: String(error) } },
-          '*',
-        );
-      },
-    );
-  });
+  host.addEventListener('message', createBridgeListener(deps, host as unknown as Window));
   return deps;
 }
 
@@ -78,6 +73,114 @@ describe('messaging bridge', () => {
     const next = { ...(await settings.load()), target: 300 };
     await client.request({ type: 'settings:set', settings: next });
     expect((await settings.load()).target).toBe(300);
+  });
+
+  it('saves a fully-shaped settings:set payload', async () => {
+    const { host } = fakeWindow();
+    const { settings } = serve(host);
+    const client = createBridgeClient(host);
+    await client.request({
+      type: 'settings:set',
+      settings: {
+        target: 300,
+        conservative: true,
+        platformMax: 2.5,
+        contentType: 'talk',
+        sites: {
+          'youtube.com': {
+            target: 240,
+            platformMax: 1.75,
+            multiplierOverride: 1.3,
+            contentType: 'lecture',
+          },
+        },
+        contentTypes: { lecture: { target: 235 } },
+      },
+    });
+    const saved = await settings.load();
+    expect(saved.target).toBe(300);
+    expect(saved.conservative).toBe(true);
+    expect(saved.platformMax).toBe(2.5);
+    expect(saved.sites['youtube.com']).toEqual({
+      target: 240,
+      platformMax: 1.75,
+      multiplierOverride: 1.3,
+      contentType: 'lecture',
+    });
+    expect(saved.contentTypes.lecture).toEqual({ target: 235 });
+  });
+
+  it('rejects forged settings:set with out-of-range target and saves nothing', async () => {
+    const { host } = fakeWindow();
+    const { settings } = serve(host);
+    const client = createBridgeClient(host);
+    await settings.save({ ...defaultSettings(), target: 240 });
+    const before = await settings.load();
+    await expect(
+      client.request({
+        type: 'settings:set',
+        settings: { ...defaultSettings(), target: 500 },
+      }),
+    ).rejects.toThrow('invalid settings payload');
+    expect(await settings.load()).toEqual(before);
+  });
+
+  it('rejects forged settings:set with platformMax 10 and saves nothing', async () => {
+    const { host } = fakeWindow();
+    const { settings } = serve(host);
+    const client = createBridgeClient(host);
+    await settings.save({ ...defaultSettings(), target: 240 });
+    const before = await settings.load();
+    await expect(
+      client.request({
+        type: 'settings:set',
+        settings: { ...defaultSettings(), platformMax: 10 },
+      }),
+    ).rejects.toThrow('invalid settings payload');
+    expect(await settings.load()).toEqual(before);
+  });
+
+  it('rejects malformed settings:set shapes and saves nothing', async () => {
+    const malformed: Array<Record<string, unknown>> = [
+      { ...defaultSettings(), conservative: 'yes' },
+      { ...defaultSettings(), sites: 'garbage' },
+      { ...defaultSettings(), sites: { 'youtube.com': { target: 900 } } },
+      { ...defaultSettings(), contentTypes: { lecture: 'fast' } },
+      { ...defaultSettings(), contentType: 'bogus' },
+    ];
+    for (const settings of malformed) {
+      const { host } = fakeWindow();
+      const { settings: store } = serve(host);
+      const client = createBridgeClient(host);
+      await store.save({ ...defaultSettings(), target: 240 });
+      const before = await store.load();
+      await expect(
+        client.request({
+          type: 'settings:set',
+          settings,
+        } as unknown as BridgeRequest),
+      ).rejects.toThrow('invalid settings payload');
+      expect(await store.load()).toEqual(before);
+    }
+  });
+
+  it('ignores requests whose source is not the bridge frame window', async () => {
+    const { host, dispatch, messages } = fakeWindow();
+    const { settings } = serve(host);
+    await settings.save({ ...defaultSettings(), target: 240 });
+    const before = await settings.load();
+    // A cross-frame forgery: the event arrives with a foreign source, so the
+    // bridge must not answer it at all (no response, no save).
+    dispatch({
+      data: {
+        channel: BRIDGE_CHANNEL,
+        direction: 'request',
+        payload: { id: 7, type: 'settings:set', settings: { ...defaultSettings(), target: 500 } },
+      },
+      source: { foreign: true },
+    } as unknown as MessageEvent);
+    expect(messages).toHaveLength(0);
+    expect(await settings.load()).toEqual(before);
   });
 
   it('round-trips log:append into the OverrideLog', async () => {
