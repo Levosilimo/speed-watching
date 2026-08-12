@@ -107,6 +107,10 @@ WASM ships in the MVP. The manifest has no `content_security_policy` override
 
 - Settings and the override log live only in `chrome.storage.local` on the
   user's machine.
+- The demand proxy (`sw.demand`) records per-content-type counts of
+  estimated-tier renders plus the STT demand gate counters (distinct render
+  days, last render date). See `docs/demand-gate.md`. Local only, never
+  transmitted.
 - The override log records per action: timestamp, video id, site, content
   type, natural rate, multiplier, and recommendation mode. It is
   report-only — never transmitted, never used for learning, capped at 500

@@ -109,6 +109,41 @@
       </div>
     </div>
 
+    <!-- STT Demand Gate -->
+    <div class="section">
+      <div class="section-label">STT demand gate</div>
+      <div class="section-card">
+        <p class="section-note">
+          Interprets the estimated usage above: when enough speech-eligible
+          renders accumulate across enough distinct render days — or six
+          weeks pass — this flags for review whether on-device
+          speech-to-text is worth building. Music is excluded (captionless
+          music has no speech to transcribe). A trip only flags; nothing
+          starts automatically.
+        </p>
+        <p class="gate-status" id="gate-status">Not tripped</p>
+        <div class="habits-grid">
+          <div class="habit-stat">
+            <span class="stat-value" id="gate-count">0</span>
+            <span class="stat-label" id="gate-count-label">Speech-eligible renders</span>
+          </div>
+          <div class="habit-stat">
+            <span class="stat-value" id="gate-days">0</span>
+            <span class="stat-label" id="gate-days-label">Distinct render days</span>
+          </div>
+          <div class="habit-stat">
+            <span class="stat-value" id="gate-elapsed">—</span>
+            <span class="stat-label" id="gate-elapsed-label">Days since first render</span>
+          </div>
+          <div class="habit-stat">
+            <span class="stat-value" id="gate-span">—</span>
+            <span class="stat-label">First → last render</span>
+          </div>
+        </div>
+        <ul class="habit-list" id="gate-list"></ul>
+      </div>
+    </div>
+
     <!-- Tier Info -->
     <div class="section">
       <div class="section-label">Tier labels</div>
