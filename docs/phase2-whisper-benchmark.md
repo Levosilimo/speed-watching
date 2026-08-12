@@ -217,3 +217,109 @@ measured numbers.
 - `ffmpeg` (system binary) is used only by the `--download` step for FLAC→f32
   decoding and is allowlisted in `knip.json` (`ignoreBinaries`); timed runs
   never invoke it.
+
+## WebGPU re-check on hardware (one-time, user machine)
+
+The August run measured no real adapter: every WebGPU attempt — including
+`gpu=hardware` — reported `adapter:google|swiftshader` (see
+[WebGPU attempt](#webgpu-attempt)). The harness now ships the switches a
+hardware attempt needs, so the plan-v2 #2 question can be closed with one run
+on a box that has a reachable GPU.
+
+### What changed in the harness
+
+`launchArgs` in `scripts/bench-whisper-page.ts` appends four switches to the
+`hardware` attempt (webgpu backend, `--gpu=hardware`):
+
+- `--use-angle=vulkan` — pin the GPU process to the real Vulkan stack instead
+  of falling back to software rendering
+- `--ignore-gpu-blocklist` — keep the GTX 1070 off Chromium's blocklist
+- `--enable-dawn-features=allow_unsafe_apis,disable_adapter_blocklist` —
+  grant the unsafe APIs (without which `adapter.info` is blanked and the
+  probe cannot name the adapter) and unblock Dawn's own adapter blocklist
+- `--disable-dawn-features=disallow_unsafe_apis` — cancel Dawn's adapter veto
+
+The `swiftshader` variant is untouched (`--use-webgpu-adapter=swiftshader`
+only) and stays the pure software control. No temp-edits are needed to run
+this check — the flags ship in the harness.
+
+### Runbook (user machine, once)
+
+1. **Preflight.** The GPU must be idle and the driver must still support
+   Pascal:
+   - `nvidia-smi` — utilization near 0 %, driver < 590 (Pascal is dropped
+     from driver 590; the check is invalid on 590+)
+   - `ls /usr/share/vulkan/icd.d/ | grep -i nvidia` — the NVIDIA Vulkan ICD
+     must be present. Without it the GPU process cannot reach the card and
+     every WebGPU run silently lands on SwiftShader no matter the flags
+     (this is exactly what the shared box does — see
+     [This box's outcome](#this-boxs-outcome)).
+2. **WASM baseline** (re-measured for a same-day comparison):
+   `bun run scripts/bench-whisper.ts --variant=wasm:relaxed:none --clip=0 --out=results-hw.jsonl`
+3. **Hardware WebGPU attempt**, headed (headless is not trustworthy for
+   adapter selection):
+   `bun run scripts/bench-whisper.ts --variant=webgpu:relaxed:hardware --clip=0 --headed --out=results-hw.jsonl`
+4. **Mandatory adapter verification** — the gpu probe is the only proof the
+   run measured hardware:
+   `grep '"gpuAttempt":"hardware"' results-hw.jsonl | grep -o '"gpu":"[^"]*"'`
+   Must print `adapter:nvidia|pascal` (case as reported).
+   `adapter:google|swiftshader`, `adapter:GPUAdapter` (identity blanked) or
+   `no-adapter` invalidates the run: re-check the Vulkan preflight and that
+   `--headed` was used.
+
+### Decision rule
+
+WebGPU is worth pursuing only if **all** hold; otherwise close the question
+(WASM already passes):
+
+- median `rtf` (webgpu) ≤ 0.6 × median `rtf` (wasm) — 0.6 × of ~0.29 ≈ 0.17
+- |median `wer` (webgpu) − median `wer` (wasm)| ≤ 2 (percentage points)
+- 0 clip failures (`clipError` set / `rtf: null` on all clips)
+- `modelLoadMs` (webgpu) ≤ 2 × `modelLoadMs` (wasm)
+
+Realtime is **not** the discriminator: WASM at RTF 0.29 is already realtime.
+The only reason to prefer WebGPU is a large decoder margin — longer clips or
+lighter hardware — and that margin is what the 0.6 × rule tests.
+
+### Pitfalls
+
+- **Driver 590+ invalidates the check** — no Pascal support, so the result
+  is "can't measure", not "WebGPU loses".
+- **Missing NVIDIA Vulkan ICD is the silent-swiftshader trap**: all flags
+  pass, the probe still says `google|swiftshader`. Preflight step 1 catches
+  it.
+- **fp16 errors on Pascal are a data point, not a bug**: Pascal has no
+  `shaderFloat16` (fp16 compute), and ort's webgpu ep can require it for
+  some kernels. An fp16-related error on the real adapter is evidence the
+  GPU is too old for the fast path — record it and close the question.
+- **Headless is not trustworthy**: the August run fell to SwiftShader
+  headless; use `--headed`.
+- **The probe, not the summary, decides**: the printed summary shows RTF
+  numbers regardless of which adapter ran. Only the `gpu` field says what
+  was measured.
+
+### This box's outcome (2026-08-12)
+
+Ran the swiftshader control and the hardware attempt (1 clip, smoke) after
+the flag change, with the GPU idle (nvidia-smi: 0 %, driver 582.53):
+
+| variant | probe gpu | model load | clip result |
+|---|---|---|---|
+| `webgpu:relaxed:swiftshader` | `adapter:google|swiftshader` | 2073 ms | error 157381320 (unchanged from August run) |
+| `webgpu:relaxed:hardware` (headless) | `adapter:google|swiftshader` | 2768 ms | error 157381320 |
+| `webgpu:relaxed:hardware` (headed) | `adapter:google|swiftshader` | 2061 ms | error 157381320 |
+
+Captured browser cmdline during the run: all four switches plus
+`--use-angle=vulkan` reach Chromium, and no `--use-angle=swiftshader-webgl`
+is present — yet the adapter is still SwiftShader. Cause: this box has no
+NVIDIA Vulkan ICD (`/usr/share/vulkan/icd.d/` holds only
+asahi/gfxstream/intel/lvp/nouveau/radeon/virtio), so the GPU process cannot
+enumerate the GTX 1070 for Vulkan and falls back to software rendering
+regardless of flags. The harness behavior is verified — flags transmit, the
+probe names the adapter, the swiftshader control is unchanged; the hardware
+verdict needs the user machine, where the runbook above applies.
+
+### Gate-3 note (manual-gates runbook)
+
+`docs/manual-gates-runbook.md` (wt-tc lane) will reference this section for
+its gate-3 WebGPU procedure; that runbook's merge is owned by the wt-tc lane.
