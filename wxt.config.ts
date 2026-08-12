@@ -25,7 +25,8 @@ export default defineConfig({
   manifest: {
     name: 'Speed Watcher',
     description: 'WPM-based speed-watching extension',
-    version: '0.0.1',
+    // No explicit version: wxt falls back to package.json, the single source
+    // (docs/store-readiness.md version policy).
     // The action entrypoint is the tabCapture invocation path: clicking the
     // toolbar icon is the user gesture that lets getMediaStreamId succeed
     // (lib-7 verdict, docs/phase0-offscreen-audio.md). NO default_popup:
@@ -53,6 +54,12 @@ export default defineConfig({
         // Firefox 128. Older versions would silently run the youtube script
         // in the content-script sandbox — working, but unmeasured.
         strict_min_version: '128.0',
+        // Mandatory for new AMO submissions since 2025-11-03 (web-ext lint
+        // hard error without it). The exact lowercase special value 'none'
+        // declares the add-on collects no data.
+        data_collection_permissions: {
+          required: ['none'],
+        },
       },
     },
   },
