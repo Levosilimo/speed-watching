@@ -115,6 +115,60 @@ export function wer(reference: string, hypothesis: string): number {
   return levenshtein(ref, hyp) / ref.length;
 }
 
+// Substitution/deletion/insertion counts from the Levenshtein backtrace over
+// normalized tokens. countBias = (I - D) / ref_words is the word-count drift
+// of the hypothesis vs the reference: positive means the STT added words
+// (over-counting the speech rate), negative means it dropped them. The G1/G2
+// battery bounds it to [-2%, +8%] per model/clip.
+export interface WerDecomposition {
+  S: number;
+  D: number;
+  I: number;
+  wer: number;
+  countBias: number;
+}
+
+export function werDecomposed(reference: string, hypothesis: string): WerDecomposition {
+  const ref = normalizeForWer(reference);
+  const hyp = normalizeForWer(hypothesis);
+  if (ref.length === 0) {
+    return { S: 0, D: 0, I: hyp.length, wer: hyp.length === 0 ? 0 : 1, countBias: 1 };
+  }
+  const cols = hyp.length + 1;
+  const rows = ref.length + 1;
+  const d: number[][] = Array.from({ length: rows }, () => Array.from({ length: cols }, () => 0));
+  for (let j = 1; j < cols; j++) d[0]![j] = j;
+  for (let i = 1; i < rows; i++) d[i]![0] = i;
+  for (let i = 1; i < rows; i++) {
+    for (let j = 1; j < cols; j++) {
+      const cost = ref[i - 1]! === hyp[j - 1]! ? 0 : 1;
+      d[i]![j] = Math.min(d[i - 1]![j]! + 1, d[i]![j - 1]! + 1, d[i - 1]![j - 1]! + cost);
+    }
+  }
+  let i = rows - 1;
+  let j = cols - 1;
+  let S = 0;
+  let D = 0;
+  let I = 0;
+  while (i > 0 || j > 0) {
+    const diag = i > 0 && j > 0 ? d[i - 1]![j - 1]! : Number.POSITIVE_INFINITY;
+    const up = i > 0 ? d[i - 1]![j]! : Number.POSITIVE_INFINITY;
+    const left = j > 0 ? d[i]![j - 1]! : Number.POSITIVE_INFINITY;
+    if (diag <= up && diag <= left) {
+      if (d[i]![j]! !== diag) S += 1;
+      i -= 1;
+      j -= 1;
+    } else if (up <= left) {
+      D += 1;
+      i -= 1;
+    } else {
+      I += 1;
+      j -= 1;
+    }
+  }
+  return { S, D, I, wer: (S + D + I) / ref.length, countBias: (I - D) / ref.length };
+}
+
 export interface WordTimestamp {
   text: string;
   start: number;
