@@ -258,8 +258,9 @@ function buildDom(): PillDom {
  * keeps it from stranding inside a pill that just hid itself. */
 function restoreFocus(host: HTMLElement): void {
   const doc = host.ownerDocument;
-  const target = doc.querySelector('#movie_player') ?? doc.querySelector('video') ?? doc.body;
-  target.focus();
+  const anchor = doc.querySelector<HTMLElement>('#movie_player');
+  const video = doc.querySelector<HTMLVideoElement>('video');
+  (anchor ?? video ?? doc.body).focus();
 }
 
 function wireEvents(
