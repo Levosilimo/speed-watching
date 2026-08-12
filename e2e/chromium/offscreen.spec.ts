@@ -15,19 +15,29 @@
 // (entrypoints/background.ts).
 //
 // This suite cannot click the toolbar: Playwright has no browser-UI
-// action-click synthesis and chrome.action exposes no programmatic click
-// (openPopup needs a user gesture and a popup). A fake invocation is not
-// possible either — the invocation state is browser-side, tied to the real
-// gesture. So the suite pins the honest split:
+// action-click synthesis. The invocation gesture is, however, synthesizable
+// through the CDP `Extensions.triggerAction` command (browser-level session;
+// the extension-side chrome.action.triggerExtensionAction() does not exist on
+// CfT 151). It fires chrome.action.onClicked for the no-popup action and
+// satisfies the tabCapture invocation requirement — the full capture chain
+// runs to `capturing` in headless. The meter level needs real tab audio,
+// which headless Chrome does not render (Chromium issue 40176215); the
+// audio-path evidence lives in the puppeteer spike scripts/audio-invocation-
+// probe (level 0.2832 on this box, headed under xvfb), and the level
+// assertion here activates under E2E_CFT_HEADED=1.
+//
+// So the suite pins the honest split:
 //   (a) the manifest contract that makes onClicked fire (action key, no
 //       default_popup, permissions unchanged),
 //   (b) the pre-invocation state: probe-start lands on the documented
 //       guidance error, the mirror stays idle, the offscreen document is
 //       still created,
-//   (c) offscreen createDocument/lifecycle (unchanged).
-// The invoked path (real click → streamId → getUserMedia → level) is unit-
-// covered in tests/capture-orchestrator.test.ts (startFromAction) and needs
-// a real click + real tab audio — gate 2 of docs/manual-gates-runbook.md.
+//   (c) offscreen createDocument/lifecycle (unchanged),
+//   (d) the invoked path: CDP triggerAction → onClicked → startFromAction →
+//       getMediaStreamId → offscreen getUserMedia → `capturing` within 2 s on
+//       the active tab (mirror-written), meter level > 0 in headed mode.
+// The unit-level startFromAction path stays covered in
+// tests/capture-orchestrator.test.ts.
 
 import { test, expect, chromium, type BrowserContext, type Page, type Worker } from '@playwright/test';
 import { mkdtempSync, existsSync } from 'node:fs';
@@ -38,6 +48,20 @@ import { FIXTURE_PORT } from '../server';
 const extensionPath = resolve('.output/chrome-mv3-e2e');
 const fixtureBase = `http://127.0.0.1:${FIXTURE_PORT}`;
 const watchUrl = 'http://www.youtube.com/watch?v=e2e-fixture&fixture=real/manual-cue.json';
+const toneUrl = `${fixtureBase}/tone.html`;
+
+// 440 Hz oscillator at gain 0.4 — the audio-invocation spike's tone.
+// window.__toneStarted lets the suite wait for the AudioContext to run.
+const TONE_HTML = `<!doctype html><html><body><script>
+const ctx = new AudioContext();
+const osc = ctx.createOscillator();
+const gain = ctx.createGain();
+gain.gain.value = 0.4;
+osc.frequency.value = 440;
+osc.connect(gain).connect(ctx.destination);
+osc.start();
+window.__toneStarted = true;
+</script></body></html>`;
 
 // Pinned orchestrator guidance: tabCapture rejected because no invocation
 // gesture (action click) happened on the target tab.
@@ -64,6 +88,9 @@ declare global {
       namespace session {
         function get(key: string): Promise<Record<string, unknown>>;
       }
+    }
+    namespace tabs {
+      function query(queryInfo: Record<string, unknown>): Promise<Array<{ id?: number; url?: string }>>;
     }
     namespace offscreen {
       function createDocument(options: {
@@ -97,9 +124,16 @@ test.beforeAll(async () => {
     args: [
       `--disable-extensions-except=${extensionPath}`,
       `--load-extension=${extensionPath}`,
+      // The tone tab's AudioContext must start without a click gesture.
+      '--autoplay-policy=no-user-gesture-required',
       ...(process.env.E2E_CFT_HEADED === '1' ? ['--window-position=-9999,-9999'] : []),
     ],
   });
+  // The tone page for the invocation test (same origin as the fixture
+  // server; route-fulfilled so no network leaves the machine).
+  await context.route(toneUrl, (route) =>
+    route.fulfill({ status: 200, contentType: 'text/html', body: TONE_HTML }),
+  );
   // Same youtube-origin fixture interception as the main suite: the watch
   // page and caption fetch are fulfilled from the local fixture server.
   await context.route('**://www.youtube.com/**', async (route) => {
@@ -229,4 +263,103 @@ test('capture orchestrator: probe-start without invocation lands on the guidance
     return items.probeCapture ?? null;
   });
   expect(finalMirror).toBeNull();
+});
+
+test('action invocation via CDP triggerAction: orchestrator reaches capturing within 2s on the active tab', async () => {
+  // chrome.action.triggerExtensionAction() does not exist on CfT 151
+  // (measured: hasTrigger false); the CDP Extensions.triggerAction command is
+  // the browser-side equivalent of a toolbar click and satisfies the
+  // tabCapture invocation requirement (spike evidence: audio-invocation-probe).
+  // It fires onClicked for the window's ACTIVE tab, so the tone tab must be
+  // in front at trigger time.
+  const tone = await context.newPage();
+  await tone.goto(toneUrl);
+  await tone.waitForFunction(() => (window as unknown as { __toneStarted?: boolean }).__toneStarted === true);
+  await tone.bringToFront();
+
+  const cdp = await context.browser()!.newBrowserCDPSession();
+  const tabTargets: Array<{ type: string; targetId: string; url: string }> = [];
+  cdp.on('Target.attachedToTarget', (ev: { targetInfo: { type: string; targetId: string; url?: string } }) => {
+    tabTargets.push({
+      type: ev.targetInfo.type,
+      targetId: ev.targetInfo.targetId,
+      url: ev.targetInfo.url ?? '',
+    });
+  });
+  // Tab targets sit above page targets and are not listed by a plain
+  // Target.getTargets; auto-attach (as Puppeteer does) surfaces them.
+  await cdp.send('Target.setAutoAttach', {
+    autoAttach: true,
+    waitForDebuggerOnStart: false,
+    flatten: true,
+    filter: [{ type: 'tab', exclude: false }],
+  });
+  await tone.waitForTimeout(500);
+  const toneTab = tabTargets.find((t) => t.type === 'tab' && t.url.includes('tone.html'));
+  expect(toneTab, 'tone tab target discovered').toBeDefined();
+  // The captured tab is the window's ACTIVE tab (invocation semantics; the
+  // mirror records which tab got captured). chrome.tabs.query does not
+  // expose urls without the tabs permission, so pin identity via the active
+  // tab id captured right before the trigger.
+  expect(await tone.evaluate(() => document.visibilityState)).toBe('visible');
+  const activeTabId = await serviceWorker.evaluate(async () => {
+    const [active] = await chrome.tabs.query({ active: true });
+    return active?.id ?? null;
+  });
+  const extensionId = new URL(serviceWorker.url()).host;
+  await cdp.send('Extensions.triggerAction', { id: extensionId, targetId: toneTab!.targetId });
+
+  // Orchestrator must reach `capturing` fast (spike: first poll already
+  // capturing); the 2s bound is the runbook expectation.
+  const startedAt = Date.now();
+  const snap = await optionsPage.evaluate(async () => {
+    for (let i = 0; i < 20; i++) {
+      const s = (await chrome.runtime.sendMessage({ kind: 'probe-state' })) as {
+        state: string;
+        level: number;
+        error?: string;
+      };
+      if (s.state === 'capturing' || s.state === 'error') return s;
+      await new Promise((r) => setTimeout(r, 100));
+    }
+    return null;
+  });
+  const elapsedMs = Date.now() - startedAt;
+  expect(snap).not.toBeNull();
+  expect(snap!.state).toBe('capturing');
+  expect(snap!.error).toBeUndefined();
+  expect(elapsedMs).toBeLessThan(2000);
+
+  const mirror = await serviceWorker.evaluate(async () => {
+    const items = (await chrome.storage.session.get('probeCapture')) as {
+      probeCapture?: { state: string; tabId: number };
+    };
+    return items.probeCapture ?? null;
+  });
+  expect(mirror?.tabId).toBe(activeTabId);
+
+  // The meter: real tab audio only flows headed (headless Chrome renders no
+  // audio, Chromium issue 40176215; the spike measured level 0.2832 headed
+  // on this box). Assert the audio path under E2E_CFT_HEADED=1, pin the
+  // headless zero otherwise.
+  if (process.env.E2E_CFT_HEADED === '1') {
+    const level = await optionsPage.evaluate(async () => {
+      let max = 0;
+      for (let i = 0; i < 40; i++) {
+        const s = (await chrome.runtime.sendMessage({ kind: 'probe-state' })) as { level: number };
+        if (typeof s.level === 'number') max = Math.max(max, s.level);
+        if (max > 0.01) break;
+        await new Promise((r) => setTimeout(r, 250));
+      }
+      return max;
+    });
+    expect(level).toBeGreaterThan(0.01);
+  } else {
+    const level = (await optionsPage.evaluate(() =>
+      chrome.runtime.sendMessage({ kind: 'probe-state' }),
+    )) as { level: number };
+    expect(level.level).toBe(0);
+  }
+
+  await optionsPage.evaluate(() => chrome.runtime.sendMessage({ kind: 'probe-stop' }));
 });

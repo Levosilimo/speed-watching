@@ -23,6 +23,6 @@
     "@huggingface/transformers",
     "sharp"
   ],
-  "ignoreBinaries": ["ffmpeg"],
+  "ignoreBinaries": ["ffmpeg", "yt-dlp"],
   "ignoreExportsUsedInFile": true
 }
