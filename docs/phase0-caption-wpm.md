@@ -291,6 +291,11 @@ above is the replacement. The product-side guard for the pause dilution:
   is inadequate (phase-0 mean 83.6% of text tokens timed): sparse
   coverage misestimates speechDur. The caller supplies the coverage
   sanity before passing an articulatory rate.
+- **Production wiring.** entrypoints/content.ts renders word-timed ASR
+  tracks (≥2 timed words) as the `asr-word` tier and feeds recommend()
+  `wordTierInputs` (lib/wpm.ts: articulatoryWpm + coverage flag), so the
+  warning fires on real YouTube payloads. The generic matcher harvests
+  cue-level VTT captions only, so it stays on `manual-cue`/`estimated`.
 - **Tier restriction is structural.** manual-cue already silence-corrects
   toward speech duration; asr-cue and estimated carry no word timing at
   all. Only asr-word can produce an articulatory estimate.

@@ -26,6 +26,7 @@ import { recommend, type Recommendation } from '../../lib/recommend';
 import { defaultSettings, type Settings } from '../../lib/settings';
 import type { PillState } from '../../ui/pill';
 import {
+  asrTierInputs,
   correctedCueLevelWpm,
   cueLevelWpm,
   filteredTokensOverTrimmedSpan,
@@ -126,19 +127,23 @@ function expectedStats(fixture: string): ExpectedStats {
 }
 
 /** The recommendation the content script must produce for a fixture
- * (default settings: target 250, platformMax 2, no overrides). */
-function expectedRecommendation(fixture: string): { rec: Recommendation; naturalRate: number } {
+ * (default settings: target 250, platformMax 2, no overrides). Mirror of
+ * entrypoints/content.ts: word-timed ASR tracks carry the articulatory
+ * inputs that can fire the pause-diluted warning. */
+export function expectedRecommendation(fixture: string): { rec: Recommendation; naturalRate: number } {
   const json = JSON.parse(readFileSync(join(fixtureRoot, fixture), 'utf8')) as unknown;
-  const { cues } = parseYouTubeJson3(json);
+  const { words, cues } = parseYouTubeJson3(json);
   const kind = KIND_BY_FIXTURE[fixture];
   const naturalRate = kind === 'asr' ? filteredTokensOverTrimmedSpan(cues) : manualCueRate(cues);
   if (naturalRate === null) throw new Error(`${fixture}: no natural rate`);
   const detected = detectMusic(cues, naturalRate) ? 'music' : 'generic';
+  const { tier, wordInputs } = asrTierInputs(kind, words, cues);
   const rec = recommend({
     naturalRate,
-    tier: kind === 'asr' ? 'asr-cue' : 'manual-cue',
+    tier,
     contentType: detected,
     platformMax: 2,
+    ...wordInputs,
   });
   return { rec, naturalRate };
 }
@@ -220,6 +225,12 @@ export async function runPillSpecs(driver: E2EDriver): Promise<void> {
     }
     if (state.tierLabel !== rec.tierLabel) {
       throw new Error(`${fixture}: pill tierLabel ${state.tierLabel} !== expected ${rec.tierLabel}`);
+    }
+    // The warning reason (pause-diluted on word-timed ASR) must survive the
+    // whole pipeline into the pill state — the e2e half of the production
+    // wiring for the articulatory warning.
+    if (state.reason !== rec.reason) {
+      throw new Error(`${fixture}: pill reason ${state.reason} !== expected ${rec.reason}`);
     }
     const source = await driver.readCaptionSource();
     if (source !== 'web') throw new Error(`${fixture}: caption source ${source}, expected web`);
