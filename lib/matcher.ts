@@ -10,9 +10,11 @@
 // matcher re-applies on ratechange/play/pause and on a fixed interval.
 //
 // The loop only runs while the pill recommendation is active (start() is
-// called from the Apply handler, stop() from Dismiss) and only re-asserts
-// when the video's rate diverges from the last-applied multiplier, so a
-// dismissed recommendation never fights the user's manual rate.
+// called from the Apply handler, stop() from Dismiss). It treats a reset to
+// playbackRate 1.0 (player re-init, seek) as the only re-assert trigger: any
+// other divergence — including a user's manual rate — is respected, so the
+// loop never fights the user. Dismissed recommendations never re-assert at
+// all (stop() detaches the loop).
 
 export interface VideoLike {
   playbackRate: number;
@@ -92,7 +94,9 @@ export class RateReapplier {
       this.stop();
       return;
     }
-    if (Math.abs(video.playbackRate - this.applied) > RATE_EPSILON) {
+    // Reset sentinel: players reset to exactly 1.0; any other rate is a
+    // deliberate user change and stays untouched.
+    if (Math.abs(video.playbackRate - 1) <= RATE_EPSILON) {
       this.applied = applyRate(video, this.applied, this.platformMax);
     }
   };

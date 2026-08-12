@@ -28,6 +28,7 @@ import {
   runBridgeSpecs,
   runGenericSpecs,
   runMeasurementSpecs,
+  runMultiVideoSpecs,
   runPillSpecs,
   type CaptionSource,
   type E2EDriver,
@@ -131,11 +132,30 @@ async function main(): Promise<void> {
       async dismissPill() {
         await driver.executeScript('window.__speedwatcherPill && window.__speedwatcherPill.dismiss()');
       },
-      async readPlaybackRate() {
+      async readPlaybackRate(index = 0) {
         const value = await driver.executeScript(
-          'return document.querySelector("video") ? document.querySelector("video").playbackRate : null',
+          'const v = document.querySelectorAll("video")[arguments[0]]; return v ? v.playbackRate : null',
+          index,
         );
         return value as unknown as number | null;
+      },
+      async setPlaybackRate(rate) {
+        await driver.executeScript(
+          'const v = document.querySelector("video"); if (v) v.playbackRate = arguments[0];',
+          rate,
+        );
+      },
+      async navigateToMultiVideo(fixture) {
+        await driver.get(
+          `http://www.youtube.com/watch?v=e2e-fixture&fixture=${fixture}&multi=1`,
+        );
+      },
+      async fireMediaEvent(index, type) {
+        await driver.executeScript(
+          'const v = document.querySelectorAll("video")[arguments[0]]; if (v) v.dispatchEvent(new Event(arguments[1]));',
+          index,
+          type,
+        );
       },
       async readCaptionSource() {
         const deadline = Date.now() + 15_000;
@@ -200,6 +220,7 @@ async function main(): Promise<void> {
     await runPillSpecs(e2e);
     await runBridgeSpecs(e2e);
     await runGenericSpecs(e2e);
+    await runMultiVideoSpecs(e2e);
     if (server.androidPosts() === 0) {
       // The web-blocked fixture must have sent the ANDROID innertube POST
       // (same-origin, so the PAC proxy delivers it to this server).

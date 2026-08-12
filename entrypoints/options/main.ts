@@ -246,14 +246,19 @@ const habitList = el('habit-list');
 function renderHabits(habits: OverrideLogEntry[]): void {
   habitTotal.textContent = String(habits.length);
 
+  // Same semantics as OverrideLog.report(): the average covers only applied
+  // multipliers — dismisses and adjusts never set the playback speed.
+  const applied = habits.filter((h) => h.userAction === 'apply');
+  const avg =
+    applied.length === 0
+      ? null
+      : applied.reduce((sum, h) => sum + h.multiplier, 0) / applied.length;
+  habitAvgMult.textContent = avg === null ? '—' : `${avg.toFixed(2)}×`;
+
   if (habits.length === 0) {
-    habitAvgMult.textContent = '—';
     habitList.innerHTML = '';
     return;
   }
-
-  const avg = habits.reduce((sum, h) => sum + h.multiplier, 0) / habits.length;
-  habitAvgMult.textContent = `${avg.toFixed(2)}×`;
 
   // Group by content type
   const byType = new Map<ContentType, number>();
@@ -320,7 +325,9 @@ async function loadSettings(): Promise<void> {
 
 void loadSettings();
 
-// Listen for storage changes from other contexts (e.g., pill apply)
+// Listen for storage changes from other contexts (e.g., pill apply), with a
+// focus/visibility fallback: a backgrounded or discarded options tab can
+// miss onChanged events while the log or demand counter moves.
 browser.storage.local.onChanged.addListener((changes) => {
   if (changes[OVERRIDE_LOG_STORAGE_KEY] !== undefined) {
     void overrideLog.entries().then(renderHabits);
@@ -328,4 +335,14 @@ browser.storage.local.onChanged.addListener((changes) => {
   if (changes[DEMAND_STORAGE_KEY] !== undefined) {
     void demandStore.get().then(renderDemand);
   }
+});
+
+function refreshFromStorage(): void {
+  void overrideLog.entries().then(renderHabits);
+  void demandStore.get().then(renderDemand);
+}
+
+window.addEventListener('focus', refreshFromStorage);
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') refreshFromStorage();
 });

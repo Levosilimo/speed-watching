@@ -17,5 +17,8 @@ export const chromeMock = {
   },
   tabCapture: { getMediaStreamId: vi.fn() },
   offscreen: { createDocument: vi.fn() },
-  storage: { session: { get: vi.fn(), set: vi.fn(), remove: vi.fn() } },
+  storage: {
+    session: { get: vi.fn(), set: vi.fn(), remove: vi.fn() },
+    local: { get: vi.fn(), set: vi.fn(), onChanged: { addListener: vi.fn() } },
+  },
 };

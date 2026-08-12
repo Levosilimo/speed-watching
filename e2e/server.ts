@@ -152,10 +152,14 @@ export function createFixtureServer(port = FIXTURE_PORT): Promise<FixtureServer>
             },
           }),
     };
-    const page = html.replace(
-      '__PLAYER_RESPONSE_JSON__',
-      JSON.stringify(playerResponse).replaceAll('</', '<\\/'),
-    );
+    const page = html
+      .replace(
+        '__PLAYER_RESPONSE_JSON__',
+        JSON.stringify(playerResponse).replaceAll('</', '<\\/'),
+      )
+      // multi=1 serves a second <video>: the multi-video e2e asserts that
+      // active-element selection follows the video that actually plays.
+      .replace('__EXTRA_VIDEO__', url.searchParams.get('multi') === '1' ? '<video id="movie_player_2"></video>' : '');
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.end(page);
   });
