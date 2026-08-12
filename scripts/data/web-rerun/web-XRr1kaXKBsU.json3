@@ -4,189 +4,415 @@
   {}
  ],
  "wsWinStyles": [
-  {}
+  {},
+  {
+   "mhModeHint": 2,
+   "juJustifCode": 0,
+   "sdScrollDir": 3
+  }
  ],
  "wpWinPositions": [
-  {}
+  {},
+  {
+   "apPoint": 6,
+   "ahHorPos": 20,
+   "avVerPos": 100,
+   "rcRows": 2,
+   "ccCols": 40
+  }
  ],
  "events": [
   {
-   "tStartMs": 8570,
-   "dDurationMs": 3370,
+   "tStartMs": 0,
+   "dDurationMs": 1055200,
+   "id": 1,
+   "wpWinPosId": 1,
+   "wsWinStyleId": 1
+  },
+  {
+   "tStartMs": 4050,
+   "dDurationMs": 7650,
+   "wWinId": 1,
    "segs": [
     {
-     "utf8": "This video is sponsored by Caseta by Lutron"
+     "utf8": "[Music]"
     }
    ]
   },
   {
-   "tStartMs": 17480,
-   "dDurationMs": 4520,
+   "tStartMs": 8870,
+   "dDurationMs": 2830,
+   "wWinId": 1,
+   "aAppend": 1,
    "segs": [
     {
-     "utf8": "According to the general theory of relativity, gravity is not a force."
+     "utf8": "\n"
     }
    ]
   },
   {
-   "tStartMs": 22000,
+   "tStartMs": 8880,
+   "dDurationMs": 6040,
+   "wWinId": 1,
+   "segs": [
+    {
+     "utf8": "this",
+     "acAsrConf": 255
+    },
+    {
+     "utf8": " video",
+     "tOffsetMs": 240,
+     "acAsrConf": 255
+    },
+    {
+     "utf8": " was",
+     "tOffsetMs": 560,
+     "acAsrConf": 255
+    },
+    {
+     "utf8": " sponsored",
+     "tOffsetMs": 719,
+     "acAsrConf": 255
+    },
+    {
+     "utf8": " by",
+     "tOffsetMs": 1040,
+     "acAsrConf": 255
+    },
+    {
+     "utf8": " caseta",
+     "tOffsetMs": 1200,
+     "acAsrConf": 255
+    },
+    {
+     "utf8": " by",
+     "tOffsetMs": 1759,
+     "acAsrConf": 255
+    }
+   ]
+  },
+  {
+   "tStartMs": 11690,
+   "dDurationMs": 3230,
+   "wWinId": 1,
+   "aAppend": 1,
+   "segs": [
+    {
+     "utf8": "\n"
+    }
+   ]
+  },
+  {
+   "tStartMs": 11700,
    "dDurationMs": 5820,
+   "wWinId": 1,
    "segs": [
     {
-     "utf8": "There are no gravitational fields, gravity is kind of an illusion."
+     "utf8": "[Music]"
     }
    ]
   },
   {
-   "tStartMs": 27820,
-   "dDurationMs": 8400,
+   "tStartMs": 14910,
+   "dDurationMs": 2610,
+   "wWinId": 1,
+   "aAppend": 1,
    "segs": [
     {
-     "utf8": "And in this video, I will prove it to you by blasting off into outer space in 321"
+     "utf8": "\n"
     }
    ]
   },
   {
-   "tStartMs": 50050,
-   "dDurationMs": 3770,
+   "tStartMs": 14920,
+   "dDurationMs": 4119,
+   "wWinId": 1,
    "segs": [
     {
-     "utf8": "Albert Einstein said the happiest thought of his life"
+     "utf8": "lutron",
+     "acAsrConf": 255
     }
    ]
   },
   {
-   "tStartMs": 53820,
-   "dDurationMs": 4920,
+   "tStartMs": 17510,
+   "dDurationMs": 1529,
+   "wWinId": 1,
+   "aAppend": 1,
    "segs": [
     {
-     "utf8": "was imagining a man falling off the roof of a house."
+     "utf8": "\n"
     }
    ]
   },
   {
-   "tStartMs": 58740,
-   "dDurationMs": 4340,
+   "tStartMs": 17520,
+   "dDurationMs": 4400,
+   "wWinId": 1,
    "segs": [
     {
-     "utf8": "What made Einstein so happy about this wasn't Schadenfreude,"
+     "utf8": "according",
+     "acAsrConf": 255
+    },
+    {
+     "utf8": " to",
+     "tOffsetMs": 480,
+     "acAsrConf": 255
+    },
+    {
+     "utf8": " the",
+     "tOffsetMs": 640,
+     "acAsrConf": 255
+    },
+    {
+     "utf8": " general",
+     "tOffsetMs": 720,
+     "acAsrConf": 255
+    },
+    {
+     "utf8": " theory",
+     "tOffsetMs": 1120,
+     "acAsrConf": 255
+    },
+    {
+     "utf8": " of",
+     "tOffsetMs": 1440,
+     "acAsrConf": 255
     }
    ]
   },
   {
-   "tStartMs": 63080,
-   "dDurationMs": 5430,
+   "tStartMs": 19029,
+   "dDurationMs": 2891,
+   "wWinId": 1,
+   "aAppend": 1,
    "segs": [
     {
-     "utf8": "It was the realization that this man, while he was falling wouldn't feel his own weight."
+     "utf8": "\n"
     }
    ]
   },
   {
-   "tStartMs": 68510,
-   "dDurationMs": 3710,
+   "tStartMs": 19039,
+   "dDurationMs": 5681,
+   "wWinId": 1,
    "segs": [
     {
-     "utf8": "He would be weightless and anything he dropped on his way down,"
+     "utf8": "relativity",
+     "acAsrConf": 255
+    },
+    {
+     "utf8": " gravity",
+     "tOffsetMs": 1041,
+     "acAsrConf": 255
+    },
+    {
+     "utf8": " is",
+     "tOffsetMs": 1601,
+     "acAsrConf": 255
+    },
+    {
+     "utf8": " not",
+     "tOffsetMs": 1761,
+     "acAsrConf": 255
+    },
+    {
+     "utf8": " a",
+     "tOffsetMs": 1921,
+     "acAsrConf": 255
+    },
+    {
+     "utf8": " force",
+     "tOffsetMs": 2080,
+     "acAsrConf": 255
     }
    ]
   },
   {
-   "tStartMs": 72220,
-   "dDurationMs": 4860,
+   "tStartMs": 21910,
+   "dDurationMs": 2810,
+   "wWinId": 1,
+   "aAppend": 1,
    "segs": [
     {
-     "utf8": "Well, it would remain stationary relative to him or moving in uniform motion."
+     "utf8": "\n"
     }
    ]
   },
   {
-   "tStartMs": 78050,
-   "dDurationMs": 5090,
+   "tStartMs": 21920,
+   "dDurationMs": 3599,
+   "wWinId": 1,
    "segs": [
     {
-     "utf8": "The whole situation would be just like.."
+     "utf8": "there",
+     "acAsrConf": 255
+    },
+    {
+     "utf8": " are",
+     "tOffsetMs": 400,
+     "acAsrConf": 255
+    },
+    {
+     "utf8": " no",
+     "tOffsetMs": 720,
+     "acAsrConf": 255
+    },
+    {
+     "utf8": " gravitational",
+     "tOffsetMs": 960,
+     "acAsrConf": 255
+    },
+    {
+     "utf8": " fields",
+     "tOffsetMs": 1680,
+     "acAsrConf": 255
     }
    ]
   },
   {
-   "tStartMs": 83140,
-   "dDurationMs": 3710,
+   "tStartMs": 24710,
+   "dDurationMs": 809,
+   "wWinId": 1,
+   "aAppend": 1,
    "segs": [
     {
-     "utf8": "If you were in deep space, not near any large masses."
+     "utf8": "\n"
     }
    ]
   },
   {
-   "tStartMs": 88850,
-   "dDurationMs": 4520,
+   "tStartMs": 24720,
+   "dDurationMs": 4399,
+   "wWinId": 1,
    "segs": [
     {
-     "utf8": "With your spaceship at rest or coasting along at constant velocity"
+     "utf8": "gravity",
+     "acAsrConf": 255
     }
    ]
   },
   {
-   "tStartMs": 94220,
-   "dDurationMs": 3150,
+   "tStartMs": 25509,
+   "dDurationMs": 3610,
+   "wWinId": 1,
+   "aAppend": 1,
    "segs": [
     {
-     "utf8": "Here, you would feel no weight"
+     "utf8": "\n"
     }
    ]
   },
   {
-   "tStartMs": 97370,
-   "dDurationMs": 8570,
+   "tStartMs": 25519,
+   "dDurationMs": 6321,
+   "wWinId": 1,
    "segs": [
     {
-     "utf8": "Objects would remain stationary relative to you or if you give them a push, they would move in a straight line at constant velocity"
+     "utf8": "is",
+     "acAsrConf": 255
+    },
+    {
+     "utf8": " kind",
+     "tOffsetMs": 401,
+     "acAsrConf": 255
+    },
+    {
+     "utf8": " of",
+     "tOffsetMs": 721,
+     "acAsrConf": 255
+    },
+    {
+     "utf8": " an",
+     "tOffsetMs": 961,
+     "acAsrConf": 255
+    },
+    {
+     "utf8": " illusion",
+     "tOffsetMs": 1201,
+     "acAsrConf": 255
+    },
+    {
+     "utf8": " and",
+     "tOffsetMs": 2481,
+     "acAsrConf": 255
+    },
+    {
+     "utf8": " in",
+     "tOffsetMs": 2721,
+     "acAsrConf": 255
+    },
+    {
+     "utf8": " this",
+     "tOffsetMs": 2881,
+     "acAsrConf": 255
+    },
+    {
+     "utf8": " video",
+     "tOffsetMs": 3041,
+     "acAsrConf": 255
     }
    ]
   },
   {
-   "tStartMs": 105940,
-   "dDurationMs": 4570,
+   "tStartMs": 29109,
+   "dDurationMs": 2731,
+   "wWinId": 1,
+   "aAppend": 1,
    "segs": [
     {
-     "utf8": "And you would be the very definition of an inertial observer,"
+     "utf8": "\n"
     }
    ]
   },
   {
-   "tStartMs": 110510,
-   "dDurationMs": 3550,
+   "tStartMs": 29119,
+   "dDurationMs": 4321,
+   "wWinId": 1,
    "segs": [
     {
-     "utf8": "you're not accelerating, not in a gravitational field,"
-    }
-   ]
-  },
-  {
-   "tStartMs": 114060,
-   "dDurationMs": 3480,
-   "segs": [
+     "utf8": "i",
+     "acAsrConf": 255
+    },
     {
-     "utf8": "all the laws of physics apply in your reference frame,"
-    }
-   ]
-  },
-  {
-   "tStartMs": 117540,
-   "dDurationMs": 6680,
-   "segs": [
+     "utf8": " will",
+     "tOffsetMs": 240,
+     "acAsrConf": 255
+    },
     {
-     "utf8": "meaning there is no experiment, you could do to distinguish your initial reference frame from any other"
-    }
-   ]
-  },
-  {
-   "tStartMs": 127020,
-   "dDurationMs": 2000,
-   "segs": [
+     "utf8": " prove",
+     "tOffsetMs": 480,
+     "acAsrConf": 255
+    },
     {
-     "utf8": "Now here comes the big leap:"
+     "utf8": " it",
+     "tOffsetMs": 881,
+     "acAsrConf": 255
+    },
+    {
+     "utf8": " to",
+     "tOffsetMs": 961,
+     "acAsrConf": 255
+    },
+    {
+     "utf8": " you",
+     "tOffsetMs": 1121,
+     "acAsrConf": 255
+    },
+    {
+     "utf8": " by",
+     "tOffsetMs": 1681,
+     "acAsrConf": 255
+    },
+    {
+     "utf8": " blasting",
+     "tOffsetMs": 1920,
+     "acAsrConf": 255
+    },
+    {
+     "utf8": " off",
+     "tOffsetMs": 2400,
+     "acAsrConf": 255
     }
    ]
   }

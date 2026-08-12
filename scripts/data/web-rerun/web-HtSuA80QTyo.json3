@@ -4,189 +4,461 @@
   {}
  ],
  "wsWinStyles": [
-  {}
+  {},
+  {
+   "mhModeHint": 2,
+   "juJustifCode": 0,
+   "sdScrollDir": 3
+  }
  ],
  "wpWinPositions": [
-  {}
+  {},
+  {
+   "apPoint": 6,
+   "ahHorPos": 20,
+   "avVerPos": 100,
+   "rcRows": 2,
+   "ccCols": 40
+  }
  ],
  "events": [
   {
-   "tStartMs": 50,
+   "tStartMs": 0,
+   "dDurationMs": 3202460,
+   "id": 1,
+   "wpWinPosId": 1,
+   "wsWinStyleId": 1
+  },
+  {
+   "tStartMs": 30,
+   "dDurationMs": 4559,
+   "wWinId": 1,
+   "segs": [
+    {
+     "utf8": "the",
+     "acAsrConf": 252
+    },
+    {
+     "utf8": " following",
+     "tOffsetMs": 119,
+     "acAsrConf": 252
+    },
+    {
+     "utf8": " content",
+     "tOffsetMs": 450,
+     "acAsrConf": 207
+    },
+    {
+     "utf8": " is",
+     "tOffsetMs": 1020,
+     "acAsrConf": 252
+    },
+    {
+     "utf8": " provided",
+     "tOffsetMs": 1230,
+     "acAsrConf": 252
+    },
+    {
+     "utf8": " under",
+     "tOffsetMs": 1289,
+     "acAsrConf": 252
+    }
+   ]
+  },
+  {
+   "tStartMs": 1819,
+   "dDurationMs": 2770,
+   "wWinId": 1,
+   "aAppend": 1,
+   "segs": [
+    {
+     "utf8": "\n"
+    }
+   ]
+  },
+  {
+   "tStartMs": 1829,
+   "dDurationMs": 5010,
+   "wWinId": 1,
+   "segs": [
+    {
+     "utf8": "a",
+     "acAsrConf": 252
+    },
+    {
+     "utf8": " Creative",
+     "tOffsetMs": 150,
+     "acAsrConf": 252
+    },
+    {
+     "utf8": " Commons",
+     "tOffsetMs": 271,
+     "acAsrConf": 252
+    },
+    {
+     "utf8": " license",
+     "tOffsetMs": 661,
+     "acAsrConf": 226
+    },
+    {
+     "utf8": " your",
+     "tOffsetMs": 1441,
+     "acAsrConf": 200
+    },
+    {
+     "utf8": " support",
+     "tOffsetMs": 2251,
+     "acAsrConf": 227
+    }
+   ]
+  },
+  {
+   "tStartMs": 4579,
+   "dDurationMs": 2260,
+   "wWinId": 1,
+   "aAppend": 1,
+   "segs": [
+    {
+     "utf8": "\n"
+    }
+   ]
+  },
+  {
+   "tStartMs": 4589,
+   "dDurationMs": 4171,
+   "wWinId": 1,
+   "segs": [
+    {
+     "utf8": "will",
+     "acAsrConf": 217
+    },
+    {
+     "utf8": " help",
+     "tOffsetMs": 241,
+     "acAsrConf": 252
+    },
+    {
+     "utf8": " MIT",
+     "tOffsetMs": 270,
+     "acAsrConf": 252
+    },
+    {
+     "utf8": " OpenCourseWare",
+     "tOffsetMs": 781,
+     "acAsrConf": 252
+    },
+    {
+     "utf8": " continue",
+     "tOffsetMs": 901,
+     "acAsrConf": 214
+    },
+    {
+     "utf8": " to",
+     "tOffsetMs": 1801,
+     "acAsrConf": 208
+    }
+   ]
+  },
+  {
+   "tStartMs": 6829,
+   "dDurationMs": 1931,
+   "wWinId": 1,
+   "aAppend": 1,
+   "segs": [
+    {
+     "utf8": "\n"
+    }
+   ]
+  },
+  {
+   "tStartMs": 6839,
+   "dDurationMs": 3061,
+   "wWinId": 1,
+   "segs": [
+    {
+     "utf8": "offer",
+     "acAsrConf": 252
+    },
+    {
+     "utf8": " high",
+     "tOffsetMs": 121,
+     "acAsrConf": 255
+    },
+    {
+     "utf8": " quality",
+     "tOffsetMs": 690,
+     "acAsrConf": 255
+    },
+    {
+     "utf8": " educational",
+     "tOffsetMs": 721,
+     "acAsrConf": 252
+    },
+    {
+     "utf8": " resources",
+     "tOffsetMs": 1201,
+     "acAsrConf": 216
+    }
+   ]
+  },
+  {
+   "tStartMs": 8750,
+   "dDurationMs": 1150,
+   "wWinId": 1,
+   "aAppend": 1,
+   "segs": [
+    {
+     "utf8": "\n"
+    }
+   ]
+  },
+  {
+   "tStartMs": 8760,
+   "dDurationMs": 3419,
+   "wWinId": 1,
+   "segs": [
+    {
+     "utf8": "for",
+     "acAsrConf": 252
+    },
+    {
+     "utf8": " free",
+     "tOffsetMs": 540,
+     "acAsrConf": 206
+    }
+   ]
+  },
+  {
+   "tStartMs": 9890,
+   "dDurationMs": 2289,
+   "wWinId": 1,
+   "aAppend": 1,
+   "segs": [
+    {
+     "utf8": "\n"
+    }
+   ]
+  },
+  {
+   "tStartMs": 9900,
+   "dDurationMs": 4500,
+   "wWinId": 1,
+   "segs": [
+    {
+     "utf8": "to",
+     "acAsrConf": 252
+    },
+    {
+     "utf8": " make",
+     "tOffsetMs": 810,
+     "acAsrConf": 252
+    },
+    {
+     "utf8": " a",
+     "tOffsetMs": 960,
+     "acAsrConf": 252
+    },
+    {
+     "utf8": " donation",
+     "tOffsetMs": 989,
+     "acAsrConf": 215
+    },
+    {
+     "utf8": " or",
+     "tOffsetMs": 1380,
+     "acAsrConf": 252
+    },
+    {
+     "utf8": " view",
+     "tOffsetMs": 1710,
+     "acAsrConf": 237
+    },
+    {
+     "utf8": " additional",
+     "tOffsetMs": 1800,
+     "acAsrConf": 252
+    }
+   ]
+  },
+  {
+   "tStartMs": 12169,
+   "dDurationMs": 2231,
+   "wWinId": 1,
+   "aAppend": 1,
+   "segs": [
+    {
+     "utf8": "\n"
+    }
+   ]
+  },
+  {
+   "tStartMs": 12179,
+   "dDurationMs": 8211,
+   "wWinId": 1,
+   "segs": [
+    {
+     "utf8": "materials",
+     "acAsrConf": 252
+    },
+    {
+     "utf8": " from",
+     "tOffsetMs": 661,
+     "acAsrConf": 128
+    },
+    {
+     "utf8": " hundreds",
+     "tOffsetMs": 1170,
+     "acAsrConf": 252
+    },
+    {
+     "utf8": " of",
+     "tOffsetMs": 1710,
+     "acAsrConf": 252
+    },
+    {
+     "utf8": " MIT",
+     "tOffsetMs": 1801,
+     "acAsrConf": 252
+    },
+    {
+     "utf8": " courses",
+     "tOffsetMs": 1920,
+     "acAsrConf": 252
+    }
+   ]
+  },
+  {
+   "tStartMs": 14390,
+   "dDurationMs": 6000,
+   "wWinId": 1,
+   "aAppend": 1,
+   "segs": [
+    {
+     "utf8": "\n"
+    }
+   ]
+  },
+  {
+   "tStartMs": 14400,
+   "dDurationMs": 5990,
+   "wWinId": 1,
+   "segs": [
+    {
+     "utf8": "visit",
+     "acAsrConf": 209
+    },
+    {
+     "utf8": " MIT",
+     "tOffsetMs": 630,
+     "acAsrConf": 252
+    },
+    {
+     "utf8": " opencourseware",
+     "tOffsetMs": 1470,
+     "acAsrConf": 252
+    },
+    {
+     "utf8": " at",
+     "tOffsetMs": 1770,
+     "acAsrConf": 252
+    },
+    {
+     "utf8": " ocw.mit.edu",
+     "tOffsetMs": 2990,
+     "acAsrConf": 220
+    }
+   ]
+  },
+  {
+   "tStartMs": 21860,
+   "wWinId": 1,
+   "aAppend": 1,
+   "segs": [
+    {
+     "utf8": "\n"
+    }
+   ]
+  },
+  {
+   "tStartMs": 21870,
+   "dDurationMs": 5140,
+   "wWinId": 1,
+   "segs": [
+    {
+     "utf8": "hi",
+     "acAsrConf": 252
+    },
+    {
+     "utf8": " I'm",
+     "tOffsetMs": 1000,
+     "acAsrConf": 83
+    },
+    {
+     "utf8": " Sweeney",
+     "tOffsetMs": 1630,
+     "acAsrConf": 108
+    },
+    {
+     "utf8": " davidís",
+     "tOffsetMs": 2320,
+     "acAsrConf": 241
+    },
+    {
+     "utf8": " I'm",
+     "tOffsetMs": 2710,
+     "acAsrConf": 252
+    },
+    {
+     "utf8": " a",
+     "tOffsetMs": 2980,
+     "acAsrConf": 252
+    },
+    {
+     "utf8": " professor",
+     "tOffsetMs": 3010,
+     "acAsrConf": 252
+    }
+   ]
+  },
+  {
+   "tStartMs": 25290,
    "dDurationMs": 1720,
+   "wWinId": 1,
+   "aAppend": 1,
    "segs": [
     {
-     "utf8": "The following\ncontent is provided"
+     "utf8": "\n"
     }
    ]
   },
   {
-   "tStartMs": 1770,
-   "dDurationMs": 2240,
+   "tStartMs": 25300,
+   "dDurationMs": 3870,
+   "wWinId": 1,
    "segs": [
     {
-     "utf8": "under a Creative\nCommons license."
-    }
-   ]
-  },
-  {
-   "tStartMs": 4010,
-   "dDurationMs": 2850,
-   "segs": [
+     "utf8": "of",
+     "acAsrConf": 252
+    },
     {
-     "utf8": "Your support will help MIT\nOpenCourseWare continue"
-    }
-   ]
-  },
-  {
-   "tStartMs": 6860,
-   "dDurationMs": 3860,
-   "segs": [
+     "utf8": " election",
+     "tOffsetMs": 180,
+     "acAsrConf": 237
+    },
     {
-     "utf8": "to offer high quality\neducational resources for free."
-    }
-   ]
-  },
-  {
-   "tStartMs": 10720,
-   "dDurationMs": 2610,
-   "segs": [
+     "utf8": " engineering",
+     "tOffsetMs": 930,
+     "acAsrConf": 207
+    },
     {
-     "utf8": "To make a donation or\nview additional materials"
-    }
-   ]
-  },
-  {
-   "tStartMs": 13330,
-   "dDurationMs": 3877,
-   "segs": [
+     "utf8": " and",
+     "tOffsetMs": 1290,
+     "acAsrConf": 252
+    },
     {
-     "utf8": "from hundreds of MIT courses,\nvisit MIT OpenCourseWare"
-    }
-   ]
-  },
-  {
-   "tStartMs": 17207,
-   "dDurationMs": 625,
-   "segs": [
-    {
-     "utf8": "at ocw.mit.edu."
-    }
-   ]
-  },
-  {
-   "tStartMs": 22730,
-   "dDurationMs": 660,
-   "segs": [
-    {
-     "utf8": "PROFESSOR: Hi."
-    }
-   ]
-  },
-  {
-   "tStartMs": 23390,
-   "dDurationMs": 1360,
-   "segs": [
-    {
-     "utf8": "I'm Srini Devadas."
-    }
-   ]
-  },
-  {
-   "tStartMs": 24750,
-   "dDurationMs": 2290,
-   "segs": [
-    {
-     "utf8": "I'm a professor of electrical\nengineering and computer"
-    }
-   ]
-  },
-  {
-   "tStartMs": 27040,
-   "dDurationMs": 610,
-   "segs": [
-    {
-     "utf8": "science."
-    }
-   ]
-  },
-  {
-   "tStartMs": 27650,
-   "dDurationMs": 3320,
-   "segs": [
-    {
-     "utf8": "I'm going to be co-lecturing\n6.006-- Introduction"
-    }
-   ]
-  },
-  {
-   "tStartMs": 30970,
-   "dDurationMs": 3980,
-   "segs": [
-    {
-     "utf8": "to Algorithms-- this term\nwith professor Erik Domane."
-    }
-   ]
-  },
-  {
-   "tStartMs": 34950,
-   "dDurationMs": 1051,
-   "segs": [
-    {
-     "utf8": "Eric, say hi."
-    }
-   ]
-  },
-  {
-   "tStartMs": 36001,
-   "dDurationMs": 882,
-   "segs": [
-    {
-     "utf8": "ERIK DOMANE: Hi."
-    }
-   ]
-  },
-  {
-   "tStartMs": 36883,
-   "dDurationMs": 1767,
-   "segs": [
-    {
-     "utf8": "[LAUGHTER]"
-    }
-   ]
-  },
-  {
-   "tStartMs": 38650,
-   "dDurationMs": 1560,
-   "segs": [
-    {
-     "utf8": "PROFESSOR: And we\nhope you're going"
-    }
-   ]
-  },
-  {
-   "tStartMs": 40210,
-   "dDurationMs": 3500,
-   "segs": [
-    {
-     "utf8": "to have a fun time\nin 6.006 learning"
-    }
-   ]
-  },
-  {
-   "tStartMs": 43710,
-   "dDurationMs": 2050,
-   "segs": [
-    {
-     "utf8": "a variety of algorithms."
-    }
-   ]
-  },
-  {
-   "tStartMs": 45760,
-   "dDurationMs": 5000,
-   "segs": [
-    {
-     "utf8": "What I want to do today is\nspend literally a minute or so"
+     "utf8": " computer",
+     "tOffsetMs": 1410,
+     "acAsrConf": 252
     }
    ]
   }

@@ -322,9 +322,18 @@ function finalizeRun(input: {
   resultsFile: string;
   refixture: boolean;
   captureWebOnly: boolean;
+  noFixtures: boolean;
 }): void {
-  const { results, webPayloads, androidPayloads, originalBytes, resultsFile, refixture, captureWebOnly } =
-    input;
+  const {
+    results,
+    webPayloads,
+    androidPayloads,
+    originalBytes,
+    resultsFile,
+    refixture,
+    captureWebOnly,
+    noFixtures,
+  } = input;
   if (!refixture) {
     writeFileSync(
       resultsFile,
@@ -333,6 +342,7 @@ function finalizeRun(input: {
     );
     console.log(`\nresults -> ${resultsFile}`);
   }
+  if (noFixtures) return;
   if (!captureWebOnly) {
     saveFixtures(results, androidPayloads, FIXTURES_DIR);
   }
@@ -355,20 +365,24 @@ async function main(): Promise<void> {
   const headed = args.includes('--headed');
   const captureWebOnly = args.includes('--capture-web-only');
   const refixture = args.includes('--refixture');
+  const noFixtures = args.includes('--no-fixtures');
+  const videoArg = args.find((a) => a.startsWith('--video='));
   const limitArg =
     args.find((a) => a.startsWith('--limit=')) ??
     (args.includes('--limit') ? args[args.indexOf('--limit') + 1] : undefined);
   const limit = limitArg ? Number(limitArg) : VIDEOS.length;
   const outDirArg = args.find((a) => a.startsWith('--out-dir='));
   const outDir = outDirArg
-    ? isAbsolute(outDirArg.slice(9))
-      ? outDirArg.slice(9)
-      : join(ROOT, outDirArg.slice(9))
+    ? isAbsolute(outDirArg.slice(10))
+      ? outDirArg.slice(10)
+      : join(ROOT, outDirArg.slice(10))
     : DEFAULT_OUT_DIR;
   const resultsFile = join(outDir, 'rerun-results.jsonl');
-  const videos = refixture
-    ? VIDEOS.filter((v) => FIXTURE_SLOTS.some((s) => s.preferred === v.videoId))
-    : VIDEOS.slice(0, limit);
+  const videos = videoArg
+    ? VIDEOS.filter((v) => v.videoId === videoArg.slice(8))
+    : refixture
+      ? VIDEOS.filter((v) => FIXTURE_SLOTS.some((s) => s.preferred === v.videoId))
+      : VIDEOS.slice(0, limit);
 
   mkdirSync(outDir, { recursive: true });
   mkdirSync(FIXTURES_DIR, { recursive: true });
@@ -414,6 +428,7 @@ async function main(): Promise<void> {
     resultsFile,
     refixture,
     captureWebOnly,
+    noFixtures,
   });
 }
 

@@ -4,189 +4,455 @@
   {}
  ],
  "wsWinStyles": [
-  {}
+  {},
+  {
+   "mhModeHint": 2,
+   "juJustifCode": 0,
+   "sdScrollDir": 3
+  }
  ],
  "wpWinPositions": [
-  {}
+  {},
+  {
+   "apPoint": 6,
+   "ahHorPos": 20,
+   "avVerPos": 100,
+   "rcRows": 2,
+   "ccCols": 40
+  }
  ],
  "events": [
   {
-   "tStartMs": 3140,
-   "dDurationMs": 3265,
+   "tStartMs": 0,
+   "dDurationMs": 4516480,
+   "id": 1,
+   "wpWinPosId": 1,
+   "wsWinStyleId": 1
+  },
+  {
+   "tStartMs": 4160,
+   "dDurationMs": 3960,
+   "wWinId": 1,
    "segs": [
     {
-     "utf8": "Welcome to CS229 Machine Learning."
+     "utf8": "Welcome"
+    },
+    {
+     "utf8": " to",
+     "tOffsetMs": 360
+    },
+    {
+     "utf8": " CS229",
+     "tOffsetMs": 480
+    },
+    {
+     "utf8": " machine",
+     "tOffsetMs": 1160
+    },
+    {
+     "utf8": " learning.",
+     "tOffsetMs": 1480
     }
    ]
   },
   {
-   "tStartMs": 6405,
+   "tStartMs": 6790,
+   "dDurationMs": 1330,
+   "wWinId": 1,
+   "aAppend": 1,
+   "segs": [
+    {
+     "utf8": "\n"
+    }
+   ]
+  },
+  {
+   "tStartMs": 6800,
    "dDurationMs": 3520,
+   "wWinId": 1,
    "segs": [
     {
-     "utf8": "Uh, some of you know that this class has been taught at Stanford for a long time."
+     "utf8": "Some"
+    },
+    {
+     "utf8": " of",
+     "tOffsetMs": 240
+    },
+    {
+     "utf8": " you",
+     "tOffsetMs": 320
+    },
+    {
+     "utf8": " know",
+     "tOffsetMs": 400
+    },
+    {
+     "utf8": " that",
+     "tOffsetMs": 600
+    },
+    {
+     "utf8": " this",
+     "tOffsetMs": 840
+    },
+    {
+     "utf8": " is",
+     "tOffsetMs": 1000
+    },
+    {
+     "utf8": " a",
+     "tOffsetMs": 1040
+    },
+    {
+     "utf8": " class",
+     "tOffsetMs": 1080
     }
    ]
   },
   {
-   "tStartMs": 9925,
-   "dDurationMs": 2555,
+   "tStartMs": 8110,
+   "dDurationMs": 2210,
+   "wWinId": 1,
+   "aAppend": 1,
    "segs": [
     {
-     "utf8": "And this is often the course that, um,"
+     "utf8": "\n"
+    }
+   ]
+  },
+  {
+   "tStartMs": 8120,
+   "dDurationMs": 4360,
+   "wWinId": 1,
+   "segs": [
+    {
+     "utf8": "that"
+    },
+    {
+     "utf8": " was",
+     "tOffsetMs": 160
+    },
+    {
+     "utf8": " at",
+     "tOffsetMs": 280
+    },
+    {
+     "utf8": " Stanford",
+     "tOffsetMs": 400
+    },
+    {
+     "utf8": " for",
+     "tOffsetMs": 920
+    },
+    {
+     "utf8": " a",
+     "tOffsetMs": 1040
+    },
+    {
+     "utf8": " long",
+     "tOffsetMs": 1080
+    },
+    {
+     "utf8": " time",
+     "tOffsetMs": 1320
+    },
+    {
+     "utf8": " and",
+     "tOffsetMs": 2000
+    }
+   ]
+  },
+  {
+   "tStartMs": 10310,
+   "dDurationMs": 2170,
+   "wWinId": 1,
+   "aAppend": 1,
+   "segs": [
+    {
+     "utf8": "\n"
+    }
+   ]
+  },
+  {
+   "tStartMs": 10320,
+   "dDurationMs": 4000,
+   "wWinId": 1,
+   "segs": [
+    {
+     "utf8": "this"
+    },
+    {
+     "utf8": " is",
+     "tOffsetMs": 160
+    },
+    {
+     "utf8": " often",
+     "tOffsetMs": 320
+    },
+    {
+     "utf8": " the",
+     "tOffsetMs": 680
+    },
+    {
+     "utf8": " class",
+     "tOffsetMs": 800
+    },
+    {
+     "utf8": " that",
+     "tOffsetMs": 1160
+    }
+   ]
+  },
+  {
+   "tStartMs": 12470,
+   "dDurationMs": 1850,
+   "wWinId": 1,
+   "aAppend": 1,
+   "segs": [
+    {
+     "utf8": "\n"
     }
    ]
   },
   {
    "tStartMs": 12480,
-   "dDurationMs": 4600,
+   "dDurationMs": 4400,
+   "wWinId": 1,
    "segs": [
     {
-     "utf8": "I most look forward to teaching each year because this is where we've helped I think,"
+     "utf8": "I"
+    },
+    {
+     "utf8": " most",
+     "tOffsetMs": 120
+    },
+    {
+     "utf8": " look",
+     "tOffsetMs": 440
+    },
+    {
+     "utf8": " forward",
+     "tOffsetMs": 640
+    },
+    {
+     "utf8": " to",
+     "tOffsetMs": 960
+    },
+    {
+     "utf8": " teaching",
+     "tOffsetMs": 1200
+    },
+    {
+     "utf8": " each",
+     "tOffsetMs": 1640
     }
    ]
   },
   {
-   "tStartMs": 17080,
-   "dDurationMs": 4485,
+   "tStartMs": 14310,
+   "dDurationMs": 2570,
+   "wWinId": 1,
+   "aAppend": 1,
    "segs": [
     {
-     "utf8": "several generations of Stanford students become experts in machine learning, go on to build"
+     "utf8": "\n"
     }
    ]
   },
   {
-   "tStartMs": 21565,
-   "dDurationMs": 2685,
+   "tStartMs": 14320,
+   "dDurationMs": 4240,
+   "wWinId": 1,
    "segs": [
     {
-     "utf8": "many of their products and services and startups that I'm"
+     "utf8": "year"
+    },
+    {
+     "utf8": " because",
+     "tOffsetMs": 320
+    },
+    {
+     "utf8": " this",
+     "tOffsetMs": 680
+    },
+    {
+     "utf8": " is",
+     "tOffsetMs": 840
+    },
+    {
+     "utf8": " where",
+     "tOffsetMs": 1000
+    },
+    {
+     "utf8": " we've",
+     "tOffsetMs": 1640
+    },
+    {
+     "utf8": " helped",
+     "tOffsetMs": 2000
     }
    ]
   },
   {
-   "tStartMs": 24250,
-   "dDurationMs": 4390,
+   "tStartMs": 16870,
+   "dDurationMs": 1690,
+   "wWinId": 1,
+   "aAppend": 1,
    "segs": [
     {
-     "utf8": "sure many of you are pre- or all of you are using, uh, uh, today."
+     "utf8": "\n"
     }
    ]
   },
   {
-   "tStartMs": 28640,
-   "dDurationMs": 6550,
+   "tStartMs": 16880,
+   "dDurationMs": 3120,
+   "wWinId": 1,
    "segs": [
     {
-     "utf8": "Um, so what I want to do today was spend some time talking over, uh, logistics,"
+     "utf8": "I"
+    },
+    {
+     "utf8": " think",
+     "tOffsetMs": 80
+    },
+    {
+     "utf8": " several",
+     "tOffsetMs": 360
+    },
+    {
+     "utf8": " generations",
+     "tOffsetMs": 640
+    },
+    {
+     "utf8": " of",
+     "tOffsetMs": 1240
+    },
+    {
+     "utf8": " Stanford",
+     "tOffsetMs": 1320
     }
    ]
   },
   {
-   "tStartMs": 35190,
-   "dDurationMs": 2135,
+   "tStartMs": 18550,
+   "dDurationMs": 1450,
+   "wWinId": 1,
+   "aAppend": 1,
    "segs": [
     {
-     "utf8": "and then, uh, spend some time, you know,"
+     "utf8": "\n"
     }
    ]
   },
   {
-   "tStartMs": 37325,
-   "dDurationMs": 1925,
+   "tStartMs": 18560,
+   "dDurationMs": 3640,
+   "wWinId": 1,
    "segs": [
     {
-     "utf8": "giving you a beginning of a intro,"
+     "utf8": "students"
+    },
+    {
+     "utf8": " become",
+     "tOffsetMs": 360
+    },
+    {
+     "utf8": " expert",
+     "tOffsetMs": 680
+    },
+    {
+     "utf8": " in",
+     "tOffsetMs": 1080
+    },
+    {
+     "utf8": " machine",
+     "tOffsetMs": 1160
     }
    ]
   },
   {
-   "tStartMs": 39250,
-   "dDurationMs": 2625,
+   "tStartMs": 19990,
+   "dDurationMs": 2210,
+   "wWinId": 1,
+   "aAppend": 1,
    "segs": [
     {
-     "utf8": "talk a little bit about machine learning."
+     "utf8": "\n"
     }
    ]
   },
   {
-   "tStartMs": 41875,
-   "dDurationMs": 3135,
+   "tStartMs": 20000,
+   "dDurationMs": 4120,
+   "wWinId": 1,
    "segs": [
     {
-     "utf8": "So about 229."
+     "utf8": "learning,"
+    },
+    {
+     "utf8": " go",
+     "tOffsetMs": 840
+    },
+    {
+     "utf8": " and",
+     "tOffsetMs": 1080
+    },
+    {
+     "utf8": " build",
+     "tOffsetMs": 1160
+    },
+    {
+     "utf8": " many",
+     "tOffsetMs": 1600
+    },
+    {
+     "utf8": " of",
+     "tOffsetMs": 1880
+    },
+    {
+     "utf8": " their",
+     "tOffsetMs": 2000
     }
    ]
   },
   {
-   "tStartMs": 45010,
-   "dDurationMs": 2705,
+   "tStartMs": 22190,
+   "dDurationMs": 1930,
+   "wWinId": 1,
+   "aAppend": 1,
    "segs": [
     {
-     "utf8": "Um, you know,"
+     "utf8": "\n"
     }
    ]
   },
   {
-   "tStartMs": 47715,
-   "dDurationMs": 3065,
+   "tStartMs": 22200,
+   "dDurationMs": 4200,
+   "wWinId": 1,
    "segs": [
     {
-     "utf8": "all of you have been reading about AI in the news,"
-    }
-   ]
-  },
-  {
-   "tStartMs": 50780,
-   "dDurationMs": 2160,
-   "segs": [
+     "utf8": "products"
+    },
     {
-     "utf8": "uh, about machine learning in the news."
-    }
-   ]
-  },
-  {
-   "tStartMs": 52940,
-   "dDurationMs": 5560,
-   "segs": [
+     "utf8": " and",
+     "tOffsetMs": 320
+    },
     {
-     "utf8": "Um, and you probably heard me or others say, AI is the new electricity."
-    }
-   ]
-  },
-  {
-   "tStartMs": 58500,
-   "dDurationMs": 2870,
-   "segs": [
+     "utf8": " services",
+     "tOffsetMs": 440
+    },
     {
-     "utf8": "Uh, the emergence and rise of electricity about 100 years ago,"
-    }
-   ]
-  },
-  {
-   "tStartMs": 61370,
-   "dDurationMs": 2010,
-   "segs": [
+     "utf8": " and",
+     "tOffsetMs": 1000
+    },
     {
-     "utf8": "it transformed every major industry."
-    }
-   ]
-  },
-  {
-   "tStartMs": 63380,
-   "dDurationMs": 4410,
-   "segs": [
+     "utf8": " startups",
+     "tOffsetMs": 1120
+    },
     {
-     "utf8": "I think AI already we call machine learning for the rest of the world seems to call AI."
-    }
-   ]
-  },
-  {
-   "tStartMs": 67790,
-   "dDurationMs": 1020,
-   "segs": [
-    {
-     "utf8": "[NOISE]"
+     "utf8": " that",
+     "tOffsetMs": 1680
     }
    ]
   }

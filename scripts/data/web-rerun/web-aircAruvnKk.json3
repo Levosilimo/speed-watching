@@ -4,189 +4,510 @@
   {}
  ],
  "wsWinStyles": [
-  {}
+  {},
+  {
+   "mhModeHint": 2,
+   "juJustifCode": 0,
+   "sdScrollDir": 3
+  }
  ],
  "wpWinPositions": [
-  {}
+  {},
+  {
+   "apPoint": 6,
+   "ahHorPos": 20,
+   "avVerPos": 100,
+   "rcRows": 2,
+   "ccCols": 40
+  }
  ],
  "events": [
   {
-   "tStartMs": 4220,
-   "dDurationMs": 1180,
+   "tStartMs": 0,
+   "dDurationMs": 1119069,
+   "id": 1,
+   "wpWinPosId": 1,
+   "wsWinStyleId": 1
+  },
+  {
+   "tStartMs": 0,
+   "dDurationMs": 2510,
+   "wWinId": 1,
    "segs": [
     {
-     "utf8": "This is a 3."
+     "utf8": "[Music]"
     }
    ]
   },
   {
-   "tStartMs": 6060,
-   "dDurationMs": 4653,
+   "tStartMs": 4390,
+   "wWinId": 1,
+   "aAppend": 1,
    "segs": [
     {
-     "utf8": "It's sloppily written and rendered at an extremely low resolution of 28x28 pixels,"
+     "utf8": "\n"
     }
    ]
   },
   {
-   "tStartMs": 10713,
-   "dDurationMs": 3007,
+   "tStartMs": 4400,
+   "dDurationMs": 4159,
+   "wWinId": 1,
    "segs": [
     {
-     "utf8": "but your brain has no trouble recognizing it as a 3."
+     "utf8": "This",
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " is",
+     "tOffsetMs": 399,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " a",
+     "tOffsetMs": 560,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " three.",
+     "tOffsetMs": 800,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " It's",
+     "tOffsetMs": 1520,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " sloppily",
+     "tOffsetMs": 1680,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " written",
+     "tOffsetMs": 2240,
+     "acAsrConf": 0
     }
    ]
   },
   {
-   "tStartMs": 14340,
-   "dDurationMs": 2219,
+   "tStartMs": 6869,
+   "dDurationMs": 1690,
+   "wWinId": 1,
+   "aAppend": 1,
    "segs": [
     {
-     "utf8": "And I want you to take a moment to appreciate how"
+     "utf8": "\n"
     }
    ]
   },
   {
-   "tStartMs": 16559,
-   "dDurationMs": 2401,
+   "tStartMs": 6879,
+   "dDurationMs": 4561,
+   "wWinId": 1,
    "segs": [
     {
-     "utf8": "crazy it is that brains can do this so effortlessly."
+     "utf8": "and",
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " rendered",
+     "tOffsetMs": 241,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " at",
+     "tOffsetMs": 561,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " an",
+     "tOffsetMs": 801,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " extremely",
+     "tOffsetMs": 960,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " low",
+     "tOffsetMs": 1441,
+     "acAsrConf": 0
     }
    ]
   },
   {
-   "tStartMs": 19700,
-   "dDurationMs": 3262,
+   "tStartMs": 8549,
+   "dDurationMs": 2891,
+   "wWinId": 1,
+   "aAppend": 1,
    "segs": [
     {
-     "utf8": "I mean, this, this and this are also recognizable as 3s,"
+     "utf8": "\n"
     }
    ]
   },
   {
-   "tStartMs": 22962,
-   "dDurationMs": 4251,
+   "tStartMs": 8559,
+   "dDurationMs": 4960,
+   "wWinId": 1,
    "segs": [
     {
-     "utf8": "even though the specific values of each pixel is very different from one"
+     "utf8": "resolution",
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " of",
+     "tOffsetMs": 481,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " 28x",
+     "tOffsetMs": 801,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " 28",
+     "tOffsetMs": 1441,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " pixels.",
+     "tOffsetMs": 1841,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " But",
+     "tOffsetMs": 2561,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " your",
+     "tOffsetMs": 2641,
+     "acAsrConf": 0
     }
    ]
   },
   {
-   "tStartMs": 27213,
-   "dDurationMs": 1107,
+   "tStartMs": 11430,
+   "dDurationMs": 2089,
+   "wWinId": 1,
+   "aAppend": 1,
    "segs": [
     {
-     "utf8": "image to the next."
+     "utf8": "\n"
     }
    ]
   },
   {
-   "tStartMs": 28900,
-   "dDurationMs": 4048,
+   "tStartMs": 11440,
+   "dDurationMs": 3920,
+   "wWinId": 1,
    "segs": [
     {
-     "utf8": "The particular light-sensitive cells in your eye that are firing when you"
+     "utf8": "brain",
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " has",
+     "tOffsetMs": 239,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " no",
+     "tOffsetMs": 400,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " trouble",
+     "tOffsetMs": 640,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " recognizing",
+     "tOffsetMs": 960,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " it",
+     "tOffsetMs": 1520,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " as",
+     "tOffsetMs": 1680,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " a",
+     "tOffsetMs": 1920,
+     "acAsrConf": 0
     }
    ]
   },
   {
-   "tStartMs": 32948,
-   "dDurationMs": 3992,
+   "tStartMs": 13509,
+   "dDurationMs": 1851,
+   "wWinId": 1,
+   "aAppend": 1,
    "segs": [
     {
-     "utf8": "see this 3 are very different from the ones firing when you see this 3."
+     "utf8": "\n"
     }
    ]
   },
   {
-   "tStartMs": 37520,
-   "dDurationMs": 5220,
+   "tStartMs": 13519,
+   "dDurationMs": 3840,
+   "wWinId": 1,
    "segs": [
     {
-     "utf8": "But something in that crazy-smart visual cortex of yours resolves these as representing"
+     "utf8": "three.",
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " And",
+     "tOffsetMs": 641,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " I",
+     "tOffsetMs": 801,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " want",
+     "tOffsetMs": 1040,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " you",
+     "tOffsetMs": 1120,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " to",
+     "tOffsetMs": 1280,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " take",
+     "tOffsetMs": 1361,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " a",
+     "tOffsetMs": 1521,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " moment",
+     "tOffsetMs": 1681,
+     "acAsrConf": 0
     }
    ]
   },
   {
-   "tStartMs": 42740,
-   "dDurationMs": 5100,
+   "tStartMs": 15350,
+   "dDurationMs": 2009,
+   "wWinId": 1,
+   "aAppend": 1,
    "segs": [
     {
-     "utf8": "the same idea, while at the same time recognizing other images as their own distinct"
+     "utf8": "\n"
     }
    ]
   },
   {
-   "tStartMs": 47840,
-   "dDurationMs": 500,
+   "tStartMs": 15360,
+   "dDurationMs": 4480,
+   "wWinId": 1,
    "segs": [
     {
-     "utf8": "ideas."
+     "utf8": "to",
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " appreciate",
+     "tOffsetMs": 239,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " how",
+     "tOffsetMs": 880,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " crazy",
+     "tOffsetMs": 1200,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " it",
+     "tOffsetMs": 1440,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " is",
+     "tOffsetMs": 1679,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " that",
+     "tOffsetMs": 1759,
+     "acAsrConf": 0
     }
    ]
   },
   {
-   "tStartMs": 49220,
-   "dDurationMs": 5414,
+   "tStartMs": 17349,
+   "dDurationMs": 2491,
+   "wWinId": 1,
+   "aAppend": 1,
    "segs": [
     {
-     "utf8": "But if I told you, hey, sit down and write for me a program that takes in a grid of"
+     "utf8": "\n"
     }
    ]
   },
   {
-   "tStartMs": 54634,
-   "dDurationMs": 4501,
+   "tStartMs": 17359,
+   "dDurationMs": 4561,
+   "wWinId": 1,
    "segs": [
     {
-     "utf8": "28x28 pixels like this and outputs a single number between 0 and 10,"
+     "utf8": "brains",
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " can",
+     "tOffsetMs": 401,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " do",
+     "tOffsetMs": 561,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " this",
+     "tOffsetMs": 721,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " so",
+     "tOffsetMs": 961,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " effortlessly.",
+     "tOffsetMs": 1201,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " I",
+     "tOffsetMs": 2241,
+     "acAsrConf": 0
     }
    ]
   },
   {
-   "tStartMs": 59135,
-   "dDurationMs": 5610,
+   "tStartMs": 19830,
+   "dDurationMs": 2090,
+   "wWinId": 1,
+   "aAppend": 1,
    "segs": [
     {
-     "utf8": "telling you what it thinks the digit is, well the task goes from comically trivial to"
+     "utf8": "\n"
     }
    ]
   },
   {
-   "tStartMs": 64745,
-   "dDurationMs": 1435,
+   "tStartMs": 19840,
+   "dDurationMs": 4320,
+   "wWinId": 1,
    "segs": [
     {
-     "utf8": "dauntingly difficult."
+     "utf8": "mean",
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " this,",
+     "tOffsetMs": 160,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " this,",
+     "tOffsetMs": 560,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " and",
+     "tOffsetMs": 800,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " this",
+     "tOffsetMs": 1040,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " are",
+     "tOffsetMs": 1439,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " also",
+     "tOffsetMs": 1680,
+     "acAsrConf": 0
     }
    ]
   },
   {
-   "tStartMs": 67160,
-   "dDurationMs": 3697,
+   "tStartMs": 21910,
+   "dDurationMs": 2250,
+   "wWinId": 1,
+   "aAppend": 1,
    "segs": [
     {
-     "utf8": "Unless you've been living under a rock, I think I hardly need to motivate the relevance"
+     "utf8": "\n"
     }
    ]
   },
   {
-   "tStartMs": 70857,
-   "dDurationMs": 3783,
+   "tStartMs": 21920,
+   "dDurationMs": 4880,
+   "wWinId": 1,
    "segs": [
     {
-     "utf8": "and importance of machine learning and neural networks to the present and to the future."
-    }
-   ]
-  },
-  {
-   "tStartMs": 75120,
-   "dDurationMs": 3830,
-   "segs": [
+     "utf8": "recognizable",
+     "acAsrConf": 0
+    },
     {
-     "utf8": "But what I want to do here is show you what a neural network actually is,"
+     "utf8": " as",
+     "tOffsetMs": 640,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " threes.",
+     "tOffsetMs": 880,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " Even",
+     "tOffsetMs": 1519,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " though",
+     "tOffsetMs": 1760,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " the",
+     "tOffsetMs": 1920,
+     "acAsrConf": 0
     }
    ]
   }

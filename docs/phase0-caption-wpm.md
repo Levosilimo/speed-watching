@@ -180,3 +180,115 @@ Word-count anchors: the Ken Robinson talk has 3,337 tokens (regex) / 3,345
    there; word-level (or token-scaled word-level) is the only trustworthy
    ASR number.
 5. Verify JRE-style podcasts (no tracks) against the tier-3 STT decision.
+
+---
+
+## 8. Residential re-run — runbook gate 1 (2026-08-12)
+
+Re-ran the harness from a residential IP (217.119.65.117) with the
+POT-aware capture method: the player's own signed `/api/timedtext` response
+is intercepted via `page.on('response')` while captions are toggled on (CC
+pill, then an explicit settings-menu pick of the auto-generated/English
+track), instead of a fresh `baseUrl` fetch that carries no video-bound POT
+token. The ANDROID innertube fetch stays as the fallback/control. Harness:
+`scripts/sample-captions.ts`; results:
+`scripts/data/web-rerun/rerun-results.jsonl`; raw WEB payloads (truncated):
+`scripts/data/web-rerun/web-<videoId>.json3`.
+
+### 8.1 Outcome by status
+
+| status | count | meaning |
+|---|---|---|
+| web-captured | 16 | player's WEB payload parsed, words > 0 AND cues > 0 |
+| android-fallback | 1 | WEB timedtext empty (http 200); ANDROID control OK |
+| manual-only | 5 | tracks exist, no ASR — structural exclusion |
+| no-track | 2 | zero caption tracks (ANDROID agrees) — structural exclusion |
+| web-empty / parse-failed / error | 0 | — |
+
+No `bot-wall` or `consent-page` on any video.
+
+### 8.2 Gate results
+
+- **WEB yield: 16/17 = 94.1% of ASR-bearing videos — PASS** (≥90%; phase-0
+  ANDROID baseline was 17/17 = 100%).
+- **Any-path word timing: 19/22 = 86.4%** (16 WEB + 8mAITcNt710 control +
+  qp0HIF3SfI4's picked track) vs the phase-0 baseline parity **17/22 =
+  77.3%** — the re-run clears it.
+- **windows==segs parity: 16/16 videos, both axes.** `windowsWords` =
+  `segsWords` and `windowsCues` = `segsCues` exactly on every ASR video
+  (e.g. iG9CE55wbtY 2745/584 both layouts, Ks-_Mh1QhMc 3297/535), and
+  first/last cue text agrees (`cuesParity` true 16/16, `wordsParity` true
+  16/16).
+- **Parser gap resolved: parse-failed = 0.** Real WEB ASR payloads carry
+  word timing in `events[].segs[].tOffsetMs` — the same shape the ANDROID
+  control returns — and `lib/captions.ts` extracts it. The
+  `events[].windows[].segs` shape the synthetic fixture models was **not
+  observed** on any of the 17 captured WEB payloads; the earlier
+  `windows-parse-zero-words` results (14 videos in the first run) were the
+  default CC track being a manual transcript without word timing, not a
+  parser defect. The three committed fixtures
+  (`tests/fixtures/real/windows-asr-*-trunc.json`) are real WEB payloads
+  that parse to words > 0 with the production parser.
+- **POT/IP access: 1/24.** 8mAITcNt710 (CS50, 25 h course) — the largest
+  ASR payload in the set — returned `timedtext-empty (http 200)` on every
+  attempt (full run + two fresh-session retries), while other videos
+  captured fine before and after; the ANDROID control succeeded (242,345
+  timed words). Video-specific throttling of the oversized auto-generated
+  track; the runbook escalation (fresh session) was followed.
+
+### 8.3 Track-list deltas vs phase 0
+
+- 4NRXx6U8ABQ (Shake It Off): no-track in phase 0, now manual-only (one
+  track appeared since).
+- qp0HIF3SfI4 (Simon Sinek): manual-only in both, but the WEB CC menu's
+  picked track carried word timing (465 words / 104 cues) despite the WEB
+  track list showing no `asr` kind — the menu exposes tracks the tracklist
+  does not; harmless for the gate (structural class).
+
+### 8.4 Pause bias (per-word inter-start speechDur)
+
+`pauseBias = (unifiedRate − filteredTokens / speechDur) / unifiedRate`
+where `unifiedRate` is the extension's rule
+(`filteredTokensOverTrimmedSpan`) on the captured cues and `speechDur` is
+per-word inter-start spans excluding gaps ≥ 1 s. In the harness the
+unified rate is the rule's output; the runbook reads the extension's
+applied `playbackRate` live — same quantity, different read point.
+
+- **Median −44.8% — FLAG** (`|bias| > 25%` on 13/19 videos). Negative
+  means the word-accurate rate exceeds the unified estimate: pauses eat a
+  large share of the cue-trimmed span, so the unified-rate rule understates
+  the true speech rate and **over-speeds** by roughly `|bias|`.
+- Cleanest talks still sit at −20…−30% (Ks-_Mh1QhMc −25.0, 8mAITcNt710
+  −24.2, aircAruvnKk −20.9, 7Pq-S557XQU −10.0); the TED/lecture set is
+  −42…−99% (HtSuA80QTyo −98.6, h6fcK_fRYaI −94.0).
+- Degenerate outliers: music videos 60ItHLz5WEA (−739%) and dQw4w9WgXcQ
+  (−186%) — sparse speech with long marker gaps; their speechDur is near
+  zero. Exclude lyric/music tracks from pause-bias interpretation.
+- Per-video values are in `rerun-results.jsonl` (`unifiedRate`,
+  `wordAccurateRate`, `pauseBiasPct`, `pauseBiasSource`); demand-lane
+  follow-up flagged per runbook.
+
+### 8.5 Fixture commitments
+
+- `tests/fixtures/real/windows-asr-iG9CE55wbtY-trunc.json` (379,178 →
+  4,192 B), `windows-asr-Ks-_Mh1QhMc-trunc.json` (403,358 → 4,751 B),
+  `windows-asr-arj7oStGLkU-trunc.json` (241,331 → 4,625 B): first 20 events
+  of real player-signed WEB payloads; parse to words > 0 / cues > 0 with
+  `lib/captions.ts`.
+- Provenance README: `tests/fixtures/README.md` (videoId, title, capture
+  date, method, original vs truncated size, backed assertions; copyright
+  held by creators). Regenerated by `emitWebFixtures()` in
+  `scripts/sample-analysis.ts` on any capture run.
+
+### 8.6 Method notes (for the runbook's agent-browser flow)
+
+- The CC toggle alone fetches the **default** track, which is usually a
+  manual transcript without word timing — the harness now always opens the
+  settings menu (gear → Subtitles/CC) and picks the auto-generated/English
+  track, then waits for the fresh signed request. The runbook's "manual
+  track pick" step is mandatory, not a fallback.
+- One video in 24 hit a transient `timedtext-empty`; other videos were
+  unaffected, so treat per-video empties as POT/IP class and retry before
+  escalating.
+- Truncated payloads for every captured video land in
+  `scripts/data/web-rerun/` (never full transcripts).

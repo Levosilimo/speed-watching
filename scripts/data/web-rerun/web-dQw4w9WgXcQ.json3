@@ -4,189 +4,485 @@
   {}
  ],
  "wsWinStyles": [
-  {}
+  {},
+  {
+   "mhModeHint": 2,
+   "juJustifCode": 0,
+   "sdScrollDir": 3
+  }
  ],
  "wpWinPositions": [
-  {}
+  {},
+  {
+   "apPoint": 6,
+   "ahHorPos": 20,
+   "avVerPos": 100,
+   "rcRows": 2,
+   "ccCols": 40
+  }
  ],
  "events": [
   {
-   "tStartMs": 1360,
-   "dDurationMs": 1680,
+   "tStartMs": 0,
+   "dDurationMs": 211879,
+   "id": 1,
+   "wpWinPosId": 1,
+   "wsWinStyleId": 1
+  },
+  {
+   "tStartMs": 320,
+   "dDurationMs": 14260,
+   "wWinId": 1,
    "segs": [
     {
-     "utf8": "[♪♪♪]"
+     "utf8": "[Music]"
     }
    ]
   },
   {
-   "tStartMs": 18640,
-   "dDurationMs": 3240,
+   "tStartMs": 18790,
+   "wWinId": 1,
+   "aAppend": 1,
    "segs": [
     {
-     "utf8": "♪ We're no strangers to love ♪"
+     "utf8": "\n"
     }
    ]
   },
   {
-   "tStartMs": 22640,
-   "dDurationMs": 4320,
+   "tStartMs": 18800,
+   "dDurationMs": 7160,
+   "wWinId": 1,
    "segs": [
     {
-     "utf8": "♪ You know the rules\nand so do I ♪"
+     "utf8": "We're",
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " no",
+     "tOffsetMs": 239,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " strangers",
+     "tOffsetMs": 559,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " to",
+     "tOffsetMs": 1040,
+     "acAsrConf": 0
     }
    ]
   },
   {
-   "tStartMs": 27040,
-   "dDurationMs": 4000,
+   "tStartMs": 21790,
+   "dDurationMs": 4170,
+   "wWinId": 1,
+   "aAppend": 1,
    "segs": [
     {
-     "utf8": "♪ A full commitment's\nwhat I'm thinking of ♪"
+     "utf8": "\n"
     }
    ]
   },
   {
-   "tStartMs": 31120,
-   "dDurationMs": 3960,
+   "tStartMs": 21800,
+   "dDurationMs": 7319,
+   "wWinId": 1,
    "segs": [
     {
-     "utf8": "♪ You wouldn't get this\nfrom any other guy ♪"
+     "utf8": "love.",
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " You",
+     "tOffsetMs": 1000,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " know",
+     "tOffsetMs": 1239,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " the",
+     "tOffsetMs": 1479,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " rules",
+     "tOffsetMs": 1800,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " and",
+     "tOffsetMs": 2520,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " so",
+     "tOffsetMs": 2840,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " do",
+     "tOffsetMs": 3399,
+     "acAsrConf": 0
     }
    ]
   },
   {
-   "tStartMs": 35160,
-   "dDurationMs": 4360,
+   "tStartMs": 25950,
+   "dDurationMs": 3169,
+   "wWinId": 1,
+   "aAppend": 1,
    "segs": [
     {
-     "utf8": "♪ I just wanna tell you\nhow I'm feeling ♪"
+     "utf8": "\n"
     }
    ]
   },
   {
-   "tStartMs": 40520,
-   "dDurationMs": 2400,
+   "tStartMs": 25960,
+   "dDurationMs": 4319,
+   "wWinId": 1,
    "segs": [
     {
-     "utf8": "♪ Gotta make you understand ♪"
+     "utf8": "I.",
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " I",
+     "tOffsetMs": 1079,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " feel",
+     "tOffsetMs": 1319,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " commitments",
+     "tOffsetMs": 1720,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " from what",
+     "tOffsetMs": 2440,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " I'm",
+     "tOffsetMs": 2680,
+     "acAsrConf": 0
     }
    ]
   },
   {
-   "tStartMs": 43000,
-   "dDurationMs": 2120,
+   "tStartMs": 29109,
+   "dDurationMs": 1170,
+   "wWinId": 1,
+   "aAppend": 1,
    "segs": [
     {
-     "utf8": "♪ Never gonna give you up ♪"
+     "utf8": "\n"
     }
    ]
   },
   {
-   "tStartMs": 45200,
-   "dDurationMs": 1880,
+   "tStartMs": 29119,
+   "dDurationMs": 5241,
+   "wWinId": 1,
    "segs": [
     {
-     "utf8": "♪ Never gonna let you down ♪"
+     "utf8": "thinking",
+     "acAsrConf": 0
     }
    ]
   },
   {
-   "tStartMs": 47320,
-   "dDurationMs": 3800,
+   "tStartMs": 30269,
+   "dDurationMs": 4091,
+   "wWinId": 1,
+   "aAppend": 1,
    "segs": [
     {
-     "utf8": "♪ Never gonna run around\nand desert you ♪"
+     "utf8": "\n"
     }
    ]
   },
   {
-   "tStartMs": 51480,
-   "dDurationMs": 2000,
+   "tStartMs": 30279,
+   "dDurationMs": 9280,
+   "wWinId": 1,
    "segs": [
     {
-     "utf8": "♪ Never gonna make you cry ♪"
+     "utf8": "of.",
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " You",
+     "tOffsetMs": 1000,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " wouldn't",
+     "tOffsetMs": 1320,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " get",
+     "tOffsetMs": 1800,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " this",
+     "tOffsetMs": 2041,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " from",
+     "tOffsetMs": 2201,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " any",
+     "tOffsetMs": 2921,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " other",
+     "tOffsetMs": 3401,
+     "acAsrConf": 0
     }
    ]
   },
   {
-   "tStartMs": 53600,
-   "dDurationMs": 1920,
+   "tStartMs": 34350,
+   "dDurationMs": 5209,
+   "wWinId": 1,
+   "aAppend": 1,
    "segs": [
     {
-     "utf8": "♪ Never gonna say goodbye ♪"
+     "utf8": "\n"
     }
    ]
   },
   {
-   "tStartMs": 55720,
-   "dDurationMs": 3640,
+   "tStartMs": 34360,
+   "dDurationMs": 8760,
+   "wWinId": 1,
    "segs": [
     {
-     "utf8": "♪ Never gonna tell a lie\nand hurt you ♪"
+     "utf8": "guy.",
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " I",
+     "tOffsetMs": 1120,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " just",
+     "tOffsetMs": 2120,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " want",
+     "tOffsetMs": 2440,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " to",
+     "tOffsetMs": 2680,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " tell",
+     "tOffsetMs": 2920,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " you",
+     "tOffsetMs": 3160,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " how",
+     "tOffsetMs": 3480,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " I'm",
+     "tOffsetMs": 3800,
+     "acAsrConf": 0
     }
    ]
   },
   {
-   "tStartMs": 60800,
-   "dDurationMs": 4000,
+   "tStartMs": 39549,
+   "dDurationMs": 3571,
+   "wWinId": 1,
+   "aAppend": 1,
    "segs": [
     {
-     "utf8": "♪ We've known each other\nfor so long ♪"
+     "utf8": "\n"
     }
    ]
   },
   {
-   "tStartMs": 64880,
-   "dDurationMs": 4160,
+   "tStartMs": 39559,
+   "dDurationMs": 6281,
+   "wWinId": 1,
    "segs": [
     {
-     "utf8": "♪ Your heart's been aching\nbut you're too shy to say it ♪"
+     "utf8": "feeling.",
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " Got",
+     "tOffsetMs": 1000,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " to",
+     "tOffsetMs": 1160,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " make",
+     "tOffsetMs": 1401,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " you",
+     "tOffsetMs": 1721,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " understand.",
+     "tOffsetMs": 2561,
+     "acAsrConf": 0
     }
    ]
   },
   {
-   "tStartMs": 69120,
-   "dDurationMs": 3840,
+   "tStartMs": 43110,
+   "dDurationMs": 2730,
+   "wWinId": 1,
+   "aAppend": 1,
    "segs": [
     {
-     "utf8": "♪ Inside we both know\nwhat's been going ♪"
+     "utf8": "\n"
     }
    ]
   },
   {
-   "tStartMs": 73360,
-   "dDurationMs": 3840,
+   "tStartMs": 43120,
+   "dDurationMs": 6080,
+   "wWinId": 1,
    "segs": [
     {
-     "utf8": "♪ We know the game\nand we're gonna play it ♪"
+     "utf8": "Never",
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " going",
+     "tOffsetMs": 320,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " to",
+     "tOffsetMs": 400,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " give",
+     "tOffsetMs": 640,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " you",
+     "tOffsetMs": 959,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " up.",
+     "tOffsetMs": 1360,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " I'm",
+     "tOffsetMs": 2240,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " going",
+     "tOffsetMs": 2400,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " to",
+     "tOffsetMs": 2480,
+     "acAsrConf": 0
     }
    ]
   },
   {
-   "tStartMs": 77400,
-   "dDurationMs": 4640,
+   "tStartMs": 45830,
+   "dDurationMs": 3370,
+   "wWinId": 1,
+   "aAppend": 1,
    "segs": [
     {
-     "utf8": "♪ And if you ask me\nhow I'm feeling ♪"
+     "utf8": "\n"
     }
    ]
   },
   {
-   "tStartMs": 82400,
-   "dDurationMs": 2840,
+   "tStartMs": 45840,
+   "dDurationMs": 7480,
+   "wWinId": 1,
    "segs": [
     {
-     "utf8": "♪ Don't tell me\nyou're too blind to see ♪"
-    }
-   ]
-  },
-  {
-   "tStartMs": 85320,
-   "dDurationMs": 1960,
-   "segs": [
+     "utf8": "let",
+     "acAsrConf": 0
+    },
     {
-     "utf8": "♪ Never gonna give you up ♪"
+     "utf8": " you",
+     "tOffsetMs": 320,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " down.",
+     "tOffsetMs": 719,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " I'm",
+     "tOffsetMs": 1680,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " going",
+     "tOffsetMs": 1760,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " to",
+     "tOffsetMs": 1920,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " run",
+     "tOffsetMs": 2080,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " around",
+     "tOffsetMs": 2640,
+     "acAsrConf": 0
     }
    ]
   }

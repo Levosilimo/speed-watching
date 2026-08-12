@@ -4,189 +4,517 @@
   {}
  ],
  "wsWinStyles": [
-  {}
+  {},
+  {
+   "mhModeHint": 2,
+   "juJustifCode": 0,
+   "sdScrollDir": 3
+  }
  ],
  "wpWinPositions": [
-  {}
+  {},
+  {
+   "apPoint": 6,
+   "ahHorPos": 20,
+   "avVerPos": 100,
+   "rcRows": 2,
+   "ccCols": 40
+  }
  ],
  "events": [
   {
-   "tStartMs": 3770,
-   "dDurationMs": 5220,
+   "tStartMs": 0,
+   "dDurationMs": 901600,
+   "id": 1,
+   "wpWinPosId": 1,
+   "wsWinStyleId": 1
+  },
+  {
+   "tStartMs": 3760,
+   "dDurationMs": 3999,
+   "wWinId": 1,
    "segs": [
     {
-     "utf8": "Every human used to have to hunt or gather to survive. But humans are smart...ly lazy so"
+     "utf8": "Every",
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " human",
+     "tOffsetMs": 320,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " used",
+     "tOffsetMs": 640,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " to",
+     "tOffsetMs": 880,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " have",
+     "tOffsetMs": 1039,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " to",
+     "tOffsetMs": 1200,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " hunt",
+     "tOffsetMs": 1360,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " or",
+     "tOffsetMs": 1599,
+     "acAsrConf": 0
     }
    ]
   },
   {
-   "tStartMs": 8990,
-   "dDurationMs": 4690,
+   "tStartMs": 5590,
+   "dDurationMs": 2169,
+   "wWinId": 1,
+   "aAppend": 1,
    "segs": [
     {
-     "utf8": "we made tools to make our work easier. From sticks, to plows, to tractors we’ve gone"
+     "utf8": "\n"
     }
    ]
   },
   {
-   "tStartMs": 13680,
-   "dDurationMs": 4460,
+   "tStartMs": 5600,
+   "dDurationMs": 4959,
+   "wWinId": 1,
    "segs": [
     {
-     "utf8": "from everyone needing to make food to, modern agriculture with almost no one needing to"
+     "utf8": "gather",
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " to",
+     "tOffsetMs": 400,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " survive.",
+     "tOffsetMs": 719,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " But",
+     "tOffsetMs": 1199,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " humans",
+     "tOffsetMs": 1440,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " are",
+     "tOffsetMs": 1840,
+     "acAsrConf": 0
     }
    ]
   },
   {
-   "tStartMs": 18140,
-   "dDurationMs": 2220,
+   "tStartMs": 7749,
+   "dDurationMs": 2810,
+   "wWinId": 1,
+   "aAppend": 1,
    "segs": [
     {
-     "utf8": "make food — and yet, we still have abundance."
+     "utf8": "\n"
     }
    ]
   },
   {
-   "tStartMs": 20400,
+   "tStartMs": 7759,
+   "dDurationMs": 5121,
+   "wWinId": 1,
+   "segs": [
+    {
+     "utf8": "smartly",
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " lazy.",
+     "tOffsetMs": 721,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " So",
+     "tOffsetMs": 1281,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " we",
+     "tOffsetMs": 1521,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " made",
+     "tOffsetMs": 1760,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " tools",
+     "tOffsetMs": 2001,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " to",
+     "tOffsetMs": 2401,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " make",
+     "tOffsetMs": 2641,
+     "acAsrConf": 0
+    }
+   ]
+  },
+  {
+   "tStartMs": 10549,
+   "dDurationMs": 2331,
+   "wWinId": 1,
+   "aAppend": 1,
+   "segs": [
+    {
+     "utf8": "\n"
+    }
+   ]
+  },
+  {
+   "tStartMs": 10559,
+   "dDurationMs": 3921,
+   "wWinId": 1,
+   "segs": [
+    {
+     "utf8": "our",
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " work",
+     "tOffsetMs": 321,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " easier.",
+     "tOffsetMs": 561,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " From",
+     "tOffsetMs": 1040,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " sticks",
+     "tOffsetMs": 1281,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " to",
+     "tOffsetMs": 1601,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " plows",
+     "tOffsetMs": 1841,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " to",
+     "tOffsetMs": 2160,
+     "acAsrConf": 0
+    }
+   ]
+  },
+  {
+   "tStartMs": 12870,
+   "dDurationMs": 1610,
+   "wWinId": 1,
+   "aAppend": 1,
+   "segs": [
+    {
+     "utf8": "\n"
+    }
+   ]
+  },
+  {
+   "tStartMs": 12880,
+   "dDurationMs": 3200,
+   "wWinId": 1,
+   "segs": [
+    {
+     "utf8": "tractors,",
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " we've",
+     "tOffsetMs": 480,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " gone",
+     "tOffsetMs": 719,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " from",
+     "tOffsetMs": 879,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " everyone",
+     "tOffsetMs": 1200,
+     "acAsrConf": 0
+    }
+   ]
+  },
+  {
+   "tStartMs": 14470,
+   "dDurationMs": 1610,
+   "wWinId": 1,
+   "aAppend": 1,
+   "segs": [
+    {
+     "utf8": "\n"
+    }
+   ]
+  },
+  {
+   "tStartMs": 14480,
    "dDurationMs": 3680,
+   "wWinId": 1,
    "segs": [
     {
-     "utf8": "Of course, it’s not just farming, it’s\neverything. We’ve spent the last several"
+     "utf8": "needing",
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " to",
+     "tOffsetMs": 319,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " make",
+     "tOffsetMs": 480,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " food",
+     "tOffsetMs": 640,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " to",
+     "tOffsetMs": 880,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " modern",
+     "tOffsetMs": 1199,
+     "acAsrConf": 0
     }
    ]
   },
   {
-   "tStartMs": 24080,
-   "dDurationMs": 5500,
+   "tStartMs": 16070,
+   "dDurationMs": 2090,
+   "wWinId": 1,
+   "aAppend": 1,
    "segs": [
     {
-     "utf8": "thousand years building tools to reduce physical\nlabor of all kinds. These are mechanical muscles."
+     "utf8": "\n"
     }
    ]
   },
   {
-   "tStartMs": 29580,
-   "dDurationMs": 4560,
+   "tStartMs": 16080,
+   "dDurationMs": 3920,
+   "wWinId": 1,
    "segs": [
     {
-     "utf8": "Stronger, more reliable, and more tireless\nthan human muscles ever could be."
+     "utf8": "agriculture",
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " with",
+     "tOffsetMs": 720,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " almost",
+     "tOffsetMs": 959,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " no",
+     "tOffsetMs": 1360,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " one",
+     "tOffsetMs": 1680,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " needing",
+     "tOffsetMs": 1840,
+     "acAsrConf": 0
     }
    ]
   },
   {
-   "tStartMs": 34140,
-   "dDurationMs": 4520,
+   "tStartMs": 18150,
+   "dDurationMs": 1850,
+   "wWinId": 1,
+   "aAppend": 1,
    "segs": [
     {
-     "utf8": "And that's a good thing. Replacing human labor\nwith mechanical muscles frees people to specialize"
+     "utf8": "\n"
     }
    ]
   },
   {
-   "tStartMs": 38660,
-   "dDurationMs": 5710,
+   "tStartMs": 18160,
+   "dDurationMs": 3520,
+   "wWinId": 1,
    "segs": [
     {
-     "utf8": "and that leaves everyone better off - even those\nstill doing physical labor. This is how economies"
+     "utf8": "to",
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " make",
+     "tOffsetMs": 240,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " food.",
+     "tOffsetMs": 400,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " And",
+     "tOffsetMs": 879,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " yet,",
+     "tOffsetMs": 1039,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " we",
+     "tOffsetMs": 1279,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " still",
+     "tOffsetMs": 1520,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " have",
+     "tOffsetMs": 1680,
+     "acAsrConf": 0
     }
    ]
   },
   {
-   "tStartMs": 44370,
-   "dDurationMs": 2240,
-   "segs": [
-    {
-     "utf8": "grow and standards of living rise."
-    }
-   ]
-  },
-  {
-   "tStartMs": 46610,
-   "dDurationMs": 4620,
-   "segs": [
-    {
-     "utf8": "Some people have specialized to be programmers\nand engineers whose job is to build mechanical"
-    }
-   ]
-  },
-  {
-   "tStartMs": 51230,
-   "dDurationMs": 4890,
-   "segs": [
-    {
-     "utf8": "minds. Just as mechanical muscles made human\nlabor less in demand so are mechanical minds"
-    }
-   ]
-  },
-  {
-   "tStartMs": 56120,
-   "dDurationMs": 2980,
-   "segs": [
-    {
-     "utf8": "making human brain labor less in demand."
-    }
-   ]
-  },
-  {
-   "tStartMs": 59100,
-   "dDurationMs": 4709,
-   "segs": [
-    {
-     "utf8": "This is an economic revolution. You may think\nwe've been here before, but we haven't."
-    }
-   ]
-  },
-  {
-   "tStartMs": 63809,
+   "tStartMs": 19990,
    "dDurationMs": 1690,
+   "wWinId": 1,
+   "aAppend": 1,
    "segs": [
     {
-     "utf8": "This time is different."
+     "utf8": "\n"
     }
    ]
   },
   {
-   "tStartMs": 65500,
-   "dDurationMs": 1630,
+   "tStartMs": 20000,
+   "dDurationMs": 3439,
+   "wWinId": 1,
    "segs": [
     {
-     "utf8": "## Physical Labor"
+     "utf8": "abundance.",
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " Of",
+     "tOffsetMs": 720,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " course,",
+     "tOffsetMs": 880,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " it's",
+     "tOffsetMs": 1039,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " not",
+     "tOffsetMs": 1279,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " just",
+     "tOffsetMs": 1439,
+     "acAsrConf": 0
     }
    ]
   },
   {
-   "tStartMs": 67130,
-   "dDurationMs": 4489,
+   "tStartMs": 21670,
+   "dDurationMs": 1769,
+   "wWinId": 1,
+   "aAppend": 1,
    "segs": [
     {
-     "utf8": "When you think of automation, you probably\nthink of this: giant, custom-built, expensive,"
+     "utf8": "\n"
     }
    ]
   },
   {
-   "tStartMs": 71620,
-   "dDurationMs": 4830,
+   "tStartMs": 21680,
+   "dDurationMs": 3599,
+   "wWinId": 1,
    "segs": [
     {
-     "utf8": "efficient, but really dumb robots blind to\nthe world and their own work. They were a"
-    }
-   ]
-  },
-  {
-   "tStartMs": 76450,
-   "dDurationMs": 4000,
-   "segs": [
+     "utf8": "farming.",
+     "acAsrConf": 0
+    },
     {
-     "utf8": "scary kind of automation but they haven't\ntaken over the world because they're only"
-    }
-   ]
-  },
-  {
-   "tStartMs": 80450,
-   "dDurationMs": 2860,
-   "segs": [
+     "utf8": " It's",
+     "tOffsetMs": 560,
+     "acAsrConf": 0
+    },
     {
-     "utf8": "cost effective in narrow situations."
+     "utf8": " everything.",
+     "tOffsetMs": 800,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " We've",
+     "tOffsetMs": 1359,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " spent",
+     "tOffsetMs": 1599,
+     "acAsrConf": 0
     }
    ]
   }

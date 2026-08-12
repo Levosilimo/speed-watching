@@ -4,189 +4,547 @@
   {}
  ],
  "wsWinStyles": [
-  {}
+  {},
+  {
+   "mhModeHint": 2,
+   "juJustifCode": 0,
+   "sdScrollDir": 3
+  }
  ],
  "wpWinPositions": [
-  {}
+  {},
+  {
+   "apPoint": 6,
+   "ahHorPos": 20,
+   "avVerPos": 100,
+   "rcRows": 2,
+   "ccCols": 40
+  }
  ],
  "events": [
   {
-   "tStartMs": 30,
-   "dDurationMs": 4970,
+   "tStartMs": 0,
+   "dDurationMs": 366759,
+   "id": 1,
+   "wpWinPosId": 1,
+   "wsWinStyleId": 1
+  },
+  {
+   "tStartMs": 359,
+   "dDurationMs": 4400,
+   "wWinId": 1,
    "segs": [
     {
-     "utf8": "Why 0! equals to 1?"
+     "utf8": "why",
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " is",
+     "tOffsetMs": 401,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " zero",
+     "tOffsetMs": 720,
+     "acAsrConf": 0
     }
    ]
   },
   {
-   "tStartMs": 5340,
-   "dDurationMs": 3700,
+   "tStartMs": 3230,
+   "dDurationMs": 1529,
+   "wWinId": 1,
+   "aAppend": 1,
    "segs": [
     {
-     "utf8": "Okay. Because it does seem to defy the idea of"
+     "utf8": "\n"
     }
    ]
   },
   {
-   "tStartMs": 9640,
-   "dDurationMs": 2340,
+   "tStartMs": 3240,
+   "dDurationMs": 4679,
+   "wWinId": 1,
    "segs": [
     {
-     "utf8": "you multiply down"
+     "utf8": "factorial",
+     "acAsrConf": 0
     }
    ]
   },
   {
-   "tStartMs": 12120,
-   "dDurationMs": 2000,
+   "tStartMs": 4749,
+   "dDurationMs": 3170,
+   "wWinId": 1,
+   "aAppend": 1,
    "segs": [
     {
-     "utf8": "until you get down to whatever"
+     "utf8": "\n"
     }
    ]
   },
   {
-   "tStartMs": 14530,
-   "dDurationMs": 5659,
+   "tStartMs": 4759,
+   "dDurationMs": 7601,
+   "wWinId": 1,
    "segs": [
     {
-     "utf8": "one, and then you stop. I'm going to argue for this the same way I would argue"
+     "utf8": "one",
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " okay",
+     "tOffsetMs": 1000,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " because",
+     "tOffsetMs": 1600,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " it",
+     "tOffsetMs": 1841,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " does",
+     "tOffsetMs": 2000,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " seem",
+     "tOffsetMs": 2201,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " to",
+     "tOffsetMs": 2401,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " defy",
+     "tOffsetMs": 2640,
+     "acAsrConf": 0
     }
    ]
   },
   {
-   "tStartMs": 20710,
-   "dDurationMs": 4190,
+   "tStartMs": 7909,
+   "dDurationMs": 4451,
+   "wWinId": 1,
+   "aAppend": 1,
    "segs": [
     {
-     "utf8": "a very sort of reverse of.. Oh no, not that."
+     "utf8": "\n"
     }
    ]
   },
   {
-   "tStartMs": 24900,
-   "dDurationMs": 520,
+   "tStartMs": 7919,
+   "dDurationMs": 7521,
+   "wWinId": 1,
    "segs": [
     {
-     "utf8": "How would i do this?"
+     "utf8": "the",
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " idea",
+     "tOffsetMs": 241,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " of",
+     "tOffsetMs": 760,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " um",
+     "tOffsetMs": 1600,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " it's",
+     "tOffsetMs": 2201,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " you",
+     "tOffsetMs": 2840,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " multiply",
+     "tOffsetMs": 3041,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " down",
+     "tOffsetMs": 3760,
+     "acAsrConf": 0
     }
    ]
   },
   {
-   "tStartMs": 25420,
-   "dDurationMs": 2000,
+   "tStartMs": 12350,
+   "dDurationMs": 3090,
+   "wWinId": 1,
+   "aAppend": 1,
    "segs": [
     {
-     "utf8": "How do you argue that?"
+     "utf8": "\n"
     }
    ]
   },
   {
-   "tStartMs": 27430,
-   "dDurationMs": 5899,
+   "tStartMs": 12360,
+   "dDurationMs": 4999,
+   "wWinId": 1,
    "segs": [
     {
-     "utf8": "Because you'll take it to be true, right? But it's the same problem when you say on"
+     "utf8": "until",
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " you",
+     "tOffsetMs": 319,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " get",
+     "tOffsetMs": 520,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " down",
+     "tOffsetMs": 720,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " to",
+     "tOffsetMs": 840,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " whatever",
+     "tOffsetMs": 1479,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " one",
+     "tOffsetMs": 2479,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " right",
+     "tOffsetMs": 2960,
+     "acAsrConf": 0
     }
    ]
   },
   {
-   "tStartMs": 34149,
-   "dDurationMs": 7400,
+   "tStartMs": 15430,
+   "dDurationMs": 1929,
+   "wWinId": 1,
+   "aAppend": 1,
    "segs": [
     {
-     "utf8": "'a' square, but we define powers as you multiply this number by itself that number of times and"
+     "utf8": "\n"
     }
    ]
   },
   {
-   "tStartMs": 41739,
-   "dDurationMs": 3290,
+   "tStartMs": 15440,
+   "dDurationMs": 4440,
+   "wWinId": 1,
    "segs": [
     {
-     "utf8": "That makes sense to you, but the definition breaks down"
+     "utf8": "and",
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " then",
+     "tOffsetMs": 119,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " you",
+     "tOffsetMs": 199,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " start",
+     "tOffsetMs": 279,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " right",
+     "tOffsetMs": 1040,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " now",
+     "tOffsetMs": 1480,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " I'm",
+     "tOffsetMs": 1679,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " going",
+     "tOffsetMs": 1800,
+     "acAsrConf": 0
     }
    ]
   },
   {
-   "tStartMs": 45610,
-   "dDurationMs": 4429,
+   "tStartMs": 17349,
+   "dDurationMs": 2531,
+   "wWinId": 1,
+   "aAppend": 1,
    "segs": [
     {
-     "utf8": "The U7 definition breaks down when you go to cases like this"
+     "utf8": "\n"
     }
    ]
   },
   {
-   "tStartMs": 51060,
-   "dDurationMs": 3880,
+   "tStartMs": 17359,
+   "dDurationMs": 5760,
+   "wWinId": 1,
    "segs": [
     {
-     "utf8": "So how do you argue it, or do you just accept it and don't think about it?"
+     "utf8": "to",
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " argue",
+     "tOffsetMs": 161,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " for",
+     "tOffsetMs": 481,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " this",
+     "tOffsetMs": 721,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " the",
+     "tOffsetMs": 961,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " same",
+     "tOffsetMs": 1121,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " way",
+     "tOffsetMs": 1401,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " I",
+     "tOffsetMs": 1641,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " would",
+     "tOffsetMs": 1721,
+     "acAsrConf": 0
     }
    ]
   },
   {
-   "tStartMs": 55380,
-   "dDurationMs": 2000,
+   "tStartMs": 19870,
+   "dDurationMs": 3249,
+   "wWinId": 1,
+   "aAppend": 1,
    "segs": [
     {
-     "utf8": "*Laughs* Don't think 'bout it"
+     "utf8": "\n"
     }
    ]
   },
   {
-   "tStartMs": 58820,
-   "dDurationMs": 2060,
+   "tStartMs": 19880,
+   "dDurationMs": 6520,
+   "wWinId": 1,
    "segs": [
     {
-     "utf8": "All right people let's play a game, okay"
+     "utf8": "argue",
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " a",
+     "tOffsetMs": 1000,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " very",
+     "tOffsetMs": 1239,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " sort",
+     "tOffsetMs": 1760,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " of",
+     "tOffsetMs": 1960,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " reverse",
+     "tOffsetMs": 2200,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " that",
+     "tOffsetMs": 2639,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " oh",
+     "tOffsetMs": 2800,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " not",
+     "tOffsetMs": 3000,
+     "acAsrConf": 0
     }
    ]
   },
   {
-   "tStartMs": 60880,
-   "dDurationMs": 1949,
+   "tStartMs": 23109,
+   "dDurationMs": 3291,
+   "wWinId": 1,
+   "aAppend": 1,
    "segs": [
     {
-     "utf8": "Someone at the audience: Mario! *laughs*"
+     "utf8": "\n"
     }
    ]
   },
   {
-   "tStartMs": 62829,
-   "dDurationMs": 2000,
+   "tStartMs": 23119,
+   "dDurationMs": 6240,
+   "wWinId": 1,
    "segs": [
     {
-     "utf8": "No"
+     "utf8": "not",
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " that",
+     "tOffsetMs": 240,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " I",
+     "tOffsetMs": 1041,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " would",
+     "tOffsetMs": 1121,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " argue",
+     "tOffsetMs": 1320,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " this",
+     "tOffsetMs": 1761,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " how",
+     "tOffsetMs": 2681,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " do",
+     "tOffsetMs": 2841,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " you",
+     "tOffsetMs": 3041,
+     "acAsrConf": 0
     }
    ]
   },
   {
-   "tStartMs": 64989,
-   "dDurationMs": 5180,
+   "tStartMs": 26390,
+   "dDurationMs": 2969,
+   "wWinId": 1,
+   "aAppend": 1,
    "segs": [
     {
-     "utf8": "I still with a number, shall we? Okay. Let's go. To power of one?"
+     "utf8": "\n"
     }
    ]
   },
   {
-   "tStartMs": 70169,
-   "dDurationMs": 1571,
+   "tStartMs": 26400,
+   "dDurationMs": 5359,
+   "wWinId": 1,
    "segs": [
     {
-     "utf8": "Everyone: 2."
-    }
-   ]
-  },
-  {
-   "tStartMs": 72960,
-   "dDurationMs": 1400,
-   "segs": [
+     "utf8": "argue",
+     "acAsrConf": 0
+    },
     {
-     "utf8": "2 squared?"
+     "utf8": " that",
+     "tOffsetMs": 440,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " because",
+     "tOffsetMs": 1279,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " you",
+     "tOffsetMs": 1840,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " all",
+     "tOffsetMs": 1959,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " take",
+     "tOffsetMs": 2199,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " it",
+     "tOffsetMs": 2400,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " to",
+     "tOffsetMs": 2560,
+     "acAsrConf": 0
+    },
+    {
+     "utf8": " be",
+     "tOffsetMs": 2719,
+     "acAsrConf": 0
     }
    ]
   }

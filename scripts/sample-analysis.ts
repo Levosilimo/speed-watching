@@ -242,8 +242,9 @@ export function emitWebFixtures(input: {
     console.log(
       `web fixture ${file} <- ${record.videoId} (${record.title ?? '?'}, ${original} -> ${size} bytes)`,
     );
+    const title = (record.title ?? '?').replace(/\|/g, '/');
     rows.push(
-      `| ${file} | ${record.videoId} | ${record.title ?? '?'} | ${captureDate} | player-signed intercept (page.on('response'), CC toggled on) | ${original} | ${size} | word timing parsing (words > 0 on a real WEB payload); windows==segs cue parity |`,
+      `| ${file} | ${record.videoId} | ${title} | ${captureDate} | player-signed intercept (page.on('response'), CC toggled on) | ${original} | ${size} | word timing parsing (words > 0 on a real WEB payload); windows==segs cue parity |`,
     );
   }
   const readmePath = join(fixturesDir, '..', 'README.md');

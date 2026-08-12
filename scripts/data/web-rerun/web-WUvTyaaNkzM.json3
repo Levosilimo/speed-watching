@@ -4,189 +4,467 @@
   {}
  ],
  "wsWinStyles": [
-  {}
+  {},
+  {
+   "mhModeHint": 2,
+   "juJustifCode": 0,
+   "sdScrollDir": 3
+  }
  ],
  "wpWinPositions": [
-  {}
+  {},
+  {
+   "apPoint": 6,
+   "ahHorPos": 20,
+   "avVerPos": 100,
+   "rcRows": 2,
+   "ccCols": 40
+  }
  ],
  "events": [
   {
-   "tStartMs": 14980,
-   "dDurationMs": 1480,
+   "tStartMs": 0,
+   "dDurationMs": 1005720,
+   "id": 1,
+   "wpWinPosId": 1,
+   "wsWinStyleId": 1
+  },
+  {
+   "tStartMs": 15240,
+   "dDurationMs": 3760,
+   "wWinId": 1,
    "segs": [
     {
-     "utf8": "Hey everyone, Grant here."
+     "utf8": "Hey"
+    },
+    {
+     "utf8": " everyone,",
+     "tOffsetMs": 120
+    },
+    {
+     "utf8": " Grant",
+     "tOffsetMs": 640
+    },
+    {
+     "utf8": " here.",
+     "tOffsetMs": 920
+    },
+    {
+     "utf8": " This",
+     "tOffsetMs": 1600
+    },
+    {
+     "utf8": " is",
+     "tOffsetMs": 1760
+    },
+    {
+     "utf8": " the",
+     "tOffsetMs": 1840
     }
    ]
   },
   {
-   "tStartMs": 16820,
-   "dDurationMs": 3008,
+   "tStartMs": 17150,
+   "dDurationMs": 1850,
+   "wWinId": 1,
+   "aAppend": 1,
    "segs": [
     {
-     "utf8": "This is the first video in a series on the essence of calculus,"
+     "utf8": "\n"
     }
    ]
   },
   {
-   "tStartMs": 19828,
-   "dDurationMs": 3772,
+   "tStartMs": 17160,
+   "dDurationMs": 3640,
+   "wWinId": 1,
    "segs": [
     {
-     "utf8": "and I'll be publishing the following videos once per day for the next 10 days."
+     "utf8": "first"
+    },
+    {
+     "utf8": " video",
+     "tOffsetMs": 240
+    },
+    {
+     "utf8": " in",
+     "tOffsetMs": 520
+    },
+    {
+     "utf8": " a",
+     "tOffsetMs": 640
+    },
+    {
+     "utf8": " series",
+     "tOffsetMs": 680
+    },
+    {
+     "utf8": " on",
+     "tOffsetMs": 1080
+    },
+    {
+     "utf8": " the",
+     "tOffsetMs": 1200
+    },
+    {
+     "utf8": " essence",
+     "tOffsetMs": 1360
     }
    ]
   },
   {
-   "tStartMs": 24300,
-   "dDurationMs": 2611,
+   "tStartMs": 18990,
+   "dDurationMs": 1810,
+   "wWinId": 1,
+   "aAppend": 1,
    "segs": [
     {
-     "utf8": "The goal here, as the name suggests, is to really get"
+     "utf8": "\n"
     }
    ]
   },
   {
-   "tStartMs": 26911,
-   "dDurationMs": 2809,
+   "tStartMs": 19000,
+   "dDurationMs": 3640,
+   "wWinId": 1,
    "segs": [
     {
-     "utf8": "the heart of the subject out in one binge-watchable set."
+     "utf8": "of"
+    },
+    {
+     "utf8": " calculus,",
+     "tOffsetMs": 120
+    },
+    {
+     "utf8": " and",
+     "tOffsetMs": 1000
+    },
+    {
+     "utf8": " I'll",
+     "tOffsetMs": 1120
+    },
+    {
+     "utf8": " be",
+     "tOffsetMs": 1200
+    },
+    {
+     "utf8": " publishing",
+     "tOffsetMs": 1320
+    },
+    {
+     "utf8": " the",
+     "tOffsetMs": 1720
     }
    ]
   },
   {
-   "tStartMs": 30320,
-   "dDurationMs": 3859,
+   "tStartMs": 20790,
+   "dDurationMs": 1850,
+   "wWinId": 1,
+   "aAppend": 1,
    "segs": [
     {
-     "utf8": "But with a topic that's as broad as calculus, there's a lot of things that can mean,"
+     "utf8": "\n"
     }
    ]
   },
   {
-   "tStartMs": 34179,
-   "dDurationMs": 2021,
+   "tStartMs": 20800,
+   "dDurationMs": 3440,
+   "wWinId": 1,
    "segs": [
     {
-     "utf8": "so here's what I have in mind specifically."
+     "utf8": "following"
+    },
+    {
+     "utf8": " videos",
+     "tOffsetMs": 400
+    },
+    {
+     "utf8": " once",
+     "tOffsetMs": 880
+    },
+    {
+     "utf8": " per",
+     "tOffsetMs": 1160
+    },
+    {
+     "utf8": " day",
+     "tOffsetMs": 1280
+    },
+    {
+     "utf8": " for",
+     "tOffsetMs": 1560
+    },
+    {
+     "utf8": " the",
+     "tOffsetMs": 1760
     }
    ]
   },
   {
-   "tStartMs": 36940,
-   "dDurationMs": 2473,
+   "tStartMs": 22630,
+   "dDurationMs": 1610,
+   "wWinId": 1,
+   "aAppend": 1,
    "segs": [
     {
-     "utf8": "Calculus has a lot of rules and formulas which"
+     "utf8": "\n"
     }
    ]
   },
   {
-   "tStartMs": 39413,
-   "dDurationMs": 2527,
+   "tStartMs": 22640,
+   "dDurationMs": 3600,
+   "wWinId": 1,
    "segs": [
     {
-     "utf8": "are often presented as things to be memorized."
+     "utf8": "next"
+    },
+    {
+     "utf8": " 10",
+     "tOffsetMs": 280
+    },
+    {
+     "utf8": " days.",
+     "tOffsetMs": 480
     }
    ]
   },
   {
-   "tStartMs": 42480,
-   "dDurationMs": 3274,
+   "tStartMs": 24230,
+   "dDurationMs": 2010,
+   "wWinId": 1,
+   "aAppend": 1,
    "segs": [
     {
-     "utf8": "Lots of derivative formulas, the product rule, the chain rule,"
+     "utf8": "\n"
     }
    ]
   },
   {
-   "tStartMs": 45754,
-   "dDurationMs": 4224,
+   "tStartMs": 24240,
+   "dDurationMs": 3640,
+   "wWinId": 1,
    "segs": [
     {
-     "utf8": "implicit differentiation, the fact that integrals and derivatives are opposite,"
+     "utf8": "The"
+    },
+    {
+     "utf8": " goal",
+     "tOffsetMs": 80
+    },
+    {
+     "utf8": " here,",
+     "tOffsetMs": 240
+    },
+    {
+     "utf8": " as",
+     "tOffsetMs": 640
+    },
+    {
+     "utf8": " the",
+     "tOffsetMs": 800
+    },
+    {
+     "utf8": " name",
+     "tOffsetMs": 880
+    },
+    {
+     "utf8": " suggests,",
+     "tOffsetMs": 1080
+    },
+    {
+     "utf8": " is",
+     "tOffsetMs": 1880
     }
    ]
   },
   {
-   "tStartMs": 49978,
-   "dDurationMs": 2482,
+   "tStartMs": 26230,
+   "dDurationMs": 1650,
+   "wWinId": 1,
+   "aAppend": 1,
    "segs": [
     {
-     "utf8": "Taylor series, just a lot of things like that."
+     "utf8": "\n"
     }
    ]
   },
   {
-   "tStartMs": 52960,
-   "dDurationMs": 2173,
+   "tStartMs": 26240,
+   "dDurationMs": 4240,
+   "wWinId": 1,
    "segs": [
     {
-     "utf8": "And my goal is for you to come away feeling like"
+     "utf8": "to"
+    },
+    {
+     "utf8": " really",
+     "tOffsetMs": 80
+    },
+    {
+     "utf8": " get",
+     "tOffsetMs": 280
+    },
+    {
+     "utf8": " the",
+     "tOffsetMs": 440
+    },
+    {
+     "utf8": " heart",
+     "tOffsetMs": 560
+    },
+    {
+     "utf8": " of",
+     "tOffsetMs": 920
+    },
+    {
+     "utf8": " the",
+     "tOffsetMs": 1040
+    },
+    {
+     "utf8": " subject",
+     "tOffsetMs": 1160
     }
    ]
   },
   {
-   "tStartMs": 55133,
-   "dDurationMs": 1947,
+   "tStartMs": 27870,
+   "dDurationMs": 2610,
+   "wWinId": 1,
+   "aAppend": 1,
    "segs": [
     {
-     "utf8": "you could have invented calculus yourself."
+     "utf8": "\n"
     }
    ]
   },
   {
-   "tStartMs": 57640,
-   "dDurationMs": 3998,
+   "tStartMs": 27880,
+   "dDurationMs": 4879,
+   "wWinId": 1,
    "segs": [
     {
-     "utf8": "That is, cover all those core ideas, but in a way that makes clear where they"
+     "utf8": "out"
+    },
+    {
+     "utf8": " in",
+     "tOffsetMs": 280
+    },
+    {
+     "utf8": " one",
+     "tOffsetMs": 440
+    },
+    {
+     "utf8": " binge-watchable",
+     "tOffsetMs": 680
+    },
+    {
+     "utf8": " set.",
+     "tOffsetMs": 1400
+    },
+    {
+     "utf8": " But",
+     "tOffsetMs": 2360
+    },
+    {
+     "utf8": " with",
+     "tOffsetMs": 2480
     }
    ]
   },
   {
-   "tStartMs": 61638,
-   "dDurationMs": 4362,
+   "tStartMs": 30470,
+   "dDurationMs": 2289,
+   "wWinId": 1,
+   "aAppend": 1,
    "segs": [
     {
-     "utf8": "actually come from, and what they really mean, using an all-around visual approach."
+     "utf8": "\n"
     }
    ]
   },
   {
-   "tStartMs": 66920,
-   "dDurationMs": 3507,
+   "tStartMs": 30480,
+   "dDurationMs": 3720,
+   "wWinId": 1,
    "segs": [
     {
-     "utf8": "Inventing math is no joke, and there is a difference between being"
+     "utf8": "a"
+    },
+    {
+     "utf8": " topic",
+     "tOffsetMs": 80
+    },
+    {
+     "utf8": " that's",
+     "tOffsetMs": 440
+    },
+    {
+     "utf8": " as",
+     "tOffsetMs": 760
+    },
+    {
+     "utf8": " broad",
+     "tOffsetMs": 960
+    },
+    {
+     "utf8": " as",
+     "tOffsetMs": 1200
+    },
+    {
+     "utf8": " calculus,",
+     "tOffsetMs": 1320
     }
    ]
   },
   {
-   "tStartMs": 70427,
-   "dDurationMs": 3613,
+   "tStartMs": 32749,
+   "dDurationMs": 1451,
+   "wWinId": 1,
+   "aAppend": 1,
    "segs": [
     {
-     "utf8": "told why something's true, and actually generating it from scratch."
+     "utf8": "\n"
     }
    ]
   },
   {
-   "tStartMs": 74680,
-   "dDurationMs": 4411,
+   "tStartMs": 32759,
+   "dDurationMs": 2721,
+   "wWinId": 1,
    "segs": [
     {
-     "utf8": "But at all points, I want you to think to yourself, if you were an early mathematician,"
-    }
-   ]
-  },
-  {
-   "tStartMs": 79091,
-   "dDurationMs": 2941,
-   "segs": [
+     "utf8": "there's"
+    },
     {
-     "utf8": "pondering these ideas and drawing out the right diagrams,"
+     "utf8": " a",
+     "tOffsetMs": 201
+    },
+    {
+     "utf8": " lot",
+     "tOffsetMs": 241
+    },
+    {
+     "utf8": " of",
+     "tOffsetMs": 401
+    },
+    {
+     "utf8": " things",
+     "tOffsetMs": 481
+    },
+    {
+     "utf8": " that",
+     "tOffsetMs": 681
+    },
+    {
+     "utf8": " can",
+     "tOffsetMs": 841
+    },
+    {
+     "utf8": " mean.",
+     "tOffsetMs": 961
     }
    ]
   }
