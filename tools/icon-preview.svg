@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <!-- Rounded square background -->
+  <rect width="128" height="128" rx="28" ry="28" fill="#1a9c8f"/>
+
+  <!-- Speed gauge arc — a wide arc across the top, thick and bold -->
+  <path
+    d="M 28 80 A 48 48 0 1 1 100 80"
+    fill="none"
+    stroke="#ffffff"
+    stroke-width="9"
+    stroke-linecap="round"
+  />
+
+  <!-- Gauge needle pointing right (fast) -->
+  <line x1="64" y1="64" x2="92" y2="36" stroke="#ffffff" stroke-width="5" stroke-linecap="round"/>
+
+  <!-- Small play triangle at the needle tip -->
+  <polygon
+    points="90,30 102,22 96,40"
+    fill="#ffffff"
+  />
+
+  <!-- Gauge center dot -->
+  <circle cx="64" cy="64" r="5" fill="#ffffff"/>
+</svg>
