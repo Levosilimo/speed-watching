@@ -64,6 +64,15 @@ describe('messaging bridge', () => {
     expect(loaded.target).toBe(240);
   });
 
+  it('round-trips settings:set into the store', async () => {
+    const { host } = fakeWindow();
+    const { settings } = serve(host);
+    const client = createBridgeClient(host);
+    const next = { ...(await settings.load()), target: 300 };
+    await client.request({ type: 'settings:set', settings: next });
+    expect((await settings.load()).target).toBe(300);
+  });
+
   it('round-trips log:append into the OverrideLog', async () => {
     const { host } = fakeWindow();
     const { log } = serve(host);

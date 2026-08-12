@@ -24,10 +24,10 @@ export interface VideoLike {
 
 /** Multi-video pages: the last media-event target wins; before any event,
  * the first non-paused element; otherwise the first element. */
-export function selectVideo(
-  candidates: readonly VideoLike[],
-  lastActive: VideoLike | null,
-): VideoLike | null {
+export function selectVideo<T extends VideoLike>(
+  candidates: readonly T[],
+  lastActive: T | null,
+): T | null {
   if (lastActive !== null && candidates.includes(lastActive)) return lastActive;
   return candidates.find((video) => !video.paused) ?? candidates[0] ?? null;
 }

@@ -16,13 +16,12 @@ export const BRIDGE_TIMEOUT_MS = 1500;
 
 export type BridgeRequest =
   | { type: 'settings:get' }
+  | { type: 'settings:set'; settings: Settings }
   | { type: 'log:append'; entry: Omit<OverrideLogEntry, 'ts'> };
 
 export type BridgeResult<T extends BridgeRequest> = T extends { type: 'settings:get' }
   ? Settings
-  : T extends { type: 'log:append' }
-    ? void
-    : never;
+  : void;
 
 export interface BridgeResponse<T extends BridgeRequest = BridgeRequest> {
   id: number;
@@ -50,8 +49,12 @@ export async function handleBridgeRequest(
   switch (request.type) {
     case 'settings:get':
       return deps.settings.load();
+    case 'settings:set':
+      await deps.settings.save(request.settings);
+      return undefined;
     case 'log:append':
       await deps.log.append(request.entry);
+      return undefined;
   }
 }
 

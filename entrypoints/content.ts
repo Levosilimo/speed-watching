@@ -84,6 +84,10 @@ declare global {
   interface Window {
     __speedwatcherPill?: PillTestHook;
     __speedwatcherCaptionSource?: 'web' | 'android' | 'none';
+    // E2E hook: settings write through the bridge (same path the options
+    // page uses) — lets the shared specs exercise the bridge in both
+    // browsers, including Firefox's single-world layout.
+    __speedwatcherSettings?: { set(settings: Settings): Promise<void> };
   }
 }
 
@@ -107,6 +111,9 @@ export default defineContentScript({
         applyMultiplier(current.recommendation.multiplier);
       },
       dismiss: () => dismissCurrent(),
+    };
+    window.__speedwatcherSettings = {
+      set: (settings) => bridge.request({ type: 'settings:set', settings }).then(() => undefined),
     };
     void measure();
     document.addEventListener('yt-navigate-finish', () => void measure());
