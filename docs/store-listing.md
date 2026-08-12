@@ -6,11 +6,11 @@ WPM-based speed-watching extension that recommends playback speed from caption s
 
 ## Full listing description
 
-Speed Watcher measures the natural speech rate of a video's captions and recommends a playback multiplier that lands your effective listening speed in the 250–275 wpm range — a zone where most adults retain information without fatigue.
+Speed Watcher measures the natural speech rate of a video's captions and recommends a playback multiplier that lands your effective listening speed in the 250–275 wpm range — a commonly cited comfortable listening range for speech.
 
 Average conversational speech runs 150–160 wpm. Podcasts and lectures vary widely. Speed Watcher reads the caption timing data YouTube already provides, computes words-per-minute for that specific video, and suggests the exact multiplier to reach your target. One click applies it.
 
-The 250–275 wpm safe zone comes from reading-comprehension research: speeds above ~300 wpm start degrading recall for unfamiliar material, while speeds below 200 wpm waste time on content you can process faster. The default target is 250 wpm; you can adjust it from 100 to 400.
+The 250–275 wpm range is a commonly cited target for comfortable speech listening; speeds well above it get harder to follow on unfamiliar material. The default target is 250 wpm; you can adjust it from 100 to 400.
 
 **How it works:**
 
@@ -21,7 +21,7 @@ The 250–275 wpm safe zone comes from reading-comprehension research: speeds ab
 
 **Tier labels explained:**
 
-- *from captions* — word-timed ASR captions, the most common source (~77% of YouTube videos)
+- *from captions* — word-timed ASR captions, the most common source (in our measurements, ~94% of sampled videos with speech captions)
 - *from captions (corrected)* — manual captions with silence correction, higher confidence, clamped to 1.5× max
 - *estimated* — heuristic from content type and video metadata, used when captions are unavailable
 

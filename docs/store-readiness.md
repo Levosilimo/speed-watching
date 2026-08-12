@@ -93,6 +93,10 @@ Before upload, verify against the built bundle:
    asset is hand-added later.
 3. Upload the `bun run zip` artifact (`.output/*.zip`), not the unpacked
    directory.
+4. HTML-internal asset links: a `<link href>` pointing outside the bundle
+   breaks the same way — the options page stylesheet is imported by the
+   entry, so `options.html` carries no `<link>`; re-check if one
+   reappears.
 
 ## No-remote-code declaration
 
@@ -144,10 +148,10 @@ These are hard submission requirements, not polish:
    640×400 (JPEG/PNG, ≤2 MB). Planned: the pill on a YouTube watch page and
    the options page.
 2. **Listing description body** — a store description distinct from the
-   manifest one-liner: what the pill does, the 250–275 wpm safe-zone
-   frame (the safe-zone claim holds for the headline presentation-rate
+   manifest one-liner: what the pill does, the 250–275 wpm frame (a
+   commonly cited comfortable listening range; the presentation-rate
    metric, pauses included), the pause-dilution warning when pause-heavy
-   captions push the speech itself past the safe zone, report-only
+   captions push the speech itself past that range, report-only
    override log, and the scope (YouTube captioned videos).
 3. **Final icons** — CWS rejects placeholder art. The current 16/32/48/96/128
    icons are generated placeholders; real artwork is required before upload.
