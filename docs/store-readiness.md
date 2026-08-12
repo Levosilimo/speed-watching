@@ -19,14 +19,15 @@ from caption speech rate). No secondary purposes are present or planned.
 | `tabCapture` | Required-not-optional: the Chrome API refuses this permission as optional, so it must sit in the manifest from day one. Used only by the audio probe (options-page "Test audio capture" button) and the future on-device STT feature. STT itself is feature-gated behind an explicit user opt-in and is not part of the MVP; `tabCapture` is never called without a user gesture. |
 | `offscreen` | `chrome.offscreen.createDocument` fails without this manifest permission (live Chrome docs); `lib/capture-orchestrator.ts` calls it with reason `USER_MEDIA` for the audio probe. Offscreen documents cannot be created lazily on Chrome 116–, hence the static declaration. |
 
-Host access is explicit and named: `host_permissions` lists only the
-measured-player origins (vimeo, twitch, coursera, edx, youtube-nocookie),
-and the content scripts match `<all_urls>` with `all_frames` because
-embedded players live in cross-origin iframes — the generic matcher and
-the message bridge must run in every frame. No `tabs`, no wildcard
-`host_permissions`, no network access from the extension's own contexts
-(the content script fetches YouTube caption endpoints from the page
-context, same-origin).
+No `host_permissions` block (STORE-4): the content scripts match
+`<all_urls>` with `all_frames` (embedded players live in cross-origin
+iframes — the generic matcher and the message bridge must run in every
+frame), and that match already grants host access. Every fetch the
+extension makes — YouTube timedtext, generic caption harvest — runs from
+the MAIN world, the page's own context, so declaring named hosts would
+only inflate the permission count CWS reviewers see. No `tabs`, no
+wildcard host permissions, no network access from the extension's own
+contexts.
 
 ## Pre-submission checklist
 
@@ -55,11 +56,10 @@ AI-guardrail-bypass / prediction-market ban (2026-08-01 policy)
   ✓ No AI-guardrail-bypass or prediction-market language detected.
 
 Single-purpose statement (metadata completeness only)
-  ! 8 permissions/host_permissions declared.
-    Not a violation by itself, but a high permission count is the most common trigger for a CWS "does this serve a single purpose?" review question. Re-read CLAUDE.md's note on grab-bag rejection risk before adding more.
+  ✓ Manifest has a description and a modest permission count. (This tool cannot judge single-purpose intent — a human must still confirm the feature set matches one stated purpose.)
 
-Summary: 5 pass, 1 warn, 0 fail
-No hard blockers found, but review the warnings — several map to common review rejections.
+Summary: 6 pass, 0 warn, 0 fail
+No issues detected by this tool. This does not replace human review of your single-purpose statement and CWS listing disclosures.
 ```
 
 ### Reading the output for this extension
@@ -71,12 +71,10 @@ No hard blockers found, but review the warnings — several map to common review
   checker's high-scrutiny list, but they are the declared surface a human
   reviewer will question; the justification lives in the Permissions table
   above (user-gesture-only audio probe, feature-gated STT).
-- **single-purpose warn (8 declared = 3 permissions + 5 named host
-  permissions)** — a warning, not a failure. Every host is an explicit
-  measured-player origin, and the `<all_urls>` content-script match exists
-  because embedded players live in cross-origin iframes. The count only
-  grows with new embed targets — re-check the single-purpose story before
-  adding any.
+- **single-purpose — clean since the STORE-4 cut**: 3 declared
+  permissions, no `host_permissions`, so cws-check reports a modest count.
+  The count only grows with new permissions — re-check the single-purpose
+  story before adding any.
 
 ### Packaging-error check (manual)
 

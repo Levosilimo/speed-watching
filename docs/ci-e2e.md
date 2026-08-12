@@ -63,8 +63,10 @@ headed, e.g. for debugging).
 
 ## E2E architecture
 
-Both suites drive the **built** extension (`.output/chrome-mv3` and
-`.output/firefox-mv3`) — no dev server, no source maps. Both assert the same
+Both suites drive the **built** extension (`.output/chrome-mv3-e2e` and
+`.output/firefox-mv3-e2e`, the e2e-mode builds that keep the window test
+hooks — the prod dirs stay hook-free, proven by the SEC-2 CI grep) — no
+dev server, no source maps. Both assert the same
 things via `e2e/shared/specs.ts`:
 
 - navigate to a fixture watch page at a `www.youtube.com` origin,
@@ -89,7 +91,7 @@ file. Expected wpm comes from the fixture data, not from any network.
 Persistent context with `channel: 'chromium'` (the bundled Playwright build —
 Chrome/Edge dropped the side-load flags) and
 `--disable-extensions-except`/`--load-extension` pointing at
-`.output/chrome-mv3`. The service worker is reached via
+`.output/chrome-mv3-e2e`. The service worker is reached via
 `waitForEvent('serviceworker')` + `sw.evaluate()`. A context route
 (`**://www.youtube.com/**`) fulfills the watch page and the caption fetch
 (`/api/timedtext`) from the fixture server; both schemes are covered because
@@ -115,19 +117,21 @@ the capture orchestrator's documented error path through the `storage.session`
 mirror.
 
 The full capture chain (getMediaStreamId → getUserMedia → level > 0) does
-**not** run in this lane: `chrome.tabCapture.getMediaStreamId` rejects with
-"Extension has not been invoked for the current page (see activeTab
-permission)" because the extension declares neither `activeTab` nor
-`scripting` and has no action entrypoint — Chrome only allows activeTab-
-granted tabs as capture targets (measured on CfT 151, matches the current
-Chrome docs). The offscreen spec pins this exact error; the audio chain's
-pass/fail lives in the manual gate (`docs/manual-gates-runbook.md`).
+**not** run in this lane: `chrome.tabCapture.getMediaStreamId` only accepts
+a target tab after the extension was invoked on it — the toolbar action
+click IS that invocation — and Playwright has no browser-UI action-click
+synthesis (`chrome.action` exposes no programmatic click), so the
+extension is never invoked and the call rejects with the documented
+"not been invoked" guidance error. The spec pins that pre-invocation state
+plus the manifest contract that makes onClicked fire (action key, no
+`default_popup`); the audio chain's pass/fail lives in the manual gate
+(`docs/manual-gates-runbook.md`).
 
 ### Firefox (WebDriver + geckodriver)
 
 `selenium-webdriver` talks to geckodriver (npm wrapper package, lazily
 downloads v0.37.1 to a cache dir) via `usingServer`. The addon is installed
-with `driver.installAddon(.output/firefox-mv3, temporary = true)`. Firefox
+with `driver.installAddon(.output/firefox-mv3-e2e, temporary = true)`. Firefox
 runs headless (`-headless` — full browser, extensions included; no Xvfb).
 
 geckodriver cannot intercept requests, so the fixture page reaches the
@@ -163,8 +167,9 @@ Marionette. The suite passes end-to-end with it.
 `wxt.config.ts` now sets `browser_specific_settings.gecko.id:
 'speed-watcher@levosilimo.dev'` and `manifestVersion: 3` (WXT defaults
 Firefox to MV2; this project is MV3-only, so both browser targets build the
-same manifest shape). Permissions are untouched — `[storage, tabCapture]` on
-both targets. The `world: 'MAIN'` content script is emitted for Firefox too;
+same manifest shape). Permissions are `[storage, tabCapture, offscreen]` on
+both targets (`offscreen` added for the audio probe). The `world: 'MAIN'`
+content script is emitted for Firefox too;
 Firefox has no isolated worlds, so it runs in the content-script world, which
 is what the E2E exercises.
 
@@ -194,9 +199,9 @@ publish time, pinned to `@8`.
 | | Local | CI |
 |---|---|---|
 | Pipeline | `bun run ci` | `ci` job (same steps + SARIF upload + zip artifact) |
-| Chromium E2E | `bun run e2e:chromium` (needs `bun run build` first — the spec fails with instructions otherwise) | `e2e-chromium` job (`playwright install --with-deps chromium`) |
-| Chromium CfT E2E (offscreen) | `bun run e2e:cft` (same build requirement) | `e2e-chromium-cft` job (`xvfb-run -a bun run e2e:cft`) |
-| Firefox E2E | `bun run e2e:firefox` (needs `bun run build:firefox` + a Firefox binary) | `e2e-firefox` job (Mozilla APT Firefox) |
+| Chromium E2E | `bun run e2e:chromium` (needs `bun run build:e2e` first — the spec fails with instructions otherwise) | `e2e-chromium` job (`playwright install --with-deps chromium`) |
+| Chromium CfT E2E (offscreen) | `bun run e2e:cft` (needs `bun run build:e2e` — offscreen.spec.ts loads `.output/chrome-mv3-e2e`) | `e2e-chromium-cft` job (`xvfb-run -a bun run e2e:cft`) |
+| Firefox E2E | `bun run e2e:firefox` (needs `bun run build:firefox:e2e` + a Firefox binary) | `e2e-firefox` job (Mozilla APT Firefox) |
 | Both | `bun run e2e` | — |
 
 `bun run e2e:chromium` starts the fixture server itself via Playwright's
@@ -208,8 +213,8 @@ publish time, pinned to `@8`.
   itself is gated.** `e2e/chromium/offscreen.spec.ts` (headless, CI job
   `e2e-chromium-cft`) asserts offscreen create/lifecycle and the
   orchestrator's documented error path. The full tabCapture → getUserMedia
-  chain is blocked at `getMediaStreamId` on the current manifest (no
-  `activeTab`/`scripting` permission, no action entrypoint — see the CfT
+  chain is blocked at `getMediaStreamId`: the target tab is never invoked
+  (the toolbar click cannot be synthesized from Playwright — see the CfT
   lane section above) and is covered by the manual gate in
   `docs/manual-gates-runbook.md` and the vitest suite.
 - **The stub page is not YouTube.** It mimics the watch page structure (a

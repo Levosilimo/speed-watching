@@ -10,20 +10,20 @@ Speed Watcher
 
 ## Summary (≤250 chars)
 
-"Recommends a playback speed that keeps speech in the 250–275 wpm safe zone,
-measured from the video's own captions. Works on YouTube, Vimeo, and any page
-with a video element."
+"Recommends a playback speed that lands speech in the 250–275 wpm comfortable
+listening range, measured from the video's own captions. Works on YouTube,
+Vimeo, and any page with a video element."
 
 (180 chars — AMO limit 250; CWS limit 132 is separate, see store-readiness.)
 
 ## Description
 
 Speed Watcher measures how fast people actually speak in a video — using the
-video's own captions — and recommends a playback speed that keeps the
-effective speech rate in the 250–275 words-per-minute range where
-comprehension holds up. Faster speakers get slowed down, slower ones sped up;
-content where the safe zone is unreachable says so honestly instead of
-guessing.
+video's own captions — and recommends a playback speed that lands your
+effective listening speed in the 250–275 words-per-minute range, a commonly
+cited comfortable listening range for speech. Faster speakers get slowed
+down, slower ones sped up; content where that range is unreachable says so
+honestly instead of guessing.
 
 How it works:
 
@@ -59,7 +59,7 @@ submission time; "Photos, Music & Videos" if "Video" is not offered).
 | Permission | Why |
 |---|---|
 | Content script on `<all_urls>`, all frames | The extension's function is to find and control video elements, and embedded players live in cross-origin iframes on arbitrary hosts (measured in the Phase-0 probe: no player was reachable from the top frame alone). A curated site list would miss native video elements on unlisted pages. The script only reads video element properties and caption resources and sets `playbackRate`; it never reads page content outside the active video. |
-| Host permissions for `vimeo.com`, `twitch.tv`, `coursera.org`, `edx.org`, `youtube-nocookie.com` | Caption harvesting fetches from these origins (Vimeo player config, HLS subtitle manifests, transcript endpoints). In Chrome's model the `<all_urls>` match already grants this host access, so these entries add no functional scope — they name the measured data-access origins explicitly for review. |
+| No `host_permissions` | Caption harvesting fetches from measured origins (Vimeo player config, HLS subtitle manifests, transcript endpoints), but every fetch runs from the MAIN world — the page's own context — and the `<all_urls>` content-script match already grants host access, so no host permission is declared (declaring one would only inflate the review surface). |
 | `storage` | Settings (`sw.settings`) and the override/habits log (`sw.overrideLog`), both in `chrome.storage.local` (browser.storage.local in Firefox). Nothing syncs, nothing leaves the machine. |
 | `tabCapture`, `offscreen` | The audio probe (options-page "Test audio capture" button), Chrome-only. Firefox has no offscreen API, so on Firefox the probe reports "not supported" and these APIs are never called. |
 
