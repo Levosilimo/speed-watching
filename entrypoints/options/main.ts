@@ -169,6 +169,7 @@ overrideInput.addEventListener('keydown', (e: KeyboardEvent) => {
 const habitTotal = el('habit-total');
 const habitAvgMult = el('habit-avg-mult');
 const habitList = el('habit-list');
+
 function renderHabits(habits: OverrideLogEntry[]): void {
   habitTotal.textContent = String(habits.length);
 
