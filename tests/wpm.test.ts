@@ -13,6 +13,7 @@ import {
   wordLevelWpm,
 } from '../lib/wpm';
 import { parseYouTubeJson3 } from '../lib/captions';
+import { LANGUAGES } from '../lib/languages';
 import { readFixture } from './fixtures/helpers';
 
 describe('countWords', () => {
@@ -272,5 +273,44 @@ describe('totalWords', () => {
         { text: 'c', startSec: 0, durSec: 1 },
       ]),
     ).toBe(3);
+  });
+});
+
+describe('language-aware token units', () => {
+  it('ja: counts graphemes per minute over the trimmed span (cpm)', () => {
+    const cues = [
+      { text: 'こんにちは世界', startSec: 0, durSec: 3 }, // 7 graphemes
+      { text: '元気ですか', startSec: 2, durSec: 2 }, // 5 graphemes
+    ];
+    // 12 chars over a 2 s span → 360 cpm; word runs would say 2.
+    expect(filteredTokensOverTrimmedSpan(cues, LANGUAGES['ja'])).toBeCloseTo(360, 6);
+    expect(filteredTokensOverTrimmedSpan(cues)).toBeCloseTo(60, 6);
+  });
+
+  it('hi: converts words-marks tokens to syllables', () => {
+    const cues = [
+      { text: 'मैं जा रहा हूँ', startSec: 0, durSec: 2 }, // 4 words × 1.5 = 6 syl
+      { text: 'मैं ठीक हूँ', startSec: 1, durSec: 1 }, // 3 words × 1.5 = 4.5 syl
+    ];
+    // 10.5 syl over a 1 s span → 630 syl/min.
+    expect(filteredTokensOverTrimmedSpan(cues, LANGUAGES['hi'])).toBeCloseTo(630, 6);
+  });
+
+  it('ko: counts Hangul syllable blocks instead of the factor', () => {
+    const cues = [
+      { text: '안녕하세요', startSec: 0, durSec: 3 }, // 5 blocks
+      { text: '세상', startSec: 1, durSec: 2 }, // 2 blocks
+    ];
+    // 7 blocks over a 1 s span → 420 syl/min.
+    expect(filteredTokensOverTrimmedSpan(cues, LANGUAGES['ko'])).toBeCloseTo(420, 6);
+  });
+
+  it('es: word runs stay words per minute', () => {
+    const cues = [
+      { text: 'hola mundo', startSec: 0, durSec: 3 },
+      { text: 'buenos días', startSec: 1, durSec: 2 },
+    ];
+    // 4 words over a 1 s span → 240 wpm; accents stay inside the run.
+    expect(filteredTokensOverTrimmedSpan(cues, LANGUAGES['es'])).toBeCloseTo(240, 6);
   });
 });
