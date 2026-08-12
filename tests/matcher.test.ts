@@ -139,6 +139,36 @@ describe('RateReapplier', () => {
     expect(video.playbackRate).toBe(1.5 + 1e-9);
   });
 
+  it('respects a user manual rate: only a reset to 1.0 is re-asserted', () => {
+    const video = new FakeVideo();
+    const loop = new RateReapplier();
+    loop.start(video, 1.5, 2);
+    video.playbackRate = 1.25; // user dials their own speed
+    video.fire('ratechange');
+    expect(video.playbackRate).toBe(1.25);
+    expect(loop.lastApplied).toBe(1.5);
+  });
+
+  it('leaves a manual rate alone on the re-check interval', () => {
+    const video = new FakeVideo();
+    const loop = new RateReapplier(2000);
+    loop.start(video, 1.5, 2);
+    video.playbackRate = 1.25;
+    vi.advanceTimersByTime(2500); // > one re-check interval
+    expect(video.playbackRate).toBe(1.25);
+  });
+
+  it('still re-asserts a manual return to 1.0 (indistinguishable from a reset)', () => {
+    const video = new FakeVideo();
+    const loop = new RateReapplier();
+    loop.start(video, 1.5, 2);
+    video.playbackRate = 1.25;
+    video.fire('ratechange');
+    video.playbackRate = 1;
+    video.fire('ratechange');
+    expect(video.playbackRate).toBe(1.5);
+  });
+
   it('stops re-asserting after stop() and leaves the rate untouched', () => {
     const video = new FakeVideo();
     const loop = new RateReapplier();
