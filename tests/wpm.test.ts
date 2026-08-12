@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  articulatoryWpm,
   correctedCueLevelWpm,
   countWords,
   cueLevelWpm,
@@ -7,6 +8,7 @@ import {
   estimateSpeechDurationSec,
   filteredTokensOverTrimmedSpan,
   manualCueRate,
+  speechDurationSec,
   totalWords,
   wordLevelWpm,
 } from '../lib/wpm';
@@ -104,6 +106,72 @@ describe('wpm across the synthetic fixture pipeline', () => {
     const corrected = correctedCueLevelWpm(cues);
     expect(naive).toBeCloseTo((5 / 7) * 60, 6);
     expect(corrected).toBeCloseTo(60, 6);
+  });
+});
+
+describe('speechDurationSec (per-word inter-start spans)', () => {
+  it('sums inter-start spans, excluding gaps ≥ 1 s', () => {
+    const words = [
+      { text: 'a', startSec: 0 },
+      { text: 'b', startSec: 0.4 },
+      { text: 'c', startSec: 0.7 },
+      { text: 'd', startSec: 1.7 }, // gap 1.0 → cue-boundary pause, excluded
+      { text: 'e', startSec: 2.4 },
+    ];
+    expect(speechDurationSec(words)).toBeCloseTo(0.4 + 0.3 + 0.7, 6);
+  });
+
+  it('skips non-positive deltas (out-of-order timings)', () => {
+    const words = [
+      { text: 'a', startSec: 1.0 },
+      { text: 'b', startSec: 1.5 },
+      { text: 'c', startSec: 1.2 }, // rewind → skipped
+      { text: 'd', startSec: 2.0 },
+    ];
+    expect(speechDurationSec(words)).toBeCloseTo(0.5 + 0.8, 6);
+  });
+
+  it('returns null for empty, single-word, and all-gap input', () => {
+    expect(speechDurationSec([])).toBeNull();
+    expect(speechDurationSec([{ text: 'a', startSec: 0 }])).toBeNull();
+    // every gap ≥ 1 s: nothing left to measure
+    expect(
+      speechDurationSec([
+        { text: 'a', startSec: 0 },
+        { text: 'b', startSec: 2 },
+      ]),
+    ).toBeNull();
+  });
+});
+
+describe('articulatoryWpm', () => {
+  it('divides the token count by the pause-excluded speech duration', () => {
+    expect(articulatoryWpm(60, 10)).toBeCloseTo(360, 6);
+    expect(articulatoryWpm(0, 10)).toBe(0);
+  });
+});
+
+describe('speech duration on real fixtures', () => {
+  it('measures pause-excluded speech duration on the iG9CE55wbtY opening', () => {
+    // Same video opening in both layouts; the WEB fixture and the ANDROID
+    // asr-word fixture must yield the same word timing.
+    const web = parseYouTubeJson3(readFixture('real/windows-asr-iG9CE55wbtY-trunc.json'));
+    const android = parseYouTubeJson3(readFixture('real/asr-word.json'));
+    const webDur = speechDurationSec(web.words);
+    const androidDur = speechDurationSec(android.words);
+    if (webDur === null || androidDur === null) {
+      throw new Error('speech duration must be measurable on the fixture');
+    }
+    expect(androidDur).toBeCloseTo(webDur, 6);
+    expect(webDur).toBeGreaterThan(0);
+  });
+
+  it('excludes the ≥1 s gap on the Ks-_Mh1QhMc opening', () => {
+    const { words } = parseYouTubeJson3(readFixture('real/windows-asr-Ks-_Mh1QhMc-trunc.json'));
+    const dur = speechDurationSec(words);
+    const raw = words.at(-1)!.startSec - words[0]!.startSec;
+    if (dur === null) throw new Error('speech duration must be measurable on the fixture');
+    expect(dur).toBeLessThan(raw);
   });
 });
 

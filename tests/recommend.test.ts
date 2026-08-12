@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
+import { parseYouTubeJson3 } from '../lib/captions';
 import type { RecommendInput, Recommendation } from '../lib/recommend';
 import {
+  ARTICULATORY_CEILING_WPM,
   MANUAL_CUE_CLAMP,
+  P_STIMULUS,
   ROUNDING_STEP,
   SAFE_ZONE_CEILING_WPM,
   SLOW_DOWN_FLOOR,
@@ -10,6 +13,14 @@ import {
   recommend,
 } from '../lib/recommend';
 import type { RateTier } from '../lib/recommend';
+import { isBracketMarker, countWordTokens } from '../lib/tokenizer';
+import {
+  articulatoryWpm,
+  filteredTokensOverTrimmedSpan,
+  speechDurationSec,
+  totalWords,
+} from '../lib/wpm';
+import { readFixture } from './fixtures/helpers';
 
 const asr = (naturalRate: number, platformMax = 2, userTarget?: number) =>
   recommend({ naturalRate, tier: 'asr-cue', contentType: 'lecture', platformMax, userTarget });
@@ -21,6 +32,10 @@ describe('recommend — constants', () => {
     expect(ROUNDING_STEP).toBe(0.05);
     expect(MANUAL_CUE_CLAMP).toBe(1.5);
     expect(SLOW_DOWN_FLOOR).toBe(0.5);
+    expect(P_STIMULUS).toBe(0.3);
+    // 275 / (1 − 0.3): the presentation-rate cliff mapped onto the
+    // pause-excluded articulatory rate.
+    expect(ARTICULATORY_CEILING_WPM).toBeCloseTo(392.857, 3);
     expect(TIER_LABELS).toEqual({
       'asr-word': 'from captions',
       'asr-cue': 'from captions',
@@ -133,6 +148,130 @@ describe('recommend — above-zone warning', () => {
     expect(r.effectiveWpm).toBeCloseTo(270, 6); // below the 275 ceiling
     expect(r.mode).toBe('recommend');
     expect(r.reason).toBeNull();
+  });
+});
+
+describe('recommend — pause-diluted articulatory warning (asr-word tier)', () => {
+  // Full-payload anchors from scripts/data/web-rerun/rerun-results.jsonl:
+  // iG9CE55wbtY pauseBias −75.2% (wordAccurateRate 312.8), Ks-_Mh1QhMc
+  // −25.0% (242.6), arj7oStGLkU −57.5% (268.7). The fixtures hold the
+  // first 20 events, so absolute numbers differ from the full payload;
+  // the fire/no-fire polarity holds.
+  function inputFrom(fixture: string): RecommendInput {
+    const parsed = parseYouTubeJson3(readFixture(fixture));
+    const naturalRate = filteredTokensOverTrimmedSpan(parsed.cues);
+    const speechDur = speechDurationSec(parsed.words);
+    if (naturalRate === null || speechDur === null) {
+      throw new Error(`${fixture}: rate or speech duration not measurable`);
+    }
+    const tokens = parsed.cues.reduce(
+      (sum, cue) => (isBracketMarker(cue.text) ? sum : sum + countWordTokens(cue.text)),
+      0,
+    );
+    return {
+      naturalRate,
+      tier: 'asr-word',
+      contentType: 'talk',
+      platformMax: 2,
+      articulatoryWpm: articulatoryWpm(tokens, speechDur),
+      timingCoverageOk: true,
+    };
+  }
+
+  it('warns on the pause-heavy iG9CE55wbtY opening at the default target', () => {
+    for (const fixture of [
+      'real/asr-word.json',
+      'real/windows-asr-iG9CE55wbtY-trunc.json',
+    ]) {
+      const r = recommend(inputFrom(fixture));
+      expect(r.mode).toBe('warning');
+      expect(r.reason).toBe('pause-diluted');
+      expect(r.label).not.toContain('capped');
+    }
+  });
+
+  it('stays in recommend mode on low-pause openings (Ks-_Mh1QhMc, arj7oStGLkU)', () => {
+    for (const fixture of [
+      'real/windows-asr-Ks-_Mh1QhMc-trunc.json',
+      'real/windows-asr-arj7oStGLkU-trunc.json',
+    ]) {
+      const r = recommend(inputFrom(fixture));
+      expect(r.mode).toBe('recommend');
+      expect(r.reason).toBeNull();
+    }
+  });
+
+  it('keeps the fixture word-timing coverage inside the measured band', () => {
+    // Phase-0 band: 67.9–87.4% of text tokens timed (mean 83.6%). Sparse
+    // coverage would misestimate speechDur; these anchors stay in-band.
+    for (const fixture of [
+      'real/asr-word.json',
+      'real/windows-asr-iG9CE55wbtY-trunc.json',
+      'real/windows-asr-Ks-_Mh1QhMc-trunc.json',
+      'real/windows-asr-arj7oStGLkU-trunc.json',
+    ]) {
+      const parsed = parseYouTubeJson3(readFixture(fixture));
+      const coverage = totalWords(parsed.words) / totalWords(parsed.cues);
+      expect(coverage).toBeGreaterThanOrEqual(0.67);
+      expect(coverage).toBeLessThanOrEqual(0.88);
+    }
+  });
+
+  it('skips the warning when word-timing coverage is inadequate', () => {
+    const r = recommend({
+      naturalRate: 160,
+      tier: 'asr-word',
+      contentType: 'talk',
+      platformMax: 2,
+      articulatoryWpm: 800,
+      timingCoverageOk: false,
+    });
+    expect(r.mode).toBe('recommend');
+    expect(r.reason).toBeNull();
+  });
+
+  it('stays silent without an articulatory input (other tiers, older callers)', () => {
+    for (const tier of ['asr-cue', 'manual-cue', 'estimated'] as const) {
+      const r = recommend({
+        naturalRate: 200, // clamp-free: 1.25x on every tier, effective 250
+        tier,
+        contentType: 'talk',
+        platformMax: 2,
+        articulatoryWpm: 800,
+        timingCoverageOk: true,
+      });
+      expect(r.reason).toBeNull();
+    }
+    const bare = recommend({ naturalRate: 160, tier: 'asr-word', contentType: 'talk', platformMax: 2 });
+    expect(bare.mode).toBe('recommend');
+  });
+
+  it('above-zone outranks pause-diluted when both fire', () => {
+    const r = recommend({
+      naturalRate: 140,
+      tier: 'asr-word',
+      contentType: 'talk',
+      platformMax: 2,
+      userTarget: 280,
+      articulatoryWpm: 300,
+      timingCoverageOk: true,
+    });
+    // effective 280 > 275 (above-zone); 2.0 × 300 = 600 > 393 (would be pause-diluted)
+    expect(r.reason).toBe('above-zone');
+  });
+
+  it('pause-diluted outranks capped-below when both fire', () => {
+    const r = recommend({
+      naturalRate: 480,
+      tier: 'asr-word',
+      contentType: 'talk',
+      platformMax: 2,
+      articulatoryWpm: 800,
+      timingCoverageOk: true,
+    });
+    // floor 0.5 → effective 240 < target (would be capped-below);
+    // 0.5 × 800 = 400 > 393 (pause-diluted)
+    expect(r.reason).toBe('pause-diluted');
   });
 });
 

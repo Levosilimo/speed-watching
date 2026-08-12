@@ -106,6 +106,20 @@ describe('createPill', () => {
     expect(note.textContent).toBe(warningNoteCopy('capped-below'));
   });
 
+  it('maps the pause-diluted reason to the articulatory note', () => {
+    expect(warningNoteCopy('pause-diluted')).toBe(
+      'Speech runs fast at this speed — estimate uncertain',
+    );
+    const roots = capturedRoots();
+    const host = shadowHost();
+    const pill = createPill(host, {});
+    pill.mount();
+    pill.update(state({ mode: 'warning', reason: 'pause-diluted', label: 'w' }));
+    const note = roots[0]!.querySelector<HTMLDivElement>('.warning-note')!;
+    expect(note.hidden).toBe(false);
+    expect(note.textContent).toBe(warningNoteCopy('pause-diluted'));
+  });
+
   it('hides the warning note outside warning mode', () => {
     const roots = capturedRoots();
     const host = shadowHost();

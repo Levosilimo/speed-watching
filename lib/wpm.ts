@@ -69,10 +69,18 @@ function spokenCues(cues: readonly Segment[]): Segment[] {
 }
 
 /**
- * Unified ASR rate rule: letter/digit tokens of non-bracket cues over the
- * span from the first to the last such cue's start. Word timing stays a
- * coverage sanity check (wordLevelWpm) — naive word-level rates undercount
- * by ~16% (measured), which over-speeds playback.
+ * Unified ASR presentation-rate rule: letter/digit tokens of non-bracket
+ * cues over the span from the first to the last such cue's start. The
+ * span keeps its pauses, so this is the presentation rate the safe-zone
+ * literature measures; TARGET_WPM and SAFE_ZONE_CEILING_WPM are defined
+ * on it. Two measured biases bracket it: naive word-level rates
+ * undercount tokens by ~16% (untimed segs), while the pause-excluded
+ * articulatory rate runs ~45% higher on the re-run corpus — median
+ * pause:speech 44.8% (≈31% pause share of span, range ~9–50%, 11/17
+ * speech videos above 25%; lower bounds, since sub-second micro-pauses
+ * stay inside the inter-start spans). speechDurationSec() and
+ * articulatoryWpm() expose the pause-excluded rate for the
+ * pause-diluted warning.
  */
 export function filteredTokensOverTrimmedSpan(cues: readonly Segment[]): number | null {
   const spoken = spokenCues(cues);
@@ -81,6 +89,36 @@ export function filteredTokensOverTrimmedSpan(cues: readonly Segment[]): number 
   if (first === undefined || last === undefined || last <= first) return null;
   const tokens = spoken.reduce((sum, cue) => sum + countWordTokens(cue.text), 0);
   return (tokens / (last - first)) * 60;
+}
+
+/**
+ * Speech duration from per-word inter-start spans: the sum of
+ * (start[i+1] − start[i]) over consecutive timed words, excluding gaps
+ * ≥ 1 s (cue-boundary pauses) and non-positive deltas (out-of-order
+ * timings). Null for fewer than two timed words — sparse word timing
+ * cannot localize pauses. Production home of the harness's speechDurSec
+ * (scripts/sample-analysis.ts).
+ */
+export function speechDurationSec(words: readonly Segment[]): number | null {
+  if (words.length < 2) return null;
+  let dur = 0;
+  for (let i = 0; i < words.length - 1; i++) {
+    const cur = words[i]!;
+    const next = words[i + 1]!;
+    const gap = next.startSec - cur.startSec;
+    if (gap >= 1 || gap <= 0) continue;
+    dur += gap;
+  }
+  return dur > 0 ? dur : null;
+}
+
+/**
+ * Articulatory rate: filtered letter/digit tokens over the pause-excluded
+ * speech duration — the rate the speaker actually produces, without the
+ * pause dilution the presentation-rate rule still carries.
+ */
+export function articulatoryWpm(tokens: number, speechDuration: number): number {
+  return (tokens / speechDuration) * 60;
 }
 
 /**

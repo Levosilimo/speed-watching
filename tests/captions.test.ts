@@ -84,8 +84,10 @@ describe('parseYouTubeJson3 — edge cases', () => {
 
 describe('parseYouTubeJson3 — WEB windows format', () => {
   it('parses event-level windows ({startMs, durMs?, text}) into the same cues as segs', () => {
-    // Synthetic fixture: the real ASR payload's texts/timings converted to
-    // the WEB windows shape (see the _synthetic marker in the fixture).
+    // Format-drift sentinel: converted from the real ASR payload's
+    // texts/timings into the windows shape, which no real payload has
+    // used since the residential re-run. If a future format change
+    // breaks this, the sentinel fails instead of silently regressing.
     const real = parseYouTubeJson3(readFixture('real/asr-word.json'));
     const windows = parseYouTubeJson3(readFixture('synthetic/windows-format.json'));
     expect(windows.cues).toEqual(real.cues);

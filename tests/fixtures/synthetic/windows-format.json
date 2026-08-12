@@ -1,6 +1,6 @@
 {
  "wireMagic": "pb3",
- "_synthetic": "converted from real/asr-word.json (TED talk) to the WEB windows shape",
+ "_synthetic": "format-drift sentinel: the events[].windows[].segs shape no real payload has used since the residential re-run (WEB ASR payloads carry per-seg tOffsetMs instead); the parser must keep handling it",
  "events": [
   {
    "tStartMs": 0,
