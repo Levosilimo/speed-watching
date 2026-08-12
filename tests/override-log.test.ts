@@ -56,4 +56,21 @@ describe('OverrideLog', () => {
     expect(report.total).toBe(0);
     expect(report.byContentType).toEqual({});
   });
+
+  it('two instances over the same storage can drop appends (documented lib-11#3 limitation)', async () => {
+    // Same interleave as the DemandStore two-instance test: appends are
+    // read-modify-write on chrome.storage.local with no cross-context
+    // atomicity, so two tabs appending together can lose an entry. The log
+    // is report-only with a 500-entry cap, so the loss is accepted.
+    const storage = mockStorage();
+    const logA = new OverrideLog(storage);
+    const logB = new OverrideLog(storage);
+    await Promise.all([
+      logA.append(entry({ videoId: 'a' })),
+      logB.append(entry({ videoId: 'b' })),
+    ]);
+    const entries = await logA.entries();
+    expect(entries).toHaveLength(1);
+    expect(entries[0]?.videoId).toBe('b'); // the second writer won
+  });
 });

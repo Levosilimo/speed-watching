@@ -5,6 +5,7 @@ import {
   DEMAND_STORAGE_KEY,
   DemandStore,
   ELAPSED_CAP_DAYS,
+  MAX_ESTIMATED_COUNT,
   RENDER_THRESHOLD,
   type DemandRecord,
 } from '../lib/demand';
@@ -125,6 +126,73 @@ describe('DemandStore', () => {
     const record = await store.get();
     expect(record.estimatedCount).toBe(types.length);
     expect(Object.keys(record.byContentType).sort()).toEqual([...types].sort());
+  });
+
+  it('caps estimatedCount: increments at the cap are no-ops with no storage write (SEC-4)', async () => {
+    const storage = mockStorage({
+      [DEMAND_STORAGE_KEY]: {
+        estimatedCount: MAX_ESTIMATED_COUNT,
+        byContentType: { generic: MAX_ESTIMATED_COUNT },
+        firstSeenTs: 1000,
+        lastSeenTs: 1000,
+      },
+    });
+    const writes: unknown[] = [];
+    const spied = {
+      ...storage,
+      set: (items: Record<string, unknown>) => {
+        writes.push(items);
+        return storage.set(items);
+      },
+    };
+    const store = new DemandStore(spied);
+    const record = await store.increment('generic', 2000);
+    expect(record.estimatedCount).toBe(MAX_ESTIMATED_COUNT);
+    expect(record.byContentType.generic).toBe(MAX_ESTIMATED_COUNT);
+    expect(record.lastSeenTs).toBe(1000); // record untouched
+    expect(writes).toHaveLength(0);
+  });
+
+  it('still increments below the cap (SEC-4)', async () => {
+    const store = new DemandStore(
+      mockStorage({
+        [DEMAND_STORAGE_KEY]: {
+          estimatedCount: MAX_ESTIMATED_COUNT - 1,
+          byContentType: { generic: MAX_ESTIMATED_COUNT - 1 },
+        },
+      }),
+    );
+    const record = await store.increment('generic');
+    expect(record.estimatedCount).toBe(MAX_ESTIMATED_COUNT);
+    expect(record.byContentType.generic).toBe(MAX_ESTIMATED_COUNT);
+  });
+
+  it('clamps corrupt stored counts to the cap (SEC-4)', async () => {
+    const store = new DemandStore(
+      mockStorage({
+        [DEMAND_STORAGE_KEY]: { estimatedCount: 999_999, byContentType: { talk: 999_999 } },
+      }),
+    );
+    const record = await store.get();
+    expect(record.estimatedCount).toBe(MAX_ESTIMATED_COUNT);
+    expect(record.byContentType.talk).toBe(MAX_ESTIMATED_COUNT);
+  });
+
+  it('two instances over the same storage can drop increments (documented lib-11#3 limitation)', async () => {
+    // Every tab/frame runs its own DemandStore with a private promise chain;
+    // chrome.storage.local get+set is not atomic across contexts, so two
+    // read-modify-write cycles can interleave and one increment is lost.
+    // Deterministic with mockStorage: both get()s resolve before either
+    // set() lands, so both compute 1 and the second write wins. Accepted for
+    // the coarse adoption gate (see the DemandStore doc comment); routing
+    // increments through the background is the STT-phase upgrade path.
+    const storage = mockStorage();
+    const storeA = new DemandStore(storage);
+    const storeB = new DemandStore(storage);
+    await Promise.all([storeA.increment('generic'), storeB.increment('generic')]);
+    const record = await storeA.get();
+    expect(record.estimatedCount).toBe(1);
+    expect(record.byContentType.generic).toBe(1);
   });
 });
 

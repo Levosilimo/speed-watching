@@ -23,9 +23,15 @@ export function createAudioCapture(env: AudioCaptureEnv, hooks: AudioCaptureHook
   let stream: MediaStream | null = null;
   let audioContext: AudioContext | null = null;
   let meterTimer: ReturnType<typeof setInterval> | null = null;
+  // SEC-5: every stop() bumps the generation, so an in-flight start (its
+  // getUserMedia still pending) can detect that a stop landed and must not
+  // become a live capture (tab-switch race: previously the capture survived
+  // the stop because stop() tore down nothing it could see).
+  let generation = 0;
 
   async function start(streamId: string): Promise<void> {
-    await stop();
+    const startedAt = generation;
+    await teardownActive();
     let acquired: MediaStream;
     try {
       const audio: TabAudioConstraints = {
@@ -34,6 +40,12 @@ export function createAudioCapture(env: AudioCaptureEnv, hooks: AudioCaptureHook
       acquired = await env.getUserMedia({ video: false, audio });
     } catch (error) {
       hooks.onError(errorMessage(error));
+      return;
+    }
+    if (startedAt !== generation) {
+      // A stop() landed while the stream was being acquired: discard it so
+      // the capture cannot outlive the stop.
+      for (const track of acquired.getAudioTracks()) track.stop();
       return;
     }
     stream = acquired;
@@ -55,14 +67,22 @@ export function createAudioCapture(env: AudioCaptureEnv, hooks: AudioCaptureHook
   }
 
   async function stop(): Promise<void> {
-    const wasActive = stream !== null || audioContext !== null;
-    await teardown();
-    if (wasActive) hooks.onStopped();
+    generation += 1;
+    await teardownActive();
   }
 
   async function handleTrackEnded(): Promise<void> {
     await teardown();
     hooks.onTrackEnded();
+  }
+
+  /** Tears down a live capture and reports stopped. start() uses it as the
+   * restart cleanup (a restart must not invalidate its own token); stop()
+   * calls it after bumping the generation. */
+  async function teardownActive(): Promise<void> {
+    const wasActive = stream !== null || audioContext !== null;
+    await teardown();
+    if (wasActive) hooks.onStopped();
   }
 
   async function teardown(): Promise<void> {

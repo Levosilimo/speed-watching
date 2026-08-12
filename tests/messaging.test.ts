@@ -12,6 +12,7 @@ import {
 } from '../lib/messaging';
 import type { ContentType } from '../lib/music';
 import { OverrideLog } from '../lib/override-log';
+import type { OverrideLogEntry } from '../lib/override-log';
 import { defaultSettings, SettingsStore } from '../lib/settings';
 import { mockStorage } from './fixtures/helpers';
 
@@ -27,6 +28,9 @@ function fakeWindow(): {
   const listeners = new Set<(event: MessageEvent) => void>();
   const messages: unknown[] = [];
   const host = {
+    // www-normalized like a real watch page; the bridge's siteHost is
+    // 'youtube.com'.
+    location: { hostname: 'www.youtube.com' },
     postMessage: (message: unknown) => {
       messages.push(message);
       for (const listener of listeners) {
@@ -203,6 +207,79 @@ describe('messaging bridge', () => {
     const entry = entries[0]!;
     expect(entry.multiplier).toBe(1.55);
     expect(entry.userAction).toBe('apply');
+  });
+
+  const validLogEntry: Omit<OverrideLogEntry, 'ts'> = {
+    site: 'youtube.com',
+    contentType: 'talk',
+    naturalRate: 160.25,
+    multiplier: 1.55,
+    mode: 'recommend',
+    userAction: 'apply',
+  };
+
+  it('accepts a log:append entry with optional fields (videoId, finalMultiplier)', async () => {
+    const { host } = fakeWindow();
+    const { log } = serve(host);
+    const client = createBridgeClient(host);
+    await client.request({
+      type: 'log:append',
+      entry: { ...validLogEntry, videoId: 'v1', userAction: 'adjust', finalMultiplier: 1.6 },
+    });
+    const entries = await log.entries();
+    expect(entries[0]?.videoId).toBe('v1');
+    expect(entries[0]?.finalMultiplier).toBe(1.6);
+  });
+
+  it('rejects forged log:append entries and appends nothing (SEC-3)', async () => {
+    const malformed: Array<Record<string, unknown> | string> = [
+      { ...validLogEntry, multiplier: Number.NaN },
+      { ...validLogEntry, multiplier: 20 },
+      { ...validLogEntry, naturalRate: 0 },
+      { ...validLogEntry, naturalRate: 5000 },
+      { ...validLogEntry, contentType: 'bogus' },
+      { ...validLogEntry, userAction: 'explode' },
+      { ...validLogEntry, mode: 'speedrun' },
+      { ...validLogEntry, site: '' },
+      { ...validLogEntry, videoId: 42 },
+      { ...validLogEntry, finalMultiplier: -2 },
+      'not an entry',
+    ];
+    for (const entry of malformed) {
+      const { host } = fakeWindow();
+      const { log } = serve(host);
+      const client = createBridgeClient(host);
+      await expect(
+        client.request({ type: 'log:append', entry } as unknown as BridgeRequest),
+      ).rejects.toThrow('log:append: invalid entry');
+      expect(await log.entries()).toHaveLength(0);
+    }
+  });
+
+  it('rejects settings:set with a sites override for a foreign host and saves nothing (SEC-1)', async () => {
+    const { host } = fakeWindow();
+    const { settings } = serve(host);
+    const client = createBridgeClient(host);
+    await settings.save({ ...defaultSettings(), target: 240 });
+    const before = await settings.load();
+    await expect(
+      client.request({
+        type: 'settings:set',
+        settings: { ...defaultSettings(), sites: { 'example.com': { target: 240 } } },
+      }),
+    ).rejects.toThrow('sites override for foreign host example.com');
+    expect(await settings.load()).toEqual(before);
+  });
+
+  it('accepts a sites override for the requesting frame host (www-normalized) (SEC-1)', async () => {
+    const { host } = fakeWindow();
+    const { settings } = serve(host);
+    const client = createBridgeClient(host);
+    await client.request({
+      type: 'settings:set',
+      settings: { ...defaultSettings(), sites: { 'youtube.com': { target: 240 } } },
+    });
+    expect((await settings.load()).sites['youtube.com']).toEqual({ target: 240 });
   });
 
   it('rejects with the handler error when the response is not ok', async () => {
