@@ -16,8 +16,8 @@ from caption speech rate). No secondary purposes are present or planned.
 | Permission | Why it is declared |
 |---|---|
 | `storage` | Settings (`sw.settings`), override log (`sw.overrideLog`), audio-probe session state. Everything is `chrome.storage.local`; nothing syncs. |
-| `tabCapture` | Required-not-optional: the Chrome API refuses this permission as optional, so it must sit in the manifest from day one. Used only by the audio probe (options-page "Test audio capture" button) and the future on-device STT feature. STT itself is feature-gated behind an explicit user opt-in and is not part of the MVP; `tabCapture` is never called without a user gesture. |
-| `offscreen` | `chrome.offscreen.createDocument` fails without this manifest permission (live Chrome docs); `lib/capture-orchestrator.ts` calls it with reason `USER_MEDIA` for the audio probe. Offscreen documents cannot be created lazily on Chrome 116–, hence the static declaration. |
+| `tabCapture` | Required-not-optional: the Chrome API refuses this permission as optional, so it must sit in the manifest from day one. Serves the shipped audio capture test — the options-page "Test audio capture" button, which captures the audio of the video tab the user is watching, shows a live level meter, and stops on demand — and the future on-device STT feature, which stays feature-gated behind an explicit user opt-in. `tabCapture` is never called without a user gesture. |
+| `offscreen` | `chrome.offscreen.createDocument` fails without this manifest permission (live Chrome docs); `lib/capture-orchestrator.ts` calls it with reason `USER_MEDIA` for the audio capture test. Offscreen documents cannot be created lazily on Chrome 116–, hence the static declaration. |
 
 No `host_permissions` block (STORE-4): the content scripts match
 `<all_urls>` with `all_frames` (embedded players live in cross-origin
@@ -70,7 +70,7 @@ No issues detected by this tool. This does not replace human review of your sing
 - **sensitive-permissions** — `tabCapture` + `offscreen` are not on the
   checker's high-scrutiny list, but they are the declared surface a human
   reviewer will question; the justification lives in the Permissions table
-  above (user-gesture-only audio probe, feature-gated STT).
+  above (user-gesture-gated audio capture test, feature-gated STT).
 - **single-purpose — clean since the STORE-4 cut**: 3 declared
   permissions, no `host_permissions`, so cws-check reports a modest count.
   The count only grows with new permissions — re-check the single-purpose
@@ -159,7 +159,7 @@ These are hard submission requirements, not polish:
 - `package.json` version is the single source; the CI `ci` job fails unless
   the built manifest version matches it (screenpipe pattern).
 - Every store upload must bump the version (CWS rejects identical versions).
-  Current: `0.0.1`.
+  Current: `0.0.2`.
 - The publish workflow (`.github/workflows/publish.yml`) is draft/inert until
   store credentials exist.
 
@@ -170,11 +170,10 @@ These are hard submission requirements, not polish:
    2-3 video stopwatch timing spot-check. The ANDROID innertube fallback is
    shipped and E2E-tested, but the WEB path's availability on residential
    networks is the unmeasured half of the chain.
-2. **Audio probe manual verification** (from `docs/phase0-offscreen-audio.md`):
+2. **Audio capture test manual verification** (from `docs/phase0-offscreen-audio.md`):
    the tabCapture → offscreen → getUserMedia flow is unit-tested only;
    `chrome.offscreen` is absent from every Playwright build, so a human must
-   run the options-page probe on a real Chrome once before submission. The
-   `offscreen` permission this flow needs is now declared in the manifest.
+   run the shipped options-page test on a real Chrome once before submission.
 3. **Firefox AMO listing metadata** (name/description/summary fields) and the
    optional source-code upload for `web-ext sign --channel listed`.
 

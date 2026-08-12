@@ -61,7 +61,7 @@ submission time; "Photos, Music & Videos" if "Video" is not offered).
 | Content script on `<all_urls>`, all frames | The extension's function is to find and control video elements, and embedded players live in cross-origin iframes on arbitrary hosts (measured in the Phase-0 probe: no player was reachable from the top frame alone). A curated site list would miss native video elements on unlisted pages. The script only reads video element properties and caption resources and sets `playbackRate`; it never reads page content outside the active video. |
 | No `host_permissions` | Caption harvesting fetches from measured origins (Vimeo player config, HLS subtitle manifests, transcript endpoints), but every fetch runs from the MAIN world — the page's own context — and the `<all_urls>` content-script match already grants host access, so no host permission is declared (declaring one would only inflate the review surface). |
 | `storage` | Settings (`sw.settings`) and the override/habits log (`sw.overrideLog`), both in `chrome.storage.local` (browser.storage.local in Firefox). Nothing syncs, nothing leaves the machine. |
-| `tabCapture`, `offscreen` | The audio probe (options-page "Test audio capture" button), Chrome-only. Firefox has no offscreen API, so on Firefox the probe reports "not supported" and these APIs are never called. |
+| `tabCapture`, `offscreen` | The audio capture test (options-page "Test audio capture" button), Chrome-only. Firefox has no offscreen API, so Firefox builds hide the test and these APIs are never called. |
 
 No other permissions: no `tabs`, no `webRequest`, no background network
 access, no remote code, no analytics.

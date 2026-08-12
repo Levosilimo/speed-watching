@@ -2,6 +2,8 @@ import { browser } from 'wxt/browser';
 import { defineBackground } from 'wxt/utils/define-background';
 import { createCaptureOrchestrator } from '../lib/capture-orchestrator';
 import { isOffscreenEvent, isOptionsMessage } from '../lib/audio-probe';
+import { DemandStore } from '../lib/demand';
+import { isDemandIncrementMessage } from '../lib/messaging';
 
 export default defineBackground(() => {
   const orchestrator = createCaptureOrchestrator(
@@ -15,6 +17,11 @@ export default defineBackground(() => {
     { offscreenUrl: browser.runtime.getURL('/offscreen.html') },
   );
 
+  // Single writer for demand counters (lib-11#3): every bridge frame
+  // forwards demand:increment here, so one promise chain covers all frames
+  // instead of per-frame get→set interleaves.
+  const demand = new DemandStore(browser.storage.local);
+
   browser.runtime.onMessage.addListener(
     (
       message: unknown,
@@ -25,6 +32,10 @@ export default defineBackground(() => {
       // document's ack is the response the forwarder waits on.
       if (isOptionsMessage(message) || isOffscreenEvent(message)) {
         void orchestrator.handleMessage(message, sender).then(sendResponse);
+        return true;
+      }
+      if (isDemandIncrementMessage(message)) {
+        void demand.increment(message.contentType).then(sendResponse);
         return true;
       }
       return false;

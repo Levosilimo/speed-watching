@@ -178,21 +178,19 @@ describe('DemandStore', () => {
     expect(record.byContentType.talk).toBe(MAX_ESTIMATED_COUNT);
   });
 
-  it('two instances over the same storage can drop increments (documented lib-11#3 limitation)', async () => {
-    // Every tab/frame runs its own DemandStore with a private promise chain;
-    // chrome.storage.local get+set is not atomic across contexts, so two
-    // read-modify-write cycles can interleave and one increment is lost.
-    // Deterministic with mockStorage: both get()s resolve before either
-    // set() lands, so both compute 1 and the second write wins. Accepted for
-    // the coarse adoption gate (see the DemandStore doc comment); routing
-    // increments through the background is the STT-phase upgrade path.
+  it('background routing: concurrent frame increments serialize in the single writer (lib-11#3)', async () => {
+    // The old architecture ran one DemandStore per frame with a private
+    // promise chain; two get→set pairs could interleave and drop an
+    // increment (mockStorage interleaves deterministically: both get()s
+    // resolve before either set() lands). Every frame now forwards to the
+    // background's one instance (entrypoints/background.ts), so the chain
+    // covers the whole extension: both increments land.
     const storage = mockStorage();
-    const storeA = new DemandStore(storage);
-    const storeB = new DemandStore(storage);
-    await Promise.all([storeA.increment('generic'), storeB.increment('generic')]);
-    const record = await storeA.get();
-    expect(record.estimatedCount).toBe(1);
-    expect(record.byContentType.generic).toBe(1);
+    const background = new DemandStore(storage);
+    await Promise.all([background.increment('generic'), background.increment('generic')]);
+    const record = await background.get();
+    expect(record.estimatedCount).toBe(2);
+    expect(record.byContentType.generic).toBe(2);
   });
 });
 

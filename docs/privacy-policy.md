@@ -38,12 +38,12 @@ outside the keys above and never leaves your device.
 
 ## Audio capture (Chrome)
 
-Chrome builds include an optional audio probe, reachable only by clicking
-"Test audio capture" in the options page. It measures a live audio level
-from the tab you select to verify the capture path; it does not record,
-store, or transmit audio. The `tabCapture` and `offscreen` permissions it
-needs are declared in the manifest but never invoked without that click.
-Firefox builds do not include this probe.
+Chrome builds include an audio capture test, reachable by clicking "Test
+audio capture" in the options page. It captures audio from the video tab
+you are watching to verify the capture path and shows a live level meter; it
+does not record, store, or transmit audio. The `tabCapture` and `offscreen`
+permissions it needs are declared in the manifest but never invoked without
+that click. Firefox builds do not include this test.
 
 ## What leaves your device
 

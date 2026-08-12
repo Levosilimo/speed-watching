@@ -38,6 +38,17 @@ function registeredListener(): BackgroundListener {
   return listener;
 }
 
+function installLocalStorage(): Map<string, unknown> {
+  const storageData = new Map<string, unknown>();
+  chromeMock.storage.local.get.mockImplementation(async (key: string) => ({
+    [key]: storageData.get(key),
+  }));
+  chromeMock.storage.local.set.mockImplementation(async (items: Record<string, unknown>) => {
+    for (const [key, value] of Object.entries(items)) storageData.set(key, value);
+  });
+  return storageData;
+}
+
 describe('background wiring', () => {
   it('registers the message listener and drives a start through the chrome APIs', async () => {
     const main = (backgroundModule as { main: () => unknown }).main;
@@ -101,6 +112,33 @@ describe('background wiring', () => {
       state: 'capturing',
       tabId: 9,
     });
+  });
+
+  it('answers demand:increment through its single DemandStore (lib-11#3 single writer)', async () => {
+    installLocalStorage();
+    const main = (backgroundModule as { main: () => unknown }).main;
+    main();
+    const listener = registeredListener();
+
+    const response = await driveMessage(listener, { type: 'demand:increment', contentType: 'generic' });
+
+    expect(response).toMatchObject({ estimatedCount: 1, byContentType: { generic: 1 } });
+  });
+
+  it('serializes concurrent increments from two frames without loss', async () => {
+    installLocalStorage();
+    const main = (backgroundModule as { main: () => unknown }).main;
+    main();
+    const listener = registeredListener();
+
+    // Two frames (sender tabs 1 and 2) race their increments; the single
+    // background-owned chain serializes them so neither get→set interleaves.
+    const [a, b] = await Promise.all([
+      driveMessage(listener, { type: 'demand:increment', contentType: 'generic' }, 1),
+      driveMessage(listener, { type: 'demand:increment', contentType: 'talk' }, 2),
+    ]);
+    expect(a).toMatchObject({ estimatedCount: 1, byContentType: { generic: 1 } });
+    expect(b).toMatchObject({ estimatedCount: 2, byContentType: { generic: 1, talk: 1 } });
   });
 
   it('ignores an action click without a tab id', async () => {

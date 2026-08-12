@@ -1,10 +1,13 @@
 // Window postMessage bridge between the MAIN-world measurement scripts (no
 // chrome.* access) and the bridge script (entrypoints/bridge.content.ts),
-// which owns a chrome-backed SettingsStore + OverrideLog + DemandStore.
-// Requests and responses travel as postMessage envelopes on the shared
-// window; the bridge answers directly from chrome.storage.local, so no
-// service-worker round trip is involved. World choice documented in
-// entrypoints/content.ts.
+// which owns a chrome-backed SettingsStore + OverrideLog. Requests and
+// responses travel as postMessage envelopes on the shared window. Settings
+// and log requests the bridge answers directly from chrome.storage.local —
+// no service-worker round trip. demand:increment is the exception: the
+// bridge forwards it to the background (runtime.sendMessage), the single
+// writer, so increments from every frame serialize on one DemandStore
+// instead of interleaving per-frame get→set pairs (lib-11#3).
+// World choice documented in entrypoints/content.ts.
 //
 // Transport choice: postMessage, not CustomEvents. Firefox does not deliver
 // page-dispatched custom events to content-script sandboxes, so a
@@ -12,7 +15,6 @@
 // e2e settings spec caught it: the bridge never answered). postMessage is
 // the sanctioned cross-world channel in both browsers, in both directions.
 
-import { DemandStore } from './demand';
 import { isContentType } from './music';
 import type { ContentType } from './music';
 import type { OverrideLogEntry } from './override-log';
@@ -29,11 +31,23 @@ import {
 export const BRIDGE_CHANNEL = 'speedwatcher:bridge';
 export const BRIDGE_TIMEOUT_MS = 1500;
 
+/** Runtime message the bridge sends the background for demand:increment
+ * (single-writer routing, lib-11#3); the background answers with the
+ * updated DemandRecord. Same shape as the bridge request it carries. */
+interface DemandIncrementMessage {
+  type: 'demand:increment';
+  contentType: ContentType;
+}
+
+export function isDemandIncrementMessage(value: unknown): value is DemandIncrementMessage {
+  return isRecord(value) && value.type === 'demand:increment' && isContentType(value.contentType);
+}
+
 export type BridgeRequest =
   | { type: 'settings:get' }
   | { type: 'settings:set'; settings: Settings }
   | { type: 'log:append'; entry: Omit<OverrideLogEntry, 'ts'> }
-  | { type: 'demand:increment'; contentType: ContentType };
+  | DemandIncrementMessage;
 
 export type BridgeResult<T extends BridgeRequest> = T extends { type: 'settings:get' }
   ? Settings
@@ -68,7 +82,8 @@ export interface EventHost {
 export interface BridgeDeps {
   settings: SettingsStore;
   log: OverrideLog;
-  demand: DemandStore;
+  /** Forwards demand:increment to the background — the single writer. */
+  forwardDemand: (contentType: ContentType) => Promise<unknown>;
 }
 
 function isFiniteNumberIn(value: unknown, min: number, max: number): boolean {
@@ -186,12 +201,12 @@ export async function handleBridgeRequest(
       await deps.log.append(request.entry);
       return undefined;
     case 'demand:increment':
-      // Shape validation: reject unknown content types instead of counting
-      // them under a garbage key.
+      // Shape validation at the boundary: unknown content types are rejected
+      // here and never reach the background writer.
       if (!isContentType(request.contentType)) {
         throw new Error(`demand:increment: unknown content type ${request.contentType}`);
       }
-      await deps.demand.increment(request.contentType);
+      await deps.forwardDemand(request.contentType);
       return undefined;
   }
 }

@@ -50,9 +50,9 @@ describe('options accessibility structure', () => {
   });
 
   it('marks the shipped section labels as headings', () => {
-    // dev.ts injects its own div.section-label sections; the shipped five
+    // dev.ts injects its own div.section-label sections; the shipped six
     // are the only h2s with the class.
-    expect(document.querySelectorAll('h2.section-label')).toHaveLength(5);
+    expect(document.querySelectorAll('h2.section-label')).toHaveLength(6);
   });
 
   it('pairs the habits stats as a description list', () => {

@@ -105,13 +105,12 @@ function localDate(now: number): string {
 
 /**
  * Serialized read-modify-write: increments queue on a promise chain so
- * concurrent calls from ONE context cannot lose updates (chrome.storage.local
- * has no atomic increment). The chain is per-instance: two contexts (tabs /
- * frames) each run their own DemandStore, and their get→set pairs can still
- * interleave and drop increments (lib-11#3, documented in
- * tests/demand.test.ts 'two instances'). Accepted for the coarse adoption
- * gate; the STT phase can route every increment through the background for
- * single-writer atomicity.
+ * concurrent calls cannot lose updates (chrome.storage.local has no atomic
+ * increment). Single writer by construction (lib-11#3): the background owns
+ * the only instance (entrypoints/background.ts) and every frame's bridge
+ * forwards demand:increment to it, so the per-instance chain covers all
+ * frames — per-frame stores could interleave their get→set pairs and drop
+ * increments.
  */
 export class DemandStore {
   private tail: Promise<void> = Promise.resolve();

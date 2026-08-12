@@ -1,5 +1,6 @@
 import '../../ui/options-styles.css';
 import { browser } from 'wxt/browser';
+import type { ProbeState } from '../../lib/audio-probe';
 import type { ContentType } from '../../lib/music';
 import {
   OVERRIDE_LOG_STORAGE_KEY,
@@ -13,9 +14,9 @@ import {
   type Settings,
 } from '../../lib/settings';
 
-// The estimated-usage report, STT demand gate, and audio probe are dev-only
-// diagnostics (lib-13: store-review liabilities); ./dev.ts is imported only
-// in dev builds, so the store bundle ships none of them.
+// The STT demand-gate diagnostics are dev-only (lib-13: store-review
+// liabilities); ./dev.ts is imported only in dev builds, so the store bundle
+// ships none of them. The audio capture test below ships.
 if (import.meta.env.DEV) {
   void import('./dev');
 }
@@ -168,7 +169,6 @@ overrideInput.addEventListener('keydown', (e: KeyboardEvent) => {
 const habitTotal = el('habit-total');
 const habitAvgMult = el('habit-avg-mult');
 const habitList = el('habit-list');
-
 function renderHabits(habits: OverrideLogEntry[]): void {
   habitTotal.textContent = String(habits.length);
 
@@ -203,6 +203,92 @@ function renderHabits(habits: OverrideLogEntry[]): void {
     li.append(name, countEl);
     habitList.appendChild(li);
   }
+}
+
+// ── Audio Capture Test (shipped; the tabCapture/offscreen justification) ──
+// probe-start/stop/state are answered by the background orchestrator, the
+// meter by its offscreen 'level' events. Chrome-only: Firefox has no
+// offscreen API, so the section is hidden and inert there.
+
+const probeSection = el('probe-section');
+const probeSupported = import.meta.env.BROWSER === 'chrome';
+probeSection.hidden = !probeSupported;
+
+const toggle = el('toggle') as HTMLButtonElement;
+const status = el('status');
+const meterFill = el('meter-fill');
+
+const POLL_INTERVAL_MS = 400;
+
+const STATE_LABELS: Record<ProbeState['state'], string> = {
+  idle: 'Idle',
+  starting: 'Starting…',
+  capturing: 'Capturing',
+  degraded: 'Capture degraded',
+  error: 'Capture failed',
+};
+
+let probeState: ProbeState = { state: 'idle', level: 0 };
+let pollTimer: ReturnType<typeof setInterval> | null = null;
+
+function sendProbe(kind: 'probe-start' | 'probe-stop' | 'probe-state'): Promise<ProbeState> {
+  return browser.runtime.sendMessage({ kind }) as Promise<ProbeState>;
+}
+
+function probeActive(): boolean {
+  return probeState.state === 'starting' || probeState.state === 'capturing';
+}
+
+function renderProbe(): void {
+  toggle.textContent = probeActive() ? 'Stop audio capture' : 'Test audio capture';
+  toggle.disabled = probeState.state === 'starting';
+  status.textContent = probeState.error
+    ? `${STATE_LABELS[probeState.state]} — ${probeState.error}`
+    : STATE_LABELS[probeState.state];
+  meterFill.style.width = `${Math.min(100, probeState.level * 300)}%`;
+}
+
+function startProbePolling(): void {
+  if (pollTimer) return;
+  pollTimer = setInterval(() => void refreshProbe(), POLL_INTERVAL_MS);
+}
+
+function stopProbePolling(): void {
+  if (!pollTimer) return;
+  clearInterval(pollTimer);
+  pollTimer = null;
+}
+
+async function refreshProbe(): Promise<void> {
+  let next: ProbeState;
+  try {
+    next = await sendProbe('probe-state');
+  } catch (error) {
+    status.textContent = `Capture failed — ${String(error)}`;
+    stopProbePolling();
+    return;
+  }
+  probeState = next;
+  renderProbe();
+  if (probeActive()) {
+    startProbePolling();
+  } else {
+    stopProbePolling();
+  }
+}
+
+async function onProbeToggle(): Promise<void> {
+  try {
+    await sendProbe(probeActive() ? 'probe-stop' : 'probe-start');
+  } catch (error) {
+    status.textContent = `Capture failed — ${String(error)}`;
+  }
+  await refreshProbe();
+}
+
+if (probeSupported) {
+  toggle.addEventListener('click', () => void onProbeToggle());
+  void refreshProbe();
 }
 
 // ── Load persisted state ─────────────────────────────────────────────────

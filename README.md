@@ -41,8 +41,8 @@ Firefox 128+, bun as package manager, Vitest, oxlint, knip, Playwright
 
 - `entrypoints/` — WXT entrypoints: `background.ts`, `content.ts` and
   `generic.content.ts` (player detection, caption harvest), `bridge.content.ts`,
-  `options/` (options page; dev-only diagnostics live in `options/dev.ts` and
-  ship in no store build)
+  `options/` (options page; the audio capture test ships, the STT demand-gate
+  diagnostics stay dev-only in `options/dev.ts`)
 - `lib/` — domain logic with no browser-surface code: caption parsing
   (`captions.ts`), wpm measurement (`wpm.ts`, `tokenizer.ts`), recommendation
   (`recommend.ts`, `heuristics.ts`), storage (`settings.ts`, `override-log.ts`,

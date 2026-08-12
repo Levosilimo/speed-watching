@@ -50,11 +50,11 @@ function fakeWindow(): {
   };
 }
 
-function serve(host: EventHost): BridgeDeps {
+function serve(host: EventHost, forwardDemand: BridgeDeps['forwardDemand'] = vi.fn()): BridgeDeps {
   const deps: BridgeDeps = {
     settings: new SettingsStore(mockStorage()),
     log: new OverrideLog(mockStorage()),
-    demand: new DemandStore(mockStorage()),
+    forwardDemand,
   };
   host.addEventListener('message', createBridgeListener(deps, host as unknown as Window));
   return deps;
@@ -301,25 +301,46 @@ describe('messaging bridge', () => {
     await expect(client.request({ type: 'settings:get' })).rejects.toThrow('boom');
   });
 
-  it('round-trips demand:increment into the DemandStore', async () => {
+  it('forwards demand:increment to the background single writer and resolves on its response (lib-11#3)', async () => {
     const { host } = fakeWindow();
-    const { demand } = serve(host);
+    // forwardDemand is the bridge's runtime.sendMessage round trip; the
+    // background's DemandStore is the single writer (entrypoints/background.ts).
+    const background = new DemandStore(mockStorage());
+    const forwardDemand = vi.fn((contentType: ContentType) => background.increment(contentType));
+    serve(host, forwardDemand);
     const client = createBridgeClient(host);
     await client.request({ type: 'demand:increment', contentType: 'generic' });
     await client.request({ type: 'demand:increment', contentType: 'podcast' });
-    const record = await demand.get();
+    expect(forwardDemand).toHaveBeenNthCalledWith(1, 'generic');
+    expect(forwardDemand).toHaveBeenNthCalledWith(2, 'podcast');
+    const record = await background.get();
     expect(record.estimatedCount).toBe(2);
     expect(record.byContentType).toEqual({ generic: 1, podcast: 1 });
   });
 
-  it('rejects demand:increment with an unknown content type (shape validation)', async () => {
+  it('serializes concurrent demand:increment requests through the background writer', async () => {
     const { host } = fakeWindow();
-    const { demand } = serve(host);
+    const background = new DemandStore(mockStorage());
+    serve(host, (contentType) => background.increment(contentType));
+    const client = createBridgeClient(host);
+    await Promise.all([
+      client.request({ type: 'demand:increment', contentType: 'generic' }),
+      client.request({ type: 'demand:increment', contentType: 'generic' }),
+    ]);
+    const record = await background.get();
+    expect(record.estimatedCount).toBe(2);
+    expect(record.byContentType.generic).toBe(2);
+  });
+
+  it('rejects demand:increment with an unknown content type before forwarding (shape validation)', async () => {
+    const { host } = fakeWindow();
+    const forwardDemand = vi.fn();
+    serve(host, forwardDemand);
     const client = createBridgeClient(host);
     await expect(
       client.request({ type: 'demand:increment', contentType: 'bogus' as ContentType }),
     ).rejects.toThrow('unknown content type');
-    expect((await demand.get()).estimatedCount).toBe(0);
+    expect(forwardDemand).not.toHaveBeenCalled();
   });
 
   it('times out when no response arrives', async () => {

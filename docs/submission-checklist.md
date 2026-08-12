@@ -1,8 +1,8 @@
 # Chrome Web Store Submission Checklist — Speed Watcher v0.0.2
 
 Field-by-field checklist for the CWS upload (developer console:
-chrome.google.com/webstore/developer). The pending tabCapture/offscreen
-decision is in the appendix — pick a path before filling the Privacy tab.
+chrome.google.com/webstore/developer). The tabCapture/offscreen decision is
+recorded in the appendix: keep + justify is the shipped path.
 
 ## 0. Artifact
 
@@ -52,8 +52,8 @@ Permission justifications (one box per declared permission):
 | Permission | Justification |
 |---|---|
 | `storage` | Settings (`sw.settings`), the 500-entry override log (`sw.overrideLog`), and demand counters (`sw.demand`) — all `chrome.storage.local`, nothing synced |
-| `tabCapture` | Audio probe only; the Chrome API refuses this as optional so it must be declared from day one; never invoked without the options-page click. Omit on path B (appendix) |
-| `offscreen` | `chrome.offscreen.createDocument` fails without the manifest permission; the audio probe calls it with reason `USER_MEDIA`. Omit on path B (appendix) |
+| `tabCapture` | The shipped audio capture test (options-page "Test audio capture" button): user-gesture-gated, captures the audio of the video tab the user is watching, shows a live level meter, never invoked without the click. Declared from day one because the Chrome API refuses it as optional; keeping it in v1 keeps the v1→v1.1 update permission-neutral. Also the declared home of the future feature-gated on-device STT |
+| `offscreen` | `chrome.offscreen.createDocument` fails without the manifest permission; the audio capture test calls it with reason `USER_MEDIA` |
 | `<all_urls>` (content scripts) | Embedded players live in cross-origin iframes — a curated site list misses them. No outbound requests: caption fetch runs in the page context, same-origin |
 
 ## 4. Distribution tab
@@ -63,21 +63,22 @@ Permission justifications (one box per declared permission):
 - [ ] Price: Free.
 - [ ] Submit. First review typically takes a few business days.
 
-## Appendix: pending tabCapture/offscreen decision
+## Appendix: tabCapture/offscreen — keep decision
 
-The store audit flagged `tabCapture`/`offscreen` as strippable from v1 (the
-audio probe is a probe only; on-device STT is a future feature).
+The store audit once flagged `tabCapture`/`offscreen` as strippable from v1
+(the audio probe is a probe only; on-device STT is a future feature). The
+decision was reversed with the STT-now direction: adding `tabCapture` in a
+later update disables every existing user until they re-accept the
+permissions, so the v1→v1.1 update must stay permission-neutral.
 
-**Path A — keep (current manifest):** ship as-is. The answers above apply
-unchanged; the justification is the user-gesture-only audio probe plus the
-feature-gated STT.
+**Path A — keep + justify (shipped):** the probe ships as a real v1 feature
+— the options-page audio capture test (button, live level meter,
+user-gesture-gated) — and the permission rows above are its justification.
+The engineering-surface audit that motivated the strip is answered by
+presenting the probe as a product surface, not by removing the permissions.
 
-**Path B — strip:** remove `tabCapture` + `offscreen` from the
-`permissions` array in `wxt.config.ts` and the audio-probe surface, then
-delete the "Audio capture (Chrome)" section from `docs/privacy-policy.md`,
-drop the two permission rows above, and re-run `bun run test`,
-`bun run build`, `bun run check:cws`. This also lowers the declared
-permission count, which quietens the single-purpose warning in cws-check.
+Path B (strip) is abandoned and must not be reintroduced: removing the
+permissions now would force the re-accept disable when STT lands.
 
 ## Pre-submission follow-ups
 

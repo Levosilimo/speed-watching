@@ -90,6 +90,22 @@
       </div>
     </div>
 
+    <!-- Test Audio Capture -->
+    <div class="section" id="probe-section">
+      <h2 class="section-label" id="probe-section-label">Test audio capture</h2>
+      <div class="section-card">
+        <p class="section-note">
+          Verifies that the extension can capture audio from a video tab. The
+          meter shows the live audio level of the captured tab while the test
+          runs. No audio is recorded, stored, or transmitted — the meter is
+          the only output.
+        </p>
+        <button type="button" id="toggle">Test audio capture</button>
+        <div id="status" role="status">Idle</div>
+        <div id="meter"><div id="meter-fill"></div></div>
+      </div>
+    </div>
+
     <!-- Tier Info -->
     <div class="section">
       <h2 class="section-label">Tier labels</h2>
