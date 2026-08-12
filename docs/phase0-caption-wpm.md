@@ -268,6 +268,36 @@ applied `playbackRate` live — same quantity, different read point.
   `wordAccurateRate`, `pauseBiasPct`, `pauseBiasSource`); demand-lane
   follow-up flagged per runbook.
 
+Semantics (calibration ruling): the unified presentation rate stays the
+headline metric — it is the literature's measure on pause-inclusive
+stimuli, and the resulting 1.2–1.9x multipliers sit in the empirically
+near-cost-free band. The earlier rationale that "target 250 absorbs the
+~2–5% residual pause-inclusion bias" is dead; the measured structure
+above is the replacement. The product-side guard for the pause dilution:
+
+- **`pause-diluted` warning (asr-word tier only, informational).** When
+  `multiplier × articulatoryWpm` exceeds `SAFE_ZONE_CEILING_WPM / (1 −
+  P_STIMULUS) = 275 / 0.7 ≈ 393 wpm`, the speech itself is running past
+  the comprehension limit even though the presentation rate stays in the
+  safe zone. `P_STIMULUS = 0.3` is a documented assumption — a round
+  placeholder at the measured ≈31% pause share of span; since the
+  measured shares are lower bounds (sub-second micro-pauses stay in
+  speechDur), the mapping is deliberately lenient. At the default target
+  this fires on 5–6 of the 17 ASR videos (one borderline within ~1%);
+  the extreme tail sits at ~400–500 wpm articulatory. Lyric/music tracks
+  never reach it — music content routes to music mode before
+  recommendation.
+- **Coverage gating.** The warning is skipped when word-timing coverage
+  is inadequate (phase-0 mean 83.6% of text tokens timed): sparse
+  coverage misestimates speechDur. The caller supplies the coverage
+  sanity before passing an articulatory rate.
+- **Tier restriction is structural.** manual-cue already silence-corrects
+  toward speech duration; asr-cue and estimated carry no word timing at
+  all. Only asr-word can produce an articulatory estimate.
+- **Report-only:** the warning never changes the multiplier; it renders
+  in the existing pill warning mode with reason-driven copy and an
+  override.
+
 ### 8.5 Fixture commitments
 
 - `tests/fixtures/real/windows-asr-iG9CE55wbtY-trunc.json` (379,178 →
