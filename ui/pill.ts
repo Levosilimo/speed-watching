@@ -161,9 +161,9 @@ function pillCss(t: Theme): string {
       display: flex;
       align-items: center;
       justify-content: center;
-      width: 22px;
-      height: 22px;
-      padding: 0;
+      width: 24px;
+      height: 24px;
+      padding: 1px;
       font-family: ${TOKENS.fontSans};
       font-size: ${TOKENS.textSm};
       color: ${t.textSecondary};
