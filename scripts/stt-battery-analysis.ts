@@ -31,6 +31,7 @@ import {
   startServer,
   type BatteryModel,
   type ChunkConfig,
+  type RunnerClip,
 } from './stt-battery-lib';
 
 // ---------------------------------------------------------------------------
@@ -49,6 +50,20 @@ interface V1Record {
   I: number;
   wer: number;
   countBias: number;
+  // Ref-alignment correction (smoke-phase finding): the YouTube-ASR ref only
+  // covers the speech span of the window (4 of 5 clips have a silent lead of
+  // 4-27 s with no ref words). Full-window hyp words before/after that span
+  // score as pure insertions, inflating WER and countBias. The gate uses the
+  // span-aligned values: hyp chunks whose start lies inside the ref span vs
+  // the ref words over that same span.
+  refSpanStartSec: number;
+  refSpanEndSec: number;
+  hypWordsInSpan: number;
+  SAligned: number;
+  DAligned: number;
+  IAligned: number;
+  werAligned: number;
+  countBiasAligned: number;
   refUnifiedRate: number | null;
   hypUnifiedRate: number | null;
   rateErrorUnifiedPct: number | null;
@@ -91,7 +106,9 @@ export async function transcribeStep(): Promise<void> {
     // Same chunk config as the locked seam strategy (transformers.js #1358
     // workaround): chunk 29 + stride 5 without force_full_sequences.
     const chunkConfig: ChunkConfig = { chunkLengthS: 29, strideLengthS: 5, forceFull: false };
-    for (const model of BATTERY_MODELS) {
+    const onlyModel = process.env.BATTERY_MODEL;
+    const models = onlyModel === undefined ? BATTERY_MODELS : BATTERY_MODELS.filter((m) => m === onlyModel);
+    for (const model of models) {
       console.log(`\n[transcribe] ${model} (chunk_length_s=29, stride_length_s=5)`);
       const result = await runInference(model, clips, chunkConfig);
       if (result.state !== 'done' || !result.clips) {
@@ -100,54 +117,19 @@ export async function transcribeStep(): Promise<void> {
         continue;
       }
       for (const c of result.clips) {
-        const ref = loadClipRef(c.id);
-        const refText = ref.words.map((w) => w.text).join(' ');
-        const hyp = c.words ?? '';
-        const dec = werDecomposed(refText, hyp);
-        const refRates = ratesFor({ cues: ref.cues, words: ref.words });
-        const hypParsed = parsedFromChunks(c.chunks);
-        const hypRates = ratesFor(hypParsed);
-        const sanity = timestampSanity(c.chunks, c.durationSec ?? 60);
-        const record: V1Record = {
-          kind: 'v1',
-          ts: new Date().toISOString(),
-          videoId: c.id,
-          category: ref.category,
-          model,
-          chunkConfig,
-          refWords: ref.words.length,
-          S: dec.S,
-          D: dec.D,
-          I: dec.I,
-          wer: dec.wer,
-          countBias: dec.countBias,
-          refUnifiedRate: refRates?.unifiedRate ?? null,
-          hypUnifiedRate: hypRates?.unifiedRate ?? null,
-          rateErrorUnifiedPct: rateErrorPct(hypRates?.unifiedRate ?? null, refRates?.unifiedRate ?? null),
-          refWordAccurateRate: refRates?.wordAccurateRate ?? null,
-          hypWordAccurateRate: hypRates?.wordAccurateRate ?? null,
-          rateErrorWordAccuratePct: rateErrorPct(
-            hypRates?.wordAccurateRate ?? null,
-            refRates?.wordAccurateRate ?? null,
-          ),
-          tsMonotonic: c.chunks.length > 1 ? sanity.monotonic : null,
-          tsWithinDuration: c.chunks.length ? sanity.withinDuration : null,
-          tsLastEndSec: sanity.lastEndSec,
-          rtf: c.rtf,
-          loadError: result.loadError ?? null,
-          clipError: c.clipError,
-        };
+        const record = analyzeV1Clip(c, model, chunkConfig, result.loadError ?? null);
         records.push(record);
         const ok =
           Math.abs(record.rateErrorWordAccuratePct ?? 999) <= 10 &&
-          record.countBias >= -0.02 &&
-          record.countBias <= 0.08 &&
-          record.wer <= 0.15;
+          record.countBiasAligned >= -0.02 &&
+          record.countBiasAligned <= 0.08 &&
+          record.werAligned <= 0.15;
         console.log(
-          `  ${c.id.padEnd(12)} wer=${(dec.wer * 100).toFixed(1)}% bias=${(dec.countBias * 100).toFixed(1)}% ` +
+          `  ${c.id.padEnd(12)} wer=${(record.wer * 100).toFixed(1)}%/${(record.werAligned * 100).toFixed(1)}% ` +
+            `(full/aligned) bias=${(record.countBias * 100).toFixed(1)}%/${(record.countBiasAligned * 100).toFixed(1)}% ` +
             `rateErr(w)=${(record.rateErrorWordAccuratePct ?? NaN).toFixed(1)}% ` +
             `rateErr(u)=${(record.rateErrorUnifiedPct ?? NaN).toFixed(1)}% ` +
-            `mono=${String(sanity.monotonic)} ${ok ? 'PASS' : 'FAIL'} ${c.clipError ?? ''}`,
+            `mono=${String(record.tsMonotonic)} ${ok ? 'PASS' : 'FAIL'} ${record.clipError ?? ''}`,
         );
       }
     }
@@ -156,6 +138,63 @@ export async function transcribeStep(): Promise<void> {
   } finally {
     await closeServer(server);
   }
+}
+
+// One V1 record: full-window + ref-aligned WER/count-bias, production rate
+// helpers on both payloads, timestamp sanity.
+function analyzeV1Clip(
+  c: RunnerClip,
+  model: BatteryModel,
+  chunkConfig: ChunkConfig,
+  loadError: string | null,
+): V1Record {
+  const ref = loadClipRef(c.id);
+  const refText = ref.words.map((w) => w.text).join(' ');
+  const dec = werDecomposed(refText, c.words ?? '');
+  const refSpanStart = ref.words[0]?.startSec ?? 0;
+  const refSpanEnd = ref.words.at(-1)?.startSec ?? 0;
+  const inSpan = c.chunks.filter((ch) => ch.start >= refSpanStart && ch.start <= refSpanEnd);
+  const decAligned = werDecomposed(refText, inSpan.map((ch) => ch.text).join(' '));
+  const refRates = ratesFor({ cues: ref.cues, words: ref.words });
+  const hypRates = ratesFor(parsedFromChunks(c.chunks));
+  const sanity = timestampSanity(c.chunks, c.durationSec ?? 60);
+  return {
+    kind: 'v1',
+    ts: new Date().toISOString(),
+    videoId: c.id,
+    category: ref.category,
+    model,
+    chunkConfig,
+    refWords: ref.words.length,
+    S: dec.S,
+    D: dec.D,
+    I: dec.I,
+    wer: dec.wer,
+    countBias: dec.countBias,
+    refSpanStartSec: refSpanStart,
+    refSpanEndSec: refSpanEnd,
+    hypWordsInSpan: inSpan.length,
+    SAligned: decAligned.S,
+    DAligned: decAligned.D,
+    IAligned: decAligned.I,
+    werAligned: decAligned.wer,
+    countBiasAligned: decAligned.countBias,
+    refUnifiedRate: refRates?.unifiedRate ?? null,
+    hypUnifiedRate: hypRates?.unifiedRate ?? null,
+    rateErrorUnifiedPct: rateErrorPct(hypRates?.unifiedRate ?? null, refRates?.unifiedRate ?? null),
+    refWordAccurateRate: refRates?.wordAccurateRate ?? null,
+    hypWordAccurateRate: hypRates?.wordAccurateRate ?? null,
+    rateErrorWordAccuratePct: rateErrorPct(
+      hypRates?.wordAccurateRate ?? null,
+      refRates?.wordAccurateRate ?? null,
+    ),
+    tsMonotonic: c.chunks.length > 1 ? sanity.monotonic : null,
+    tsWithinDuration: c.chunks.length ? sanity.withinDuration : null,
+    tsLastEndSec: sanity.lastEndSec,
+    rtf: c.rtf,
+    loadError,
+    clipError: c.clipError,
+  };
 }
 
 // ---------------------------------------------------------------------------

@@ -271,10 +271,13 @@ export async function runInference(
   if (chunkConfig.tsMode !== undefined) params.set('ts', chunkConfig.tsMode);
   const url = `${BATTERY_BASE}/?${params.toString()}`;
 
-  const browser: PWBrowser = await chromium.launch({
-    headless: true,
-    args: ['--disable-dev-shm-usage'],
-  });
+  // Measured on this box: under load the browser can die during spawn and
+  // playwright's launch then waits on the debug pipe forever. Fail fast so a
+  // battery run reports a harness failure instead of hanging silently.
+  const browser: PWBrowser = await Promise.race([
+    chromium.launch({ headless: true, args: ['--disable-dev-shm-usage'] }),
+    new Promise<never>((_, reject) => setTimeout(() => reject(new Error('chromium launch exceeded 120s')), 120_000)),
+  ]);
   try {
     const context: PWContext = await browser.newContext();
     try {

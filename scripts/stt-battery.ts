@@ -232,3 +232,7 @@ async function main(): Promise<void> {
 }
 
 await main();
+// bun keeps the event loop alive past server.close() (measured: the process
+// lingers indefinitely after the harness finishes), so terminate explicitly;
+// process.exitCode (harness failures) is honored.
+process.exit();

@@ -1,0 +1,54 @@
+# STT battery verdicts
+
+Gate rules (plan-v2, phase-0): per clip, rate error <=10%, count-bias in
+[-2%,+8%], WER <=15%. G1: both models pass -> tiny wins; only base -> base;
+neither -> word-level STT rate not shippable. All numbers below are the
+ref-aligned values (see G1 note).
+
+## G1 — model lock (V1, 2026-08-13)
+
+records: results-v1.jsonl (10 records, both models x 5 clips, chunk 29 / stride 5)
+
+| clip | model | werAligned | countBiasAligned | rateErr(w) | rateErr(u) | tsMonotonic |
+|---|---|---|---|---|---|---|
+| iG9CE55wbtY | tiny | 22.6% | +7.5% | -38.6% | -31.1% | true |
+| Ks-_Mh1QhMc | tiny | 19.3% | +5.7% | -7.5% | -20.4% | true |
+| jGwO_UgTS7I | tiny | 37.9% | +14.5% | -26.8% | -8.9% | true |
+| HtSuA80QTyo | tiny | 32.8% | +20.1% | -26.9% | -1.8% | false |
+| WUvTyaaNkzM | tiny | 21.1% | +17.7% | -20.1% | -0.7% | true |
+| iG9CE55wbtY | base | 20.4% | +6.5% | -20.0% | -20.7% | true |
+| Ks-_Mh1QhMc | base | 19.3% | +6.4% | -2.9% | -15.2% | true |
+| jGwO_UgTS7I | base | 31.0% | +13.1% | -22.3% | -9.3% | true |
+| HtSuA80QTyo | base | 30.6% | +16.4% | -21.0% | -5.0% | true |
+| WUvTyaaNkzM | base | 19.0% | +17.7% | -15.3% | -4.8% | true |
+
+VERDICT: NEITHER passes -> word-level STT rate NOT shippable on this corpus.
+
+- WER: 0 of 10 records <=15% (tiny 19.3-37.9, base 19.0-31.0). The errors are
+  cross-ASR word disagreement, not misrecognition: the diag dump for
+  iG9CE55wbtY shows the hyp content-matches the ref in the ref span ("Good
+  morning. How are you? It's been great..." vs "morning are you it's been
+  great..."); whisper and YouTube-ASR simply pick different function words.
+- count-bias: 4 of 10 records pass [-2%,+8%] (iG9CE55wbtY + Ks-_Mh1QhMc on
+  both models); whisper is wordier than the caption everywhere else.
+- rate error (word-accurate): 1 of 10 records within +-10% (Ks-_Mh1QhMc,
+  both models). The error is systematically NEGATIVE: caption cue-boundary
+  pauses shrink the ref speech-duration denominator, whisper's continuous
+  word timestamps do not, so whisper's word-accurate rate reads low. The
+  unified (span-trimmed) rate error is closer: tiny -0.7..-31.1 (3/5 in
+  +-10%), base -4.8..-20.7 (2/5).
+- timestamp sanity: tiny 4/5 monotonic (HtSuA80QTyo out-of-order words), base
+  5/5.
+- Reproducibility: tiny.en numbers bit-identical across three independent
+  runs (2026-08-12 smoke x2, 2026-08-13 V1 x2 runs on the same clip).
+
+Ref-alignment correction: the YouTube-ASR ref only covers the speech span of
+each 66s window (silent leads of 0.1-26.7s; 4 of 5 clips). Full-window hyp
+words outside the ref span score as pure insertions, inflating WER and
+count-bias. Scoring hyp chunks whose start falls inside the ref span lowers
+the bias (iG9CE55wbtY tiny +8.6% -> +7.5%, base +8.6% -> +6.5%) but does not
+change any gate outcome. The raw full-window values are in results-v1.jsonl.
+
+## G2 — chunk-seam integrity (V2)
+
+pending
