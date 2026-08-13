@@ -71,6 +71,8 @@ in store copy to the samples in `docs/phase0-caption-wpm.md`.
 - `docs/phase0-generic-probe.md` — generic player detection
 - `docs/phase0-offscreen-audio.md` — tab capture and offscreen audio probe
 - `docs/demand-gate.md` — STT demand gate
+- `docs/provider-integration.md` — the measured-rate provider (`wpm:get`) protocol
+- `docs/core-library.md` — the chrome-free measurement core and porting notes
 - `docs/manual-gates-runbook.md` — manual verification gates
 - `docs/phase2-whisper-benchmark.md` — on-device STT benchmark
 - `docs/ci-e2e.md` — e2e setup and lanes
