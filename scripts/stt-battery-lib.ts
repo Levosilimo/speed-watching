@@ -76,6 +76,17 @@ function rewriteTransformerBundle(source: Buffer): Buffer {
   );
 }
 
+// VAD fixture: silero VAD v4 ONNX (643,854 bytes, sha256 9e2449e1…), the box's
+// canonical model — the same file ~/va runs via sherpa-onnx (16k, window 512,
+// threshold 0.35). Copied from VAD_MODEL_SOURCE by the --vad step into this
+// gitignored dir. v4 has no If node, so it runs on the pinned ort 1.23 wasm
+// without the v5 If-branch crash (dead-lane error: Invalid typed array
+// length: 1099511627520).
+export const VAD_DIR = join(ROOT, 'scripts', 'data', 'whisper-bench', 'vad');
+export const VAD_MODEL_FILE = join(VAD_DIR, 'silero_vad.onnx');
+export const VAD_MODEL_SOURCE = '/home/levosilimo/models/silero_vad.onnx';
+export const VAD_MODEL_SHA256 = '9e2449e1087496d8d4caba907f23e0bd3f78d91fa552479bb9c23ac09cbb1fd6';
+
 const RUNNER_SOURCE = `
 import { env, pipeline } from '/vendor/transformers.web.min.js';
 
@@ -87,6 +98,7 @@ const chunkLengthS = q.get('chunk') === null ? null : Number(q.get('chunk'));
 const strideLengthS = q.get('stride') === null ? null : Number(q.get('stride'));
 const forceFull = q.get('forceFull') === '1';
 const tsMode = q.get('ts') || 'word';
+const doVad = q.get('vad') === '1';
 
 env.allowRemoteModels = false;
 env.allowLocalModels = true;
@@ -100,6 +112,9 @@ async function loadClip(id) {
   const buf = await res.arrayBuffer();
   return new Float32Array(buf);
 }
+
+// The VAD itself runs in /vad/runner.js (see stt-battery-vad.ts): the silero
+// v4 prob loop with the RMS gate, segmented in-page. Loaded only when ?vad=1.
 
 const errs = [];
 window.addEventListener('unhandledrejection', (ev) => {
@@ -119,11 +134,17 @@ async function main() {
   }
   const clips = [];
   for (const id of clipIds) {
-    const rec = { id, loadError, transcribeMs: null, rtf: null, words: null, chunks: [], clipError: null };
+    const rec = { id, loadError, transcribeMs: null, rtf: null, words: null, chunks: [], vad: null, clipError: null };
     if (transcriber) {
       try {
         const samples = await loadClip(id);
         const durationSec = samples.length / 16000;
+        if (doVad) {
+          const vadMod = await import('/vad/runner.js');
+          rec.vad = await vadMod.runClipVad(samples).catch((e) => ({
+            error: String(e && e.message ? e.message : e),
+          }));
+        }
         const tA = performance.now();
         const opts = { return_timestamps: tsMode };
         if (chunkLengthS !== null) opts.chunk_length_s = chunkLengthS;
@@ -189,9 +210,10 @@ const STATIC_ROUTES: Array<[string, string]> = [
   ['/ort/', ORT_DIR],
   ['/models/', MODELS_DIR],
   ['/clips/', CLIPS_DIR],
+  ['/vad/', VAD_DIR],
 ];
 
-async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise<void> {
+async function handleRequest(req: IncomingMessage, res: ServerResponse, extraFiles: Array<[string, string]>): Promise<void> {
   const url = new URL(req.url ?? '/', BATTERY_BASE);
   if (url.pathname === '/' || url.pathname === '/index.html') {
     res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
@@ -207,6 +229,13 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
     res.writeHead(200, { 'content-type': 'text/javascript' });
     res.end(rewriteTransformerBundle(await readFile(join(DIST_DIR, 'transformers.web.min.js'))));
     return;
+  }
+  for (const [route, content] of extraFiles) {
+    if (url.pathname === route) {
+      res.writeHead(200, { 'content-type': 'text/javascript' });
+      res.end(content);
+      return;
+    }
   }
   for (const [prefix, dir] of STATIC_ROUTES) {
     if (!url.pathname.startsWith(prefix)) continue;
@@ -224,9 +253,9 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
   res.end('not found');
 }
 
-export function startServer(): Promise<Server> {
+export function startServer(extraFiles: Array<[string, string]> = []): Promise<Server> {
   const server = createServer((req, res) => {
-    handleRequest(req, res).catch(() => {
+    handleRequest(req, res, extraFiles).catch(() => {
       res.writeHead(500);
       res.end('server error');
     });
@@ -240,6 +269,13 @@ export function startServer(): Promise<Server> {
 // ---------------------------------------------------------------------------
 // Playwright driver.
 
+export interface VadResult {
+  segs: Array<{ start: number; end: number }>;
+  speechSec?: number;
+  noGateSec?: number;
+  error?: string;
+}
+
 export interface RunnerClip {
   id: string;
   loadError: string | null;
@@ -247,6 +283,7 @@ export interface RunnerClip {
   rtf: number | null;
   words: string | null;
   chunks: WordTimestamp[];
+  vad: VadResult | null;
   durationSec?: number;
   clipError: string | null;
 }
@@ -271,8 +308,10 @@ export async function runInference(
   model: string,
   clipIds: string[],
   chunkConfig: ChunkConfig,
+  vad = false,
 ): Promise<BatteryResult> {
   const params = new URLSearchParams({ model, clips: clipIds.join(',') });
+  if (vad) params.set('vad', '1');
   if (chunkConfig.chunkLengthS !== null) params.set('chunk', String(chunkConfig.chunkLengthS));
   if (chunkConfig.strideLengthS !== null) params.set('stride', String(chunkConfig.strideLengthS));
   if (chunkConfig.forceFull) params.set('forceFull', '1');
