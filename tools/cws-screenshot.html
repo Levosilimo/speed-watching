@@ -12,12 +12,12 @@
         --sw-border: #dee2e6;
         --sw-border-subtle: #e9ecef;
         --sw-text: #212529;
-        --sw-text-secondary: #6c757d;
-        --sw-text-muted: #adb5bd;
-        --sw-primary: #1a9c8f;
-        --sw-primary-hover: #17897d;
+        --sw-text-secondary: #5a6268;
+        --sw-text-muted: #6c757d;
+        --sw-primary: #12796b;
+        --sw-primary-hover: #116960;
         --sw-primary-subtle: #e6f7f5;
-        --sw-warning: #d97706;
+        --sw-warning: #b45309;
         --sw-warning-subtle: #fef3c7;
         --sw-danger: #dc3545;
         --sw-danger-subtle: #fee2e2;
@@ -34,64 +34,71 @@
 
       body {
         font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-        font-size: 14px;
-        line-height: 1.55;
+        font-size: 13px;
+        line-height: 1.4;
         color: var(--sw-text);
         background: var(--sw-bg);
         max-width: 600px;
         margin: 0 auto;
-        padding: 32px 20px 64px;
+        padding: 14px 20px 6px;
         -webkit-font-smoothing: antialiased;
       }
 
-      .header { margin-bottom: 32px; }
-      .header h1 { font-size: 20px; font-weight: 600; letter-spacing: -0.01em; margin-bottom: 4px; }
-      .header p { font-size: 13px; color: var(--sw-text-secondary); }
+      .header { margin-bottom: 10px; }
+      .header h1 { font-size: 18px; font-weight: 600; letter-spacing: -0.01em; margin-bottom: 1px; }
+      .header p { font-size: 12px; color: var(--sw-text-secondary); }
 
-      .section { margin-bottom: 28px; }
+      .section { margin-bottom: 8px; }
       .section-label {
-        font-size: 11px; font-weight: 600; text-transform: uppercase;
-        letter-spacing: 0.06em; color: var(--sw-text-muted); margin-bottom: 10px;
+        font-size: 10px; font-weight: 600; text-transform: uppercase;
+        letter-spacing: 0.06em; color: var(--sw-text-muted); margin-bottom: 4px;
       }
       .section-card {
         background: var(--sw-bg-subtle); border: 1px solid var(--sw-border-subtle);
-        border-radius: var(--sw-r-lg); padding: 16px;
+        border-radius: var(--sw-r-lg); padding: 10px 12px;
+      }
+      .section-note {
+        font-size: 11px; line-height: 1.3; color: var(--sw-text-secondary); margin-bottom: 6px;
       }
 
-      .wpm-display { display: flex; align-items: baseline; gap: 6px; margin-bottom: 12px; }
+      /* ── WPM Slider ──────────────────────────────────────────────── */
+
+      .wpm-display { display: flex; align-items: baseline; gap: 5px; margin-bottom: 4px; }
       .wpm-value {
-        font-size: 28px; font-weight: 700; letter-spacing: -0.02em;
+        font-size: 20px; font-weight: 700; letter-spacing: -0.02em;
         color: var(--sw-primary); font-variant-numeric: tabular-nums;
       }
-      .wpm-unit { font-size: 13px; color: var(--sw-text-secondary); }
+      .wpm-unit { font-size: 12px; color: var(--sw-text-secondary); }
 
-      .slider-track { position: relative; width: 100%; height: 36px; display: flex; align-items: center; }
+      .slider-track { position: relative; width: 100%; height: 24px; display: flex; align-items: center; }
       .slider-input {
-        -webkit-appearance: none; appearance: none; width: 100%; height: 6px;
-        background: var(--sw-border); border-radius: 3px; outline: none; position: relative; z-index: 2;
+        -webkit-appearance: none; appearance: none; width: 100%; height: 4px;
+        background: #868e96; border-radius: 2px; outline: none; position: relative; z-index: 2;
       }
       .slider-input::-webkit-slider-thumb {
-        -webkit-appearance: none; appearance: none; width: 18px; height: 18px;
+        -webkit-appearance: none; appearance: none; width: 14px; height: 14px;
         border-radius: 50%; background: var(--sw-primary); cursor: pointer;
         border: 2px solid var(--sw-bg); box-shadow: var(--sw-shadow);
       }
       .safe-zone {
-        position: absolute; top: 50%; transform: translateY(-50%); height: 10px;
+        position: absolute; top: 50%; transform: translateY(-50%); height: 8px;
         background: var(--sw-primary-subtle); border: 1px solid var(--sw-primary);
         border-radius: 2px; opacity: 0.5; pointer-events: none; z-index: 1;
         left: 50%; width: 8.33%;
       }
       .safe-zone-label {
-        display: flex; justify-content: space-between; margin-top: 2px;
-        font-size: 11px; color: var(--sw-text-muted);
+        display: flex; justify-content: space-between; margin-top: 0;
+        font-size: 10px; color: var(--sw-text-muted);
       }
+
+      /* ── Content Type Presets ────────────────────────────────────── */
 
       .presets {
         display: flex; gap: 0; background: var(--sw-bg-muted);
-        border-radius: var(--sw-r-md); padding: 3px;
+        border-radius: var(--sw-r-md); padding: 2px;
       }
       .preset-btn {
-        flex: 1; padding: 7px 0; font-family: inherit; font-size: 12px; font-weight: 500;
+        flex: 1; padding: 4px 0; font-family: inherit; font-size: 11px; font-weight: 500;
         color: var(--sw-text-secondary); background: transparent; border: none;
         border-radius: var(--sw-r-sm); cursor: pointer;
       }
@@ -99,55 +106,77 @@
         background: var(--sw-bg); color: var(--sw-text); box-shadow: var(--sw-shadow);
       }
 
-      .override-list { list-style: none; margin-bottom: 12px; }
+      /* ── Per-site Overrides ──────────────────────────────────────── */
+
+      .override-list { list-style: none; margin-bottom: 5px; }
       .override-item {
         display: flex; align-items: center; justify-content: space-between;
-        padding: 8px 0; border-bottom: 1px solid var(--sw-border-subtle); font-size: 13px;
+        padding: 4px 0; border-bottom: 1px solid var(--sw-border-subtle); font-size: 12px;
       }
       .override-item:last-child { border-bottom: none; }
       .override-hostname { font-weight: 500; }
-      .override-type { font-size: 12px; color: var(--sw-text-secondary); margin-left: 8px; }
+      .override-type { font-size: 11px; color: var(--sw-text-secondary); margin-left: 6px; }
       .override-remove {
-        font-size: 12px; color: var(--sw-danger); background: none; border: none;
-        cursor: pointer; padding: 2px 6px; border-radius: var(--sw-r-sm); font-family: inherit;
+        font-size: 11px; color: var(--sw-danger); background: none; border: none;
+        cursor: pointer; padding: 2px 5px; border-radius: var(--sw-r-sm); font-family: inherit;
       }
       .override-remove:hover { background: var(--sw-danger-subtle); }
-      .empty-note { font-size: 12px; color: var(--sw-text-muted); padding: 8px 0; }
-      .add-override { display: flex; gap: 8px; }
+      .add-override { display: flex; gap: 6px; }
       .add-override input {
-        flex: 1; padding: 7px 10px; font-family: inherit; font-size: 13px;
+        flex: 1; padding: 4px 8px; font-family: inherit; font-size: 12px;
         background: var(--sw-bg); border: 1px solid var(--sw-border);
         border-radius: var(--sw-r-md); color: var(--sw-text); outline: none;
       }
       .add-override button {
-        padding: 7px 14px; font-family: inherit; font-size: 13px; font-weight: 500;
+        padding: 4px 10px; font-family: inherit; font-size: 12px; font-weight: 500;
         background: var(--sw-primary); color: var(--sw-bg); border: none;
         border-radius: var(--sw-r-md); cursor: pointer;
       }
 
-      .habits-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-      .habit-stat { display: flex; flex-direction: column; gap: 2px; }
+      /* ── Habits Report ───────────────────────────────────────────── */
+
+      .habits-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+      .habit-stat { display: flex; flex-direction: column; gap: 0; }
       .habit-stat .stat-value {
-        font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--sw-text);
+        font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--sw-text);
       }
-      .habit-stat .stat-label { font-size: 11px; color: var(--sw-text-secondary); }
-      .habit-list { margin-top: 12px; list-style: none; }
+      .habit-stat .stat-label { font-size: 10px; color: var(--sw-text-secondary); }
+      .habit-list { margin-top: 4px; list-style: none; }
       .habit-list li {
-        display: flex; justify-content: space-between; padding: 5px 0;
-        font-size: 12px; color: var(--sw-text-secondary);
+        display: flex; justify-content: space-between; padding: 2px 0;
+        font-size: 11px; color: var(--sw-text-secondary);
         border-bottom: 1px solid var(--sw-border-subtle);
       }
       .habit-list li:last-child { border-bottom: none; }
 
+      /* ── Audio Capture Test ──────────────────────────────────────── */
+
+      #toggle {
+        padding: 5px 10px; font-family: inherit; font-size: 12px; font-weight: 500;
+        background: var(--sw-primary); color: var(--sw-bg); border: none;
+        border-radius: var(--sw-r-md); cursor: pointer;
+      }
+      #status { margin: 4px 0; font-weight: 600; font-size: 12px; }
+      #meter {
+        width: 100%; height: 6px; background: var(--sw-bg-muted);
+        border-radius: 3px; overflow: hidden;
+      }
+      #meter-fill {
+        height: 100%; width: 0%; background: var(--sw-primary);
+        border-radius: 3px;
+      }
+
+      /* ── Tier Info ───────────────────────────────────────────────── */
+
       .tier-list { list-style: none; }
-      .tier-item { display: flex; align-items: flex-start; gap: 10px; padding: 8px 0; }
+      .tier-item { display: flex; align-items: flex-start; gap: 8px; padding: 3px 0; }
       .tier-item + .tier-item { border-top: 1px solid var(--sw-border-subtle); }
       .tier-badge {
-        font-size: 11px; font-weight: 600; padding: 2px 8px;
+        font-size: 10px; font-weight: 600; padding: 1px 6px;
         border-radius: var(--sw-r-pill); background: var(--sw-primary-subtle);
         color: var(--sw-primary); white-space: nowrap; flex-shrink: 0;
       }
-      .tier-desc { font-size: 12px; color: var(--sw-text-secondary); line-height: 1.45; }
+      .tier-desc { font-size: 11px; color: var(--sw-text-secondary); line-height: 1.25; }
     </style>
   </head>
   <body>
@@ -157,7 +186,7 @@
     </div>
 
     <div class="section">
-      <div class="section-label">Target speech rate</div>
+      <h2 class="section-label" id="target-rate-label">Target speech rate</h2>
       <div class="section-card">
         <div class="wpm-display">
           <span class="wpm-value" id="wpm-value">250</span>
@@ -165,18 +194,18 @@
         </div>
         <div class="slider-track">
           <div class="safe-zone" id="safe-zone"></div>
-          <input type="range" class="slider-input" id="wpm-slider" min="100" max="400" step="5" value="250">
+          <input type="range" class="slider-input" id="wpm-slider" min="100" max="400" step="5" value="250" aria-labelledby="target-rate-label">
         </div>
         <div class="safe-zone-label">
           <span>Slow</span>
-          <span>Safe zone (250–275)</span>
+          <span>Comfortable range (250–275)</span>
           <span>Fast</span>
         </div>
       </div>
     </div>
 
     <div class="section">
-      <div class="section-label">Content type</div>
+      <h2 class="section-label">Content type</h2>
       <div class="section-card">
         <div class="presets" role="group" aria-label="Content type presets">
           <button class="preset-btn" data-type="lecture" aria-pressed="false">Lecture</button>
@@ -189,7 +218,7 @@
     </div>
 
     <div class="section">
-      <div class="section-label">Per-site overrides</div>
+      <h2 class="section-label">Per-site overrides</h2>
       <div class="section-card">
         <ul class="override-list" id="override-list">
           <li class="override-item">
@@ -201,7 +230,6 @@
             <button class="override-remove" aria-label="Remove override for coursera.org">Remove</button>
           </li>
         </ul>
-        <p class="empty-note" id="override-empty" hidden>No site overrides set.</p>
         <div class="add-override">
           <input type="text" id="override-input" placeholder="e.g. ted.com" aria-label="Hostname to override">
           <button type="button" id="override-add">Add</button>
@@ -210,7 +238,7 @@
     </div>
 
     <div class="section">
-      <div class="section-label">Your habits</div>
+      <h2 class="section-label">Your habits</h2>
       <div class="section-card">
         <div class="habits-grid">
           <div class="habit-stat">
@@ -230,13 +258,27 @@
       </div>
     </div>
 
+    <div class="section" id="probe-section">
+      <h2 class="section-label" id="probe-section-label">Test audio capture</h2>
+      <div class="section-card">
+        <p class="section-note">
+          Verifies that the extension can capture audio from a video tab. The meter
+          shows the live audio level of the captured tab while the test runs. No audio
+          is recorded, stored, or transmitted.
+        </p>
+        <button type="button" id="toggle">Test audio capture</button>
+        <div id="status" role="status">Idle</div>
+        <div id="meter"><div id="meter-fill"></div></div>
+      </div>
+    </div>
+
     <div class="section">
-      <div class="section-label">Tier labels</div>
+      <h2 class="section-label">Tier labels</h2>
       <div class="section-card">
         <ul class="tier-list">
           <li class="tier-item">
             <span class="tier-badge">from captions</span>
-            <span class="tier-desc">Word-timed ASR captions. The most common tier — covers ~77% of YouTube videos.</span>
+            <span class="tier-desc">Word-timed ASR captions. The most common tier — ~94% of sampled videos with speech captions in our measurements.</span>
           </li>
           <li class="tier-item">
             <span class="tier-badge">from captions (corrected)</span>
