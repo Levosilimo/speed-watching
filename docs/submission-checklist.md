@@ -24,7 +24,7 @@ recorded in the appendix: keep + justify is the shipped path.
 
 | Field | Value |
 |---|---|
-| Name | `Video Speed Controller & Playback Speed Tool — Speed Watcher` (60/60 chars) |
+| Name | `Speed Watcher — Recommend Playback Speed from Speech Rate` (57/60 chars) |
 | Summary | `WPM-based speed-watching extension that recommends playback speed from caption speech rate` (90/132 chars) |
 | Detailed description | Plain text of the "Full listing description" in `docs/store-listing.md` — CWS strips markdown, so drop the `**` markers and bullet formatting |
 | Category | Productivity |
@@ -52,7 +52,7 @@ Permission justifications (one box per declared permission):
 | Permission | Justification |
 |---|---|
 | `storage` | Settings (`sw.settings`), the 500-entry override log (`sw.overrideLog`), and demand counters (`sw.demand`) — all `chrome.storage.local`, nothing synced |
-| `tabCapture` | The shipped audio capture test (options-page "Test audio capture" button): user-gesture-gated, captures the audio of the video tab the user is watching, shows a live level meter, never invoked without the click. Declared from day one because the Chrome API refuses it as optional; keeping it in v1 keeps the v1→v1.1 update permission-neutral. Also the declared home of the future feature-gated on-device STT |
+| `tabCapture` | The shipped audio capture test (options-page "Test audio capture" button): user-gesture-gated, captures the audio of the video tab the user is watching, shows a live level meter, never invoked without the click. Declared from day one because the Chrome API refuses it as optional; keeping it in v1 keeps the v1→v1.1 update permission-neutral |
 | `offscreen` | `chrome.offscreen.createDocument` fails without the manifest permission; the audio capture test calls it with reason `USER_MEDIA` |
 | `<all_urls>` (content scripts) | Embedded players live in cross-origin iframes — a curated site list misses them. No outbound requests: caption fetch runs in the page context, same-origin |
 

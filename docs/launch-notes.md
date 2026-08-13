@@ -29,7 +29,10 @@ It reads the word-timed caption data a video already carries, computes the
 video's natural speech rate, and recommends the playback multiplier that
 lands your effective listening speed in the 250–275 words-per-minute range — a
 commonly cited comfortable range for speech. Default target is 250 wpm;
-you can set anything from 100 to 400.
+you can set anything from 100 to 400. Why 250? It's the reading-parity
+anchor: silent reading runs 240–260 wpm (Kuperman et al.), and listening
+comprehension stays high to ~275 — 250 is roughly the speed you'd read
+this at.
 
 What it does differently:
 
@@ -37,6 +40,11 @@ What it does differently:
   one click applies it, or dismiss it. Your manual speed is always respected.
 - **Slows down fast talkers.** Fast speakers land above the range, and it
   recommends slowing the video rather than always pushing faster.
+- **Keyboard shortcuts.** Alt+Shift+S applies the recommendation,
+  Alt+Shift+D dismisses it.
+- **Live rate line.** After you apply, the pill shows your actual rate in
+  real time — "now ≈ 248 wpm at 1.55x" — so you see where you land, not
+  just the multiplier.
 - **Notices music.** Music tracks get the recommendation skipped, not
   miscounted as speech.
 - **Privacy is local-only.** Nothing is transmitted. The extension reads
@@ -169,7 +177,9 @@ The useful differences: it **suggests, never forces** — a pill shows the
 recommendation, you apply or dismiss, and your manual speed is always
 respected; it **slows down fast talkers** instead of only ever going faster;
 it **skips music** so it's not miscounted as speech; and it's **local-only** —
-no data leaves the browser, no network requests from the extension.
+no data leaves the browser, no network requests from the extension. Keyboard
+shortcuts (Alt+Shift+S apply, Alt+Shift+D dismiss) and a live rate line show
+where you actually land after applying.
 
 The 250–275 wpm range is a commonly cited comfortable listening range;
 comprehension research above it is mixed, so this is a recommendation from
@@ -177,7 +187,7 @@ the video's own speech rate, not a claim that faster is better. English is
 measured; non-English targets are labeled derived estimates. DRM-protected
 pages fall back to an estimate.
 
-Firefox and Chrome builds are both in the works. Feedback on edge cases —
+Firefox and Chrome builds are both shipping. Feedback on edge cases —
 multi-speaker talks, pause-heavy lectures, non-English rates — is what I'm
 after.
 
@@ -211,9 +221,11 @@ them.
 - [ ] **Respond to every comment for the first 2+ hours.** Answer the
       science questions with the effective-rate frame; don't dodge the
       mixed-research honesty.
-- [ ] Pre-empt "YouTube has built-in speed": acknowledge the built-in control
-      exists, and the difference is the recommendation (rate-based, not a
-      guessed multiplier) plus slow-down and privacy. Do not dismiss it.
+- [ ] Pre-empt YouTube's native Auto Speed (Premium, ~June 2026): it sets a
+      rate without showing you the speech rate. Speed Watcher's pitch is the
+      information gap — the measured rate and where your effective rate
+      lands. Also free, desktop, works without Premium, and slows down fast
+      talkers. Do not dismiss it.
 
 ### Reddit
 

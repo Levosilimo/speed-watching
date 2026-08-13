@@ -44,10 +44,9 @@ Productivity
 `storage`, `tabCapture`, and `offscreen` cover settings, the override log,
 and the audio capture test: an options-page button that captures the audio of
 the video tab you're watching, shows a live level meter, and stops on demand
-— user-gesture-gated, nothing recorded or stored. The same permissions back
-the on-device speech-to-text feature planned for a future release. The
-content scripts match `<all_urls>` with `all_frames` because embedded
-players live in cross-origin iframes — a curated site list would miss them.
+— user-gesture-gated, nothing recorded or stored. The content scripts match
+`<all_urls>` with `all_frames` because embedded players live in cross-origin
+iframes — a curated site list would miss them.
 The extension makes no outbound requests from its own contexts: caption
 data is fetched from the page context (same-origin), never through extension
 network calls.
