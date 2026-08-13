@@ -51,4 +51,23 @@ change any gate outcome. The raw full-window values are in results-v1.jsonl.
 
 ## G2 — chunk-seam integrity (V2)
 
-pending
+records: results-v2.jsonl (kind v2, 2026-08-13; clip jGwO_UgTS7I, 66s, base.en)
+
+| config | seam | seamCountBias | o3 | dup | tsMonotonic | overflow | wholeBias |
+|---|---|---|---|---|---|---|---|
+| chunk=30 stride=null | 30s | 0.0% | 0 | 0 | true | false | 19.3% |
+| chunk=29 stride=5 | 29s | +7.7% | 0 | 0 | true | false | 13.8% |
+
+VERDICT: PASS — both chunk configs hold seam-local word continuity: per-seam
+count-bias within [-2%,+8%], no out-of-order words, no duplicate word pairs
+(seam or whole clip), timestamps monotonic, no overflow. The low seam recall
+(8.3%/15.4%) is a metric artifact of the greedy in-order matcher (a leading
+hyp word outside the ref window, e.g. "using" at 28.2s vs ref 26.6s, exhausts
+the ref scan) — the diag dump shows the hyp and ref content match at the
+seam ("so what I want to do today spend some" on both sides). Whole-clip
+count-bias stays above +8% (13.8-19.3%) — that is the G1 cross-ASR wordiness,
+not a seam effect; the G2 gate is per-seam and both configs pass it.
+
+Note: the 2026-08-12 v2 record (seam countBias 0.69, wholeClipCountBias 2.38,
+recall 0) predates the harness's clip-relative ref timestamps and is a known
+reference-alignment artifact; it is excluded from this verdict.
