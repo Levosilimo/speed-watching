@@ -180,6 +180,9 @@ export function isSettingsPayload(value: unknown): value is Settings {
   if (!isRecord(value)) return false;
   if (typeof value.conservative !== 'boolean') return false;
   if (!isFiniteNumberIn(value.platformMax, PLATFORM_MAX_MIN, PLATFORM_MAX_MAX)) return false;
+  // Strict boolean: a forged (or stale, pre-Tier-4) payload without the
+  // provider toggle must not turn the measured-rate API on.
+  if (typeof value.externalApiEnabled !== 'boolean') return false;
   if (value.target !== undefined && !isFiniteNumberIn(value.target, TARGET_WPM_MIN, TARGET_WPM_MAX)) {
     return false;
   }

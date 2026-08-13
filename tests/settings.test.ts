@@ -109,3 +109,20 @@ describe('SettingsStore', () => {
     expect((await store.load()).target).toBe(240);
   });
 });
+
+describe('external API opt-in', () => {
+  it('defaults to off and round-trips through the store', async () => {
+    const store = new SettingsStore(mockStorage());
+    expect((await store.load()).externalApiEnabled).toBe(false);
+    await store.save({ ...defaultSettings(), externalApiEnabled: true });
+    expect((await store.load()).externalApiEnabled).toBe(true);
+  });
+
+  it('normalizes any non-true stored value to off (strict boolean)', async () => {
+    const store = new SettingsStore(
+      mockStorage({ 'sw.settings': { externalApiEnabled: 'yes' } }),
+    );
+    expect((await store.load()).externalApiEnabled).toBe(false);
+    expect((await new SettingsStore(mockStorage()).load()).externalApiEnabled).toBe(false);
+  });
+});

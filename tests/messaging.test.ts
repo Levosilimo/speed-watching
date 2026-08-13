@@ -89,6 +89,7 @@ describe('messaging bridge', () => {
         target: 300,
         conservative: true,
         platformMax: 2.5,
+        externalApiEnabled: true,
         contentType: 'talk',
         sites: {
           'youtube.com': {
@@ -105,6 +106,7 @@ describe('messaging bridge', () => {
     expect(saved.target).toBe(300);
     expect(saved.conservative).toBe(true);
     expect(saved.platformMax).toBe(2.5);
+    expect(saved.externalApiEnabled).toBe(true);
     expect(saved.sites['youtube.com']).toEqual({
       target: 240,
       platformMax: 1.75,
@@ -151,6 +153,7 @@ describe('messaging bridge', () => {
       { ...defaultSettings(), sites: { 'youtube.com': { target: 900 } } },
       { ...defaultSettings(), contentTypes: { lecture: 'fast' } },
       { ...defaultSettings(), contentType: 'bogus' },
+      { ...defaultSettings(), externalApiEnabled: 'yes' },
     ];
     for (const settings of malformed) {
       const { host } = fakeWindow();
