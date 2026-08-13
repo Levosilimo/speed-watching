@@ -89,3 +89,25 @@ VERDICT: PASS. Deviation: the box's /tmp/.X11-unix is root-owned with mode
 (no passwordless sudo to fix the mode); the headed run used the live X :0
 session with the spec's off-screen window position.
 
+## G4 — STT zip footprint (V4, 2026-08-13)
+
+zip -9 measurements (deflate):
+
+| artifact | on-disk | zipped | ratio |
+|---|---|---|---|
+| whisper-tiny.en (q8, 13 files) | 42.4 MB | 24.76 MB | 0.58 |
+| whisper-base.en (q8, 13 files) | 76.8 MB | 44.70 MB | 0.58 |
+| onnxruntime-web dist (ort-wasm) | 106.2 MB | 23.70 MB | 0.22 |
+| transformers.web.min.js | 0.4 MB | 0.11 MB | 0.28 |
+| extension bundle (wxt zip) | - | 0.07 MB | - |
+
+STT zip totals vs the 2 GB store cap:
+
+- tiny.en bundle: 24.76 + 23.70 + 0.11 = 48.6 MB (2.4% of 2 GB)
+- base.en bundle: 44.70 + 23.70 + 0.11 = 68.5 MB (3.3% of 2 GB)
+
+VERDICT: PASS — either model's STT payload fits the store cap with 30x
+headroom; the ort-wasm dist zips to a quarter of its disk size (wasm
+compresses well), so even shipping the full webgpu+wasm dist stays cheap.
+
+
