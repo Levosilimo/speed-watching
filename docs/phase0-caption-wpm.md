@@ -13,17 +13,18 @@ layer and compute wpm with `lib/captions.ts` + `lib/wpm.ts`.
 
 Two fetch paths were tried; only one works from this machine:
 
-- **WEB client timedtext (blocked).** The captionTracks baseUrl from
+- **WEB client timedtext (bare fetch fails).** The captionTracks baseUrl from
   `ytInitialPlayerResponse` returns HTTP 200 with an empty body
-  (`content-type: text/html`, 0 bytes) for every video — including the
-  player's own timedtext request (which carries the signed URL, `pot` token,
-  `fmt=json3`, full browser headers) and a bare curl without cookies.
-  `youtubei/v1/get_transcript`, triggered from the page's own "Show
-  transcript" button, returns 400 `failedPrecondition`. Evidence of an
-  IP-reputation block on caption endpoints for this datacenter IP, not a
-  session or signature problem: identical requests would succeed from a
-  residential IP (the player requests captions the same way in every normal
-  browser).
+  (`content-type: text/html`, 0 bytes) when fetched fresh or replayed
+  without the originating page context — the signed URL's `pot` token and
+  proof-of-origin are bound to the player's request context, and a script
+  re-fetch does not carry them. `youtubei/v1/get_transcript`, triggered from
+  the page's own "Show transcript" button, returns 400 `failedPrecondition`.
+  This was initially misread as an IP-reputation block on caption endpoints
+  for a "datacenter IP". The box is WSL2 on a residential Windows 11 line —
+  never a datacenter IP — and section 8 shows the player's own in-context
+  request works on this same box: the failures were context failures (the
+  missing player-signed POT context), not IP class.
 - **ANDROID innertube client (works).** POST `youtubei/v1/player` with
   `clientName: ANDROID, clientVersion: 20.10.31` returns a full player
   response with caption tracks; fetching the picked track's baseUrl with
@@ -124,7 +125,9 @@ Reference: `Intl.Segmenter` (ICU word segmentation, `isWordLike`) over the
 same joined caption text, versus the parser's `\S+` tokenizer. This
 validates **counting, not transcription accuracy** — there is no independent
 transcript to compare against, and word timing itself could not be
-cross-checked with the WEB endpoint blocked on this network.
+cross-checked until the POT-aware intercept re-run (section 8): the
+phase-0 fetch path returned empty 200s because it lacked the player-signed
+context, not because of the network class.
 
 - 17 of 22 videos: |delta| ≤ 0.53% (regex counts 0.1–0.5% fewer — ICU splits
   on punctuation like `—`).
@@ -150,26 +153,30 @@ Word-count anchors: the Ken Robinson talk has 3,337 tokens (regex) / 3,345
    fall to tier 2 + correction or suppress.
 3. **Manual-only tracks (5/24)**: no word timing by design; cue-level only,
    with the +3–15% naive underestimate corrected as in section 3.
-4. **WEB endpoint block (all)**: empty 200s / 400s from this IP; the
-   measurement itself had to switch to the ANDROID client. Content-script
-   path (`entrypoints/content.ts`) uses the same timedtext fetch and will hit
-   the same wall only on blocked IPs; on user residential IPs the WEB
-   endpoint serves normally.
+4. **WEB bare-fetch failures (all)**: empty 200s / 400s from bare
+   `baseUrl` fetches on this network; the measurement itself had to switch
+   to the ANDROID client. The content-script path
+   (`entrypoints/content.ts`) relies on the player's own signed request,
+   which serves normally on this box via the POT-aware intercept (section
+   8) — the phase-0 failures were a missing-context artifact of script
+   fetches, misattributed at the time to IP class.
 
 ## 6. Gates
 
 | gate | result |
 |---|---|
 | ≥90% word-level availability | **FAIL** — 77.3% (17/22) on this network |
-| word-level wpm within ±10% of independent reference | **NOT MEASURABLE here** — WEB word-level endpoint IP-blocked; count accuracy vs ICU on spoken content: 17/22 within ±0.53%, max |delta| 2.81% (Numberphile math symbols; lyric tracks 28–37% from note-symbol tokens) |
+| word-level wpm within ±10% of independent reference | **NOT MEASURABLE in phase-0's bare-fetch path** — script fetches returned empty 200s (context failure, misread as IP-block; the POT-aware intercept in section 8 re-measured word-level rates on 16/17 WEB videos); count accuracy vs ICU on spoken content: 17/22 within ±0.53%, max |delta| 2.81% (Numberphile math symbols; lyric tracks 28–37% from note-symbol tokens) |
 | cue-level fallback + silence correction | **PASS** — 100% availability; correction measured (+3–15% on manual tracks, no-op on ASR) |
 | degradation rule for music / no-tracks | **PASS (measured)** — 4/24 videos degrade as documented, none crash |
 
 ## 7. Follow-ups for Phase 1
 
-1. Re-run this harness from a residential IP to capture WEB json3 (word
-   timing in `windows`) and to clear the ≥90% gate with the format the
-   extension will actually receive.
+1. ~~Re-run this harness from a residential IP~~ **DONE — section 8.** The
+   blocker was never the network: the re-run happened on this same box with
+   the POT-aware intercept (player-signed request) and cleared the ≥90%
+   gate at 16/17 = 94.1% with the format the extension will actually
+   receive.
 2. Word-level wpm should count tokens from cue text over the word span
    (removes the ~16% untimed-token underestimate) — one-line change, all
    numbers already in the JSONL to re-derive.
@@ -185,7 +192,8 @@ Word-count anchors: the Ken Robinson talk has 3,337 tokens (regex) / 3,345
 
 ## 8. Residential re-run — runbook gate 1 (2026-08-12)
 
-Re-ran the harness from a residential IP (217.119.65.117) with the
+Re-ran the harness on this same box (WSL2 over a residential Windows 11
+line; public IP 217.119.65.117 at run time) with the
 POT-aware capture method: the player's own signed `/api/timedtext` response
 is intercepted via `page.on('response')` while captions are toggled on (CC
 pill, then an explicit settings-menu pick of the auto-generated/English

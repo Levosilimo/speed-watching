@@ -166,10 +166,17 @@ These are hard submission requirements, not polish:
 ## Pending before submission
 
 1. **Residential WEB re-run** (hard Phase-1 gate from ora-2): verify the WEB
-   timedtext path from a residential IP — windows-format json3 parsing and a
-   2-3 video stopwatch timing spot-check. The ANDROID innertube fallback is
-   shipped and E2E-tested, but the WEB path's availability on residential
-   networks is the unmeasured half of the chain.
+   timedtext path — windows-format json3 parsing and a 2-3 video timing
+   spot-check. **PASSED.** The landmark re-run
+   (`docs/phase0-caption-wpm.md` §8, 2026-08-12, `scripts/sample-captions.ts`)
+   measured 16/17 = 94.1% WEB yield on this box (WSL2, residential Windows
+   11 line; the one miss, 8mAITcNt710/CS50, is a documented video-specific
+   empty-200 with the ANDROID control OK). Re-checked 2026-08-13 with the
+   gate-1 runner after its fixes: 5/5 of the landmark's web-ok videos
+   re-verified `web-ok` with word/cue counts identical to the landmark
+   (`scripts/data/gate1-residential/results.jsonl`), and the landmark
+   harness itself re-ran the same five videos with identical results. The
+   ANDROID innertube fallback remains shipped and E2E-tested.
 2. **Audio capture test manual verification** (from `docs/phase0-offscreen-audio.md`):
    the tabCapture → offscreen → getUserMedia flow is unit-tested only;
    `chrome.offscreen` is absent from every Playwright build, so a human must

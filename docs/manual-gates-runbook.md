@@ -7,8 +7,11 @@ a human: numbered steps, exact commands, pass/fail criteria. The one
 exception is gate 2's toolbar click — browser chrome, which CDP cannot
 synthesize (see the gate's step 3).
 
-What the datacenter box already proves is in `docs/phase0-offscreen-audio.md`
-and `docs/ci-e2e.md`; this runbook only covers what those cannot.
+What this box already proves is in `docs/phase0-offscreen-audio.md`,
+`docs/phase0-caption-wpm.md`, and `docs/ci-e2e.md`; this runbook only covers
+what those cannot. The box is WSL2 on a residential Windows 11 line — never
+a datacenter IP; phase-0's WEB caption failures were the bare-fetch
+POT-context gap, not IP class (see `docs/phase0-caption-wpm.md` §8).
 
 ## Agent operating model
 
@@ -39,23 +42,35 @@ agent-browser \
   mode, find **Speed Watcher**, click **Details**, click **Extension
   options**; the URL is `chrome-extension://<id>/options.html` — read it with
   `agent-browser get url` on that tab.
-- Gate 1 runs from the repo root of a checkout **on the residential machine**
-  (the box whose IP is not a datacenter IP). Gates 2–3 run wherever a real
+- Gate 1 runs from the repo root of a checkout on this box (the WSL2
+  machine on the residential Windows 11 line). Gates 2–3 run wherever a real
   Chrome with audio output exists.
 
 ---
 
 ## Gate 1 — residential timedtext re-run (player-signed capture)
 
-**What it validates:** the WEB timedtext caption path from a residential IP,
-captured the way the extension's content script sees it — the **player's own
-signed timedtext request**. A fresh `baseUrl` fetch by a script is not
-representative: the player's URL carries a `pot` token and the page's
-proof-of-origin, both bound to the video, and a re-fetch from a different
-context drifts or gets blocked (the datacenter box measured exactly this as
-`caption-fetch-empty` on WEB). Intercepting the player's request tests the
+**What it validates:** the WEB timedtext caption path, captured the way the
+extension's content script sees it — the **player's own signed timedtext
+request**. A fresh `baseUrl` fetch by a script is not representative: the
+player's URL carries a `pot` token and the page's proof-of-origin, both
+bound to the video, and a re-fetch from a different context drifts or gets
+blocked (phase-0 measured exactly this as `caption-fetch-empty` on WEB — a
+context failure, not IP class). Intercepting the player's request tests the
 primary path end to end — it is the request `entrypoints/content.ts` relies
 on.
+
+**Status: PASSED 2026-08-12.** The landmark re-run (`scripts/sample-captions.ts`,
+`docs/phase0-caption-wpm.md` §8) IS the residential run: 16/17 = 94.1% of
+ASR-bearing videos yielded WEB word timing on this same box; the one miss
+(8mAITcNt710, CS50) was a video-specific empty-200 with the ANDROID control
+OK. `scripts/gate1-residential.ts` is the regression/periodic tool for this
+gate, not a first-time gate — a smoke run of it on 2026-08-12 reported a
+false `pot-fail` whose root cause was runner bugs (a persistent browser
+profile that YouTube served degraded no-word-timing ASR payloads to, and
+latching the first post-repick response before the word-timed follow-up
+landed). Both were fixed 2026-08-13; the runner then re-verified 5/5 of the
+landmark's web-ok videos with word/cue counts identical to the landmark.
 
 Also validates: the **parser gap** (word-level `windows` parsing is only
 proven on the synthetic fixture, `tests/fixtures/synthetic/windows-format.json`),
@@ -130,13 +145,14 @@ for (const f of readdirSync(dir).filter((f) => f.startsWith("residential-"))) {
 1. **≥ 90% of ASR-bearing videos pass** (words > 0 AND cues > 0 on the same
    payload). Report the raw fraction as **x/22** (the ASR-bearing subset the
    planning lane counted in the phase-0 list) for direct parity with
-   phase-0, which measured 17/17 = 100% on the datacenter ANDROID path.
+   phase-0, which measured 17/17 = 100% on the ANDROID path from this same
+   box.
 2. **Stratify every non-passing video** by failure class:
 
    | Symptom | Class | Verdict |
    |---|---|---|
    | no `captionTracks` or manual-only tracks | structural | not a parser bug — the video has no ASR captions; excluded from the ASR denominator |
-   | timedtext intercepted but empty, or no timedtext request at all | POT/IP access | the player's own request failed — same class as the datacenter `caption-fetch-empty`; retry with a fresh session, then the escalation below |
+   | timedtext intercepted but empty, or no timedtext request at all | POT/IP access | the player's own request failed — same class as phase-0's `caption-fetch-empty` (context failure, not IP class); retry with a fresh session, then the escalation below |
    | payload parsed but `words === 0` | **PARSER BUG** | hard fail — the word-level windows path is broken on real payloads; word timing is the pause-bias and WPM input |
 
 3. **No `bot-wall` or `consent-page` errors** (the hardened driver above is
@@ -311,7 +327,7 @@ advantage over the JS-only fallback.
 
 ---
 
-## Reference — measured state on the datacenter box (2026-08-12)
+## Reference — measured state on this box (2026-08-12)
 
 Reproduced here so a gate run that hits these exact results is recognized as
 the known baseline, not a surprise:

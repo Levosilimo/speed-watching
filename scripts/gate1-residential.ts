@@ -1,43 +1,15 @@
-// Gate 1 residential timedtext re-run (docs/manual-gates-runbook.md gate 1).
-// Runs the phase-0 WEB corpus from a residential IP and classifies each video
-// by how the player's own signed /api/timedtext request behaves — the request
-// entrypoints/content.ts relies on, which a fresh baseUrl fetch cannot
-// reproduce (the player's URL carries a pot token bound to the video).
-//
-// Classification (runbook vocabulary):
-//   web-ok     words > 0 AND cues > 0 parsed from the intercepted payload
-//   pot-fail   no/empty timedtext or a payload without word-timing structures
-//              — POT/IP access; fresh-session re-run, then the escalation
-//   parse-fail timing structures present but words === 0 — PARSER BUG, hard fail
-//   no-track   no captionTracks or manual-only tracks — structural, excluded
-//              from the ASR denominator
-//
-// Reuses the capture mechanics proven in scripts/sample-captions.ts via
-// scripts/web-capture.ts and the production parser (lib/captions.ts).
+// Gate 1 timedtext re-run (docs/manual-gates-runbook.md gate 1): classifies
+// each phase-0 video by how the player's own signed /api/timedtext request
+// behaves — web-ok / pot-fail / parse-fail / no-track (runbook vocabulary).
+// Reuses scripts/web-capture.ts mechanics and the production parser.
 // Run: bun run scripts/gate1-residential.ts [--limit N] [--video=ID] [--headless]
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { chromium, type BrowserContext, type Page } from 'playwright';
-import {
-  parseYouTubeJson3,
-  type ParsedCaptions,
-  type Segment,
-} from '../lib/captions';
-import type { PlayerResponse } from '../lib/youtube';
-import {
-  dismissConsentIfPresent,
-  enableCaptions,
-  hookTimedtext,
-  pageErrorHint,
-  pickAsrTrackFromMenu,
-  readPlayerInfo,
-  waitForFreshTimedtext,
-  waitForTimedtext,
-  type TimedtextCapture,
-} from './web-capture';
+import { chromium, type Browser, type BrowserContext, type Page } from 'playwright';
+import { parseYouTubeJson3, type ParsedCaptions, type Segment } from '../lib/captions';
+import { dismissConsentIfPresent, enableCaptions, hookTimedtext, pageErrorHint, pickAsrTrackFromMenu, readPlayerInfo, waitForTimedtext, type TimedtextCapture } from './web-capture';
 type GateClass = 'web-ok' | 'pot-fail' | 'parse-fail' | 'no-track';
 interface SampleVideo {
   videoId: string;
@@ -64,24 +36,19 @@ interface GateRecord {
 }
 // Fallback corpus when scripts/data/web-rerun/rerun-results.jsonl is absent (same list as sample-captions.ts).
 const FALLBACK_VIDEOS: SampleVideo[] = [
-  { videoId: 'iG9CE55wbtY', category: 'talk' }, { videoId: 'qp0HIF3SfI4', category: 'talk' },
-  { videoId: 'Ks-_Mh1QhMc', category: 'talk' }, { videoId: 'arj7oStGLkU', category: 'talk' },
-  { videoId: 'HtSuA80QTyo', category: 'lecture' }, { videoId: 'jGwO_UgTS7I', category: 'lecture' },
-  { videoId: '8mAITcNt710', category: 'lecture' }, { videoId: 'ycPr5-27vSI', category: 'podcast' },
-  { videoId: 'fpbOEoRrHyU', category: 'news-comedy' }, { videoId: 'WUvTyaaNkzM', category: 'explainer' },
-  { videoId: 'aircAruvnKk', category: 'explainer' }, { videoId: 'h6fcK_fRYaI', category: 'explainer' },
-  { videoId: '7Pq-S557XQU', category: 'explainer' }, { videoId: 'w-I6XTVZXww', category: 'explainer' },
-  { videoId: 'XRr1kaXKBsU', category: 'explainer' }, { videoId: 'r6sGWTCMz2k', category: 'explainer' },
-  { videoId: 'JTvcpdfGUtQ', category: 'explainer' }, { videoId: 'X32dce7_D48', category: 'explainer' },
-  { videoId: '60ItHLz5WEA', category: 'music' }, { videoId: 'dQw4w9WgXcQ', category: 'music' },
-  { videoId: 'ZbZSe6N_BXs', category: 'music' }, { videoId: 'kJQP7kiw5Fk', category: 'music' },
-  { videoId: 'nfWlot6h_JM', category: 'music' }, { videoId: '4NRXx6U8ABQ', category: 'music' },
+  { videoId: 'iG9CE55wbtY', category: 'talk' }, { videoId: 'qp0HIF3SfI4', category: 'talk' }, { videoId: 'Ks-_Mh1QhMc', category: 'talk' },
+  { videoId: 'arj7oStGLkU', category: 'talk' }, { videoId: 'HtSuA80QTyo', category: 'lecture' }, { videoId: 'jGwO_UgTS7I', category: 'lecture' },
+  { videoId: '8mAITcNt710', category: 'lecture' }, { videoId: 'ycPr5-27vSI', category: 'podcast' }, { videoId: 'fpbOEoRrHyU', category: 'news-comedy' },
+  { videoId: 'WUvTyaaNkzM', category: 'explainer' }, { videoId: 'aircAruvnKk', category: 'explainer' }, { videoId: 'h6fcK_fRYaI', category: 'explainer' },
+  { videoId: '7Pq-S557XQU', category: 'explainer' }, { videoId: 'w-I6XTVZXww', category: 'explainer' }, { videoId: 'XRr1kaXKBsU', category: 'explainer' },
+  { videoId: 'r6sGWTCMz2k', category: 'explainer' }, { videoId: 'JTvcpdfGUtQ', category: 'explainer' }, { videoId: 'X32dce7_D48', category: 'explainer' },
+  { videoId: '60ItHLz5WEA', category: 'music' }, { videoId: 'dQw4w9WgXcQ', category: 'music' }, { videoId: 'ZbZSe6N_BXs', category: 'music' },
+  { videoId: 'kJQP7kiw5Fk', category: 'music' }, { videoId: 'nfWlot6h_JM', category: 'music' }, { videoId: '4NRXx6U8ABQ', category: 'music' },
 ];
 const ROOT = fileURLToPath(new URL('.', import.meta.url));
 const OUT_DIR = join(ROOT, 'data', 'gate1-residential');
 const RESULTS_FILE = join(OUT_DIR, 'results.jsonl');
 const CORPUS_FILE = join(ROOT, 'data', 'web-rerun', 'rerun-results.jsonl');
-const PROFILE_DIR = join(homedir(), '.speedwatcher-gate1');
 const PAGE_PACE_MS = 2500;
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -104,16 +71,16 @@ function firstLast<T>(items: T[]): [T, T] | null {
   return first === undefined || last === undefined ? null : [first, last];
 }
 
-/** Words from one layout only — mirrors the two wordTokens loops in
- * lib/captions.ts so the windows==segs parity compares like for like. */
+/** Words from one layout only — mirrors the wordTokens loops in lib/captions.ts. */
 function wordsFromLayout(payload: Record<string, unknown>, layout: 'windows' | 'segs'): Segment[] {
   const tokens: Segment[] = [];
   const push = (seg: unknown, baseMs: number): void => {
     if (!isRecord(seg)) return;
     const text = asString(seg.utf8);
     const offset = asNumber(seg.tOffsetMs);
-    if (text === null || offset === null || text.trim() === '') return;
-    tokens.push({ text, startSec: (baseMs + offset) / 1000 });
+    if (text !== null && offset !== null && text.trim() !== '') {
+      tokens.push({ text, startSec: (baseMs + offset) / 1000 });
+    }
   };
   if (layout === 'windows') {
     for (const window of asArray(payload.windows)) {
@@ -140,9 +107,33 @@ function hasWordTimingStructures(payload: unknown): boolean {
     (e) => isRecord(e) && asArray(e.segs).some((s) => isRecord(s) && asNumber(s.tOffsetMs) !== null),
   );
 }
-/** Runbook parity: when a payload carries BOTH layouts, both parses must
- * agree (same first/last word, overlapping coverage). Null when a layout is
- * absent — most real WEB payloads carry events[].segs only. */
+
+function bodyHasTiming(body: string): boolean {
+  try { return hasWordTimingStructures(JSON.parse(body) as unknown); } catch { return false; }
+}
+
+/** After a track re-pick the first fresh response can be a degraded no-timing payload; the full one lands on a follow-up request. */
+async function waitForWordTimed(
+  page: Page,
+  captures: TimedtextCapture[],
+  baseline: number,
+  timeoutMs: number,
+): Promise<TimedtextCapture | null> {
+  const deadline = Date.now() + timeoutMs;
+  const nudgeAt = Date.now() + Math.min(timeoutMs / 3, 5000);
+  let nudged = false;
+  while (Date.now() < deadline) {
+    const timed = captures.slice(baseline).find((c) => c.body !== '' && bodyHasTiming(c.body));
+    if (timed !== undefined) return timed;
+    if (!nudged && Date.now() >= nudgeAt) {
+      await page.keyboard.press('k').catch(() => undefined);
+      nudged = true;
+    }
+    await new Promise((r) => setTimeout(r, 500));
+  }
+  return null;
+}
+/** Runbook parity: when the payload carries BOTH layouts, both parses must agree; null when a layout is absent. */
 function windowsSegsParity(payload: unknown): boolean | null {
   if (!isRecord(payload)) return null;
   const windowsWords = wordsFromLayout(payload, 'windows');
@@ -150,24 +141,16 @@ function windowsSegsParity(payload: unknown): boolean | null {
   const windows = firstLast(windowsWords);
   const segs = firstLast(segsWords);
   if (windows === null || segs === null) return null;
-  const [firstWindows, lastWindows] = windows;
-  const [firstSegs, lastSegs] = segs;
-  const firstSame = firstWindows.text === firstSegs.text;
-  const lastSame = lastWindows.text === lastSegs.text;
+  // windows/segs are [first, last] tuples from firstLast
+  const sameEnds = windows[0].text === segs[0].text && windows[1].text === segs[1].text;
   const coverage = Math.min(windowsWords.length, segsWords.length) / Math.max(windowsWords.length, segsWords.length);
-  return firstSame && lastSame && coverage >= 0.9;
+  return sameEnds && coverage >= 0.9;
 }
 
 function transcriptSample(parsed: ParsedCaptions): string | null {
   const cues = parsed.cues.length > 0 ? parsed.cues : parsed.words;
   if (cues.length === 0) return null;
-  return cues
-    .slice(0, 5)
-    .map((c) => c.text)
-    .join(' ')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .slice(0, 300);
+  return cues.slice(0, 5).map((c) => c.text).join(' ').replace(/\s+/g, ' ').trim().slice(0, 300);
 }
 
 function initRecord(video: SampleVideo): GateRecord {
@@ -176,39 +159,30 @@ function initRecord(video: SampleVideo): GateRecord {
     url: `https://www.youtube.com/watch?v=${video.videoId}`,
     category: video.category,
     classification: 'pot-fail',
-    reason: null,
-    title: null,
-    asrBearing: false,
-    trackCount: 0,
-    asrCount: 0,
+    reason: null, title: null,
+    asrBearing: false, trackCount: 0, asrCount: 0,
     languageCode: null,
     words: 0, cues: 0, wordsParity: null,
-    transcriptSample: null, timedtextUrl: null,
-    timedtextHttpStatus: null, asrRepick: false,
+    transcriptSample: null, timedtextUrl: null, timedtextHttpStatus: null, asrRepick: false,
   };
 }
 
 async function loadWatchPage(page: Page, record: GateRecord): Promise<{ trackCount: number; asrCount: number }> {
   await page.goto(record.url, { waitUntil: 'domcontentloaded', timeout: 60_000 });
   await dismissConsentIfPresent(page);
-  await page.waitForFunction(() => window.ytInitialPlayerResponse !== undefined, undefined, {
-    timeout: 25_000,
-  });
+  await page.waitForFunction(() => window.ytInitialPlayerResponse !== undefined, undefined, { timeout: 25_000 });
   const info = await readPlayerInfo(page);
   record.title = info.title;
   record.trackCount = info.trackCount;
   record.asrCount = info.asrCount;
   record.languageCode = await page.evaluate((): string | null => {
-    const pr: PlayerResponse | undefined = window.ytInitialPlayerResponse;
-    const tracks = pr?.captions?.playerCaptionsTracklistRenderer?.captionTracks ?? [];
+    const tracks = window.ytInitialPlayerResponse?.captions?.playerCaptionsTracklistRenderer?.captionTracks ?? [];
     return (tracks.find((t) => t.kind === 'asr') ?? tracks[0])?.languageCode ?? null;
   });
   return info;
 }
 
-/** Toggle captions on, wait for the player's signed timedtext request, then
- * re-pick the ASR track from the CC menu — the default track is often a
- * manual transcript without word timing. */
+/** Toggle captions on, wait for the player's signed timedtext request, then re-pick the ASR track — the default is often a manual transcript. */
 async function captureTimedtext(page: Page, record: GateRecord, captures: TimedtextCapture[]): Promise<void> {
   await enableCaptions(page);
   let timedtext = await waitForTimedtext(captures, 5000);
@@ -218,11 +192,16 @@ async function captureTimedtext(page: Page, record: GateRecord, captures: Timedt
     timedtext = await waitForTimedtext(captures, 3000);
   }
   const baseline = captures.length;
-  const menuPicked = await pickAsrTrackFromMenu(page);
+  let menuPicked = await pickAsrTrackFromMenu(page);
+  if (!menuPicked) {
+    // the settings menu is racy right after load; one retry before giving up
+    await page.waitForTimeout(800);
+    menuPicked = await pickAsrTrackFromMenu(page);
+  }
   if (menuPicked) {
-    const fresh = await waitForFreshTimedtext(captures, baseline, 4000);
-    if (fresh !== null) {
-      timedtext = fresh;
+    const timed = await waitForWordTimed(page, captures, baseline, 15_000);
+    if (timed !== null) {
+      timedtext = timed;
       record.asrRepick = true;
     }
   }
@@ -241,11 +220,7 @@ async function captureTimedtext(page: Page, record: GateRecord, captures: Timedt
     return;
   }
   let json: unknown = null;
-  try {
-    json = JSON.parse(timedtext.body) as unknown;
-  } catch {
-    json = null;
-  }
+  try { json = JSON.parse(timedtext.body) as unknown; } catch { json = null; }
   if (json === null) {
     fail(record, 'pot-fail', 'response-not-json');
     return;
@@ -290,18 +265,18 @@ async function sampleVideo(context: BrowserContext, video: SampleVideo): Promise
   return record;
 }
 
-async function setupBrowser(headed: boolean, profileDir: string): Promise<BrowserContext> {
+async function setupBrowser(headed: boolean): Promise<{ browser: Browser; context: BrowserContext }> {
   // probe for the CfT version so the UA matches the real Chrome build
   const probe = await chromium.launch({ headless: true });
   const version = probe.version();
   await probe.close();
-  const context = await chromium.launchPersistentContext(profileDir, {
+  const browser = await chromium.launch({
     headless: !headed,
     args: ['--disable-blink-features=AutomationControlled'],
+  });
+  const context = await browser.newContext({
     locale: 'en-US',
-    userAgent:
-      `Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) ` +
-      `Chrome/${version} Safari/537.36`,
+    userAgent: `Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${version} Safari/537.36`,
     viewport: { width: 1280, height: 800 },
   });
   // consent cookies: without them the default CC track is the manual transcript, not ASR
@@ -309,7 +284,7 @@ async function setupBrowser(headed: boolean, profileDir: string): Promise<Browse
     { name: 'CONSENT', value: 'YES+cb.20220301-01-p0.en+FX+000', domain: '.youtube.com', path: '/' },
     { name: 'SOCS', value: 'CAISNQgDEitib3FfaWRlbnRpdHlmcm9udGVuZHVpc2VydmVyXzIwMjMwODI5LjA3X3AxGgJlbiACGgYIgLC_pwY', domain: '.youtube.com', path: '/' },
   ]);
-  return context;
+  return { browser, context };
 }
 
 function loadVideos(videoArg: string | undefined, limit: number | undefined): SampleVideo[] {
@@ -334,12 +309,10 @@ function loadVideos(videoArg: string | undefined, limit: number | undefined): Sa
   return limit === undefined ? videos : videos.slice(0, limit);
 }
 
-function parityStr(parity: boolean | null): string {
-  return parity === null ? '-' : String(parity);
-}
 function recordLine(record: GateRecord): string {
   if (record.classification === 'web-ok') {
-    return `web-ok words=${record.words} cues=${record.cues} lang=${record.languageCode ?? '-'} parity=${parityStr(record.wordsParity)}`;
+    const parity = record.wordsParity === null ? '-' : String(record.wordsParity);
+    return `web-ok words=${record.words} cues=${record.cues} lang=${record.languageCode ?? '-'} parity=${parity}`;
   }
   return `${record.classification}${record.reason ? ` (${record.reason})` : ''}`;
 }
@@ -361,7 +334,7 @@ function summarize(records: GateRecord[]): number {
     String(r.words),
     String(r.cues),
     r.languageCode ?? '-',
-    parityStr(r.wordsParity),
+    r.wordsParity === null ? '-' : String(r.wordsParity),
     (r.reason ?? '').slice(0, 60),
   ]);
   const widths = header.map((h, i) => Math.max(h.length, ...rows.map((row) => (row[i] ?? '').length)));
@@ -371,23 +344,14 @@ function summarize(records: GateRecord[]): number {
   for (const row of rows) console.log(printRow(row));
 
   console.log(`\nby class: ${[...byClass.entries()].map(([k, v]) => `${k}=${v}`).join(', ')}`);
-  console.log(
-    `pass fraction: ${passed.length}/${asrBearing.length} ASR-bearing videos ` +
-      `yielded word timing (${(rate * 100).toFixed(1)}%)`,
-  );
-  console.log(
-    `stratified: structural=${byClass.get('no-track') ?? 0} ` +
-      `pot-access=${byClass.get('pot-fail') ?? 0} parser=${parserFails}`,
-  );
+  console.log(`pass fraction: ${passed.length}/${asrBearing.length} ASR-bearing videos yielded word timing (${(rate * 100).toFixed(1)}%)`);
+  console.log(`stratified: structural=${byClass.get('no-track') ?? 0} pot-access=${byClass.get('pot-fail') ?? 0} parser=${parserFails}`);
   if (parserFails > 0) {
     console.log('VERDICT: HARD FAIL — parser bug on real payloads (words===0)');
     return 1;
   }
   if (rate < 0.9) {
-    console.log(
-      'VERDICT: FAIL — pass fraction below 90%; pot-access failures need a ' +
-        'fresh-session re-run, then the runbook escalation',
-    );
+    console.log('VERDICT: FAIL — pass fraction below 90%; pot-access failures need a fresh-session re-run, then the runbook escalation');
     return 1;
   }
   console.log('VERDICT: PASS — gate 1 residential re-run green');
@@ -397,8 +361,8 @@ function summarize(records: GateRecord[]): number {
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
   const headed = !args.includes('--headless');
-  const videoArg = args.find((a) => a.startsWith('--video='))?.slice(7);
-  const limitArg = args.find((a) => a.startsWith('--limit=')) ?? (args.includes('--limit') ? args[args.indexOf('--limit') + 1] : undefined);
+  const videoArg = args.find((a) => a.startsWith('--video='))?.slice('--video='.length);
+  const limitArg = args.find((a) => a.startsWith('--limit='))?.slice('--limit='.length) ?? (args.includes('--limit') ? args[args.indexOf('--limit') + 1] : undefined);
   const limit = limitArg === undefined ? undefined : Number(limitArg);
   if (limit !== undefined && !Number.isFinite(limit)) {
     console.error('--limit must be a number');
@@ -411,9 +375,9 @@ async function main(): Promise<void> {
     process.exit(2);
   }
   mkdirSync(OUT_DIR, { recursive: true });
-  console.log(`gate1-residential: ${videos.length} video(s), headed=${headed}, profile=${PROFILE_DIR}`);
+  console.log(`gate1-residential: ${videos.length} video(s), headed=${headed}`);
 
-  const context = await setupBrowser(headed, PROFILE_DIR);
+  const { browser, context } = await setupBrowser(headed);
   const records: GateRecord[] = [];
   try {
     for (const video of videos) {
@@ -424,7 +388,7 @@ async function main(): Promise<void> {
       await new Promise((resolve) => setTimeout(resolve, PAGE_PACE_MS));
     }
   } finally {
-    await context.close();
+    await browser.close();
   }
   writeFileSync(RESULTS_FILE, records.map((r) => JSON.stringify(r)).join('\n') + '\n', 'utf8');
   console.log(`\nresults -> ${RESULTS_FILE}`);

@@ -1,7 +1,8 @@
 # Phase 0 Lane B: tab → offscreen → AudioContext audio path — gate report
 
-Measured 2026-08-11 in the datacenter environment (Playwright Chromium 149/151
-builds, headed under Xvfb). Purpose: de-risk the Phase 2 STT bet that MV3 tab
+Measured 2026-08-11 on the dev box (WSL2 over a residential Windows 11
+line — not a datacenter environment; Playwright Chromium 149/151 builds,
+headed under Xvfb). Purpose: de-risk the Phase 2 STT bet that MV3 tab
 audio can be routed through an offscreen document into an AudioContext, and
 answer the three known failure modes. The code is a throwaway probe, not
 production.

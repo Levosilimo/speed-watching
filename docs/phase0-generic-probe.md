@@ -1,6 +1,8 @@
 # Phase 0 Lane C: generic-player probe — feasibility report
 
-Measured 2026-08-11 from a datacenter IP (Poland). Data:
+Measured 2026-08-11 on the dev box (WSL2 over a residential Windows 11
+line — not a datacenter IP; that framing for this machine was a phase-0
+misread, see `docs/phase0-caption-wpm.md` §8). Data:
 `scripts/data/generic-player-results.jsonl` (11 records: 8 sites plus three
 extra `vimeo-page` runs to pin down run-to-run variance). Probe script:
 `scripts/probe-generic-players.ts` (standalone, not part of the vitest suite).
