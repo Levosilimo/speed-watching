@@ -4,12 +4,19 @@ import { DemandStore } from '../lib/demand';
 import {
   BRIDGE_CHANNEL,
   BRIDGE_TIMEOUT_MS,
+  clampWpmResponse,
   createBridgeClient,
   createBridgeListener,
   isBridgeEnvelope,
+  isWpmEnvelope,
+  isWpmGetRequest,
+  isWpmGetResponse,
+  WPM_CHANNEL,
+  WPM_PROTOCOL_VERSION,
   type BridgeDeps,
   type BridgeRequest,
   type EventHost,
+  type WpmGetResponse,
 } from '../lib/messaging';
 import type { ContentType } from '../lib/music';
 import { OverrideLog } from '../lib/override-log';
@@ -91,6 +98,7 @@ describe('messaging bridge', () => {
         target: 300,
         conservative: true,
         platformMax: 2.5,
+        externalApiEnabled: true,
         contentType: 'talk',
         sites: {
           'youtube.com': {
@@ -107,6 +115,7 @@ describe('messaging bridge', () => {
     expect(saved.target).toBe(300);
     expect(saved.conservative).toBe(true);
     expect(saved.platformMax).toBe(2.5);
+    expect(saved.externalApiEnabled).toBe(true);
     expect(saved.sites['youtube.com']).toEqual({
       target: 240,
       platformMax: 1.75,
@@ -153,6 +162,7 @@ describe('messaging bridge', () => {
       { ...defaultSettings(), sites: { 'youtube.com': { target: 900 } } },
       { ...defaultSettings(), contentTypes: { lecture: 'fast' } },
       { ...defaultSettings(), contentType: 'bogus' },
+      { ...defaultSettings(), externalApiEnabled: 'yes' },
     ];
     for (const settings of malformed) {
       const { host } = fakeWindow();
@@ -458,5 +468,83 @@ describe('messaging bridge', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+});
+
+describe('wpm:get protocol', () => {
+  const okResponse: WpmGetResponse = {
+    ok: true,
+    version: WPM_PROTOCOL_VERSION,
+    ts: 1000,
+    site: 'youtube.com',
+    naturalRate: 150,
+    unit: 'wpm',
+    language: 'en',
+    tier: 'asr-word',
+    contentType: 'lecture',
+    platformMax: 2,
+    recommendation: { target: 250, recommendedMultiplier: 1.65, mode: 'recommend' },
+  };
+
+  it('accepts a valid wpm:get request and rejects malformed ones', () => {
+    expect(isWpmGetRequest({ type: 'wpm:get', version: 1 })).toBe(true);
+    expect(isWpmGetRequest({ type: 'wpm:get' })).toBe(false);
+    expect(isWpmGetRequest({ type: 'wpm:get', version: 2 })).toBe(false);
+    expect(isWpmGetRequest({ type: 'other', version: 1 })).toBe(false);
+    expect(isWpmGetRequest(null)).toBe(false);
+  });
+
+  it('recognizes the wpm window envelope', () => {
+    expect(
+      isWpmEnvelope({ channel: WPM_CHANNEL, message: { type: 'wpm:get', version: 1 } }),
+    ).toBe(true);
+    expect(isWpmEnvelope({ channel: 'speedwatcher:shortcut', message: {} })).toBe(false);
+    expect(isWpmEnvelope({ channel: WPM_CHANNEL })).toBe(false);
+  });
+
+  it('validates the wpm:get response shape (SEC)', () => {
+    expect(isWpmGetResponse(okResponse)).toBe(true);
+    expect(isWpmGetResponse({ ...okResponse, naturalRate: 0 })).toBe(false);
+    expect(isWpmGetResponse({ ...okResponse, naturalRate: 5000 })).toBe(false);
+    expect(
+      isWpmGetResponse({
+        ...okResponse,
+        recommendation: { ...okResponse.recommendation, recommendedMultiplier: 9 },
+      }),
+    ).toBe(false);
+    expect(isWpmGetResponse({ ...okResponse, tier: 'bogus' })).toBe(false);
+    expect(isWpmGetResponse({ ...okResponse, version: 2 })).toBe(false);
+    expect(isWpmGetResponse({ ok: false, error: 'no-active-video' })).toBe(true);
+    expect(isWpmGetResponse({ ok: false, error: '' })).toBe(false);
+    expect(isWpmGetResponse({ ok: false })).toBe(false);
+  });
+
+  it('clamps numeric response fields to protocol bounds', () => {
+    const now = 1_000_000;
+    const clamped = clampWpmResponse(
+      {
+        ...okResponse,
+        ts: now + 500,
+        naturalRate: 5000,
+        platformMax: 2,
+        recommendation: { ...okResponse.recommendation, recommendedMultiplier: 9 },
+      },
+      now,
+    );
+    if (clamped.ok === false) throw new Error('expected ok response');
+    expect(clamped.ts).toBe(now);
+    expect(clamped.naturalRate).toBe(1000);
+    expect(clamped.recommendation.recommendedMultiplier).toBe(2);
+    const floored = clampWpmResponse({
+      ...okResponse,
+      recommendation: { ...okResponse.recommendation, recommendedMultiplier: 0.2 },
+    });
+    if (floored.ok === false) throw new Error('expected ok response');
+    expect(floored.recommendation.recommendedMultiplier).toBe(0.5);
+    // Error responses pass through untouched.
+    expect(clampWpmResponse({ ok: false, error: 'rate_limited' })).toEqual({
+      ok: false,
+      error: 'rate_limited',
+    });
   });
 });

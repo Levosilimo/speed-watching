@@ -462,6 +462,8 @@ export async function runBridgeSpecs(driver: E2EDriver): Promise<void> {
     target: 300,
     conservative: false,
     platformMax: 2,
+    // Strict validator: the provider toggle is a required boolean field.
+    externalApiEnabled: false,
     sites: {},
     contentTypes: {},
   });

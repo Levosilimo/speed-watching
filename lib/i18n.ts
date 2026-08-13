@@ -73,6 +73,10 @@ const EN = {
   'options.probeDegraded': 'Capture degraded',
   'options.probeError': 'Capture failed',
   'options.probeFail': 'Capture failed — {error}',
+  'options.integrationLabel': 'Integration',
+  'options.integrationNote':
+    'Allow other extensions you install to ask Speed Watcher for the measured speech rate of the current video. Off by default; only approved partner extensions can query.',
+  'options.integrationToggle': 'Allow measurement requests from partner extensions',
   'options.tiersLabel': 'Tier labels',
   'options.tier.asrWordDesc':
     'Word-timed ASR captions. The most common tier — ~94% of sampled videos with speech captions in our measurements.',

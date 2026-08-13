@@ -17,7 +17,17 @@
 import { browser } from 'wxt/browser';
 import { defineContentScript } from 'wxt/utils/define-content-script';
 import { ChannelMemory } from '@/lib/channel-memory';
-import { createBridgeListener, isShortcutMessage, SHORTCUT_CHANNEL } from '@/lib/messaging';
+import {
+  createBridgeListener,
+  isShortcutMessage,
+  isWpmEnvelope,
+  isWpmGetRequest,
+  isWpmGetResponse,
+  SHORTCUT_CHANNEL,
+  WPM_CHANNEL,
+  WPM_RELAY_TIMEOUT_MS,
+  type WpmGetRequest,
+} from '@/lib/messaging';
 import { OverrideLog } from '@/lib/override-log';
 import { SettingsStore } from '@/lib/settings';
 
@@ -50,11 +60,41 @@ export default defineContentScript({
     // world: chrome.* is unavailable there (file header). The main script
     // on youtube watch pages picks the relayed envelope off the window.
     // One-way relay: no response, so return false instead of keeping the
-    // message channel open for a response nobody sends.
-    browser.runtime.onMessage.addListener((message: unknown): boolean => {
-      if (!isShortcutMessage(message)) return false;
-      window.postMessage({ channel: SHORTCUT_CHANNEL, message }, '*');
-      return false;
-    });
+    // message channel open for a response nobody sends. wpm:get is the
+    // round-trip exception: the MAIN-world answer comes back on the same
+    // window channel and is forwarded to the background's sendResponse.
+    browser.runtime.onMessage.addListener(
+      (message: unknown, _sender, sendResponse): boolean => {
+        if (isWpmGetRequest(message)) {
+          relayWpmGet(message, sendResponse);
+          return true;
+        }
+        if (!isShortcutMessage(message)) return false;
+        window.postMessage({ channel: SHORTCUT_CHANNEL, message }, '*');
+        return false;
+      },
+    );
   },
 });
+
+/** wpm:get round trip (docs/provider-integration.md): post the request
+ * envelope, wait for the MAIN-world answer, forward it to sendResponse.
+ * A timeout means the page has no content script (or no measurement) —
+ * the answer is then no-active-video. */
+function relayWpmGet(request: WpmGetRequest, sendResponse: (response?: unknown) => void): void {
+  window.postMessage({ channel: WPM_CHANNEL, message: request }, '*');
+  const timer = setTimeout(() => {
+    window.removeEventListener('message', onEnvelope);
+    sendResponse({ ok: false, error: 'no-active-video' });
+  }, WPM_RELAY_TIMEOUT_MS);
+  function onEnvelope(event: MessageEvent): void {
+    const envelope = event.data;
+    // SEC: the page world can post arbitrary JSON; validate both the
+    // channel and the response shape before forwarding to the background.
+    if (!isWpmEnvelope(envelope) || !isWpmGetResponse(envelope.message)) return;
+    clearTimeout(timer);
+    window.removeEventListener('message', onEnvelope);
+    sendResponse(envelope.message);
+  }
+  window.addEventListener('message', onEnvelope);
+}

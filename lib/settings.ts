@@ -48,6 +48,10 @@ export interface Settings {
   platformMax: number;
   /** Global content-type default; unset means auto-detect. */
   contentType?: ContentType;
+  /** Opt-in for the measured-rate provider protocol
+   * (docs/provider-integration.md): partner extensions may query the
+   * current video's measured rate only while this is on. */
+  externalApiEnabled: boolean;
   /** Keyed by hostname, e.g. 'youtube.com'. */
   sites: Record<string, SiteOverride>;
   contentTypes: Partial<Record<ContentType, ContentTypePrefs>>;
@@ -65,6 +69,7 @@ export function defaultSettings(): Settings {
   return {
     conservative: false,
     platformMax: DEFAULT_PLATFORM_MAX,
+    externalApiEnabled: false,
     sites: {},
     contentTypes: {},
   };
@@ -88,6 +93,9 @@ function normalizeSettings(raw: unknown): Settings {
   const settings: Settings = {
     conservative: raw.conservative === true,
     platformMax: clamp(finiteOr(raw.platformMax, base.platformMax), PLATFORM_MAX_MIN, PLATFORM_MAX_MAX),
+    // Strict boolean: the provider toggle is a security gate, so anything
+    // but `true` stored is treated as off.
+    externalApiEnabled: raw.externalApiEnabled === true,
     sites: isRecord(raw.sites) ? (raw.sites as Record<string, SiteOverride>) : {},
     contentTypes: isRecord(raw.contentTypes)
       ? (raw.contentTypes as Partial<Record<ContentType, ContentTypePrefs>>)

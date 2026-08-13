@@ -231,8 +231,9 @@ test('manifest exposes the action entrypoint (no popup) that makes onClicked fir
     '48': 'icon/48.png',
     '128': 'icon/128.png',
   });
-  // action is not a permission; the set stays exactly as before.
-  expect(manifest.permissions).toEqual(['storage', 'tabCapture', 'offscreen']);
+  // action is not a permission; the set is exactly the shipped one
+  // (contextMenus: the measure-link menu, Tier 4).
+  expect(manifest.permissions).toEqual(['storage', 'tabCapture', 'offscreen', 'contextMenus']);
 });
 
 test('capture orchestrator: probe-start without invocation lands on the guidance error; mirror stays idle', async () => {

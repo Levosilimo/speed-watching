@@ -168,3 +168,31 @@ describe('options storage refresh wiring', () => {
     expect(document.getElementById('habit-avg-mult')?.textContent).toBe('1.50×');
   });
 });
+
+describe('options external API toggle', () => {
+  function toggle(): HTMLInputElement {
+    return document.getElementById('external-api-toggle') as HTMLInputElement;
+  }
+
+  it('defaults to off', async () => {
+    await import('../entrypoints/options/main');
+    await flush();
+    expect(toggle().checked).toBe(false);
+  });
+
+  it('persists a user toggle through the settings store', async () => {
+    await import('../entrypoints/options/main');
+    await flush();
+    toggle().checked = true;
+    toggle().dispatchEvent(new Event('change'));
+    await flush();
+    expect(storageData.get('sw.settings')).toMatchObject({ externalApiEnabled: true });
+  });
+
+  it('reflects a persisted true setting on load', async () => {
+    storageData.set('sw.settings', { externalApiEnabled: true });
+    await import('../entrypoints/options/main');
+    await flush();
+    expect(toggle().checked).toBe(true);
+  });
+});

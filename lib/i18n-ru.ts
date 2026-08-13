@@ -63,6 +63,10 @@ export const RU: Record<I18nKey, string> = {
   'options.probeDegraded': 'Качество захвата снижено',
   'options.probeError': 'Ошибка захвата',
   'options.probeFail': 'Ошибка захвата — {error}',
+  'options.integrationLabel': 'Интеграция',
+  'options.integrationNote':
+    'Позволяет другим расширениям, которые вы установили, запрашивать у Speed Watcher измеренную скорость речи текущего видео. По умолчанию выключено; запрашивать могут только одобренные расширения-партнёры.',
+  'options.integrationToggle': 'Разрешить запросы измерений от расширений-партнёров',
   'options.tiersLabel': 'Уровни достоверности',
   'options.tier.asrWordDesc':
     'Субтитры ASR с таймингами по словам. Самый распространённый уровень — около 94% проверенных видео с речевыми субтитрами.',

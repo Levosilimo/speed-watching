@@ -9,10 +9,11 @@ import { cueSignal, detectContentType, priorMidpoint } from '@/lib/heuristics';
 import { resolveLanguage, UNIT_LABELS, type LanguageModel } from '@/lib/languages';
 import { logWpm, waitForPlayerResponse } from '@/lib/measure-hooks';
 import { SerializedRunner } from '@/lib/measure-guard';
-import { createBridgeClient, isShortcutEnvelope, SHORTCUT_APPLY } from '@/lib/messaging';
+import { buildWpmResponse, type MeasurementContext } from '@/lib/wpm-provider';
+import { createBridgeClient, isShortcutEnvelope, isWpmEnvelope, isWpmGetRequest, SHORTCUT_APPLY, WPM_CHANNEL } from '@/lib/messaging';
 import type { ContentType } from '@/lib/music';
 import { detectMusic } from '@/lib/music';
-import { recommend, type RateTier, type Recommendation } from '@/lib/recommend';
+import { recommend, TARGET_WPM, type RateTier, type Recommendation } from '@/lib/recommend';
 import {
   defaultSettings,
   resolveContentType,
@@ -36,18 +37,7 @@ import { createPill, type LiveRate, type PillApi, type PillState } from '@/ui/pi
 const bridge = createBridgeClient(window);
 
 /** Current video's recommendation context; null until the first measure. */
-let current: {
-  videoId: string;
-  site: string;
-  contentType: ContentType;
-  naturalRate: number;
-  platformMax: number;
-  tier: RateTier;
-  /** Rate-unit display label ('wpm' | 'cpm' | 'syl/min' | 'morae/min'). */
-  unit: string;
-  recommendation: Recommendation;
-} | null = null;
-
+let current: (MeasurementContext & { videoId: string; recommendation: Recommendation }) | null = null;
 let pill: { api: PillApi; host: HTMLElement } | null = null;
 
 /** Last rendered pill state — the shortcut handler and live line gate on it. */
@@ -102,6 +92,13 @@ export default defineContentScript({
         if (current === null || pillState === null || (pillState.mode !== 'recommend' && pillState.mode !== 'warning')) return;
         applyMultiplier(current.recommendation.multiplier);
       } else if (pillState !== null && pillState.mode !== 'none') dismissCurrent();
+    });
+    // Measured-rate provider (Tier 4): relays wpm:get to the answer builder;
+    // no source guard, like the shortcut relay (the bridge validates the
+    // response, and the channel carries only the minimized measurement).
+    window.addEventListener('message', (event: MessageEvent): void => {
+      if (!isWpmEnvelope(event.data) || !isWpmGetRequest(event.data.message)) return;
+      window.postMessage({ channel: WPM_CHANNEL, message: buildWpmResponse(current) }, '*');
     });
     // E2E-only hooks (SEC-2): the store bundle ships without these.
     if (__E2E__) {
@@ -260,7 +257,10 @@ function renderRecommendation(
     language,
     ...wordInputs,
   });
-  current = { videoId, site, contentType, naturalRate, platformMax, tier, unit: UNIT_LABELS[language?.unit ?? 'wpm'], recommendation };
+  current = { videoId, site, contentType, naturalRate, platformMax, tier,
+    unit: UNIT_LABELS[language?.unit ?? 'wpm'], language: language?.code ?? null,
+    target: resolveUserTarget(settings, site, contentType) ?? language?.target ?? TARGET_WPM,
+    recommendation };
   showPill({
     mode: recommendation.mode,
     rateWpm: naturalRate,
