@@ -43,7 +43,7 @@ describe('createPill', () => {
 
   it('renders an open shadow root with the pill surface on mount', () => {
     const host = shadowHost();
-    const pill = createPill(host, {});
+    const pill = createPill(host, {}, { locale: 'en' });
     expect(host.shadowRoot).not.toBeNull(); // open: reachable from the host
     pill.mount();
     const root = rootOf(host);
@@ -54,7 +54,7 @@ describe('createPill', () => {
 
   it('mounts twice without duplicating the shadow root', () => {
     const host = shadowHost();
-    const pill = createPill(host, {});
+    const pill = createPill(host, {}, { locale: 'en' });
     pill.mount();
     const root = rootOf(host);
     pill.mount();
@@ -63,7 +63,7 @@ describe('createPill', () => {
 
   it('keeps the live region on the text and off the action buttons', () => {
     const host = shadowHost();
-    const pill = createPill(host, {});
+    const pill = createPill(host, {}, { locale: 'en' });
     pill.mount();
     const root = rootOf(host);
     const surface = root.querySelector('.pill')!;
@@ -80,7 +80,7 @@ describe('createPill', () => {
 
   it('maps recommend mode to label, tier, and an enabled Apply button', () => {
     const host = shadowHost();
-    const pill = createPill(host, {});
+    const pill = createPill(host, {}, { locale: 'en' });
     pill.mount();
     pill.update(state());
     const root = rootOf(host);
@@ -98,7 +98,7 @@ describe('createPill', () => {
 
   it('renders the warning note for warning mode and picks the copy by reason', () => {
     const host = shadowHost();
-    const pill = createPill(host, {});
+    const pill = createPill(host, {}, { locale: 'en' });
     pill.mount();
     pill.update(state({ mode: 'warning', reason: 'above-zone', label: 'w', effectiveWpm: 280 }));
     const root = rootOf(host);
@@ -116,7 +116,7 @@ describe('createPill', () => {
       'Speech runs fast at this speed — estimate uncertain',
     );
     const host = shadowHost();
-    const pill = createPill(host, {});
+    const pill = createPill(host, {}, { locale: 'en' });
     pill.mount();
     pill.update(state({ mode: 'warning', reason: 'pause-diluted', label: 'w' }));
     const note = rootOf(host).querySelector<HTMLDivElement>('.warning-note')!;
@@ -126,7 +126,7 @@ describe('createPill', () => {
 
   it('hides the warning note outside warning mode', () => {
     const host = shadowHost();
-    const pill = createPill(host, {});
+    const pill = createPill(host, {}, { locale: 'en' });
     pill.mount();
     pill.update(state());
     const note = rootOf(host).querySelector<HTMLDivElement>('.warning-note')!;
@@ -135,7 +135,7 @@ describe('createPill', () => {
 
   it('hides Apply for music and unreachable modes', () => {
     const host = shadowHost();
-    const pill = createPill(host, {});
+    const pill = createPill(host, {}, { locale: 'en' });
     pill.mount();
     const root = rootOf(host);
     for (const mode of ['music', 'unreachable'] as const) {
@@ -147,7 +147,7 @@ describe('createPill', () => {
 
   it('hides the surface entirely for the none mode', () => {
     const host = shadowHost();
-    const pill = createPill(host, {});
+    const pill = createPill(host, {}, { locale: 'en' });
     pill.mount();
     pill.update(state({ mode: 'none', label: '' }));
     const surface = rootOf(host).querySelector('.pill')!;
@@ -159,7 +159,7 @@ describe('createPill', () => {
     const onApply = vi.fn();
     const onDismiss = vi.fn();
     const host = shadowHost();
-    const pill = createPill(host, { onApply, onDismiss });
+    const pill = createPill(host, { onApply, onDismiss }, { locale: 'en' });
     pill.mount();
     pill.update(state({ multiplier: 1.55 }));
     rootOf(host).querySelector<HTMLButtonElement>('.btn-apply')!.click();
@@ -170,7 +170,7 @@ describe('createPill', () => {
   it('never fires onApply for music or unreachable states', () => {
     const onApply = vi.fn();
     const host = shadowHost();
-    const pill = createPill(host, { onApply });
+    const pill = createPill(host, { onApply }, { locale: 'en' });
     pill.mount();
     const apply = rootOf(host).querySelector<HTMLButtonElement>('.btn-apply')!;
     pill.update(state({ mode: 'music', label: 'm' }));
@@ -183,7 +183,7 @@ describe('createPill', () => {
   it('fires onDismiss on the dismiss button click', () => {
     const onDismiss = vi.fn();
     const host = shadowHost();
-    const pill = createPill(host, { onDismiss });
+    const pill = createPill(host, { onDismiss }, { locale: 'en' });
     pill.mount();
     pill.update(state());
     rootOf(host).querySelector<HTMLButtonElement>('.btn-dismiss')!.click();
@@ -193,7 +193,7 @@ describe('createPill', () => {
   it('applies on Enter keydown on the pill surface', () => {
     const onApply = vi.fn();
     const host = shadowHost();
-    const pill = createPill(host, { onApply });
+    const pill = createPill(host, { onApply }, { locale: 'en' });
     pill.mount();
     pill.update(state({ multiplier: 1.55 }));
     rootOf(host).querySelector('.pill')!.dispatchEvent(
@@ -206,7 +206,7 @@ describe('createPill', () => {
     const onApply = vi.fn();
     const onDismiss = vi.fn();
     const host = shadowHost();
-    const pill = createPill(host, { onApply, onDismiss });
+    const pill = createPill(host, { onDismiss }, { locale: 'en' });
     pill.mount();
     pill.update(state());
     rootOf(host).querySelector('.pill')!.dispatchEvent(
@@ -221,7 +221,7 @@ describe('createPill', () => {
     player.id = 'movie_player';
     document.body.appendChild(player);
     const host = shadowHost();
-    const pill = createPill(host, { onDismiss: vi.fn() });
+    const pill = createPill(host, { onDismiss: vi.fn() }, { locale: 'en' });
     pill.mount();
     pill.update(state());
     // happy-dom cannot focus elements inside a shadow root, so the pre-click
@@ -234,7 +234,7 @@ describe('createPill', () => {
     const video = document.createElement('video');
     document.body.appendChild(video);
     const host = shadowHost();
-    const pill = createPill(host, { onDismiss: vi.fn() });
+    const pill = createPill(host, { onDismiss: vi.fn() }, { locale: 'en' });
     pill.mount();
     pill.update(state());
     rootOf(host).querySelector<HTMLButtonElement>('.btn-dismiss')!.click();
@@ -243,7 +243,7 @@ describe('createPill', () => {
 
   it('restores focus to body when neither player nor video exists', () => {
     const host = shadowHost();
-    const pill = createPill(host, { onDismiss: vi.fn() });
+    const pill = createPill(host, { onDismiss: vi.fn() }, { locale: 'en' });
     pill.mount();
     pill.update(state());
     rootOf(host).querySelector<HTMLButtonElement>('.btn-dismiss')!.click();
@@ -255,7 +255,7 @@ describe('createPill', () => {
     player.id = 'movie_player';
     document.body.appendChild(player);
     const host = shadowHost();
-    const pill = createPill(host, { onApply: vi.fn() });
+    const pill = createPill(host, { onApply: vi.fn() }, { locale: 'en' });
     pill.mount();
     pill.update(state());
     rootOf(host).querySelector<HTMLButtonElement>('.btn-apply')!.click();
@@ -264,7 +264,7 @@ describe('createPill', () => {
 
   it('destroy is idempotent, clears the host, and makes update a no-op', () => {
     const host = shadowHost();
-    const pill = createPill(host, {});
+    const pill = createPill(host, {}, { locale: 'en' });
     pill.mount();
     pill.update(state());
     const root = rootOf(host);
@@ -279,7 +279,7 @@ describe('createPill', () => {
   it('destroy detaches the host so the next pill mounts clean (video churn)', () => {
     const host = shadowHost();
     document.body.appendChild(host);
-    const pill = createPill(host, {});
+    const pill = createPill(host, {}, { locale: 'en' });
     pill.mount();
     pill.destroy();
     // The content scripts re-resolve the host after churn (querySelector
@@ -294,10 +294,122 @@ describe('createPill', () => {
 
   it('renders the label with the language rate unit (cpm)', () => {
     const host = shadowHost();
-    const pill = createPill(host);
+    const pill = createPill(host, undefined, { locale: 'en' });
     pill.mount();
     pill.update(state({ label: '→ 1.9x ≈ 380 cpm' }));
     expect(rootOf(host).querySelector('.label')?.textContent).toBe('→ 1.9x ≈ 380 cpm');
     pill.destroy();
+  });
+});
+
+describe('createPill — ru locale', () => {
+  it('renders Russian strings: label, tier, buttons, warning note', () => {
+    const host = shadowHost();
+    const pill = createPill(host, {}, { locale: 'ru' });
+    pill.mount();
+    pill.update(
+      state({ mode: 'warning', reason: 'above-zone', effectiveWpm: 248 }),
+    );
+    const root = rootOf(host);
+    expect(root.querySelector('.label')?.textContent).toBe('→ 1,55× ≈ 248 слов/мин');
+    expect(root.querySelector('.tier')?.textContent).toBe('по субтитрам');
+    expect(root.querySelector('.warning-note')?.textContent).toBe(
+      warningNoteCopy('above-zone', 'ru'),
+    );
+    const apply = root.querySelector<HTMLButtonElement>('.btn-apply')!;
+    expect(apply.textContent).toBe('Применить');
+    expect(apply.getAttribute('aria-label')).toBe('Применить скорость 1,6×');
+    expect(root.querySelector<HTMLButtonElement>('.btn-dismiss')?.getAttribute('aria-label')).toBe(
+      'Закрыть',
+    );
+  });
+
+  it('localizes the unreachable and music labels', () => {
+    const host = shadowHost();
+    const pill = createPill(host, {}, { locale: 'ru' });
+    pill.mount();
+    pill.update(
+      state({ mode: 'unreachable', label: 'safe zone unreachable — 2x ≈ 170 wpm', effectiveWpm: 170, multiplier: 2 }),
+    );
+    expect(rootOf(host).querySelector('.label')?.textContent).toBe(
+      'комфортная зона недостижима — 2× ≈ 170 слов/мин',
+    );
+    pill.update(state({ mode: 'music', label: 'music — speed not recommended' }));
+    expect(rootOf(host).querySelector('.label')?.textContent).toBe(
+      'музыка — скорость не рекомендуется',
+    );
+  });
+
+  it('renders the Russian live-rate line with the localized unit', () => {
+    const host = shadowHost();
+    const pill = createPill(host, {}, { locale: 'ru' });
+    pill.mount();
+    pill.update(state());
+    pill.updateLiveRate({ rate: 248, multiplier: 1.55, unit: 'wpm' });
+    expect(rootOf(host).querySelector('.live-rate')?.textContent).toBe(
+      'сейчас ≈ 248 слов/мин при 1,55×',
+    );
+    pill.updateLiveRate({ rate: 380, multiplier: 1.9, unit: 'morae/min' });
+    expect(rootOf(host).querySelector('.live-rate')?.textContent).toBe(
+      'сейчас ≈ 380 мор/мин при 1,9×',
+    );
+  });
+
+  it('localizes the non-wpm units in the main label', () => {
+    const host = shadowHost();
+    const pill = createPill(host, {}, { locale: 'ru' });
+    pill.mount();
+    pill.update(state({ label: '→ 1.9x ≈ 380 morae/min', effectiveWpm: 380, multiplier: 1.9 }));
+    expect(rootOf(host).querySelector('.label')?.textContent).toBe('→ 1,9× ≈ 380 мор/мин');
+    pill.update(state({ label: '→ 1.5x ≈ 340 syl/min', effectiveWpm: 340, multiplier: 1.5 }));
+    expect(rootOf(host).querySelector('.label')?.textContent).toBe('→ 1,5× ≈ 340 слогов/мин');
+    pill.update(state({ label: '→ 1.5x ≈ 340 cpm', effectiveWpm: 340, multiplier: 1.5 }));
+    expect(rootOf(host).querySelector('.label')?.textContent).toBe('→ 1,5× ≈ 340 симв/мин');
+  });
+
+  it('keeps the ru data model identical: same mode and multiplier as en', () => {
+    const en = shadowHost();
+    const ru = shadowHost();
+    createPill(en, {}, { locale: 'en' }).mount();
+    const pillRu = createPill(ru, {}, { locale: 'ru' });
+    pillRu.mount();
+    const input = state({ mode: 'warning', reason: 'capped-below', effectiveWpm: 240 });
+    pillRu.update(input);
+    expect(rootOf(ru).querySelector('.pill')?.getAttribute('data-mode')).toBe('warning');
+    expect(rootOf(ru).querySelector('.label')?.textContent).toBe(
+      '→ 1,55× ≈ 240 слов/мин (ниже комфортной зоны)',
+    );
+  });
+
+  it('resolves the locale from settings.uiLanguage through the bridge', async () => {
+    const host = shadowHost();
+    const original = window.postMessage;
+    // The bridge never answers in happy-dom; stub a response envelope so
+    // the pill's locale fetch resolves to the stored uiLanguage.
+    window.postMessage = ((message: unknown) => {
+      const payload = (message as { payload?: { id?: number } }).payload ?? {};
+      window.dispatchEvent(
+        new MessageEvent('message', {
+          data: {
+            channel: 'speedwatcher:bridge',
+            direction: 'response',
+            payload: {
+              id: payload.id ?? 1,
+              ok: true,
+              result: { conservative: false, platformMax: 2, sites: {}, contentTypes: {}, uiLanguage: 'ru' },
+            },
+          },
+        }),
+      );
+    }) as typeof window.postMessage;
+    try {
+      const pill = createPill(host, {});
+      pill.mount();
+      pill.update(state());
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(rootOf(host).querySelector('.label')?.textContent).toBe('→ 1,55× ≈ 248 слов/мин');
+    } finally {
+      window.postMessage = original;
+    }
   });
 });

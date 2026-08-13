@@ -103,6 +103,15 @@ describe('SettingsStore', () => {
     expect((await low.load()).platformMax).toBe(PLATFORM_MAX_MIN);
   });
 
+  it('round-trips the uiLanguage setting and drops invalid values', async () => {
+    const store = new SettingsStore(mockStorage({ 'sw.settings': { uiLanguage: 'ru' } }));
+    expect((await store.load()).uiLanguage).toBe('ru');
+    const invalid = new SettingsStore(mockStorage({ 'sw.settings': { uiLanguage: 'de' } }));
+    expect((await invalid.load()).uiLanguage).toBeUndefined();
+    const auto = new SettingsStore(mockStorage({ 'sw.settings': { uiLanguage: 'auto' } }));
+    expect((await auto.load()).uiLanguage).toBe('auto');
+  });
+
   it('update mutates and persists', async () => {
     const store = new SettingsStore(mockStorage());
     await store.update((settings) => ({ ...settings, target: 240 }));

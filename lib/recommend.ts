@@ -14,6 +14,22 @@ export const MANUAL_CUE_CLAMP = 1.5;
 export const SLOW_DOWN_FLOOR = 0.5;
 
 /**
+ * Multimedia-ceiling modulation (Chen et al. 2024, comprehension at speed
+ * with visual support): slide-heavy visuals (lecture/explainer) offload
+ * processing, so their safe-zone ceiling rides 5% up; audio-only podcasts
+ * get no such offload and ride 5% down. Applied to the warning ceilings
+ * only — never to the target or the multiplier bounds.
+ */
+export const MULTIMEDIA_CEILING_FACTOR = 1.05;
+export const PODCAST_CEILING_FACTOR = 0.95;
+
+const CONTENT_TYPE_CEILING_FACTOR: Partial<Record<ContentType, number>> = {
+  lecture: MULTIMEDIA_CEILING_FACTOR,
+  explainer: MULTIMEDIA_CEILING_FACTOR,
+  podcast: PODCAST_CEILING_FACTOR,
+};
+
+/**
  * Assumed pause share of the stimulus on word-timed tracks. Measured
  * pause:speech median is 44.8% (≈31% pause share of span; range ~9–50%,
  * 11/17 speech videos above 25%) — lower bounds, since sub-second
@@ -98,9 +114,13 @@ export function recommend(input: RecommendInput): Recommendation {
   // userTarget is interpreted in the language's unit when set on a
   // non-English track (the options slider is wpm-labeled regardless).
   const target = userTarget ?? language?.target ?? TARGET_WPM;
-  const ceiling = language?.ceiling ?? SAFE_ZONE_CEILING_WPM;
-  // The pause-diluted articulatory ceiling scales with the language
-  // ceiling: ceiling / (1 − P_STIMULUS).
+  // The comprehension ceiling is content-type modulated: slide-heavy
+  // lectures/explainers offload processing (factor up), podcasts don't
+  // (factor down). The pause-diluted articulatory ceiling scales with the
+  // same modulated ceiling — ceiling / (1 − P_STIMULUS).
+  const ceiling =
+    (language?.ceiling ?? SAFE_ZONE_CEILING_WPM) *
+    (CONTENT_TYPE_CEILING_FACTOR[contentType] ?? 1);
   const articulatoryCeiling = ceiling / (1 - P_STIMULUS);
   const tierLabel = TIER_LABELS[tier];
 

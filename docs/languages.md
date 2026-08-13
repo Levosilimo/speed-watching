@@ -159,6 +159,35 @@ keeps working in every mode.
   (`ceiling / (1 − P_STIMULUS)`); the pill's rate label carries the unit
   (`≈ 240 cpm`, `≈ 340 syl/min`, `≈ 380 morae/min`).
 
+## Interface localization
+
+- All ~55 UI strings live in `lib/i18n.ts` (English) + `lib/i18n-ru.ts`
+  (Russian), keyed by a shared `I18nKey`; the ru map is type-checked to
+  cover every en key, and a completeness test re-asserts it at runtime.
+- Locale resolution: `settings.uiLanguage` ('auto' default) wins when set
+  to 'ru'/'en'; 'auto' (or unset) follows the browser UI language
+  (`navigator.language`, 'ru'-prefix → Russian). The pill resolves it at
+  creation through the bridge `settings:get` and falls back to the browser
+  language when the fetch fails; the options page reads `SettingsStore`
+  directly.
+- ru unit labels: the ru model is word-unit, so wpm renders **слов/мин**
+  — not a transliteration — and the non-word units transliterate
+  consistently: симв/мин, слогов/мин, мор/мин.
+- The recommendation engine stays English: `TIER_LABELS`/`UNIT_LABELS`
+  remain the canonical data values, and the pill localizes at render time
+  (en renders byte-identical to the labels `recommend()` builds). The
+  pill's ru line follows Russian typography: decimal comma and × (1,55×).
+
+## Multimedia ceiling modulation
+
+- `MULTIMEDIA_CEILING_FACTOR` (1.05, lecture/explainer) and
+  `PODCAST_CEILING_FACTOR` (0.95, podcast) modulate the **warning
+  ceilings** — above-zone and pause-diluted articulatory — by content
+  type, per Chen et al. 2024: slide-heavy visuals offload comprehension
+  processing at speed, audio-only podcasts get no such offload. The
+  factors never touch the target or the multiplier bounds; every other
+  content type rides at 1.0.
+
 ## Deferred / known limits
 
 - **Corpus measurement** — the per-language targets are derived, not

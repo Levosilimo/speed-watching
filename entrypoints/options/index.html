@@ -3,21 +3,21 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Speed Watcher — Options</title>
+    <title data-i18n="options.title">Speed Watcher — Options</title>
   </head>
   <body>
     <div class="header">
       <h1>Speed Watcher</h1>
-      <p>WPM-based playback speed recommendations</p>
+      <p data-i18n="options.tagline">WPM-based playback speed recommendations</p>
     </div>
 
     <!-- Target WPM -->
     <div class="section">
-      <h2 class="section-label" id="target-rate-label">Target speech rate</h2>
+      <h2 class="section-label" id="target-rate-label" data-i18n="options.targetLabel">Target speech rate</h2>
       <div class="section-card">
         <div class="wpm-display">
           <span class="wpm-value" id="wpm-value">250</span>
-          <span class="wpm-unit">wpm</span>
+          <span class="wpm-unit" data-i18n="unit.wpm">wpm</span>
         </div>
         <div class="slider-track">
           <div class="safe-zone" id="safe-zone"></div>
@@ -33,57 +33,71 @@
           />
         </div>
         <div class="safe-zone-label">
-          <span>Slow</span>
-          <span>Comfortable range (250–275)</span>
-          <span>Fast</span>
+          <span data-i18n="options.slow">Slow</span>
+          <span data-i18n="options.safeZone">Comfortable range (250–275)</span>
+          <span data-i18n="options.fast">Fast</span>
         </div>
       </div>
     </div>
 
     <!-- Content Type -->
     <div class="section">
-      <h2 class="section-label">Content type</h2>
+      <h2 class="section-label" data-i18n="options.contentTypeLabel">Content type</h2>
       <div class="section-card">
-        <div class="presets" role="group" aria-label="Content type presets">
-          <button class="preset-btn" data-type="lecture" aria-pressed="false">Lecture</button>
-          <button class="preset-btn" data-type="talk" aria-pressed="false">Talk</button>
-          <button class="preset-btn" data-type="podcast" aria-pressed="false">Podcast</button>
-          <button class="preset-btn" data-type="music" aria-pressed="false">Music</button>
-          <button class="preset-btn" data-type="generic" aria-pressed="true">Generic</button>
+        <div class="presets" role="group" aria-label="Content type presets" data-i18n-aria="options.contentTypeAria">
+          <button class="preset-btn" data-type="lecture" aria-pressed="false" data-i18n="options.preset.lecture">Lecture</button>
+          <button class="preset-btn" data-type="talk" aria-pressed="false" data-i18n="options.preset.talk">Talk</button>
+          <button class="preset-btn" data-type="podcast" aria-pressed="false" data-i18n="options.preset.podcast">Podcast</button>
+          <button class="preset-btn" data-type="music" aria-pressed="false" data-i18n="options.preset.music">Music</button>
+          <button class="preset-btn" data-type="generic" aria-pressed="true" data-i18n="options.preset.generic">Generic</button>
         </div>
+      </div>
+    </div>
+
+    <!-- Interface Language -->
+    <div class="section">
+      <h2 class="section-label" data-i18n="options.languageLabel">Interface language</h2>
+      <div class="section-card">
+        <select id="ui-language" class="language-select" aria-label="Interface language" data-i18n-aria="options.languageLabel">
+          <option value="auto" data-i18n="options.languageAuto">Auto</option>
+          <option value="ru">Русский</option>
+          <option value="en">English</option>
+        </select>
       </div>
     </div>
 
     <!-- Per-site Overrides -->
     <div class="section">
-      <h2 class="section-label">Per-site overrides</h2>
+      <h2 class="section-label" data-i18n="options.overridesLabel">Per-site overrides</h2>
       <div class="section-card">
         <ul class="override-list" id="override-list"></ul>
-        <p class="empty-note" id="override-empty">No site overrides set.</p>
+        <p class="empty-note" id="override-empty" data-i18n="options.overridesEmpty">No site overrides set.</p>
         <div class="add-override">
           <input
             type="text"
             id="override-input"
             placeholder="e.g. ted.com"
             aria-label="Hostname to override"
+            data-i18n-placeholder="options.overridePlaceholder"
+            data-i18n-aria="options.overrideAria"
           />
-          <button type="button" id="override-add">Add</button>
+          <button type="button" id="override-add" data-i18n="options.add">Add</button>
         </div>
       </div>
     </div>
 
     <!-- Your Habits -->
     <div class="section">
-      <h2 class="section-label">Your habits</h2>
+      <h2 class="section-label" data-i18n="options.habitsLabel">Your habits</h2>
       <div class="section-card">
         <dl class="habits-grid">
           <div class="habit-stat">
             <dt class="stat-value" id="habit-total">0</dt>
-            <dd class="stat-label">Recommendations applied</dd>
+            <dd class="stat-label" data-i18n="options.habitsApplied">Recommendations applied</dd>
           </div>
           <div class="habit-stat">
             <dt class="stat-value" id="habit-avg-mult">—</dt>
-            <dd class="stat-label">Average multiplier</dd>
+            <dd class="stat-label" data-i18n="options.habitsAvgMult">Average multiplier</dd>
           </div>
         </dl>
         <ul class="habit-list" id="habit-list"></ul>
@@ -92,9 +106,9 @@
 
     <!-- Test Audio Capture -->
     <div class="section" id="probe-section">
-      <h2 class="section-label" id="probe-section-label">Test audio capture</h2>
+      <h2 class="section-label" id="probe-section-label" data-i18n="options.probeLabel">Test audio capture</h2>
       <div class="section-card">
-        <p class="section-note">
+        <p class="section-note" data-i18n="options.probeNote">
           Verifies that the extension can capture audio from a video tab. The
           meter shows the live audio level of the captured tab while the test
           runs. No audio is recorded, stored, or transmitted — the meter is
@@ -108,20 +122,20 @@
 
     <!-- Tier Info -->
     <div class="section">
-      <h2 class="section-label">Tier labels</h2>
+      <h2 class="section-label" data-i18n="options.tiersLabel">Tier labels</h2>
       <div class="section-card">
         <ul class="tier-list">
           <li class="tier-item">
-            <span class="tier-badge">from captions</span>
-            <span class="tier-desc">Word-timed ASR captions. The most common tier — ~94% of sampled videos with speech captions in our measurements.</span>
+            <span class="tier-badge" data-i18n="tier.asrWord">from captions</span>
+            <span class="tier-desc" data-i18n="options.tier.asrWordDesc">Word-timed ASR captions. The most common tier — ~94% of sampled videos with speech captions in our measurements.</span>
           </li>
           <li class="tier-item">
-            <span class="tier-badge">from captions (corrected)</span>
-            <span class="tier-desc">Manual captions with silence correction applied. Higher confidence, clamped to 1.5× max.</span>
+            <span class="tier-badge" data-i18n="tier.manualCue">from captions (corrected)</span>
+            <span class="tier-desc" data-i18n="options.tier.manualCueDesc">Manual captions with silence correction applied. Higher confidence, clamped to 1.5× max.</span>
           </li>
           <li class="tier-item">
-            <span class="tier-badge">estimated</span>
-            <span class="tier-desc">Heuristic estimate from content type and video metadata. Used when captions are unavailable.</span>
+            <span class="tier-badge" data-i18n="tier.estimated">estimated</span>
+            <span class="tier-desc" data-i18n="options.tier.estimatedDesc">Heuristic estimate from content type and video metadata. Used when captions are unavailable.</span>
           </li>
         </ul>
       </div>

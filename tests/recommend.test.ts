@@ -4,7 +4,9 @@ import type { RecommendInput, Recommendation } from '../lib/recommend';
 import {
   ARTICULATORY_CEILING_WPM,
   MANUAL_CUE_CLAMP,
+  MULTIMEDIA_CEILING_FACTOR,
   P_STIMULUS,
+  PODCAST_CEILING_FACTOR,
   ROUNDING_STEP,
   SAFE_ZONE_CEILING_WPM,
   SLOW_DOWN_FLOOR,
@@ -112,7 +114,14 @@ describe('recommend — slow-down and clamps', () => {
 describe('recommend — above-zone warning', () => {
   it('warns when a user target pushes the effective rate past the cliff', () => {
     // Target 280 on a 140-wpm talk: 2x ≈ 280 wpm — past the 275 cliff.
-    const r = asr(140, 2, 280);
+    // (talk carries no modulation; lecture would ride at 288.75.)
+    const r = recommend({
+      naturalRate: 140,
+      tier: 'asr-cue',
+      contentType: 'talk',
+      platformMax: 2,
+      userTarget: 280,
+    });
     expect(r.multiplier).toBe(2);
     expect(r.effectiveWpm).toBeCloseTo(280, 6);
     expect(r.mode).toBe('warning');
@@ -375,7 +384,7 @@ describe('recommend — language-aware targets', () => {
       userTarget: 190,
       language: LANGUAGES['es'],
     });
-    // 160 × 1.2 = 192 > es ceiling 175
+    // 160 × 1.2 = 192 > es ceiling 175 × 1.05 (lecture) = 183.75
     expect(r.mode).toBe('warning');
     expect(r.reason).toBe('above-zone');
   });
@@ -390,8 +399,9 @@ describe('recommend — language-aware targets', () => {
       articulatoryWpm: 300,
       timingCoverageOk: true,
     });
-    // 1.05 × 300 = 315 > 185 / 0.7 ≈ 264; effective 168 ≤ 185, so the
-    // pause-diluted warning fires, not above-zone.
+    // 1.05 × 300 = 315 > 185 × 1.05 (lecture) / 0.7 ≈ 277.5; effective
+    // 168 ≤ 185 × 1.05 = 194.25, so the pause-diluted warning fires, not
+    // above-zone.
     expect(r.reason).toBe('pause-diluted');
     expect(r.mode).toBe('warning');
   });
@@ -434,5 +444,67 @@ describe('recommend — language-aware targets', () => {
   it('defaults to the English target without a language', () => {
     const r = asr(200);
     expect(r.label).toContain('≈ 250 wpm');
+  });
+});
+
+describe('recommend — multimedia ceiling modulation', () => {
+  it('pins the modulation constants', () => {
+    expect(MULTIMEDIA_CEILING_FACTOR).toBe(1.05);
+    expect(PODCAST_CEILING_FACTOR).toBe(0.95);
+  });
+
+  it('nudges the lecture/explainer ceiling up: 280 wpm stays recommend', () => {
+    const input = {
+      naturalRate: 140,
+      tier: 'asr-cue' as const,
+      platformMax: 2,
+      userTarget: 280,
+    };
+    // 280 > 275 (the unmodulated cliff) but ≤ 275 × 1.05 = 288.75.
+    expect(recommend({ ...input, contentType: 'lecture' }).mode).toBe('recommend');
+    expect(recommend({ ...input, contentType: 'explainer' }).mode).toBe('recommend');
+    const talk = recommend({ ...input, contentType: 'talk' });
+    expect(talk.mode).toBe('warning');
+    expect(talk.reason).toBe('above-zone');
+  });
+
+  it('nudges the podcast ceiling down: 270 wpm warns where lecture stays calm', () => {
+    const input = {
+      naturalRate: 200,
+      tier: 'asr-cue' as const,
+      platformMax: 2,
+      userTarget: 270,
+    };
+    // 270 > 275 × 0.95 = 261.25 but ≤ 288.75.
+    const podcast = recommend({ ...input, contentType: 'podcast' });
+    expect(podcast.mode).toBe('warning');
+    expect(podcast.reason).toBe('above-zone');
+    expect(recommend({ ...input, contentType: 'lecture' }).mode).toBe('recommend');
+  });
+
+  it('never touches the target or the multiplier bounds', () => {
+    const base = { naturalRate: 200, tier: 'asr-cue' as const, platformMax: 2 };
+    for (const contentType of ['lecture', 'explainer', 'podcast', 'talk', 'generic'] as const) {
+      const r = recommend({ ...base, contentType });
+      expect(r.multiplier).toBeCloseTo(1.25, 6);
+      expect(r.effectiveWpm).toBeCloseTo(250, 6);
+      expect(r.mode).toBe('recommend');
+    }
+  });
+
+  it('scales the articulatory ceiling with the modulated ceiling', () => {
+    const r = recommend({
+      naturalRate: 200,
+      tier: 'asr-word',
+      contentType: 'podcast',
+      platformMax: 2,
+      articulatoryWpm: 320,
+      timingCoverageOk: true,
+    });
+    // podcast ceiling 275 × 0.95 = 261.25 → articulatory 261.25 / 0.7
+    // ≈ 373.2; 1.25 × 320 = 400 > 373.2 → pause-diluted (effective 250 ≤
+    // 261.25, so no above-zone).
+    expect(r.reason).toBe('pause-diluted');
+    expect(r.mode).toBe('warning');
   });
 });
