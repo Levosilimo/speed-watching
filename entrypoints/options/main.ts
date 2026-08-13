@@ -164,6 +164,17 @@ overrideInput.addEventListener('keydown', (e: KeyboardEvent) => {
   }
 });
 
+// ── Settings: External API toggle (measured-rate provider) ──────────────
+
+const externalApiToggle = el('external-api-toggle') as HTMLInputElement;
+
+externalApiToggle.addEventListener('change', () => {
+  void settingsStore.update((settings) => ({
+    ...settings,
+    externalApiEnabled: externalApiToggle.checked,
+  }));
+});
+
 // ── Settings: Habits Report ──────────────────────────────────────────────
 
 const habitTotal = el('habit-total');
@@ -303,6 +314,7 @@ async function loadSettings(): Promise<void> {
   wpmSlider.value = String(target);
   wpmValue.textContent = String(target);
   setActivePreset(settings.contentType ?? 'generic');
+  externalApiToggle.checked = settings.externalApiEnabled;
   renderOverrides(siteList(settings));
   renderHabits(habits);
 }
