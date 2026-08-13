@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { chromeMock } from './chrome-mock';
 import type { OverrideLogEntry } from '../lib/override-log';
+import { SETTINGS_STORAGE_KEY } from '../lib/settings';
 
 // happy-dom rewrites import.meta.url to an http origin, so resolve the page
 // markup from the process cwd instead of the module URL.
@@ -79,6 +80,33 @@ describe('options habits report', () => {
     await flush();
     expect(document.getElementById('habit-total')?.textContent).toBe('2');
     expect(document.getElementById('habit-avg-mult')?.textContent).toBe('—');
+  });
+});
+
+describe('options interface language', () => {
+  it('persists the chosen language and re-localizes the page', async () => {
+    await import('../entrypoints/options/main');
+    await flush();
+    const select = document.getElementById('ui-language') as HTMLSelectElement;
+    expect(select.value).toBe('auto');
+    expect(document.getElementById('target-rate-label')?.textContent).toBe('Target speech rate');
+
+    select.value = 'ru';
+    select.dispatchEvent(new Event('change'));
+    await flush();
+    expect(storageData.get(SETTINGS_STORAGE_KEY)).toMatchObject({ uiLanguage: 'ru' });
+    expect(document.getElementById('target-rate-label')?.textContent).toBe('Целевой темп речи');
+    expect(document.querySelector('.preset-btn[data-type="lecture"]')?.textContent).toBe('Лекция');
+    expect(document.getElementById('override-empty')?.textContent).toBe(
+      'Настройки для сайтов не заданы.',
+    );
+    expect(document.documentElement.lang).toBe('ru');
+
+    select.value = 'en';
+    select.dispatchEvent(new Event('change'));
+    await flush();
+    expect(document.getElementById('target-rate-label')?.textContent).toBe('Target speech rate');
+    expect(document.documentElement.lang).toBe('en');
   });
 });
 

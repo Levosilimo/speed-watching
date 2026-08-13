@@ -20,6 +20,13 @@ export const TARGET_WPM_MAX = 400;
 export const PLATFORM_MAX_MIN = 1;
 export const PLATFORM_MAX_MAX = 4;
 
+/** UI-language preference: 'auto' follows the browser UI language. */
+export type UiLanguageSetting = 'auto' | 'ru' | 'en';
+
+export function isUiLanguageSetting(value: unknown): value is UiLanguageSetting {
+  return value === 'auto' || value === 'ru' || value === 'en';
+}
+
 export interface SiteOverride {
   target?: number;
   contentType?: ContentType;
@@ -43,6 +50,8 @@ export interface Settings {
   /** Keyed by hostname, e.g. 'youtube.com'. */
   sites: Record<string, SiteOverride>;
   contentTypes: Partial<Record<ContentType, ContentTypePrefs>>;
+  /** UI-language preference; unset/'auto' → navigator.language. */
+  uiLanguage?: UiLanguageSetting;
 }
 
 /** Injectable chrome.storage.local stand-in for unit tests. */
@@ -86,6 +95,7 @@ function normalizeSettings(raw: unknown): Settings {
   const target = finiteOr(raw.target, undefined);
   if (target !== undefined) settings.target = target;
   if (typeof raw.contentType === 'string') settings.contentType = raw.contentType as ContentType;
+  if (isUiLanguageSetting(raw.uiLanguage)) settings.uiLanguage = raw.uiLanguage;
   return settings;
 }
 

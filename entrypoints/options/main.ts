@@ -11,8 +11,17 @@ import {
   DEFAULT_TARGET_WPM,
   SETTINGS_STORAGE_KEY,
   SettingsStore,
+  isUiLanguageSetting,
   type Settings,
+  type UiLanguageSetting,
 } from '../../lib/settings';
+import {
+  applyI18n,
+  resolveUiLanguage,
+  t,
+  type I18nKey,
+  type UiLocale,
+} from '../../lib/i18n';
 
 // The STT demand-gate diagnostics are dev-only (lib-13: store-review
 // liabilities); ./dev.ts is imported only in dev builds, so the store bundle
@@ -77,6 +86,28 @@ presetBtns.forEach((btn) => {
   });
 });
 
+// ── Settings: Interface Language ──────────────────────────────────────────
+
+const uiLangSelect = el('ui-language') as HTMLSelectElement;
+
+let uiLocale: UiLocale = 'en';
+
+function renderLocale(): void {
+  document.documentElement.lang = uiLocale;
+  applyI18n(document, uiLocale);
+  renderProbe();
+}
+
+uiLangSelect.addEventListener('change', () => {
+  const setting: UiLanguageSetting = isUiLanguageSetting(uiLangSelect.value)
+    ? uiLangSelect.value
+    : 'auto';
+  void settingsStore.update((settings) => ({ ...settings, uiLanguage: setting })).then(() => {
+    uiLocale = resolveUiLanguage(setting, navigator.language);
+    renderLocale();
+  });
+});
+
 // ── Settings: Per-site Overrides ──────────────────────────────────────────
 
 const overrideList = el('override-list');
@@ -119,8 +150,8 @@ function renderOverrides(overrides: DisplayedOverride[]): void {
 
     const removeBtn = document.createElement('button');
     removeBtn.className = 'override-remove';
-    removeBtn.textContent = 'Remove';
-    removeBtn.setAttribute('aria-label', `Remove override for ${item.hostname}`);
+    removeBtn.textContent = t('options.remove', uiLocale);
+    removeBtn.setAttribute('aria-label', t('options.removeAria', uiLocale, { host: item.hostname }));
     removeBtn.addEventListener('click', () => {
       void settingsStore
         .update((settings) => {
@@ -221,12 +252,12 @@ const meterFill = el('meter-fill');
 
 const POLL_INTERVAL_MS = 400;
 
-const STATE_LABELS: Record<ProbeState['state'], string> = {
-  idle: 'Idle',
-  starting: 'Starting…',
-  capturing: 'Capturing',
-  degraded: 'Capture degraded',
-  error: 'Capture failed',
+const STATE_LABELS: Record<ProbeState['state'], I18nKey> = {
+  idle: 'options.probeIdle',
+  starting: 'options.probeStarting',
+  capturing: 'options.probeCapturing',
+  degraded: 'options.probeDegraded',
+  error: 'options.probeError',
 };
 
 let probeState: ProbeState = { state: 'idle', level: 0 };
@@ -241,11 +272,13 @@ function probeActive(): boolean {
 }
 
 function renderProbe(): void {
-  toggle.textContent = probeActive() ? 'Stop audio capture' : 'Test audio capture';
+  toggle.textContent = probeActive()
+    ? t('options.probeStop', uiLocale)
+    : t('options.probeStart', uiLocale);
   toggle.disabled = probeState.state === 'starting';
   status.textContent = probeState.error
-    ? `${STATE_LABELS[probeState.state]} — ${probeState.error}`
-    : STATE_LABELS[probeState.state];
+    ? t('options.probeFail', uiLocale, { error: probeState.error })
+    : t(STATE_LABELS[probeState.state], uiLocale);
   meterFill.style.width = `${Math.min(100, probeState.level * 300)}%`;
 }
 
@@ -265,7 +298,7 @@ async function refreshProbe(): Promise<void> {
   try {
     next = await sendProbe('probe-state');
   } catch (error) {
-    status.textContent = `Capture failed — ${String(error)}`;
+    status.textContent = t('options.probeFail', uiLocale, { error: String(error) });
     stopProbePolling();
     return;
   }
@@ -282,7 +315,7 @@ async function onProbeToggle(): Promise<void> {
   try {
     await sendProbe(probeActive() ? 'probe-stop' : 'probe-start');
   } catch (error) {
-    status.textContent = `Capture failed — ${String(error)}`;
+    status.textContent = t('options.probeFail', uiLocale, { error: String(error) });
   }
   await refreshProbe();
 }
@@ -299,6 +332,9 @@ async function loadSettings(): Promise<void> {
     settingsStore.load(),
     overrideLog.entries(),
   ]);
+  uiLocale = resolveUiLanguage(settings.uiLanguage, navigator.language);
+  uiLangSelect.value = settings.uiLanguage ?? 'auto';
+  renderLocale();
   const target = settings.target ?? DEFAULT_TARGET_WPM;
   wpmSlider.value = String(target);
   wpmValue.textContent = String(target);
@@ -307,6 +343,10 @@ async function loadSettings(): Promise<void> {
   renderHabits(habits);
 }
 
+// Render the browser-language default immediately, then refine with the
+// stored setting once it loads (no English flash for ru users).
+uiLocale = resolveUiLanguage('auto', navigator.language);
+renderLocale();
 void loadSettings();
 
 // Listen for storage changes from other contexts (e.g., pill apply), with a
