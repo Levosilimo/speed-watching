@@ -1,10 +1,23 @@
 // Overlay pill component — the primary user-facing surface.
 // Self-contained vanilla TS DOM. Open shadow root for style isolation:
 // closed roots hide their content and ARIA from the accessibility tree.
-// No chrome.* imports. No lib/ logic imports.
+// No chrome.* imports. The two lib imports are the i18n layer (display
+// strings) and the bridge client it uses to resolve the UI language.
 
 import { DARK, LIGHT, type Theme } from './styles';
 import { pillCss } from './pill-css';
+import { createBridgeClient } from '../lib/messaging';
+import {
+  extractUnit,
+  formatMultiplier,
+  resolveUiLanguage,
+  t,
+  tierKeyFromLabel,
+  tierLabel,
+  unitLabel,
+  type UiLocale,
+} from '../lib/i18n';
+import type { UiLanguageSetting } from '../lib/settings';
 
 // ── Types (matches the seam contract exactly) ────────────────────────────
 export type PillMode = 'recommend' | 'warning' | 'unreachable' | 'music' | 'none';
@@ -23,6 +36,12 @@ export interface PillState {
 export interface PillEvents {
   onApply?: (multiplier: number) => void;
   onDismiss?: () => void;
+}
+
+export interface PillOptions {
+  /** UI locale; unset → resolved from settings.uiLanguage via the bridge,
+   * falling back to the browser UI language. */
+  locale?: UiLocale;
 }
 
 /** Current presentation rate for the live line: measured natural rate ×
@@ -144,7 +163,17 @@ function wireEvents(
 
 export function warningNoteCopy(
   reason?: 'above-zone' | 'capped-below' | 'pause-diluted',
+  locale: UiLocale = 'en',
 ): string {
+  if (locale === 'ru') {
+    const key =
+      reason === 'capped-below'
+        ? 'pill.warning.cappedBelow'
+        : reason === 'pause-diluted'
+          ? 'pill.warning.pauseDiluted'
+          : 'pill.warning.aboveZone';
+    return t(key, 'ru');
+  }
   if (reason === 'capped-below') {
     return 'Estimate uncertain — capped at 1.5x for safety';
   }
@@ -155,7 +184,14 @@ export function warningNoteCopy(
 }
 
 /** Formats the live-rate line, e.g. 'now ≈ 248 wpm at 1.55x'. */
-export function liveRateText(live: LiveRate): string {
+export function liveRateText(live: LiveRate, locale: UiLocale = 'en'): string {
+  if (locale === 'ru') {
+    return t('pill.liveRate', 'ru', {
+      rate: Math.round(live.rate),
+      unit: unitLabel(extractUnit(live.unit), 'ru'),
+      mult: formatMultiplier(live.multiplier, 'ru'),
+    });
+  }
   const multiplier = String(Math.round(live.multiplier * 100) / 100);
   return `now ≈ ${Math.round(live.rate)} ${live.unit} at ${multiplier}x`;
 }
@@ -175,26 +211,68 @@ export function shouldRefreshLive(prev: LiveRate | null, next: LiveRate | null):
 
 /** Live line visibility: recommend/warning modes only, and only while a
  * live rate is pushed. Full state updates re-evaluate it via render(). */
-function renderLive(dom: PillDom, mode: PillMode, live: LiveRate | null): void {
+function renderLive(dom: PillDom, mode: PillMode, live: LiveRate | null, locale: UiLocale): void {
   const visible = live !== null && (mode === 'recommend' || mode === 'warning');
   dom.liveEl.hidden = !visible;
-  if (visible) dom.liveEl.textContent = liveRateText(live);
+  if (visible) dom.liveEl.textContent = liveRateText(live, locale);
+}
+
+/** Localized main line: English renders the recommendation verbatim; ru
+ * rebuilds it from the structured state (unit recovered from the label). */
+function localizedLabel(state: PillState, locale: UiLocale): string {
+  if (locale === 'en') return state.label;
+  const mult = formatMultiplier(state.multiplier, 'ru');
+  const rate = Math.round(state.effectiveWpm);
+  const unit = unitLabel(extractUnit(state.label), 'ru');
+  switch (state.mode) {
+    case 'music':
+      return t('pill.label.music', 'ru');
+    case 'unreachable':
+      return t('pill.label.unreachable', 'ru', { mult, rate, unit });
+    default:
+      return (
+        t('pill.label.recommend', 'ru', { mult, rate, unit }) +
+        (state.reason === 'capped-below' ? t('pill.label.cappedSuffix', 'ru') : '')
+      );
+  }
+}
+
+/** Localized tier badge; unknown labels pass through unchanged. */
+function localizedTier(tierLabelText: string, locale: UiLocale): string {
+  if (locale === 'en') return tierLabelText;
+  const tier = tierKeyFromLabel(tierLabelText);
+  return tier === null ? tierLabelText : tierLabel(tier, 'ru');
+}
+
+function localizedApplyAria(state: PillState, locale: UiLocale): string {
+  const mult =
+    locale === 'ru' ? state.multiplier.toFixed(1).replace('.', ',') : state.multiplier.toFixed(1);
+  return locale === 'ru'
+    ? t('pill.applyAriaSpeed', 'ru', { mult })
+    : `Apply ${mult}x playback speed`;
 }
 
 function render(
   dom: PillDom,
   state: PillState,
   live: LiveRate | null,
+  locale: UiLocale,
   destroyed: boolean,
 ): void {
   if (destroyed) return;
+
+  // Button strings live in render so a late locale resolution re-labels
+  // them (buildDom only supplies the structural defaults).
+  dom.applyBtn.textContent = t('pill.apply', locale);
+  dom.applyBtn.setAttribute('aria-label', t('pill.applyAria', locale));
+  dom.dismissBtn.setAttribute('aria-label', t('pill.dismissAria', locale));
 
   const mode = state.mode;
 
   // Hide the live line outside recommend/warning, even in the none branch
   // below (the pill surface itself is invisible there, but the element must
   // not keep stale text).
-  if (mode !== 'recommend' && mode !== 'warning') renderLive(dom, mode, null);
+  if (mode !== 'recommend' && mode !== 'warning') renderLive(dom, mode, null, locale);
 
   if (mode === 'none') {
     dom.pill.dataset.mode = 'hidden';
@@ -204,14 +282,14 @@ function render(
 
   dom.pill.removeAttribute('aria-hidden');
   dom.pill.dataset.mode = mode;
-  renderLive(dom, mode, live);
+  renderLive(dom, mode, live, locale);
 
   // Label
-  dom.labelEl.textContent = state.label;
+  dom.labelEl.textContent = localizedLabel(state, locale);
 
   // Tier
   if (state.tierLabel) {
-    dom.tierEl.textContent = state.tierLabel;
+    dom.tierEl.textContent = localizedTier(state.tierLabel, locale);
     dom.tierEl.hidden = false;
   } else {
     dom.tierEl.hidden = true;
@@ -219,7 +297,7 @@ function render(
 
   // Warning note (only for warning mode; copy picked by reason)
   if (mode === 'warning') {
-    dom.warningNote.textContent = warningNoteCopy(state.reason);
+    dom.warningNote.textContent = warningNoteCopy(state.reason, locale);
     dom.warningNote.hidden = false;
   } else {
     dom.warningNote.hidden = true;
@@ -231,22 +309,42 @@ function render(
   } else {
     dom.applyBtn.hidden = false;
     dom.applyBtn.dataset.variant = mode === 'warning' ? 'warning' : 'primary';
-    dom.applyBtn.setAttribute(
-      'aria-label',
-      `Apply ${state.multiplier.toFixed(1)}x playback speed`,
-    );
+    dom.applyBtn.setAttribute('aria-label', localizedApplyAria(state, locale));
   }
 }
 
-export function createPill(host: HTMLElement, events?: PillEvents): PillApi {
+/** Reads settings.uiLanguage through the page bridge; bridge failure or
+ * timeout falls back to 'auto' → the browser UI language. */
+async function resolvePillLocale(win: Window | null): Promise<UiLocale> {
+  let setting: UiLanguageSetting | undefined;
+  if (win !== null) {
+    try {
+      setting = (await createBridgeClient(win).request({ type: 'settings:get' })).uiLanguage;
+    } catch {
+      setting = undefined;
+    }
+  }
+  return resolveUiLanguage(setting, navigator.language);
+}
+
+export function createPill(host: HTMLElement, events?: PillEvents, opts?: PillOptions): PillApi {
   const shadow = host.attachShadow({ mode: 'open' });
   let mounted = false;
   let destroyed = false;
   let currentState: PillState | null = null;
+  let locale: UiLocale = opts?.locale ?? 'en';
   // Throttled live-rate state: render()/updateLiveRate() both drive
   // renderLive() so a live update never re-renders the recommendation and
   // a recommendation update re-evaluates the line's visibility.
   let liveRate: LiveRate | null = null;
+
+  if (opts?.locale === undefined) {
+    void resolvePillLocale(host.ownerDocument.defaultView).then((resolved) => {
+      if (destroyed || resolved === locale) return;
+      locale = resolved;
+      if (currentState !== null) render(dom, currentState, liveRate, locale, destroyed);
+    });
+  }
 
   // Detect theme from host's document or system
   const doc = host.ownerDocument;
@@ -286,13 +384,13 @@ export function createPill(host: HTMLElement, events?: PillEvents): PillApi {
       // Drop stale live rates outside recommend/warning so a later mode flip
       // cannot resurrect a paused video's line (render only sees the value).
       if (state.mode !== 'recommend' && state.mode !== 'warning') liveRate = null;
-      render(dom, state, liveRate, destroyed);
+      render(dom, state, liveRate, locale, destroyed);
     },
 
     updateLiveRate(live: LiveRate | null) {
       if (destroyed || !shouldRefreshLive(liveRate, live)) return;
       liveRate = live;
-      renderLive(dom, currentState?.mode ?? 'none', live);
+      renderLive(dom, currentState?.mode ?? 'none', live, locale);
     },
 
     destroy() {

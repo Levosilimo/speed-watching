@@ -57,6 +57,15 @@ describe('liveRateText', () => {
   it('keeps the language unit label', () => {
     expect(liveRateText({ rate: 380, multiplier: 2, unit: 'morae/min' })).toBe('now ≈ 380 morae/min at 2x');
   });
+
+  it('localizes the line and unit for ru', () => {
+    expect(liveRateText({ rate: 248, multiplier: 1.55, unit: 'wpm' }, 'ru')).toBe(
+      'сейчас ≈ 248 слов/мин при 1,55×',
+    );
+    expect(liveRateText({ rate: 380, multiplier: 2, unit: 'morae/min' }, 'ru')).toBe(
+      'сейчас ≈ 380 мор/мин при 2×',
+    );
+  });
 });
 
 describe('shouldRefreshLive (throttle gate)', () => {
@@ -79,7 +88,7 @@ describe('createPill live-rate line', () => {
 
   it('renders the live line in recommend mode and hides it without a rate', () => {
     const host = shadowHost();
-    const pill = createPill(host, {});
+    const pill = createPill(host, {}, { locale: 'en' });
     pill.mount();
     pill.update(state());
     pill.updateLiveRate(LIVE);
@@ -91,7 +100,7 @@ describe('createPill live-rate line', () => {
 
   it('shows the line in warning mode as well', () => {
     const host = shadowHost();
-    const pill = createPill(host, {});
+    const pill = createPill(host, {}, { locale: 'en' });
     pill.mount();
     pill.update(state({ mode: 'warning', reason: 'above-zone' }));
     pill.updateLiveRate(LIVE);
@@ -101,7 +110,7 @@ describe('createPill live-rate line', () => {
 
   it('stays hidden in music, unreachable and none modes', () => {
     const host = shadowHost();
-    const pill = createPill(host, {});
+    const pill = createPill(host, {}, { locale: 'en' });
     pill.mount();
     pill.update(state({ mode: 'music' }));
     pill.updateLiveRate(LIVE);
@@ -118,7 +127,7 @@ describe('createPill live-rate line', () => {
 
   it('hides the line when a live-rate update pushes null', () => {
     const host = shadowHost();
-    const pill = createPill(host, {});
+    const pill = createPill(host, {}, { locale: 'en' });
     pill.mount();
     pill.update(state());
     pill.updateLiveRate(LIVE);
@@ -130,7 +139,7 @@ describe('createPill live-rate line', () => {
 
   it('does not fight the apply flow: a full state update keeps the line', () => {
     const host = shadowHost();
-    const pill = createPill(host, {});
+    const pill = createPill(host, {}, { locale: 'en' });
     pill.mount();
     pill.update(state());
     pill.updateLiveRate(LIVE);
@@ -144,7 +153,7 @@ describe('createPill live-rate line', () => {
 
   it('drops the stale rate when a full update leaves recommend/warning', () => {
     const host = shadowHost();
-    const pill = createPill(host, {});
+    const pill = createPill(host, {}, { locale: 'en' });
     pill.mount();
     pill.update(state());
     pill.updateLiveRate(LIVE);
@@ -159,7 +168,7 @@ describe('createPill live-rate line', () => {
 
   it('throttles: an equal updateLiveRate is a no-op', () => {
     const host = shadowHost();
-    const pill = createPill(host, {});
+    const pill = createPill(host, {}, { locale: 'en' });
     pill.mount();
     pill.update(state());
     const live = liveElOf(host);
