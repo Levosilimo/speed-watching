@@ -4,11 +4,18 @@ import { createCaptureOrchestrator } from '../lib/capture-orchestrator';
 import { isOffscreenEvent, isOptionsMessage } from '../lib/audio-probe';
 import { DemandStore } from '../lib/demand';
 import {
+  clampWpmResponse,
   isDemandIncrementMessage,
+  isWpmGetRequest,
+  isWpmGetResponse,
   SHORTCUT_APPLY,
   SHORTCUT_DISMISS,
+  WPM_GET,
+  WPM_PROTOCOL_VERSION,
   type ShortcutMessage,
+  type WpmGetResponse,
 } from '../lib/messaging';
+import { SettingsStore } from '../lib/settings';
 
 export default defineBackground(() => {
   const orchestrator = createCaptureOrchestrator(
@@ -26,6 +33,23 @@ export default defineBackground(() => {
   // forwards demand:increment here, so one promise chain covers all frames
   // instead of per-frame get→set interleaves.
   const demand = new DemandStore(browser.storage.local);
+  const settings = new SettingsStore(browser.storage.local);
+
+  browser.runtime.onMessageExternal.addListener(
+    (
+      message: unknown,
+      sender: { id?: string },
+      sendResponse: (response?: unknown) => void,
+    ) => {
+      if (!isWpmGetRequest(message)) return false;
+      void handleExternalWpmRequest(settings, sender.id)
+        .then(sendResponse)
+        // The provider must never throw: a dead listener leaves the partner
+        // hanging, so any unexpected failure becomes an internal error.
+        .catch(() => sendResponse({ ok: false, error: 'internal' }));
+      return true;
+    },
+  );
 
   browser.runtime.onMessage.addListener(
     (
@@ -71,6 +95,55 @@ const SHORTCUT_MESSAGES: Record<string, ShortcutMessage> = {
   'dismiss-pill': { type: SHORTCUT_DISMISS },
 };
 
+// Measured-rate provider (docs/provider-integration.md): partner extensions
+// query the current video's measured rate over runtime.onMessageExternal.
+// Both this allowlist and the manifest's externally_connectable.ids
+// (wxt.config.ts) must name a partner before their requests are served —
+// they mirror each other. Partner opt-in: the partner adds the matching
+// listener, the user enables the options toggle, and the partner's ID
+// lands in both lists. Starts empty; partner IDs get added on their opt-in.
+export const ALLOWED_PROVIDER_IDS: string[] = [];
+
+// Per-sender sliding window over request timestamps: a partner cannot wake
+// the service worker more than 10 times per 10 s window.
+const RATE_LIMIT_MAX = 10;
+const RATE_LIMIT_WINDOW_MS = 10_000;
+const providerHits = new Map<string, number[]>();
+
+function providerAllowed(id: string, now = Date.now()): boolean {
+  const recent = (providerHits.get(id) ?? []).filter((ts) => now - ts < RATE_LIMIT_WINDOW_MS);
+  if (recent.length >= RATE_LIMIT_MAX) {
+    providerHits.set(id, recent);
+    return false;
+  }
+  recent.push(now);
+  providerHits.set(id, recent);
+  return true;
+}
+
+/** wpm:get serving path; guards run in order, cheapest first, so a
+ * disabled or unknown sender never reaches the tab round trip (SW-wake
+ * abuse protection). The response crosses back from the tab world, so it
+ * is re-validated and clamped at this boundary before sendResponse. */
+async function handleExternalWpmRequest(
+  settings: SettingsStore,
+  senderId: string | undefined,
+): Promise<WpmGetResponse> {
+  if ((await settings.load()).externalApiEnabled !== true) return { ok: false, error: 'disabled' };
+  if (senderId === undefined || !ALLOWED_PROVIDER_IDS.includes(senderId)) {
+    return { ok: false, error: 'forbidden' };
+  }
+  if (!providerAllowed(senderId)) return { ok: false, error: 'rate_limited' };
+  const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
+  if (tab?.id === undefined) return { ok: false, error: 'no-active-video' };
+  const response = await browser.tabs.sendMessage(tab.id, {
+    type: WPM_GET,
+    version: WPM_PROTOCOL_VERSION,
+  });
+  if (!isWpmGetResponse(response)) return { ok: false, error: 'internal' };
+  return clampWpmResponse(response);
+}
+
 async function routeShortcut(command: string): Promise<void> {
   const message = SHORTCUT_MESSAGES[command];
   if (message === undefined) return;
@@ -80,3 +153,4 @@ async function routeShortcut(command: string): Promise<void> {
   // 'Receiving end does not exist' — expected, not an error.
   await browser.tabs.sendMessage(tab.id, message).catch(() => undefined);
 }
+

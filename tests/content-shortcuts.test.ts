@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import contentModule from '../entrypoints/content';
 import bridgeModule from '../entrypoints/bridge.content';
 import { parseYouTubeJson3 } from '../lib/captions';
-import type { BridgeEnvelope } from '../lib/messaging';
+import type { BridgeEnvelope, WpmGetResponseOk } from '../lib/messaging';
 import { priorMidpoint } from '../lib/heuristics';
 import { recommend } from '../lib/recommend';
 import { defaultSettings, resolveContentType, resolvePlatformMax, resolveUserTarget } from '../lib/settings';
@@ -255,4 +255,126 @@ describe('content shortcut envelope handling', () => {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+});
+
+describe('wpm:get measured-rate answer', () => {
+  /** Captures response envelopes on the wpm channel (the test's own request
+   * posting arrives on the same channel first). */
+  function captureWpmAnswers(): { answers: unknown[]; detach: () => void } {
+    const answers: unknown[] = [];
+    const onWindow = (event: MessageEvent): void => {
+      const envelope = event.data as { channel?: string; message?: unknown };
+      if (envelope.channel === 'speedwatcher:wpm' && typeof envelope.message === 'object' && envelope.message !== null && 'ok' in envelope.message) {
+        answers.push(event.data);
+      }
+    };
+    window.addEventListener('message', onWindow);
+    return { answers, detach: () => window.removeEventListener('message', onWindow) };
+  }
+
+  it('answers from the measurement context without the videoId', async () => {
+    // Estimated tier: the beforeEach player response has no caption tracks.
+    const settings = defaultSettings();
+    const site = 'youtube.com';
+    const contentType = resolveContentType(settings, site, 'generic');
+    const rec = recommend({
+      naturalRate: priorMidpoint('generic'),
+      tier: 'estimated',
+      contentType,
+      platformMax: resolvePlatformMax(settings, site),
+      userTarget: resolveUserTarget(settings, site, contentType),
+    });
+    await vi.waitFor(() => {
+      expect(pillMode()).toBe('recommend');
+    });
+
+    const { answers, detach } = captureWpmAnswers();
+    window.postMessage({ channel: 'speedwatcher:wpm', message: { type: 'wpm:get', version: 1 } }, '*');
+    await tick();
+    detach();
+
+    // main() ran once per test in this file, so every content-script
+    // instance answers the same channel; the last answer is authoritative.
+    expect(answers.length).toBeGreaterThan(0);
+    const answer = (answers.at(-1) as { message: WpmGetResponseOk }).message;
+    expect(answer).toMatchObject({
+      ok: true,
+      version: 1,
+      site: 'youtube.com',
+      unit: 'wpm',
+      language: null,
+      tier: 'estimated',
+      contentType: 'generic',
+      platformMax: 2,
+      recommendation: { target: 250, mode: 'recommend' },
+    });
+    expect(answer.naturalRate).toBeCloseTo(priorMidpoint('generic'), 5);
+    expect(answer.recommendation.recommendedMultiplier).toBeCloseTo(rec.multiplier, 5);
+    expect(JSON.stringify(answer)).not.toContain('videoId');
+  });
+
+  it('reports no-active-video when no measurement exists', async () => {
+    await vi.waitFor(() => {
+      expect(pillMode()).toBe('recommend');
+    });
+    // SPA navigation invalidates the previous video's measurement.
+    document.dispatchEvent(new Event('yt-navigate-start'));
+
+    const { answers, detach } = captureWpmAnswers();
+    window.postMessage({ channel: 'speedwatcher:wpm', message: { type: 'wpm:get', version: 1 } }, '*');
+    await tick();
+    detach();
+
+    expect(answers.length).toBeGreaterThan(0);
+    expect((answers.at(-1) as { message: unknown }).message).toEqual({
+      ok: false,
+      error: 'no-active-video',
+    });
+  });
+
+  it('ignores malformed envelopes on the channel', async () => {
+    await vi.waitFor(() => {
+      expect(pillMode()).toBe('recommend');
+    });
+
+    const { answers, detach } = captureWpmAnswers();
+    window.postMessage({ channel: 'speedwatcher:wpm', message: { type: 'bogus' } }, '*');
+    window.postMessage({ channel: 'speedwatcher:shortcut', message: { type: 'wpm:get', version: 1 } }, '*');
+    await tick();
+    detach();
+
+    expect(answers).toHaveLength(0);
+  });
+});
+
+describe('bridge wpm:get relay (background → window → sendResponse)', () => {
+  it('round-trips the runtime request through the window answer', async () => {
+    const main = (bridgeModule as { main: () => void }).main;
+    main();
+    const listener = chromeMock.runtime.onMessage.addListener.mock.calls[0]?.[0] as
+      | ((message: unknown, sender: unknown, sendResponse: (response?: unknown) => void) => boolean)
+      | undefined;
+    if (!listener) throw new Error('no bridge runtime listener registered');
+
+    await vi.waitFor(() => {
+      expect(pillMode()).toBe('recommend');
+    });
+
+    const response = await new Promise<unknown>((resolve) => {
+      const returned = listener({ type: 'wpm:get', version: 1 }, {}, resolve);
+      expect(returned).toBe(true);
+    });
+    expect(response).toMatchObject({ ok: true, version: 1, site: 'youtube.com', tier: 'estimated' });
+  });
+
+  it('keeps the shortcut relay one-way (no response)', async () => {
+    const main = (bridgeModule as { main: () => void }).main;
+    main();
+    const listener = chromeMock.runtime.onMessage.addListener.mock.calls[0]?.[0] as
+      | ((message: unknown, sender: unknown, sendResponse: (response?: unknown) => void) => boolean)
+      | undefined;
+    if (!listener) throw new Error('no bridge runtime listener registered');
+
+    expect(listener({ type: 'speedwatcher:apply-shortcut' }, {}, vi.fn())).toBe(false);
+  });
 });

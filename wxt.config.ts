@@ -58,6 +58,15 @@ export default defineConfig({
       },
     },
     permissions: ['storage', 'tabCapture', 'offscreen'],
+    // Measured-rate provider (docs/provider-integration.md): limits which
+    // extensions may reach the background via runtime.onMessageExternal.
+    // Partner IDs land here AND in ALLOWED_PROVIDER_IDS
+    // (entrypoints/background.ts) on their opt-in — the two lists mirror
+    // each other. Empty until a partner opts in, so the API is unreachable
+    // at the runtime layer even if the code allowlist drifts.
+    externally_connectable: {
+      ids: [],
+    },
     min_chrome_version: '116',
     browser_specific_settings: {
       gecko: {

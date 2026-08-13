@@ -9,10 +9,12 @@ export const chromeMock = {
     sendMessage: vi.fn(),
     getContexts: vi.fn(),
     onMessage: { addListener: vi.fn() },
+    onMessageExternal: { addListener: vi.fn() },
   },
   tabs: {
     query: vi.fn(),
     sendMessage: vi.fn(),
+    create: vi.fn(),
     onActivated: { addListener: vi.fn() },
     onRemoved: { addListener: vi.fn() },
   },
@@ -20,6 +22,10 @@ export const chromeMock = {
   action: { onClicked: { addListener: vi.fn() } },
   commands: { onCommand: { addListener: vi.fn() } },
   offscreen: { createDocument: vi.fn() },
+  contextMenus: {
+    create: vi.fn(),
+    onClicked: { addListener: vi.fn(), hasListener: vi.fn() },
+  },
   storage: {
     session: { get: vi.fn(), set: vi.fn(), remove: vi.fn() },
     local: { get: vi.fn(), set: vi.fn(), onChanged: { addListener: vi.fn() } },
