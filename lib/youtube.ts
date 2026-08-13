@@ -17,6 +17,11 @@ export interface PlayerResponse {
   videoDetails?: {
     videoId?: string;
     title?: string;
+    /** Canonical per-channel key (UC-id); absent on some embeds. */
+    channelId?: string;
+    /** Display name; the channel-memory fallback key when channelId is
+     * missing (names are not unique, so the memory namespaces them). */
+    author?: string;
   };
 }
 
@@ -24,4 +29,13 @@ declare global {
   interface Window {
     ytInitialPlayerResponse?: PlayerResponse;
   }
+}
+
+/** Stable per-channel memory key from the player response: the channelId
+ * when present, else the author name (namespaced — names are not unique). */
+export function channelKeyOf(videoDetails: PlayerResponse['videoDetails']): string | undefined {
+  const id = videoDetails?.channelId;
+  if (id !== undefined && id !== '') return id;
+  const author = videoDetails?.author;
+  return author !== undefined && author !== '' ? `author:${author}` : undefined;
 }

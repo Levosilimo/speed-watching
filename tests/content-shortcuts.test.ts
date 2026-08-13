@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import contentModule from '../entrypoints/content';
 import bridgeModule from '../entrypoints/bridge.content';
+import type { ChannelRecord } from '../lib/channel-memory';
 import { parseYouTubeJson3 } from '../lib/captions';
 import type { BridgeEnvelope } from '../lib/messaging';
 import { priorMidpoint } from '../lib/heuristics';
@@ -39,7 +40,11 @@ const tick = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 2
  * e2e/server.ts). Absent kind means a manual track, like the fixture map. */
 function playerResponseWithCaptions(fixture: string, kind: string | undefined): unknown {
   return {
-    videoDetails: { videoId: 'e2e-fixture', title: `unit fixture: ${fixture}` },
+    videoDetails: {
+      videoId: 'e2e-fixture',
+      title: `unit fixture: ${fixture}`,
+      channelId: 'UC-e2e-fixture',
+    },
     captions: {
       playerCaptionsTracklistRenderer: {
         captionTracks: [
@@ -66,8 +71,21 @@ function liveLine(): HTMLElement | null {
   return pillHost()?.querySelector('.live-rate') ?? null;
 }
 
+function pillLabel(): string | null {
+  return pillHost()?.querySelector('.label')?.textContent ?? null;
+}
+
+function pillTier(): string | null {
+  return pillHost()?.querySelector('.tier')?.textContent ?? null;
+}
+
+/** Channel-memory records the in-process bridge serves back on channel:get
+ * and captures on channel:put (mirror of lib/channel-memory storage). */
+const channelRates = new Map<string, ChannelRecord>();
+
 beforeEach(() => {
   vi.clearAllMocks();
+  channelRates.clear();
   document.body.innerHTML = '';
   const happyDom = window as unknown as { happyDOM: { setURL(url: string): void } };
   happyDom.happyDOM.setURL(WATCH_URL);
@@ -78,16 +96,23 @@ beforeEach(() => {
   Object.defineProperty(video, 'paused', { get: () => false, configurable: true });
   document.body.appendChild(video);
 
-  // In-process bridge: answer settings:get the way the isolated bridge would.
+  // In-process bridge: answer settings:get, channel:get, and channel:put the
+  // way the isolated bridge would.
   const onBridge = (event: MessageEvent): void => {
     const envelope = event.data as BridgeEnvelope | undefined;
     if (envelope?.channel !== 'speedwatcher:bridge' || envelope.direction !== 'request') return;
-    const payload = envelope.payload as { id: number };
+    const payload = envelope.payload as { id: number; type: string; channelKey?: string; record?: ChannelRecord };
+    let result: unknown;
+    if (payload.type === 'settings:get') result = defaultSettings();
+    else if (payload.type === 'channel:get') result = channelRates.get(payload.channelKey ?? '') ?? null;
+    else if (payload.type === 'channel:put' && payload.channelKey !== undefined) {
+      channelRates.set(payload.channelKey, payload.record as ChannelRecord);
+    }
     window.postMessage(
       {
         channel: 'speedwatcher:bridge',
         direction: 'response',
-        payload: { id: payload.id, ok: true, result: defaultSettings() },
+        payload: { id: payload.id, ok: true, result },
       },
       '*',
     );
@@ -250,6 +275,94 @@ describe('content shortcut envelope handling', () => {
     await tick();
     expect(video?.playbackRate).toBe(1);
     expect(pillMode()).toBe('recommend');
+  });
+});
+
+describe('channel rate memory wiring', () => {
+  /** Measured render: stub the timedtext fetch with the manual-cue fixture
+   * and re-run the measure chain (mirror of the measured-tier test above). */
+  async function renderMeasured(): Promise<void> {
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, json: async () => fixture })));
+    (window as unknown as Record<string, unknown>).ytInitialPlayerResponse = playerResponseWithCaptions(
+      'real/manual-cue.json',
+      undefined,
+    );
+    document.dispatchEvent(new Event('yt-navigate-start'));
+    document.dispatchEvent(new Event('yt-navigate-finish'));
+    await vi.waitFor(() => {
+      expect(pillMode()).toBe('recommend');
+    });
+    await tick();
+  }
+
+  /** Estimated render with a known en track: stub the fetch to fail so the
+   * pipeline falls to the estimated tier with language en. */
+  async function renderEstimatedWithLanguage(): Promise<void> {
+    vi.stubGlobal('fetch', vi.fn(async () => null));
+    (window as unknown as Record<string, unknown>).ytInitialPlayerResponse = playerResponseWithCaptions(
+      'real/manual-cue.json',
+      undefined,
+    );
+    document.dispatchEvent(new Event('yt-navigate-start'));
+    document.dispatchEvent(new Event('yt-navigate-finish'));
+    await vi.waitFor(() => {
+      expect(pillMode()).toBe('recommend');
+    });
+  }
+
+  it('remembers the measured rate on a measured recommendation', async () => {
+    await renderMeasured();
+    const { cues } = parseYouTubeJson3(fixture);
+    const naturalRate = manualCueRate(cues);
+    if (naturalRate === null) throw new Error('manual-cue fixture: no natural rate');
+    expect(channelRates.get('UC-e2e-fixture')).toEqual({
+      rate: naturalRate,
+      unit: 'wpm',
+      language: 'en',
+      ts: expect.any(Number),
+    });
+  });
+
+  it('seeds the estimated tier from the channel memory in the same language', async () => {
+    channelRates.set('UC-e2e-fixture', { rate: 150, unit: 'wpm', language: 'en', ts: 1 });
+    await renderEstimatedWithLanguage();
+    // The pill renders the seeded rate's recommendation, still labeled
+    // estimated — the prior got smarter, the tier did not.
+    const seeded = recommend({ naturalRate: 150, tier: 'estimated', contentType: 'generic', platformMax: 2 });
+    expect(pillLabel()).toBe(seeded.label);
+    expect(pillTier()).toBe('estimated');
+  });
+
+  it('ignores channel memory measured in another language', async () => {
+    channelRates.set('UC-e2e-fixture', { rate: 150, unit: 'wpm', language: 'ru', ts: 1 });
+    await renderEstimatedWithLanguage();
+    const fallback = recommend({
+      naturalRate: priorMidpoint('generic'),
+      tier: 'estimated',
+      contentType: 'generic',
+      platformMax: 2,
+    });
+    expect(pillLabel()).toBe(fallback.label);
+    expect(pillTier()).toBe('estimated');
+  });
+
+  it('does not remember a rate without a stable channel key', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, json: async () => fixture })));
+    (window as unknown as Record<string, unknown>).ytInitialPlayerResponse = {
+      videoDetails: { videoId: 'e2e-fixture' },
+      captions: {
+        playerCaptionsTracklistRenderer: {
+          captionTracks: [{ baseUrl: '/api/timedtext', languageCode: 'en' }],
+        },
+      },
+    };
+    document.dispatchEvent(new Event('yt-navigate-start'));
+    document.dispatchEvent(new Event('yt-navigate-finish'));
+    await vi.waitFor(() => {
+      expect(pillMode()).toBe('recommend');
+    });
+    await tick();
+    expect(channelRates.size).toBe(0);
   });
 });
 

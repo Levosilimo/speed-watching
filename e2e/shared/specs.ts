@@ -35,7 +35,7 @@ import {
   totalWords,
   wordLevelWpm,
 } from '../../lib/wpm';
-import type { MeasureEventDetail } from '../../entrypoints/content';
+import type { MeasureEventDetail } from '../../lib/measure-hooks';
 import { KIND_BY_FIXTURE, LANG_BY_FIXTURE } from './fixtures';
 
 export type Measurement = MeasureEventDetail;
