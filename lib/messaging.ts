@@ -43,6 +43,33 @@ export function isDemandIncrementMessage(value: unknown): value is DemandIncreme
   return isRecord(value) && value.type === 'demand:increment' && isContentType(value.contentType);
 }
 
+/** Runtime message the background sends the active tab on a keyboard
+ * shortcut (chrome.commands, wxt.config.ts). The ISOLATED bridge receives
+ * it and relays it to the MAIN-world script (see ShortcutEnvelope). */
+export const SHORTCUT_APPLY = 'speedwatcher:apply-shortcut';
+export const SHORTCUT_DISMISS = 'speedwatcher:dismiss-shortcut';
+
+export type ShortcutMessage =
+  | { type: typeof SHORTCUT_APPLY }
+  | { type: typeof SHORTCUT_DISMISS };
+
+export function isShortcutMessage(value: unknown): value is ShortcutMessage {
+  return isRecord(value) && (value.type === SHORTCUT_APPLY || value.type === SHORTCUT_DISMISS);
+}
+
+/** Window channel the ISOLATED bridge uses to relay a shortcut message to
+ * the MAIN-world script (chrome.* is unavailable in the page world). */
+export const SHORTCUT_CHANNEL = 'speedwatcher:shortcut';
+
+export interface ShortcutEnvelope {
+  channel: typeof SHORTCUT_CHANNEL;
+  message: ShortcutMessage;
+}
+
+export function isShortcutEnvelope(value: unknown): value is ShortcutEnvelope {
+  return isRecord(value) && value.channel === SHORTCUT_CHANNEL && isShortcutMessage(value.message);
+}
+
 export type BridgeRequest =
   | { type: 'settings:get' }
   | { type: 'settings:set'; settings: Settings }

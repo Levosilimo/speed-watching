@@ -3,10 +3,10 @@
 // closed roots hide their content and ARIA from the accessibility tree.
 // No chrome.* imports. No lib/ logic imports.
 
-import { DARK, LIGHT, TOKENS, type Theme } from './styles';
+import { DARK, LIGHT, type Theme } from './styles';
+import { pillCss } from './pill-css';
 
 // ── Types (matches the seam contract exactly) ────────────────────────────
-
 export type PillMode = 'recommend' | 'warning' | 'unreachable' | 'music' | 'none';
 
 export interface PillState {
@@ -25,176 +25,20 @@ export interface PillEvents {
   onDismiss?: () => void;
 }
 
+/** Current presentation rate for the live line: measured natural rate ×
+ * playbackRate, in the rate unit the recommendation label uses. */
+export interface LiveRate {
+  rate: number;
+  multiplier: number;
+  unit: string;
+}
+
 export interface PillApi {
   mount(): void;
   update(state: PillState): void;
+  /** Live-rate line; null hides it. Throttled: no-op while unchanged. */
+  updateLiveRate(live: LiveRate | null): void;
   destroy(): void;
-}
-
-// ── Styles (injected into shadow root) ───────────────────────────────────
-
-function pillCss(t: Theme): string {
-  return `
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    :host {
-      all: initial;
-      display: block;
-      position: fixed;
-      bottom: 18px;
-      right: 18px;
-      z-index: 999999;
-      font-family: ${TOKENS.fontSans};
-      font-size: ${TOKENS.textBase};
-      line-height: 1.45;
-      color: ${t.text};
-      pointer-events: none;
-    }
-
-    .pill {
-      pointer-events: auto;
-      display: inline-flex;
-      align-items: center;
-      gap: ${TOKENS.sp3};
-      padding: ${TOKENS.sp2} ${TOKENS.sp3};
-      background: ${t.bgSubtle};
-      border: 1px solid ${t.border};
-      border-radius: ${TOKENS.rPill};
-      box-shadow: ${t.shadowMd};
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
-      max-width: 420px;
-      transition: opacity ${TOKENS.durationNorm} ${TOKENS.easeOut},
-                  transform ${TOKENS.durationNorm} ${TOKENS.easeOut};
-    }
-
-    .pill[data-mode="hidden"] {
-      opacity: 0;
-      transform: translateY(6px) scale(0.96);
-      pointer-events: none;
-    }
-
-    .pill[data-mode="recommend"] {
-      border-color: ${t.primary};
-      background: ${t.primarySubtle};
-    }
-
-    .pill[data-mode="warning"] {
-      border-color: ${t.warning};
-      background: ${t.warningSubtle};
-    }
-
-    .pill[data-mode="unreachable"],
-    .pill[data-mode="music"] {
-      border-color: ${t.border};
-      background: ${t.bgMuted};
-    }
-
-    .main-text {
-      flex: 1;
-      min-width: 0;
-      display: flex;
-      flex-direction: column;
-      gap: 1px;
-    }
-
-    .label {
-      font-weight: 500;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .tier {
-      font-size: ${TOKENS.textXs};
-      color: ${t.textSecondary};
-      white-space: nowrap;
-    }
-
-    .actions {
-      display: flex;
-      align-items: center;
-      gap: ${TOKENS.sp1};
-      flex-shrink: 0;
-    }
-
-    .btn-apply {
-      padding: ${TOKENS.sp1} ${TOKENS.sp3};
-      font-family: ${TOKENS.fontSans};
-      font-size: ${TOKENS.textSm};
-      font-weight: 600;
-      border: none;
-      border-radius: ${TOKENS.rPill};
-      cursor: pointer;
-      transition: background ${TOKENS.durationFast} ease,
-                  color ${TOKENS.durationFast} ease;
-    }
-
-    .btn-apply[data-variant="primary"] {
-      background: ${t.primary};
-      color: ${t.bg};
-    }
-    .btn-apply[data-variant="primary"]:hover {
-      background: ${t.primaryHover};
-    }
-
-    .btn-apply[data-variant="warning"] {
-      background: ${t.warning};
-      color: ${t.bg};
-    }
-    .btn-apply[data-variant="warning"]:hover {
-      opacity: 0.9;
-    }
-
-    .btn-apply[data-variant="muted"] {
-      background: ${t.border};
-      color: ${t.textSecondary};
-      cursor: default;
-    }
-
-    .btn-apply:focus-visible {
-      outline: 2px solid ${t.primary};
-      outline-offset: 2px;
-      box-shadow: 0 0 0 4px ${t.focusRing};
-    }
-
-    .btn-dismiss {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 24px;
-      height: 24px;
-      padding: 1px;
-      font-family: ${TOKENS.fontSans};
-      font-size: ${TOKENS.textSm};
-      color: ${t.textSecondary};
-      background: transparent;
-      border: none;
-      border-radius: 50%;
-      cursor: pointer;
-      transition: background ${TOKENS.durationFast} ease,
-                  color ${TOKENS.durationFast} ease;
-    }
-
-    .btn-dismiss:hover {
-      background: ${t.border};
-      color: ${t.text};
-    }
-
-    .btn-dismiss:focus-visible {
-      outline: 2px solid ${t.primary};
-      outline-offset: 1px;
-      box-shadow: 0 0 0 3px ${t.focusRing};
-    }
-
-    .warning-note {
-      font-size: ${TOKENS.textXs};
-      color: ${t.warning};
-      padding: 0 ${TOKENS.sp3};
-      margin-top: -2px;
-      line-height: 1.3;
-    }
-  `;
 }
 
 // ── Component ────────────────────────────────────────────────────────────
@@ -203,6 +47,7 @@ interface PillDom {
   pill: HTMLDivElement;
   labelEl: HTMLSpanElement;
   tierEl: HTMLSpanElement;
+  liveEl: HTMLSpanElement;
   warningNote: HTMLDivElement;
   applyBtn: HTMLButtonElement;
   dismissBtn: HTMLButtonElement;
@@ -226,10 +71,14 @@ function buildDom(): PillDom {
   const tierEl = document.createElement('span');
   tierEl.className = 'tier';
 
+  const liveEl = document.createElement('span');
+  liveEl.className = 'live-rate';
+  liveEl.hidden = true;
+
   const warningNote = document.createElement('div');
   warningNote.className = 'warning-note';
 
-  mainText.append(labelEl, tierEl, warningNote);
+  mainText.append(labelEl, tierEl, liveEl, warningNote);
 
   const actions = document.createElement('div');
   actions.className = 'actions';
@@ -250,7 +99,7 @@ function buildDom(): PillDom {
   actions.append(applyBtn, dismissBtn);
   pill.append(mainText, actions);
 
-  return { pill, labelEl, tierEl, warningNote, applyBtn, dismissBtn };
+  return { pill, labelEl, tierEl, liveEl, warningNote, applyBtn, dismissBtn };
 }
 
 /** The player area that hosted the pill — #movie_player on YouTube, else the
@@ -305,10 +154,47 @@ export function warningNoteCopy(
   return 'Past the 250–275 wpm range commonly cited for comfortable listening';
 }
 
-function render(dom: PillDom, state: PillState, destroyed: boolean): void {
+/** Formats the live-rate line, e.g. 'now ≈ 248 wpm at 1.55x'. */
+export function liveRateText(live: LiveRate): string {
+  const multiplier = String(Math.round(live.multiplier * 100) / 100);
+  return `now ≈ ${Math.round(live.rate)} ${live.unit} at ${multiplier}x`;
+}
+
+/** Throttle gate: true only when pushing `next` would change the live line.
+ * timeupdate fires ~4x/sec while playing; the equality check keeps the pill
+ * update from fighting the apply flow with redundant renders. */
+export function shouldRefreshLive(prev: LiveRate | null, next: LiveRate | null): boolean {
+  if (next === null) return prev !== null;
+  if (prev === null) return true;
+  return (
+    prev.rate !== next.rate ||
+    prev.multiplier !== next.multiplier ||
+    prev.unit !== next.unit
+  );
+}
+
+/** Live line visibility: recommend/warning modes only, and only while a
+ * live rate is pushed. Full state updates re-evaluate it via render(). */
+function renderLive(dom: PillDom, mode: PillMode, live: LiveRate | null): void {
+  const visible = live !== null && (mode === 'recommend' || mode === 'warning');
+  dom.liveEl.hidden = !visible;
+  if (visible) dom.liveEl.textContent = liveRateText(live);
+}
+
+function render(
+  dom: PillDom,
+  state: PillState,
+  live: LiveRate | null,
+  destroyed: boolean,
+): void {
   if (destroyed) return;
 
   const mode = state.mode;
+
+  // Hide the live line outside recommend/warning, even in the none branch
+  // below (the pill surface itself is invisible there, but the element must
+  // not keep stale text).
+  if (mode !== 'recommend' && mode !== 'warning') renderLive(dom, mode, null);
 
   if (mode === 'none') {
     dom.pill.dataset.mode = 'hidden';
@@ -318,6 +204,7 @@ function render(dom: PillDom, state: PillState, destroyed: boolean): void {
 
   dom.pill.removeAttribute('aria-hidden');
   dom.pill.dataset.mode = mode;
+  renderLive(dom, mode, live);
 
   // Label
   dom.labelEl.textContent = state.label;
@@ -356,6 +243,10 @@ export function createPill(host: HTMLElement, events?: PillEvents): PillApi {
   let mounted = false;
   let destroyed = false;
   let currentState: PillState | null = null;
+  // Throttled live-rate state: render()/updateLiveRate() both drive
+  // renderLive() so a live update never re-renders the recommendation and
+  // a recommendation update re-evaluates the line's visibility.
+  let liveRate: LiveRate | null = null;
 
   // Detect theme from host's document or system
   const doc = host.ownerDocument;
@@ -392,7 +283,16 @@ export function createPill(host: HTMLElement, events?: PillEvents): PillApi {
     update(state: PillState) {
       if (destroyed) return;
       currentState = state;
-      render(dom, state, destroyed);
+      // Drop stale live rates outside recommend/warning so a later mode flip
+      // cannot resurrect a paused video's line (render only sees the value).
+      if (state.mode !== 'recommend' && state.mode !== 'warning') liveRate = null;
+      render(dom, state, liveRate, destroyed);
+    },
+
+    updateLiveRate(live: LiveRate | null) {
+      if (destroyed || !shouldRefreshLive(liveRate, live)) return;
+      liveRate = live;
+      renderLive(dom, currentState?.mode ?? 'none', live);
     },
 
     destroy() {

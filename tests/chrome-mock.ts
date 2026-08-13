@@ -12,11 +12,13 @@ export const chromeMock = {
   },
   tabs: {
     query: vi.fn(),
+    sendMessage: vi.fn(),
     onActivated: { addListener: vi.fn() },
     onRemoved: { addListener: vi.fn() },
   },
   tabCapture: { getMediaStreamId: vi.fn() },
   action: { onClicked: { addListener: vi.fn() } },
+  commands: { onCommand: { addListener: vi.fn() } },
   offscreen: { createDocument: vi.fn() },
   storage: {
     session: { get: vi.fn(), set: vi.fn(), remove: vi.fn() },

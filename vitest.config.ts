@@ -1,6 +1,14 @@
+import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
+  resolve: {
+    // Same '@' → project root alias WXT generates for builds (.wxt/tsconfig.json).
+    alias: { '@': fileURLToPath(new URL('./', import.meta.url)) },
+  },
+  // Same build-time define as wxt.config.ts: tests run the production path
+  // (entrypoints/content.ts's e2e hooks are compiled out).
+  define: { __E2E__: 'false' },
   test: {
     environment: 'node',
     environmentOptions: {
