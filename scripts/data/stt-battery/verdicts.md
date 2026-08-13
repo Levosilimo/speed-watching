@@ -172,3 +172,95 @@ residual systematic offset, deferred because the gate outcome cannot change
 (1/5 in band vs the 4/5 requirement).
 
 
+
+## G6 — VAD-denominator articulation rate (V6, 2026-08-13)
+
+records: results-vad.jsonl (kind vad, 10 records, both models x 5 clips,
+chunk 29 / stride 5, tsMode word — the G2-pass config — plus silero VAD v4
+speech seconds as the rate denominator). Hand-annotated reference speech
+seconds: hand-speech.jsonl (energy bands + caption span geometry, same
+pause scale; per-clip evidence in the file).
+
+VAD spec (the settled G6 config): silero v4, scripts/data/whisper-bench/vad/
+silero_vad.onnx (643,854 bytes, sha256 9e2449e1…, the same file ~/va runs via
+sherpa-onnx), 16 kHz, 512-sample frames, h/c LSTM state [2,1,64] reset per
+clip, threshold 0.35, min_speech 0.25 s, min_silence 0.4 s, pad 50 ms — the
+~/va box-proven values. RMS gate: frames under 0.005 RMS are silence without
+inference (v4 hallucinates speech on zero input, measured prob 0.88+).
+Calibration: true-silence regions of the corpus sit <= 0.004 RMS (HtSuA80QTyo
+and jGwO_UgTS7I p5 0.000, WUvTyaaNkzM p5 0.0031); the quietest speech median
+is 0.0096 (jGwO_UgTS7I), so the floor separates silence from speech with a
+2x margin on the quietest clip. Runs on the pinned ort 1.23 wasm in the
+runner page (no version changes; v4 has no If node — the v5 crash of the
+8k-path attempt is gone; that attempt is quarantined in
+results-vad-8kpath.jsonl).
+
+| clip | model | refTok | hypW | handSec | vadSec | refRate | hypRate | rateErr | countBias | biasCont |
+|---|---|---|---|---|---|---|---|---|---|---|
+| iG9CE55wbtY | tiny | 93 | 101 | 39.28 | 43.8 | 142 | 138 | -2.5% | +8.6% | +10.6% |
+| Ks-_Mh1QhMc | tiny | 140 | 150 | 48.78 | 46.4 | 172 | 194 | +12.6% | +7.1% | +17.9% |
+| jGwO_UgTS7I | tiny | 145 | 167 | 37.78 | 53.6 | 230 | 187 | -18.9% | +15.2% | +18.8% |
+| HtSuA80QTyo | tiny | 133 | 163 | 50.29 | 52.0 | 159 | 188 | +18.4% | +21.6% | +15.1% |
+| WUvTyaaNkzM | tiny | 147 | 176 | 47.39 | 46.8 | 186 | 226 | +21.4% | +19.7% | +23.5% |
+| iG9CE55wbtY | base | 93 | 101 | 39.28 | 43.8 | 142 | 138 | -2.5% | +8.6% | +10.6% |
+| Ks-_Mh1QhMc | base | 140 | 150 | 48.78 | 46.4 | 172 | 194 | +12.6% | +7.1% | +17.9% |
+| jGwO_UgTS7I | base | 145 | 165 | 37.78 | 53.6 | 230 | 185 | -19.8% | +13.8% | +18.8% |
+| HtSuA80QTyo | base | 133 | 156 | 50.29 | 52.0 | 159 | 180 | +13.3% | +16.4% | +14.0% |
+| WUvTyaaNkzM | base | 147 | 176 | 47.39 | 46.8 | 186 | 226 | +21.4% | +19.7% | +23.5% |
+
+(refTok = caption letter/digit tokens, hypW = whisper tokens, Sec = speech
+seconds, rates in wpm, rateErr = (hypRate-refRate)/refRate; countBias full /
+content-only. VAD seconds are model-independent: the VAD runs once per clip.)
+
+VERDICT: FAIL — 1/5 clips within +-10% per model (iG9CE55wbtY -2.5%) vs the
+4/5 requirement. The VAD-denominator articulation rate is NOT shippable on
+this corpus.
+
+- The G5 lead/music artifact is FIXED: iG9CE55wbtY's systematic -49.5% (G5
+  unified rate, whisper span 0.0..66.0 vs ref 26.7..65.8) is now -2.5% — the
+  VAD denominator excludes the music leads instead of inheriting whisper's
+  full-window span. Errors are now +-12..21% with mixed signs (3 positive,
+  2 negative) instead of the G5 monotone -50..-5% tracking the lead length.
+- Residual error source 1 — whisper count bias +7.1..+21.6% (the G1/G2
+  artifact: whisper is wordier than YouTube-ASR everywhere). It dominates
+  the rate error on Ks-_Mh1QhMc, HtSuA80QTyo and WUvTyaaNkzM (all positive).
+- Residual error source 2 — VAD-vs-hand denominator: within +-11% on 4/5
+  clips (iG9CE55wbtY +11.4% just over, Ks -4.9%, HtSuA80QTyo +3.4%,
+  WUvTyaaNkzM -1.3%) but jGwO_UgTS7I +41.8%: v4 fires prob > 0.8 on 99.2% of
+  frames above the RMS floor on that clip's quiet lecture audio (room tone
+  reads as speech; the energy floor becomes the sole discriminator). The
+  error is model-behavior, not a harness fault: the clip slice is byte-exact
+  vs the source audio, whisper transcribes it fine, and the model
+  discriminates on the other four clips (38-3.7% of above-floor frames below
+  threshold).
+- Safety direction: every residual error mode errs slow. Count bias is
+  positive on all 10 records (inflates the measured rate -> the speed
+  multiplier lands low), and the duration errors that exist are over-
+  detection (+11.4% iG9, +41.8% jGwO; the under-detections Ks -4.9% /
+  WUv -1.3% are within band). Playback would run slower than the safe-zone
+  target — no comprehension risk, just conservative speed.
+- Music-lead evidence (per-lead RMS over 0..firstCaptionWord, VAD first
+  segment start, gate effect = noGateSec - speechSec):
+  iG9CE55wbtY lead 0-26.72 s, rms p50 0.128 (p90 0.269, 0.5% below floor):
+  first VAD segment 5.2 s — ~4.5 s of loud lead music counted as speech;
+  gate delta -0.1 s (music is not silence; the gate cannot touch it).
+  Ks-_Mh1QhMc lead 0-16.76 s, rms p50 0.050: first segment 1.5 s; delta
+  +1.4 s. WUvTyaaNkzM lead 0-15.36 s, rms p50 0.0049 (53.8% below floor):
+  first segment 15.4 s — the lead is cleanly rejected. jGwO_UgTS7I lead
+  0-4.52 s is true silence (p50 0.000, 96.5% below floor): the model's
+  silence hallucination would add 7.7 s without the gate (HtSuA80QTyo
+  +1.5 s) — the gate's real effect is on true silence, where v4 invents
+  speech.
+- Caption-reference implausibility (why it is not the arbiter): the
+  speechDurationSec (>= 1 s gap exclusion) denominator on iG9CE55wbtY is
+  16.3 s -> 343 wpm at 93 ref tokens (435 wpm on the dead-lane cue-token
+  basis) for a TED talk whose hand-derived rate is 142 wpm. Quantized
+  YouTube-ASR word timing with fake >= 1 s gaps collapses the denominator.
+  The naive hyp-vs-caption comparison (captionRateErrPct) is -59.6% on the
+  same clip — a -50% class artifact, exactly the G5 failure shape.
+- Cross-tier consistency flag: the G6 articulation rate (138-226 wpm per
+  clip) does NOT agree with the caption tiers' speech-span rate (343 wpm on
+  iG9CE55wbtY). The two denominators measure different things — VAD speech
+  seconds vs YouTube-ASR pause-excluded span. If the STT tier ever ships, the
+  product must pick ONE rate basis; the caption tiers and the STT tier cannot
+  share a threshold scale today. Product decision for the orchestrator.

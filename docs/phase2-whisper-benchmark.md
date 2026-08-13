@@ -468,3 +468,101 @@ step is idempotent (skips existing files) and documented in the script
 header. The audio acquisition has the same shape: the POT-capped stream
 fetch serves unrelated audio for 3 of 5 videos (measured), so the battery
 pulls itag 139 with yt-dlp and slices the window locally.
+
+## 10. VAD-denominator articulation rate (G6)
+
+G5 left the STT tier with one open question: the reference itself is
+YouTube-ASR, whose pause structure distorts both G1 rate metrics. The
+literature-correct articulation rate (de Jong & Wempe; the whisperX /
+faster-whisper pattern) divides the word count by speech-only duration
+measured by an EXTERNAL VAD, not by whisper timestamps. G6 runs that
+measurement: whisper word count (the G2-pass config, chunk 29 / stride 5,
+tsMode word) over silero VAD v4 speech seconds, scored against a
+hand-annotated speech-seconds reference.
+
+VAD spec (settled after the dead-lane v5 detour): silero **v4** — the same
+file ~/va runs via sherpa-onnx on this box (16 kHz, window 512, threshold
+0.35, min_speech 0.25 s, min_silence 0.4 s; the box-proven config, vs
+browser-vad's default 0.5 threshold). v4 has no If node, so it executes on
+the repo's pinned onnxruntime-web 1.23.0 with no version changes — the v5
+If-branch crash of the earlier attempt (ort 1.23, "Invalid typed array
+length") is gone. Model provenance: `scripts/data/whisper-bench/vad/
+silero_vad.onnx`, 643,854 bytes, sha256 9e2449e1…, copied from the box's
+canonical model dir and verified by the `--vad` step. Feed format: 16 kHz
+float32 mono, 512-sample frames (32 ms), x [1,512] plus h/c LSTM state
+[2,1,64] carried across frames and reset per clip; the v4 export has no sr
+input (graph I/O names x/h/c → prob/new_h/new_c; the metadata map mislabels
+them "0"/"1"/"2" — feed by graph name).
+
+RMS gate (energy floor): frames under 0.005 RMS are classified silence
+without VAD inference. Calibration on this corpus: true-silence regions sit
+≤ 0.004 RMS (HtSuA80QTyo / jGwO_UgTS7I p5 = 0.000, WUvTyaaNkzM p5 = 0.0031),
+the quietest speech median is 0.0096 (jGwO_UgTS7I) — a 2x margin on the
+quietest clip. The gate exists because v4 hallucinates speech on zero input
+(measured prob 0.88+ within ~4 frames of digital silence); without it,
+HtSuA80QTyo-style pauses would add 7.7 s (jGwO_UgTS7I) to the denominator.
+
+Hand-annotated reference: `scripts/data/stt-battery/hand-speech.jsonl` —
+per clip, speech seconds from RMS energy bands over the caption span
+geometry (first caption word → clip end), same pause scale as the VAD
+(min_speech 0.25 s, min_silence 0.4 s), with the per-clip evidence
+recorded. This replaces the caption-derived speechDurationSec (≥ 1 s gap
+exclusion) as the rate arbiter: that denominator collapses to 16.3 s on
+iG9CE55wbtY — 343 wpm at the ref token count, 435 wpm on the cue-token
+basis — for a TED talk whose hand-derived rate is 142 wpm. Quantized
+YouTube-ASR word timing with fake ≥ 1 s gaps makes the caption reference
+implausible as a duration arbiter; it stays valid for the word count only.
+
+Per-clip results (records: results-vad.jsonl; VAD seconds are
+model-independent, whisper counts differ per model):
+
+| clip | model | refTok | hypW | handSec | vadSec | refRate | hypRate | rateErr | countBias |
+|---|---|---|---|---|---|---|---|---|---|
+| iG9CE55wbtY | tiny | 93 | 101 | 39.28 | 43.8 | 142 | 138 | -2.5% | +8.6% |
+| Ks-_Mh1QhMc | tiny | 140 | 150 | 48.78 | 46.4 | 172 | 194 | +12.6% | +7.1% |
+| jGwO_UgTS7I | tiny | 145 | 167 | 37.78 | 53.6 | 230 | 187 | -18.9% | +15.2% |
+| HtSuA80QTyo | tiny | 133 | 163 | 50.29 | 52.0 | 159 | 188 | +18.4% | +21.6% |
+| WUvTyaaNkzM | tiny | 147 | 176 | 47.39 | 46.8 | 186 | 226 | +21.4% | +19.7% |
+| iG9CE55wbtY | base | 93 | 101 | 39.28 | 43.8 | 142 | 138 | -2.5% | +8.6% |
+| Ks-_Mh1QhMc | base | 140 | 150 | 48.78 | 46.4 | 172 | 194 | +12.6% | +7.1% |
+| jGwO_UgTS7I | base | 145 | 165 | 37.78 | 53.6 | 230 | 185 | -19.8% | +13.8% |
+| HtSuA80QTyo | base | 133 | 156 | 50.29 | 52.0 | 159 | 180 | +13.3% | +16.4% |
+| WUvTyaaNkzM | base | 147 | 176 | 47.39 | 46.8 | 186 | 226 | +21.4% | +19.7% |
+
+**G6: fail — 1/5 clips within ±10% per model (the ≥4/5 requirement is not
+met); the VAD-denominator articulation rate is not shippable.** The G5
+lead/music artifact is fixed: iG9CE55wbtY went from -49.5% (whisper's
+full-window span vs the caption speech span) to -2.5%, and the errors now
+mix signs (±12-21%) instead of tracking the lead length monotonically. Two
+residual error sources remain: (1) whisper's count bias (+7.1..+21.6%,
+the G1/G2 artifact — whisper is wordier than YouTube-ASR) dominates the
+positive errors on Ks-_Mh1QhMc, HtSuA80QTyo, WUvTyaaNkzM; (2) the VAD
+denominator is within ±11% of the hand annotation on 4/5 clips but +41.8%
+on jGwO_UgTS7I, where v4 fires prob > 0.8 on 99.2% of above-floor frames
+(quiet lecture room tone read as speech — the energy floor becomes the sole
+discriminator on that clip; the slice is byte-exact and whisper transcribes
+it normally, so it is model behavior, not a harness fault).
+
+Music-lead evidence: the leads are NOT silence — iG9CE55wbtY's 0-26.7 s
+lead runs at rms p50 0.128 (0.5% of frames below the floor), Ks-_Mh1QhMc's
+at 0.050, so the RMS gate cannot touch them; the model itself rejects
+WUvTyaaNkzM's lead cleanly (first VAD segment at 15.4 s = lead end) but
+counts ~4.5 s of iG9CE55wbtY's louder passages and ~1.5 s of Ks-_Mh1QhMc's
+onset spike as speech. The gate's measurable effect is on TRUE silence
+(no-gate delta: jGwO_UgTS7I +7.7 s, HtSuA80QTyo +1.5 s — v4's zero-input
+hallucination), which is exactly what it is for.
+
+Safety direction: every residual error mode pushes the recommendation
+slow. The count bias is positive on all 10 records and the duration errors
+are over-detection where they exist, so the measured rate over-estimates,
+the speed multiplier lands low, and playback errs below the safe-zone
+target — conservative, no comprehension risk, but a wrong number for a
+precision tier.
+
+Cross-tier consistency flag (product decision): the G6 articulation rate
+(138-226 wpm) disagrees with the caption tiers' speech-span rate (343 wpm on
+iG9CE55wbtY) because the denominators measure different things — VAD speech
+seconds vs YouTube-ASR pause-excluded span. If the STT tier ever ships, one
+rate basis must win; the two cannot share a threshold scale. The verdict
+detail, per-clip evidence and the full per-clip gate table live in
+verdicts.md (G6).

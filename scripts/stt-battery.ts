@@ -22,8 +22,9 @@
 //   bun run scripts/stt-battery.ts --transcribe   (analysis file)
 //   bun run scripts/stt-battery.ts --seam         (analysis file)
 //   bun run scripts/stt-battery.ts --segment     (segment file: G5, tsMode true)
+//   bun run scripts/stt-battery.ts --vad         (vad file: G6, external-VAD articulation rate)
 //
-// Committed outputs: scripts/data/stt-battery/{meta,results-v1,results-v2,results-seg}.jsonl
+// Committed outputs: scripts/data/stt-battery/{meta,results-v1,results-v2,results-seg,results-vad}.jsonl
 // (numbers only). Audio, f32 clips and caption payloads live in gitignored
 // subdirectories — full transcripts are not committed (repo fixture policy).
 // Exit 1 only on harness errors; measured failures are data.
@@ -47,6 +48,7 @@ import {
 } from './stt-battery-lib';
 import { seamStep, smokeStep, transcribeStep } from './stt-battery-analysis';
 import { segmentStep } from './stt-battery-segment';
+import { vadStep } from './stt-battery-vad';
 
 // ---------------------------------------------------------------------------
 // Model download (q8 onnx, same file set as the bench harness).
@@ -223,6 +225,7 @@ async function main(): Promise<void> {
   if (args.includes('--transcribe')) await transcribeStep();
   if (args.includes('--seam')) await seamStep();
   if (args.includes('--segment')) await segmentStep();
+  if (args.includes('--vad')) await vadStep();
   if (args.includes('--smoke')) {
     const i = args.indexOf('--smoke');
     const clipId = args[i + 1] ?? BATTERY_VIDEOS[0].id;
