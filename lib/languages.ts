@@ -22,7 +22,10 @@
 //
 // Ceilings on target-only entries apply the ≈1.03 target:ceiling ratio of
 // the researched pairs. Priors (estimated-tier natural-rate ranges) scale
-// the English generic-prior ratio (0.52–0.76 × target) to each target.
+// the English generic-prior ratio (0.52–0.76 × target) to each target;
+// ru/uk are the exception — their per-register priors (registerPriors) are
+// the gathered Russian rate norms, not ratio-scaled (see the ru/uk row
+// comment and docs/languages.md).
 // syllable-per-word factors (ar 2.0, id/ms/tl 1.5) are typological
 // approximations, documented as such; the multiplier itself is
 // factor-invariant (target and rate share the unit), so only the displayed
@@ -30,6 +33,7 @@
 // the vowel-nucleus counters replaced them; ko counts Hangul blocks.
 
 import type { TokenizerMode } from './tokenizer';
+import type { ContentType } from './music';
 
 export type RateUnit = 'wpm' | 'cpm' | 'syl' | 'mora';
 
@@ -46,6 +50,10 @@ export interface LanguageModel {
   derived: boolean;
   /** Estimated-tier natural-rate range, in `unit`. */
   priors: { min: number; max: number };
+  /** Per-register estimated-tier ranges, in `unit` (detectContentType's
+   * bands and priorRange's register lookup). The generic entry mirrors
+   * `priors`; absent → only the generic band. */
+  registerPriors?: Partial<Record<ContentType, { min: number; max: number }>>;
   /** syl-unit languages: word-token → syllable conversion factor. */
   syllablesPerWord?: number;
   /** ko: count Hangul syllable blocks instead of applying the factor. */
@@ -70,8 +78,46 @@ export const LANGUAGES: Record<string, LanguageModel> = {
   id: { code: 'id', unit: 'syl', target: 400, ceiling: 412, tokenizerMode: 'words', derived: true, priors: { min: 208, max: 304 }, syllablesPerWord: 1.5 },
   ms: { code: 'ms', unit: 'syl', target: 400, ceiling: 412, tokenizerMode: 'words', derived: true, priors: { min: 208, max: 304 }, syllablesPerWord: 1.5 },
   tl: { code: 'tl', unit: 'syl', target: 400, ceiling: 412, tokenizerMode: 'words', derived: true, priors: { min: 208, max: 304 }, syllablesPerWord: 1.5 },
-  ru: { code: 'ru', unit: 'wpm', target: 168, ceiling: 185, tokenizerMode: 'words', derived: true, priors: { min: 87, max: 128 } },
-  uk: { code: 'uk', unit: 'wpm', target: 168, ceiling: 185, tokenizerMode: 'words', derived: true, priors: { min: 87, max: 128 } },
+  // ru/uk register bands are the gathered Russian rate norms themselves: news
+  // and dictation 120–150 wpm, conversational ~100–140, lecture ~95–135,
+  // explainer ~100–140 (Kazabeeva 2015 pedagogy norms; the "fast" band tops
+  // out ~400 syl/min ≈ 174 wpm). The old content-invariant 87–128 prior sat
+  // under every one of them; the generic band is their union mid (105–145).
+  // The 180 ceiling keeps ~3.5% headroom above the fast band.
+  ru: {
+    code: 'ru',
+    unit: 'wpm',
+    target: 168,
+    ceiling: 180,
+    tokenizerMode: 'words',
+    derived: true,
+    priors: { min: 105, max: 145 },
+    registerPriors: {
+      news: { min: 120, max: 150 },
+      podcast: { min: 100, max: 140 },
+      lecture: { min: 95, max: 135 },
+      explainer: { min: 100, max: 140 },
+      talk: { min: 100, max: 140 },
+      generic: { min: 105, max: 145 },
+    },
+  },
+  uk: {
+    code: 'uk',
+    unit: 'wpm',
+    target: 168,
+    ceiling: 180,
+    tokenizerMode: 'words',
+    derived: true,
+    priors: { min: 105, max: 145 },
+    registerPriors: {
+      news: { min: 120, max: 150 },
+      podcast: { min: 100, max: 140 },
+      lecture: { min: 95, max: 135 },
+      explainer: { min: 100, max: 140 },
+      talk: { min: 100, max: 140 },
+      generic: { min: 105, max: 145 },
+    },
+  },
   pl: { code: 'pl', unit: 'wpm', target: 185, ceiling: 200, tokenizerMode: 'words', derived: true, priors: { min: 96, max: 141 } },
   cs: { code: 'cs', unit: 'wpm', target: 185, ceiling: 200, tokenizerMode: 'words', derived: true, priors: { min: 96, max: 141 } },
   sr: { code: 'sr', unit: 'wpm', target: 185, ceiling: 200, tokenizerMode: 'words', derived: true, priors: { min: 96, max: 141 } },

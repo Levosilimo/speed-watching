@@ -62,8 +62,8 @@ vowel letters (one vowel per syllable), hi counts Devanagari vowel nuclei.
 | id | syl/min | 400 | 412 | words | yes | 208–304 |
 | ms | syl/min | 400 | 412 | words | yes | 208–304 |
 | tl | syl/min | 400 | 412 | words | yes | 208–304 |
-| ru | wpm | 168 | 185 | words | yes | 87–128 |
-| uk | wpm | 168 | 185 | words | yes | 87–128 |
+| ru | wpm | 168 | 180 | words | yes | 105–145 (per register, below) |
+| uk | wpm | 168 | 180 | words | yes | 105–145 (per register, below) |
 | pl | wpm | 185 | 200 | words | yes | 96–141 |
 | cs | wpm | 185 | 200 | words | yes | 96–141 |
 | sr | wpm | 185 | 200 | words | yes | 96–141 |
@@ -73,7 +73,36 @@ comprehension-measured; its target is derived.
 
 Priors scale the English estimated-tier ratio (0.52–0.76 × target) to each
 language's target — the same below-target relationship as the English
-generic prior, pending per-language corpus measurement.
+generic prior, pending per-language corpus measurement. **ru/uk are the
+exception**: their priors are the gathered Russian rate norms, not
+ratio-scaled (below).
+
+## Russian/Ukrainian register priors
+
+ru and uk carry a per-register prior table (`registerPriors` in
+`lib/languages.ts`) used both as the estimated-tier prior per content type
+and as `detectContentType`'s classification bands. The bands are the
+gathered Russian natural-rate norms — news and dictation 120–150 wpm,
+conversational ~100–140, lecture ~95–135, explainer ~100–140 (Kazabeeva
+2015 pedagogy norms; dictation and news readings at ~4.7–5.8 syl/s). The
+old content-invariant 87–128 prior sat under every band, which under-
+anchored every Russian estimated tier; the generic band is the union mid,
+105–145.
+
+| register | ru/uk band (wpm) |
+|---|---|
+| news | 120–150 |
+| podcast | 100–140 |
+| lecture | 95–135 |
+| explainer | 100–140 |
+| talk | 100–140 |
+| generic | 105–145 |
+
+The ru/uk ceiling sits at **180 wpm**: the Russian "fast" normative band
+(~400 syl/min ≈ 174 wpm at ~2.3 syl/word) is the fastest rate pedagogy
+expects an average listener to sustain, and 180 keeps ~3.5% headroom above
+it. (The old 185 was ratio-derived; the nudge makes the ceiling
+norm-grounded like the priors.)
 
 ## Tokenizer modes
 

@@ -19,11 +19,18 @@ const PODCAST_PRIOR: WpmRange = { min: 140, max: 200 };
 /**
  * Natural-rate range for the 'estimated' tier. Language priors win for
  * known non-English tracks — the Phase-0 anchors are an English-corpus
- * measurement. English and unmapped tracks keep the measured anchors and
- * the generic default.
+ * measurement. A register band (language.registerPriors) applies when the
+ * language carries one and the caller resolved a concrete type
+ * (detectContentType or a user/site preference); everything else on the
+ * language falls back to its generic band. English and unmapped tracks
+ * keep the measured anchors and the generic default.
  */
 export function priorRange(contentType: ContentType, language?: LanguageModel): WpmRange {
-  if (language !== undefined && language.code !== 'en') return language.priors;
+  if (language !== undefined && language.code !== 'en') {
+    const register = language.registerPriors?.[contentType];
+    if (register !== undefined) return register;
+    return language.priors;
+  }
   const measured = MEASURED_PRIORS[contentType];
   if (measured !== undefined) return measured;
   if (contentType === 'podcast') return PODCAST_PRIOR;

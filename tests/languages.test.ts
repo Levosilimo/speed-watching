@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { LANGUAGES, UNIT_LABELS, normalizeLanguageCode, resolveLanguage } from '../lib/languages';
+import type { ContentType } from '../lib/music';
 
 describe('normalizeLanguageCode', () => {
   it('lowercases and strips the region', () => {
@@ -67,8 +68,8 @@ describe('language table', () => {
     // The vowel-nucleus counters replaced tr's 2.3 and hi's 1.5 factors.
     expect(LANGUAGES['tr']?.syllablesPerWord).toBeUndefined();
     expect(LANGUAGES['hi']?.syllablesPerWord).toBeUndefined();
-    expect(LANGUAGES['ru']).toMatchObject({ target: 168, ceiling: 185 });
-    expect(LANGUAGES['uk']).toMatchObject({ target: 168, ceiling: 185 });
+    expect(LANGUAGES['ru']).toMatchObject({ target: 168, ceiling: 180 });
+    expect(LANGUAGES['uk']).toMatchObject({ target: 168, ceiling: 180 });
     expect(LANGUAGES['pl']).toMatchObject({ target: 185, ceiling: 200 });
     expect(LANGUAGES['cs']).toMatchObject({ target: 185, ceiling: 200 });
     expect(LANGUAGES['sr']).toMatchObject({ target: 185, ceiling: 200 });
@@ -82,6 +83,33 @@ describe('language table', () => {
     for (const [code, model] of Object.entries(LANGUAGES)) {
       expect(model.priors.min, code).toBeLessThan(model.priors.max);
       expect(model.priors.max, code).toBeLessThan(model.target);
+    }
+  });
+
+  it('anchors ru/uk register priors to the gathered Russian rate norms', () => {
+    const register: Partial<Record<ContentType, { min: number; max: number }>> = {
+      news: { min: 120, max: 150 },
+      podcast: { min: 100, max: 140 },
+      lecture: { min: 95, max: 135 },
+      explainer: { min: 100, max: 140 },
+      talk: { min: 100, max: 140 },
+      generic: { min: 105, max: 145 },
+    };
+    for (const code of ['ru', 'uk']) {
+      const model = LANGUAGES[code]!;
+      expect(model.registerPriors).toEqual(register);
+      expect(model.priors).toEqual(register.generic);
+      for (const [type, band] of Object.entries(register)) {
+        expect(band!.min, `${code} ${type}`).toBeGreaterThan(0);
+        expect(band!.max, `${code} ${type}`).toBeLessThan(model.target);
+      }
+    }
+  });
+
+  it('keeps the register priors off every other language', () => {
+    for (const [code, model] of Object.entries(LANGUAGES)) {
+      if (code === 'ru' || code === 'uk') continue;
+      expect(model.registerPriors, code).toBeUndefined();
     }
   });
 
