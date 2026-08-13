@@ -83,6 +83,7 @@ export default defineBackground(() => {
   browser.commands.onCommand.addListener((command) => {
     void routeShortcut(command);
   });
+  installContextMenu();
   void orchestrator.init();
 
   return orchestrator;
@@ -152,5 +153,32 @@ async function routeShortcut(command: string): Promise<void> {
   // Tabs without the content script (non-video pages, chrome://) reject with
   // 'Receiving end does not exist' — expected, not an error.
   await browser.tabs.sendMessage(tab.id, message).catch(() => undefined);
+}
+
+// ── Measure-link context menu ───────────────────────────────────────────
+// One item on link elements: the click opens the link in a tab, and the
+// existing measurement pipeline takes over there — the youtube script
+// measures watch pages, the generic matcher every other page with a
+// <video> — so the pill appears naturally with no extra logic here.
+
+const MEASURE_LINK_MENU_ID = 'speedwatcher-measure-link';
+const MEASURE_LINK_MENU_TITLE = "Measure this video's rate";
+
+function installContextMenu(): void {
+  // id-guard: menus persist across service-worker restarts, and create
+  // with a duplicate id throws — register once per session.
+  if (browser.contextMenus.onClicked.hasListener(onMeasureLinkClick)) return;
+  browser.contextMenus.create({
+    id: MEASURE_LINK_MENU_ID,
+    title: MEASURE_LINK_MENU_TITLE,
+    contexts: ['link'],
+  });
+  browser.contextMenus.onClicked.addListener(onMeasureLinkClick);
+}
+
+function onMeasureLinkClick(info: { linkUrl?: string }): void {
+  const url = info.linkUrl;
+  if (url === undefined || !/^https?:\/\//.test(url)) return;
+  void browser.tabs.create({ url });
 }
 

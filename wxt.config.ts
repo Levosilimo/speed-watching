@@ -57,7 +57,7 @@ export default defineConfig({
         description: 'Dismiss the recommendation pill',
       },
     },
-    permissions: ['storage', 'tabCapture', 'offscreen'],
+    permissions: ['storage', 'tabCapture', 'offscreen', 'contextMenus'],
     // Measured-rate provider (docs/provider-integration.md): limits which
     // extensions may reach the background via runtime.onMessageExternal.
     // Partner IDs land here AND in ALLOWED_PROVIDER_IDS

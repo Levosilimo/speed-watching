@@ -22,6 +22,9 @@ beforeEach(() => {
   chromeMock.storage.session.set.mockResolvedValue(undefined);
   chromeMock.storage.session.remove.mockResolvedValue(undefined);
   chromeMock.runtime.sendMessage.mockResolvedValue({ received: true });
+  // The id-guard consults hasListener; clearAllMocks resets calls but not
+  // implementations, so the default must be re-established per test.
+  chromeMock.contextMenus.onClicked.hasListener.mockReturnValue(false);
 });
 
 function driveMessage(listener: BackgroundListener, message: unknown, senderTabId?: number): Promise<unknown> {
@@ -318,5 +321,55 @@ describe('measured-rate provider (onMessageExternal)', () => {
 
     const response = await driveExternal(listener, WPM_REQUEST, 'partner-1');
     expect(response).toEqual({ ok: false, error: 'internal' });
+  });
+});
+
+describe('measure-link context menu', () => {
+  function clickHandler(): (info: { linkUrl?: string }) => void {
+    const handler = chromeMock.contextMenus.onClicked.addListener.mock.calls[0]?.[0] as
+      | ((info: { linkUrl?: string }) => void)
+      | undefined;
+    if (!handler) throw new Error('no context menu click listener registered');
+    return handler;
+  }
+
+  it('registers the menu item on link elements with the click handler', () => {
+    const main = (backgroundModule as { main: () => unknown }).main;
+    main();
+
+    expect(chromeMock.contextMenus.create).toHaveBeenCalledWith({
+      id: 'speedwatcher-measure-link',
+      title: "Measure this video's rate",
+      contexts: ['link'],
+    });
+    expect(chromeMock.contextMenus.onClicked.addListener).toHaveBeenCalledTimes(1);
+  });
+
+  it('skips registration when the handler is already installed (id-guard)', () => {
+    chromeMock.contextMenus.onClicked.hasListener.mockReturnValue(true);
+    const main = (backgroundModule as { main: () => unknown }).main;
+    main();
+
+    expect(chromeMock.contextMenus.create).not.toHaveBeenCalled();
+  });
+
+  it('opens an http video link in a new tab (the measurement pipeline takes over)', () => {
+    const main = (backgroundModule as { main: () => unknown }).main;
+    main();
+
+    clickHandler()({ linkUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' });
+    expect(chromeMock.tabs.create).toHaveBeenCalledWith({
+      url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+    });
+  });
+
+  it('ignores non-http and missing link URLs', () => {
+    const main = (backgroundModule as { main: () => unknown }).main;
+    main();
+    const handler = clickHandler();
+
+    handler({ linkUrl: 'chrome://settings' });
+    handler({});
+    expect(chromeMock.tabs.create).not.toHaveBeenCalled();
   });
 });
