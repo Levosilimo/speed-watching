@@ -1,6 +1,6 @@
 // Message protocol between the options page, background, and offscreen
-// document, plus pure helpers for the audio probe. No chrome imports — safe
-// to import from any context and from vitest.
+// document (capture probe + STT recorder plumbing), plus pure helpers. No
+// chrome imports — safe to import from any context and from vitest.
 
 type CaptureState = 'idle' | 'starting' | 'capturing' | 'degraded' | 'error';
 
@@ -22,7 +22,12 @@ export type WasmCheckResult = { ok: boolean; sab: boolean; error?: string };
 export type OffscreenMessage =
   | { kind: 'offscreen-start'; streamId: string }
   | { kind: 'offscreen-stop' }
-  | { kind: 'offscreen-wasm-check' };
+  | { kind: 'offscreen-wasm-check' }
+  // STT recorder plumbing (docs/phase2-stt-recorder.md): the background asks
+  // the offscreen document to record the live capture; chunkSec is the
+  // chunk length the future STT flow wants, echoed back in 'stt:ready'.
+  | { kind: 'stt:start-recording'; chunkSec: number }
+  | { kind: 'stt:stop-recording' };
 
 export type OffscreenEvent =
   | { kind: 'offscreen-event'; event: 'started' }
@@ -30,7 +35,10 @@ export type OffscreenEvent =
   | { kind: 'offscreen-event'; event: 'track-ended' }
   | { kind: 'offscreen-event'; event: 'level'; level: number }
   | { kind: 'offscreen-event'; event: 'error'; error: string }
-  | { kind: 'offscreen-event'; event: 'wasm-check'; wasm: WasmCheckResult };
+  | { kind: 'offscreen-event'; event: 'wasm-check'; wasm: WasmCheckResult }
+  | { kind: 'offscreen-event'; event: 'stt:ready'; chunkSec: number; sampleRate: number }
+  | { kind: 'offscreen-event'; event: 'stt:stopped' }
+  | { kind: 'offscreen-event'; event: 'stt:error'; error: string };
 
 type OffscreenAck = { received: true };
 
@@ -50,7 +58,9 @@ export function isOffscreenMessage(value: unknown): value is OffscreenMessage {
     isRecord(value) &&
     (value.kind === 'offscreen-start' ||
       value.kind === 'offscreen-stop' ||
-      value.kind === 'offscreen-wasm-check')
+      value.kind === 'offscreen-wasm-check' ||
+      (value.kind === 'stt:start-recording' && typeof value.chunkSec === 'number') ||
+      value.kind === 'stt:stop-recording')
   );
 }
 
@@ -63,7 +73,12 @@ export function isOffscreenEvent(value: unknown): value is OffscreenEvent {
     event === 'track-ended' ||
     (event === 'level' && typeof value.level === 'number') ||
     (event === 'error' && typeof value.error === 'string') ||
-    (event === 'wasm-check' && isWasmResult(value.wasm))
+    (event === 'wasm-check' && isWasmResult(value.wasm)) ||
+    (event === 'stt:ready' &&
+      typeof value.chunkSec === 'number' &&
+      typeof value.sampleRate === 'number') ||
+    event === 'stt:stopped' ||
+    (event === 'stt:error' && typeof value.error === 'string')
   );
 }
 
