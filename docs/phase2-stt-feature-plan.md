@@ -7,17 +7,24 @@ Whisper benchmark (`docs/phase2-whisper-benchmark.md`), the STT battery
 design verdicts in the deepwork lane. The battery owns the benchmark doc; this
 plan is the build design it gates.
 
-The headline question is the pending **G5** battery verdict: does the
+The headline question was the **G5** battery verdict: does the
 segment-timed unified rate (whisper's native segment timestamps, `return_timestamps: true`)
-pass the gate rule? The two branches below are both drafted; the G5 result
+pass the gate rule? The two branches below were both drafted; the G5 result
 selects which one ships.
+
+> **Verdict (2026-08-13, `7bcff97`): G5 FAIL.** Whisper places the first
+> segment at 0.0s while the caption reference spans the lead-in speech, so
+> segment-timed rates land ~-50% off on lead-heavy clips. STT does not ship
+> as a tier: the **closed branch below is the selected branch** (captions +
+> estimated stand; recorder/model-store stay dormant-but-wired). §1/§2/§3
+> remain reference for a later revisit.
 
 ## Status: G5 is the ship gate
 
 | verdict | outcome |
 |---|---|
-| **G5 PASS** | Cue-level STT ships as the `from audio (approximate)` tier. This plan's primary path. |
-| **G5 FAIL** | STT does not ship as a tier. The recorder plumbing stays dormant-and-wired (as today); captions + estimated stand. Build phase A is skipped; the docs in this plan mark it closed. |
+| **G5 PASS** | Cue-level STT ships as the `from audio (approximate)` tier. ~~This plan's primary path~~ — **closed by the G5 verdict**. |
+| **G5 FAIL** — **selected** | STT does not ship as a tier. The recorder plumbing stays dormant-and-wired (as today); captions + estimated stand. Build phase A is skipped; the docs in this plan mark it closed. |
 
 Everything except the final ship/no-ship decision is branch-neutral and
 drafted below.
@@ -392,13 +399,13 @@ the G5-PASS branch.
   confirm segment-level rates aren't silently diverging from word-level
   coverage, without ever using word timing as the rate source.
 
-### Closed branch (G5 FAIL)
+### Closed branch (G5 FAIL) — selected by the verdict
 
-If G5 fails: Phase A does not ship; the recorder stays dormant-and-wired;
+G5 failed: Phase A does not ship; the recorder stays dormant-and-wired;
 captions + estimated remain the shipped behavior. The demand-gate residual
 monitor (§5.2) still ships to record whether the estimated demand is worth a
 future, different approach (e.g. a better model class) — but no STT tier is
-released. This plan's §1/§2/§3 become reference for a later revisit, not a
+released. This plan's §1/§2/§3 are reference for a later revisit, not a
 release.
 
 ---
@@ -418,7 +425,7 @@ release.
 
 ## Sources
 
-- `.slim/worktrees/wt-battery/scripts/data/stt-battery/verdicts.md` — G1/G2/G3/G4 verdicts (word-level not shippable; seam PASS; invocation PASS; size PASS). Ship gate (G5) pending.
+- `.slim/worktrees/wt-battery/scripts/data/stt-battery/verdicts.md` — G1/G2/G3/G4 verdicts (word-level not shippable; seam PASS; invocation PASS; size PASS). Ship gate (G5): **FAIL** — segment timing not shippable (`7bcff97`); the G5-FAIL branch above is selected.
 - `.slim/worktrees/wt-battery/scripts/data/stt-battery/results-v1.jsonl`, `results-v2.jsonl` — raw records (G1 unified-rate bias, G2 seam configs).
 - `docs/phase2-whisper-benchmark.md` — WASM RTF 0.29, WER 2.8–12.2%, CSP findings, model/assets, chunk/stride, single-thread.
 - `docs/phase2-stt-recorder.md` — recorder plumbing contract; names the `'asr-audio'` evidence tier.
