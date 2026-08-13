@@ -45,7 +45,7 @@ jobs:
           CLIENT_ID: ${{ secrets.CLIENT_ID }}
           CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
           REFRESH_TOKEN: ${{ secrets.REFRESH_TOKEN }}
-        run: npx chrome-webstore-upload-cli@4 upload --source .output/speed-watcher-0.0.1-chrome.zip --auto-publish
+        run: npx chrome-webstore-upload-cli@4 upload --source .output/speed-watcher-*-chrome.zip --auto-publish
 
   amo:
     name: Firefox Add-ons (AMO)
