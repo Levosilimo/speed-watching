@@ -1,12 +1,11 @@
 // E2E hooks: one-line console.info wpm summaries compiled out of the store
-// bundle (SEC-2). The signed timedtext fetch needs the page context, so the
-// pipeline runs in the MAIN world; entrypoints/bridge.ts is the ISOLATED
-// sibling hosting the chrome-backed SettingsStore + OverrideLog.
+// bundle (SEC-2). MAIN world — the signed timedtext fetch needs page
+// context; entrypoints/bridge.content.ts is the ISOLATED sibling.
 // aislop-ignore-file console-leftover
 import { defineContentScript } from 'wxt/utils/define-content-script';
 import { fetchAndroidCaptions, fetchJson3 } from '@/lib/caption-fetch';
 import { parseYouTubeJson3 } from '@/lib/captions';
-import { priorMidpoint } from '@/lib/heuristics';
+import { cueSignal, detectContentType, priorMidpoint } from '@/lib/heuristics';
 import { resolveLanguage, UNIT_LABELS, type LanguageModel } from '@/lib/languages';
 import { SerializedRunner } from '@/lib/measure-guard';
 import { createBridgeClient, isShortcutEnvelope, SHORTCUT_APPLY } from '@/lib/messaging';
@@ -71,15 +70,10 @@ const NONE_STATE: PillState = {
 
 // E2E hooks (same pattern as the speedwatcher:measure event): the pill's
 // shadow root is closed, so specs read state and trigger apply/dismiss here.
-interface PillTestHook {
-  state: PillState | null;
-  apply(): void;
-  dismiss(): void;
-}
 
 declare global {
   interface Window {
-    __speedwatcherPill?: PillTestHook;
+    __speedwatcherPill?: { state: PillState | null; apply(): void; dismiss(): void };
     __speedwatcherCaptionSource?: 'web' | 'android' | 'none';
     // E2E hook: settings write through the bridge (same path the options
     // page uses) — the shared specs exercise the bridge in both browsers.
@@ -117,9 +111,7 @@ export default defineContentScript({
         // unreachable states must not touch playbackRate.
         apply: () => {
           if (current === null) return;
-          if (current.recommendation.mode === 'music' || current.recommendation.mode === 'unreachable') {
-            return;
-          }
+          if (current.recommendation.mode === 'music' || current.recommendation.mode === 'unreachable') return;
           applyMultiplier(current.recommendation.multiplier);
         },
         dismiss: () => dismissCurrent(),
@@ -215,7 +207,13 @@ async function measureOnce(): Promise<void> {
     showEstimatedPill(videoId, settings, site, language);
     return;
   }
-  const detected = detectMusic(cues, naturalRate) ? 'music' : 'generic';
+  // Auto-detect the register from the measured signal; the user/site
+  // preference still outranks it in resolveContentType. Music is checked
+  // first — lyric tracks share no speech register (detectContentType
+  // never returns 'music').
+  const signal = cueSignal(cues, naturalRate, language);
+  let detected: ContentType = signal === null ? 'generic' : detectContentType(signal);
+  if (detectMusic(cues, naturalRate)) detected = 'music';
   const contentType = resolveContentType(settings, site, detected);
   const { tier, wordInputs } = asrTierInputs(kind, words, cues);
   renderRecommendation(videoId, naturalRate, tier, contentType, settings, site, wordInputs, language);
