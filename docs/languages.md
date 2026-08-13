@@ -107,6 +107,10 @@ keeps working in every mode.
 
 ## The gate
 
+- Videos default to the language model's own target — en 250 wpm
+  (measured), every other language its **derived estimate** (ja 380
+  morae/min, de 175 wpm, …). An explicit target set on the options slider
+  overrides it, applied as a raw number in the language's unit.
 - Non-English word-tier content is measured with the language-appropriate
   target; ja uses the mora path, zh/th the char path; tr/hi count vowel
   nuclei; the rest word-count with per-language targets.

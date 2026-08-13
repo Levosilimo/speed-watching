@@ -24,7 +24,7 @@ import { priorMidpoint } from '../../lib/heuristics';
 import { resolveLanguage } from '../../lib/languages';
 import { detectMusic } from '../../lib/music';
 import { recommend, type Recommendation } from '../../lib/recommend';
-import { defaultSettings, resolveTarget, type Settings } from '../../lib/settings';
+import { defaultSettings, resolveUserTarget, type Settings } from '../../lib/settings';
 import type { PillState } from '../../ui/pill';
 import {
   asrTierInputs,
@@ -130,10 +130,11 @@ function expectedStats(fixture: string): ExpectedStats {
 /** The recommendation the content script must produce for a fixture
  * (default settings: platformMax 2, no overrides). Mirror of
  * entrypoints/content.ts: the track language feeds the rate measurement and
- * the unit label, the settings target rides through resolveTarget as the
- * userTarget (so the default 250 applies even on language-model tracks), and
- * word-timed ASR tracks carry the articulatory inputs that can fire the
- * pause-diluted warning. */
+ * the unit label, the settings target rides through resolveUserTarget —
+ * unset under default settings, so the language model's own target applies
+ * on language tracks (en 250, ja 380 morae/min) — and word-timed ASR
+ * tracks carry the articulatory inputs that can fire the pause-diluted
+ * warning. */
 export function expectedRecommendation(fixture: string): { rec: Recommendation; naturalRate: number } {
   const json = JSON.parse(readFileSync(join(fixtureRoot, fixture), 'utf8')) as unknown;
   const { words, cues } = parseYouTubeJson3(json);
@@ -149,7 +150,7 @@ export function expectedRecommendation(fixture: string): { rec: Recommendation; 
     tier,
     contentType: detected,
     platformMax: 2,
-    userTarget: resolveTarget(defaultSettings(), 'youtube.com', detected),
+    userTarget: resolveUserTarget(defaultSettings(), 'youtube.com', detected),
     language,
     ...wordInputs,
   });

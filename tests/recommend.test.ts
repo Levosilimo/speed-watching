@@ -330,6 +330,30 @@ describe('recommend — language-aware targets', () => {
     expect(r.label).toContain('≈ 380 morae/min');
   });
 
+  it('en: the unset-target default is byte-identical to an explicit 250', () => {
+    const base: RecommendInput = {
+      naturalRate: 200,
+      tier: 'asr-cue',
+      contentType: 'lecture',
+      platformMax: 2,
+      language: LANGUAGES['en'],
+    };
+    expect(recommend(base)).toEqual(recommend({ ...base, userTarget: 250 }));
+  });
+
+  it('a user target overrides the ja derived target in the language unit', () => {
+    const r = recommend({
+      naturalRate: 200,
+      tier: 'asr-cue',
+      contentType: 'lecture',
+      platformMax: 2,
+      userTarget: 250,
+      language: LANGUAGES['ja'],
+    });
+    expect(r.multiplier).toBeCloseTo(1.25, 6); // 250/200, not 380/200
+    expect(r.label).toContain('≈ 250 morae/min');
+  });
+
   it('de: compounding factor — a 125 wpm track recommends ~1.4x', () => {
     const r = recommend({
       naturalRate: 125,

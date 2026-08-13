@@ -12,19 +12,22 @@ import {
   resolveMultiplierOverride,
   resolvePlatformMax,
   resolveTarget,
+  resolveUserTarget,
 } from '../lib/settings';
 import { mockStorage } from './fixtures/helpers';
 
 describe('settings resolution', () => {
-  it('defaults to 250 wpm and 2x platform max', () => {
+  it('distinguishes an unset target from an explicit one', () => {
     const settings = defaultSettings();
-    expect(resolveTarget(settings)).toBe(DEFAULT_TARGET_WPM);
+    expect(resolveTarget(settings)).toBeUndefined();
+    expect(resolveUserTarget(settings)).toBeUndefined();
     expect(resolvePlatformMax(settings)).toBe(DEFAULT_PLATFORM_MAX);
+    expect(resolveUserTarget({ ...settings, target: DEFAULT_TARGET_WPM })).toBe(DEFAULT_TARGET_WPM);
   });
 
   it('uses 225 as the conservative default target', () => {
     const settings = { ...defaultSettings(), conservative: true };
-    expect(resolveTarget(settings)).toBe(CONSERVATIVE_TARGET_WPM);
+    expect(resolveUserTarget(settings)).toBe(CONSERVATIVE_TARGET_WPM);
   });
 
   it('prefers site, then content-type, then profile targets', () => {

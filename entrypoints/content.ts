@@ -17,7 +17,7 @@ import {
   defaultSettings,
   resolveContentType,
   resolvePlatformMax,
-  resolveTarget,
+  resolveUserTarget,
   type Settings,
 } from '@/lib/settings';
 import {
@@ -254,7 +254,7 @@ function renderRecommendation(
     tier,
     contentType,
     platformMax,
-    userTarget: resolveTarget(settings, site, contentType),
+    userTarget: resolveUserTarget(settings, site, contentType),
     language,
     ...wordInputs,
   });

@@ -32,7 +32,8 @@ export interface ContentTypePrefs {
 }
 
 export interface Settings {
-  /** Explicit profile target; falls back to conservative ? 225 : 250. */
+  /** Explicit profile target; unset → the language model's own target
+   * (conservative mode lowers the default to 225). */
   target?: number;
   /** Conservative mode: default target 225 instead of 250. */
   conservative: boolean;
@@ -88,16 +89,39 @@ function normalizeSettings(raw: unknown): Settings {
   return settings;
 }
 
+/**
+ * The explicitly configured target — site override, then content-type
+ * preference, then the profile target — or undefined when none is set.
+ * Defaults (the language-model target, conservative 225) are the caller's
+ * job; resolveUserTarget applies them.
+ */
 export function resolveTarget(
   settings: Settings,
   site?: string,
   contentType?: ContentType,
-): number {
+): number | undefined {
   const siteOverride = site === undefined ? undefined : settings.sites[site];
   if (siteOverride?.target !== undefined) return siteOverride.target;
   const ctPrefs = contentType === undefined ? undefined : settings.contentTypes[contentType];
   if (ctPrefs?.target !== undefined) return ctPrefs.target;
-  return settings.target ?? (settings.conservative ? CONSERVATIVE_TARGET_WPM : DEFAULT_TARGET_WPM);
+  return settings.target;
+}
+
+/**
+ * The target content scripts pass to recommend(): the explicit target,
+ * else the conservative 225 default, else undefined — which leaves the
+ * language model's own target in charge (en 250 wpm, derived estimates
+ * for every other language).
+ */
+export function resolveUserTarget(
+  settings: Settings,
+  site?: string,
+  contentType?: ContentType,
+): number | undefined {
+  return (
+    resolveTarget(settings, site, contentType) ??
+    (settings.conservative ? CONSERVATIVE_TARGET_WPM : undefined)
+  );
 }
 
 export function resolvePlatformMax(settings: Settings, site?: string): number {

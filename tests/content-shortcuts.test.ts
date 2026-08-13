@@ -9,7 +9,7 @@ import { parseYouTubeJson3 } from '../lib/captions';
 import type { BridgeEnvelope } from '../lib/messaging';
 import { priorMidpoint } from '../lib/heuristics';
 import { recommend } from '../lib/recommend';
-import { defaultSettings, resolveContentType, resolvePlatformMax, resolveTarget } from '../lib/settings';
+import { defaultSettings, resolveContentType, resolvePlatformMax, resolveUserTarget } from '../lib/settings';
 import { manualCueRate } from '../lib/wpm';
 import { chromeMock } from './chrome-mock';
 
@@ -139,7 +139,7 @@ describe('content shortcut envelope handling', () => {
       tier: 'estimated',
       contentType: resolveContentType(settings, site, 'generic'),
       platformMax: resolvePlatformMax(settings, site),
-      userTarget: resolveTarget(settings, site, resolveContentType(settings, site, 'generic')),
+      userTarget: resolveUserTarget(settings, site, resolveContentType(settings, site, 'generic')),
     });
     expect(rec.mode).toBe('recommend');
 

@@ -29,7 +29,7 @@ import { recommend, type RateTier, type Recommendation } from '@/lib/recommend';
   defaultSettings,
   resolveContentType,
   resolvePlatformMax,
-  resolveTarget,
+  resolveUserTarget,
   type Settings,
 } from '@/lib/settings';
 import { manualCueRate } from '@/lib/wpm';
@@ -229,7 +229,7 @@ function renderRecommendation(
     tier,
     contentType,
     platformMax,
-    userTarget: resolveTarget(settings, site, contentType),
+    userTarget: resolveUserTarget(settings, site, contentType),
   });
   current = { site, contentType, naturalRate, platformMax, tier, unit: 'wpm', recommendation };
   showPill({
