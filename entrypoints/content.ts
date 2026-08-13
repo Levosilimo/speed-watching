@@ -7,6 +7,7 @@ import { fetchAndroidCaptions, fetchJson3 } from '@/lib/caption-fetch';
 import { parseYouTubeJson3 } from '@/lib/captions';
 import { cueSignal, detectContentType, priorMidpoint } from '@/lib/heuristics';
 import { resolveLanguage, UNIT_LABELS, type LanguageModel } from '@/lib/languages';
+import { logWpm, waitForPlayerResponse } from '@/lib/measure-hooks';
 import { SerializedRunner } from '@/lib/measure-guard';
 import { createBridgeClient, isShortcutEnvelope, SHORTCUT_APPLY } from '@/lib/messaging';
 import type { ContentType } from '@/lib/music';
@@ -29,9 +30,8 @@ import {
   wordLevelWpm,
 } from '@/lib/wpm';
 import type { CaptionTrack, PlayerResponse } from '@/lib/youtube';
+import { channelKeyOf } from '@/lib/youtube';
 import { createPill, type LiveRate, type PillApi, type PillState } from '@/ui/pill';
-
-const PLAYER_RESPONSE_TIMEOUT_MS = 10_000;
 
 const bridge = createBridgeClient(window);
 
@@ -168,13 +168,13 @@ async function measureOnce(): Promise<void> {
   const language = resolveLanguage(track?.languageCode) ?? undefined;
   if (track === undefined) {
     if (__E2E__) console.info('[speed-watcher] wpm: no caption tracks for this video — estimated');
-    showEstimatedPill(videoId, settings, site);
+    void showEstimatedPill(videoId, settings, site, undefined, response.videoDetails);
     return;
   }
   const json = await fetchCaptions(track, videoId);
   if (json === null) {
     if (__E2E__) console.info('[speed-watcher] wpm: caption fetch failed — estimated');
-    showEstimatedPill(videoId, settings, site, language);
+    void showEstimatedPill(videoId, settings, site, language, response.videoDetails);
     return;
   }
   const { words, cues } = parseYouTubeJson3(json);
@@ -197,14 +197,14 @@ async function measureOnce(): Promise<void> {
     if (__E2E__) {
       console.info(`[speed-watcher] video=${videoId} kind=${kind} lang=${lang}: captions parsed but empty — estimated`);
     }
-    showEstimatedPill(videoId, settings, site, language);
+    void showEstimatedPill(videoId, settings, site, language, response.videoDetails);
     return;
   }
 
   const naturalRate =
     kind === 'asr' ? filteredTokensOverTrimmedSpan(cues, language) : manualCueRate(cues, language);
   if (naturalRate === null) {
-    showEstimatedPill(videoId, settings, site, language);
+    void showEstimatedPill(videoId, settings, site, language, response.videoDetails);
     return;
   }
   // Auto-detect the register from the measured signal; the user/site
@@ -217,18 +217,22 @@ async function measureOnce(): Promise<void> {
   const contentType = resolveContentType(settings, site, detected);
   const { tier, wordInputs } = asrTierInputs(kind, words, cues);
   renderRecommendation(videoId, naturalRate, tier, contentType, settings, site, wordInputs, language);
+  rememberChannelRate(response.videoDetails, naturalRate, language);
 }
 
 /** No usable caption rate: heuristic prior midpoint for the content type,
- * in the language's unit when the track language is known. */
-function showEstimatedPill(
+ * in the language's unit when the track language is known — or the
+ * channel's last measured rate when it was measured in the same language. */
+async function showEstimatedPill(
   videoId: string,
   settings: Settings,
   site: string,
   language?: LanguageModel,
-): void {
+  videoDetails?: PlayerResponse['videoDetails'],
+): Promise<void> {
   const contentType = resolveContentType(settings, site, 'generic');
-  renderRecommendation(videoId, priorMidpoint(contentType, language), 'estimated', contentType, settings, site, null, language);
+  const seeded = await channelSeededRate(videoDetails, language);
+  renderRecommendation(videoId, seeded ?? priorMidpoint(contentType, language), 'estimated', contentType, settings, site, null, language);
   // Demand proxy (Phase-2 STT gate): one local count per estimated render.
   // Best-effort like logAction — a dead bridge must not suppress the pill.
   void bridge
@@ -384,55 +388,47 @@ function logAction(userAction: 'apply' | 'dismiss', multiplier: number): void {
     .catch(() => undefined);
 }
 
-// ── Measurement hook (unchanged from Phase 0) ─────────────────────────────
+// ── Channel rate memory (YouTube) ─────────────────────────────────────────
 
-function logWpm(
-  videoId: string,
-  kind: string,
-  lang: string,
-  stats: {
-    word?: number | null;
-    cue?: number | null;
-    corrected?: number | null;
-    nWords: number;
-  },
+/** Best-effort: remember the measured rate for the channel, seeding the
+ * estimated tier of its captionless videos; a dead bridge must not block
+ * the pill. Measured tiers only — call sites gate on naturalRate. */
+function rememberChannelRate(
+  videoDetails: PlayerResponse['videoDetails'],
+  naturalRate: number,
+  language: LanguageModel | undefined,
 ): void {
-  const fmt = (value: number | null | undefined): string =>
-    value === undefined || value === null ? 'n/a' : value.toFixed(1);
-  const line =
-    `[speed-watcher] video=${videoId} kind=${kind} lang=${lang} ` +
-    `wpm word-level=${fmt(stats.word)} cue-level=${fmt(stats.cue)} ` +
-    `corrected=${fmt(stats.corrected)} nWords=${stats.nWords}`;
-  if (__E2E__) console.info(line);
-  // E2E hook: the fixture page listens for this event; the console line
-  // alone is not assertable from WebDriver (no console API in Selenium).
-  window.dispatchEvent(
-    new CustomEvent('speedwatcher:measure', {
-      detail: { videoId, kind, lang, stats, line } satisfies MeasureEventDetail,
-    }),
-  );
+  const channelKey = channelKeyOf(videoDetails);
+  if (channelKey === undefined) return;
+  void bridge
+    .request({
+      type: 'channel:put',
+      channelKey,
+      record: {
+        rate: naturalRate,
+        unit: UNIT_LABELS[language?.unit ?? 'wpm'],
+        language: language?.code ?? '?',
+        ts: Date.now(),
+      },
+    })
+    .catch(() => undefined);
 }
 
-export interface MeasureEventDetail {
-  videoId: string;
-  kind: string;
-  lang: string;
-  stats: {
-    word?: number | null;
-    cue?: number | null;
-    corrected?: number | null;
-    nWords: number;
-  };
-  line: string;
-}
-
-async function waitForPlayerResponse(): Promise<PlayerResponse | undefined> {
-  const deadline = Date.now() + PLAYER_RESPONSE_TIMEOUT_MS;
-  while (Date.now() < deadline) {
-    if (window.ytInitialPlayerResponse) return window.ytInitialPlayerResponse;
-    await new Promise((resolve) => setTimeout(resolve, 250));
+/** The channel's last measured rate, when it was measured in this video's
+ * language — the estimated prior gets smarter, the tier stays 'estimated'
+ * (the rate is a prior, not this video's measurement). */
+async function channelSeededRate(
+  videoDetails: PlayerResponse['videoDetails'],
+  language: LanguageModel | undefined,
+): Promise<number | null> {
+  const channelKey = channelKeyOf(videoDetails);
+  if (channelKey === undefined || language === undefined) return null;
+  try {
+    const record = await bridge.request({ type: 'channel:get', channelKey });
+    if (record === null || record.language !== language.code) return null;
+    return record.rate;
+  } catch {
+    return null;
   }
-  return undefined;
 }
-
 

@@ -1,12 +1,13 @@
 // Window postMessage bridge between the MAIN-world measurement scripts (no
 // chrome.* access) and the bridge script (entrypoints/bridge.content.ts),
-// which owns a chrome-backed SettingsStore + OverrideLog. Requests and
-// responses travel as postMessage envelopes on the shared window. Settings
-// and log requests the bridge answers directly from chrome.storage.local —
-// no service-worker round trip. demand:increment is the exception: the
-// bridge forwards it to the background (runtime.sendMessage), the single
-// writer, so increments from every frame serialize on one DemandStore
-// instead of interleaving per-frame get→set pairs (lib-11#3).
+// which owns a chrome-backed SettingsStore, OverrideLog, and ChannelMemory.
+// Requests and responses travel as postMessage envelopes on the shared
+// window. Settings, log, and channel-memory requests the bridge answers
+// directly from chrome.storage.local — no service-worker round trip.
+// demand:increment is the exception: the bridge forwards it to the
+// background (runtime.sendMessage), the single writer, so increments from
+// every frame serialize on one DemandStore instead of interleaving
+// per-frame get→set pairs (lib-11#3).
 // World choice documented in entrypoints/content.ts.
 //
 // Transport choice: postMessage, not CustomEvents. Firefox does not deliver
@@ -15,6 +16,7 @@
 // e2e settings spec caught it: the bridge never answered). postMessage is
 // the sanctioned cross-world channel in both browsers, in both directions.
 
+import { CHANNEL_KEY_MAX_LENGTH, ChannelMemory, isChannelRecord, type ChannelRecord } from './channel-memory';
 import { isContentType } from './music';
 import type { ContentType } from './music';
 import type { OverrideLogEntry } from './override-log';
@@ -74,11 +76,15 @@ export type BridgeRequest =
   | { type: 'settings:get' }
   | { type: 'settings:set'; settings: Settings }
   | { type: 'log:append'; entry: Omit<OverrideLogEntry, 'ts'> }
+  | { type: 'channel:get'; channelKey: string }
+  | { type: 'channel:put'; channelKey: string; record: ChannelRecord }
   | DemandIncrementMessage;
 
 export type BridgeResult<T extends BridgeRequest> = T extends { type: 'settings:get' }
   ? Settings
-  : void;
+  : T extends { type: 'channel:get' }
+    ? ChannelRecord | null
+    : void;
 
 export interface BridgeEnvelope {
   channel: typeof BRIDGE_CHANNEL;
@@ -88,6 +94,13 @@ export interface BridgeEnvelope {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
+}
+
+/** Runtime shape check for channel keys crossing the postMessage boundary:
+ * non-empty and bounded (channelIds are ~24 chars; author-name fallbacks
+ * are short display names). */
+function isChannelKey(value: unknown): value is string {
+  return typeof value === 'string' && value.length > 0 && value.length <= CHANNEL_KEY_MAX_LENGTH;
 }
 
 export function isBridgeEnvelope(value: unknown): value is BridgeEnvelope {
@@ -109,6 +122,7 @@ export interface EventHost {
 export interface BridgeDeps {
   settings: SettingsStore;
   log: OverrideLog;
+  channels: ChannelMemory;
   /** Forwards demand:increment to the background — the single writer. */
   forwardDemand: (contentType: ContentType) => Promise<unknown>;
 }
@@ -199,7 +213,7 @@ export async function handleBridgeRequest(
   request: BridgeRequest,
   deps: BridgeDeps,
   siteHost: string,
-): Promise<Settings | void> {
+): Promise<Settings | ChannelRecord | null | void> {
   switch (request.type) {
     case 'settings:get':
       return deps.settings.load();
@@ -226,6 +240,19 @@ export async function handleBridgeRequest(
         throw new Error('log:append: invalid entry');
       }
       await deps.log.append(request.entry);
+      return undefined;
+    case 'channel:get':
+      // SEC: a lookup with a malformed key answers null — nothing is
+      // written, so there is nothing to reject.
+      if (!isChannelKey(request.channelKey)) return null;
+      return deps.channels.get(request.channelKey);
+    case 'channel:put':
+      // SEC-3: forged records (out-of-range rates, oversized or empty
+      // keys) must not reach storage; nothing is written on rejection.
+      if (!isChannelKey(request.channelKey) || !isChannelRecord(request.record)) {
+        throw new Error('channel:put: invalid record');
+      }
+      await deps.channels.put(request.channelKey, request.record);
       return undefined;
     case 'demand:increment':
       // Shape validation at the boundary: unknown content types are rejected

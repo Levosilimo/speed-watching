@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { ChannelMemory } from '../lib/channel-memory';
 import { DemandStore } from '../lib/demand';
 import {
   BRIDGE_CHANNEL,
@@ -54,6 +55,7 @@ function serve(host: EventHost, forwardDemand: BridgeDeps['forwardDemand'] = vi.
   const deps: BridgeDeps = {
     settings: new SettingsStore(mockStorage()),
     log: new OverrideLog(mockStorage()),
+    channels: new ChannelMemory(mockStorage()),
     forwardDemand,
   };
   host.addEventListener('message', createBridgeListener(deps, host as unknown as Window));
@@ -299,6 +301,67 @@ describe('messaging bridge', () => {
     });
     const client = createBridgeClient(host);
     await expect(client.request({ type: 'settings:get' })).rejects.toThrow('boom');
+  });
+
+  it('round-trips channel:put and channel:get through the bridge', async () => {
+    const { host } = fakeWindow();
+    serve(host);
+    const client = createBridgeClient(host);
+    await client.request({
+      type: 'channel:put',
+      channelKey: 'UC-a',
+      record: { rate: 150, unit: 'wpm', language: 'en', ts: 42 },
+    });
+    expect(await client.request({ type: 'channel:get', channelKey: 'UC-a' })).toEqual({
+      rate: 150,
+      unit: 'wpm',
+      language: 'en',
+      ts: 42,
+    });
+    expect(await client.request({ type: 'channel:get', channelKey: 'UC-unknown' })).toBeNull();
+  });
+
+  it('rejects forged channel:put records and writes nothing (SEC-3)', async () => {
+    const malformed: Array<Record<string, unknown>> = [
+      { rate: 0, unit: 'wpm', language: 'en', ts: 1 },
+      { rate: 5000, unit: 'wpm', language: 'en', ts: 1 },
+      { rate: 150, unit: '', language: 'en', ts: 1 },
+      { rate: 150, unit: 'wpm', language: 'en', ts: Number.NaN },
+      { rate: 'fast', unit: 'wpm', language: 'en', ts: 1 },
+    ];
+    for (const record of malformed) {
+      const { host } = fakeWindow();
+      const { channels } = serve(host);
+      const client = createBridgeClient(host);
+      await expect(
+        client.request({ type: 'channel:put', channelKey: 'UC-a', record } as unknown as BridgeRequest),
+      ).rejects.toThrow('channel:put: invalid record');
+      expect(await channels.load()).toEqual({});
+    }
+  });
+
+  it('rejects channel:put with an empty or oversized key (SEC-3)', async () => {
+    for (const channelKey of ['', 'x'.repeat(201)]) {
+      const { host } = fakeWindow();
+      const { channels } = serve(host);
+      const client = createBridgeClient(host);
+      await expect(
+        client.request({
+          type: 'channel:put',
+          channelKey,
+          record: { rate: 150, unit: 'wpm', language: 'en', ts: 1 },
+        }),
+      ).rejects.toThrow('channel:put: invalid record');
+      expect(await channels.load()).toEqual({});
+    }
+  });
+
+  it('answers channel:get with null for a malformed key', async () => {
+    const { host } = fakeWindow();
+    serve(host);
+    const client = createBridgeClient(host);
+    expect(await client.request({ type: 'channel:get', channelKey: '' })).toBeNull();
+    expect(await client.request({ type: 'channel:get', channelKey: 'x'.repeat(201) })).toBeNull();
   });
 
   it('forwards demand:increment to the background single writer and resolves on its response (lib-11#3)', async () => {

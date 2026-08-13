@@ -146,6 +146,15 @@ keeps working in every mode.
 - The estimated tier (no usable captions) uses the language-aware priors
   when the track language is known; unmapped languages and English keep the
   existing content-type anchors / generic prior.
+- **Channel rate memory** (YouTube only; `lib/channel-memory.ts`): a
+  measured recommendation stores the channel's natural rate (keyed by
+  `videoDetails.channelId`, author name as the fallback key). A later
+  captionless video on the same channel, in the same language, seeds its
+  estimated tier with that measured rate instead of the prior midpoint —
+  the pill still labels it 'estimated' (the rate is a prior, not this
+  video's measurement). The store is bounded (50 channels, LRU) and
+  lives in `chrome.storage.local` under `sw.channelRates`; the generic
+  path (`generic.content.ts`) never touches it.
 - The pause-diluted articulatory ceiling scales with the language ceiling
   (`ceiling / (1 − P_STIMULUS)`); the pill's rate label carries the unit
   (`≈ 240 cpm`, `≈ 340 syl/min`, `≈ 380 morae/min`).
