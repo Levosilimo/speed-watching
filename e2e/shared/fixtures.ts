@@ -8,6 +8,16 @@ export const KIND_BY_FIXTURE: Record<string, string | undefined> = {
   'synthetic/music-lyrics.json': 'asr',
   'real/manual-cue.json': undefined,
   'synthetic/cue-level-only.json': undefined,
+  'synthetic/ja-captions.json': 'asr',
+};
+
+/**
+ * Fixture file → caption-track languageCode; absent means 'en'. The ja
+ * fixture exercises the language-resolution chain (resolveLanguage →
+ * recommend → unit label) end-to-end in both browser suites.
+ */
+export const LANG_BY_FIXTURE: Record<string, string | undefined> = {
+  'synthetic/ja-captions.json': 'ja',
 };
 
 /**

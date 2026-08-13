@@ -21,6 +21,7 @@ import vttjs from 'vtt.js';
 import { parseVtt, type VttHost } from '../../lib/captions-harvest';
 import { parseYouTubeJson3 } from '../../lib/captions';
 import { priorMidpoint } from '../../lib/heuristics';
+import { resolveLanguage } from '../../lib/languages';
 import { detectMusic } from '../../lib/music';
 import { recommend, type Recommendation } from '../../lib/recommend';
 import { defaultSettings, type Settings } from '../../lib/settings';
@@ -35,7 +36,7 @@ import {
   wordLevelWpm,
 } from '../../lib/wpm';
 import type { MeasureEventDetail } from '../../entrypoints/content';
-import { KIND_BY_FIXTURE } from './fixtures';
+import { KIND_BY_FIXTURE, LANG_BY_FIXTURE } from './fixtures';
 
 export type Measurement = MeasureEventDetail;
 
@@ -128,13 +129,16 @@ function expectedStats(fixture: string): ExpectedStats {
 
 /** The recommendation the content script must produce for a fixture
  * (default settings: target 250, platformMax 2, no overrides). Mirror of
- * entrypoints/content.ts: word-timed ASR tracks carry the articulatory
+ * entrypoints/content.ts: the track language feeds the rate measurement and
+ * the language model, and word-timed ASR tracks carry the articulatory
  * inputs that can fire the pause-diluted warning. */
 export function expectedRecommendation(fixture: string): { rec: Recommendation; naturalRate: number } {
   const json = JSON.parse(readFileSync(join(fixtureRoot, fixture), 'utf8')) as unknown;
   const { words, cues } = parseYouTubeJson3(json);
   const kind = KIND_BY_FIXTURE[fixture];
-  const naturalRate = kind === 'asr' ? filteredTokensOverTrimmedSpan(cues) : manualCueRate(cues);
+  const language = resolveLanguage(LANG_BY_FIXTURE[fixture]) ?? undefined;
+  const naturalRate =
+    kind === 'asr' ? filteredTokensOverTrimmedSpan(cues, language) : manualCueRate(cues, language);
   if (naturalRate === null) throw new Error(`${fixture}: no natural rate`);
   const detected = detectMusic(cues, naturalRate) ? 'music' : 'generic';
   const { tier, wordInputs } = asrTierInputs(kind, words, cues);
@@ -143,6 +147,7 @@ export function expectedRecommendation(fixture: string): { rec: Recommendation; 
     tier,
     contentType: detected,
     platformMax: 2,
+    language,
     ...wordInputs,
   });
   return { rec, naturalRate };
@@ -204,8 +209,12 @@ function expectState(state: PillState | null, fixture: string): PillState {
 }
 
 export async function runPillSpecs(driver: E2EDriver): Promise<void> {
-  // (a) The pill renders the expected recommendation for both tiers.
-  for (const fixture of ['real/asr-word.json', 'real/manual-cue.json']) {
+  // (a) The pill renders the expected recommendation for all three tiers.
+  for (const fixture of [
+    'real/asr-word.json',
+    'real/manual-cue.json',
+    'synthetic/ja-captions.json',
+  ]) {
     await driver.navigateToWatch(fixture);
     const state = expectState(await driver.readPillState(), fixture);
     const { rec, naturalRate } = expectedRecommendation(fixture);
@@ -214,6 +223,11 @@ export async function runPillSpecs(driver: E2EDriver): Promise<void> {
     }
     if (state.label !== rec.label) {
       throw new Error(`${fixture}: pill label "${state.label}" !== expected "${rec.label}"`);
+    }
+    // Language-unit label end-to-end: the ja fixture must render in the
+    // resolved language's unit, not wpm.
+    if (fixture === 'synthetic/ja-captions.json' && !state.label.includes('morae/min')) {
+      throw new Error(`${fixture}: pill label "${state.label}" missing the morae/min unit`);
     }
     if (Math.abs(state.multiplier - rec.multiplier) > 1e-9) {
       throw new Error(

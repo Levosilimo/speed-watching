@@ -1,0 +1,13 @@
+{
+  "wireMagic": "pb3",
+  "pens": [{}],
+  "wsWinStyles": [{}],
+  "wpWinPositions": [{}],
+  "events": [
+    { "tStartMs": 0, "dDurationMs": 1000, "id": 1, "wpWinPosId": 1, "wsWinStyleId": 1, "segs": [{ "utf8": "こんにちは ", "tOffsetMs": 0 }, { "utf8": "世界", "tOffsetMs": 500, "acAsrConf": 0.9 }] },
+    { "tStartMs": 1200, "dDurationMs": 1000, "wWinId": 1, "segs": [{ "utf8": "これは", "tOffsetMs": 0 }, { "utf8": "テスト", "tOffsetMs": 400 }] },
+    { "tStartMs": 2400, "dDurationMs": 1000, "aAppend": 1, "segs": [{ "utf8": "です", "tOffsetMs": 0 }, { "utf8": "速さを", "tOffsetMs": 300 }] },
+    { "tStartMs": 3600, "dDurationMs": 1200, "aAppend": 1, "segs": [{ "utf8": "測ります", "tOffsetMs": 0 }] }
+  ],
+  "windows": []
+}

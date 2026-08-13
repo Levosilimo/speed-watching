@@ -15,7 +15,7 @@ import { createServer, type Server } from 'node:http';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { BLOCKED_FIXTURES, KIND_BY_FIXTURE, NO_TRACK_FIXTURES } from './shared/fixtures';
+import { BLOCKED_FIXTURES, KIND_BY_FIXTURE, LANG_BY_FIXTURE, NO_TRACK_FIXTURES } from './shared/fixtures';
 
 export const FIXTURE_PORT = 4319;
 
@@ -145,7 +145,7 @@ export function createFixtureServer(port = FIXTURE_PORT): Promise<FixtureServer>
                     // page URL, so the fetch never leaves the youtube.com origin.
                     baseUrl: `/api/timedtext?fixture=${fixture}`,
                     ...(trackKind === undefined ? {} : { kind: trackKind }),
-                    languageCode: 'en',
+                    languageCode: LANG_BY_FIXTURE[fixture] ?? 'en',
                   },
                 ],
               },
