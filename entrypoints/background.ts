@@ -4,17 +4,12 @@ import { createCaptureOrchestrator } from '../lib/capture-orchestrator';
 import { isOffscreenEvent, isOptionsMessage } from '../lib/audio-probe';
 import { DemandStore } from '../lib/demand';
 import {
-  clampWpmResponse,
   isDemandIncrementMessage,
-  isWpmGetRequest,
-  isWpmGetResponse,
   SHORTCUT_APPLY,
   SHORTCUT_DISMISS,
-  WPM_GET,
-  WPM_PROTOCOL_VERSION,
   type ShortcutMessage,
-  type WpmGetResponse,
 } from '../lib/messaging';
+import { clampWpmResponse, isWpmGetRequest, isWpmGetResponse, WPM_GET, WPM_PROTOCOL_VERSION, type WpmGetResponse } from '../lib/wpm-protocol';
 import { SettingsStore } from '../lib/settings';
 
 export default defineBackground(() => {

@@ -4,20 +4,22 @@ import { DemandStore } from '../lib/demand';
 import {
   BRIDGE_CHANNEL,
   BRIDGE_TIMEOUT_MS,
-  clampWpmResponse,
   createBridgeClient,
   createBridgeListener,
   isBridgeEnvelope,
+  type BridgeDeps,
+  type BridgeRequest,
+  type EventHost,
+} from '../lib/messaging';
+import {
+  clampWpmResponse,
   isWpmEnvelope,
   isWpmGetRequest,
   isWpmGetResponse,
   WPM_CHANNEL,
   WPM_PROTOCOL_VERSION,
-  type BridgeDeps,
-  type BridgeRequest,
-  type EventHost,
   type WpmGetResponse,
-} from '../lib/messaging';
+} from '../lib/wpm-protocol';
 import type { ContentType } from '../lib/music';
 import { OverrideLog } from '../lib/override-log';
 import type { OverrideLogEntry } from '../lib/override-log';

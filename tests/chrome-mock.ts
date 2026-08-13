@@ -28,6 +28,16 @@ export const chromeMock = {
   },
   storage: {
     session: { get: vi.fn(), set: vi.fn(), remove: vi.fn() },
-    local: { get: vi.fn(), set: vi.fn(), onChanged: { addListener: vi.fn() } },
+    // Default get/set implementations: a vi.fn() with no implementation
+    // returns undefined, and the options harness's module re-imports (the
+    // vitest module-cache quirk documented in options-a11y.test.ts) can
+    // float a dev.ts refreshDemand past vi.restoreAllMocks() at teardown —
+    // a bare get() then throws on raw[this.key] as an unhandled rejection
+    // and fails the run. Returning {} keeps the floating call harmless.
+    local: {
+      get: vi.fn(async (..._args: never[]) => ({})),
+      set: vi.fn(async (..._args: never[]) => {}),
+      onChanged: { addListener: vi.fn() },
+    },
   },
 };

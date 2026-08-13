@@ -10,7 +10,8 @@ import { resolveLanguage, UNIT_LABELS, type LanguageModel } from '@/lib/language
 import { logWpm, waitForPlayerResponse } from '@/lib/measure-hooks';
 import { SerializedRunner } from '@/lib/measure-guard';
 import { buildWpmResponse, type MeasurementContext } from '@/lib/wpm-provider';
-import { createBridgeClient, isShortcutEnvelope, isWpmEnvelope, isWpmGetRequest, SHORTCUT_APPLY, WPM_CHANNEL } from '@/lib/messaging';
+import { createBridgeClient, isShortcutEnvelope, SHORTCUT_APPLY } from '@/lib/messaging';
+import { isWpmEnvelope, isWpmGetRequest, WPM_CHANNEL } from '@/lib/wpm-protocol';
 import type { ContentType } from '@/lib/music';
 import { detectMusic } from '@/lib/music';
 import { recommend, TARGET_WPM, type RateTier, type Recommendation } from '@/lib/recommend';

@@ -17,17 +17,15 @@
 import { browser } from 'wxt/browser';
 import { defineContentScript } from 'wxt/utils/define-content-script';
 import { ChannelMemory } from '@/lib/channel-memory';
+import { createBridgeListener, isShortcutMessage, SHORTCUT_CHANNEL } from '@/lib/messaging';
 import {
-  createBridgeListener,
-  isShortcutMessage,
   isWpmEnvelope,
   isWpmGetRequest,
   isWpmGetResponse,
-  SHORTCUT_CHANNEL,
   WPM_CHANNEL,
   WPM_RELAY_TIMEOUT_MS,
   type WpmGetRequest,
-} from '@/lib/messaging';
+} from '@/lib/wpm-protocol';
 import { OverrideLog } from '@/lib/override-log';
 import { SettingsStore } from '@/lib/settings';
 

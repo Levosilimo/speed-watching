@@ -6,7 +6,7 @@
 // The content script keeps `current` (the live measurement) in the
 // entrypoint; this module only knows the slice the protocol carries.
 
-import { WPM_PROTOCOL_VERSION, type WpmGetResponse } from './messaging';
+import { WPM_PROTOCOL_VERSION, type WpmGetResponse } from './wpm-protocol';
 import type { ContentType } from './music';
 import type { RateTier, RecommendationMode } from './recommend';
 
