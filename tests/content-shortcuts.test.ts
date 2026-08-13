@@ -1,12 +1,24 @@
 // @vitest-environment happy-dom
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import contentModule from '../entrypoints/content';
 import bridgeModule from '../entrypoints/bridge.content';
+import { parseYouTubeJson3 } from '../lib/captions';
 import type { BridgeEnvelope } from '../lib/messaging';
 import { priorMidpoint } from '../lib/heuristics';
 import { recommend } from '../lib/recommend';
 import { defaultSettings, resolveContentType, resolvePlatformMax, resolveTarget } from '../lib/settings';
+import { manualCueRate } from '../lib/wpm';
 import { chromeMock } from './chrome-mock';
+
+// readFixture (fixtures/helpers.ts) builds its path with the global URL
+// constructor, which the happy-dom environment replaces; load the payload
+// with plain path joins instead.
+const fixture = JSON.parse(
+  readFileSync(join(dirname(fileURLToPath(import.meta.url)), 'fixtures', 'real', 'manual-cue.json'), 'utf8'),
+) as unknown;
 
 // Drives the real entrypoints the way background-glue.test.ts drives the
 // background: invoke main() against a fake page, then exercise the message
@@ -22,6 +34,21 @@ type MessageListener = (message: unknown) => boolean;
 const WATCH_URL = 'https://www.youtube.com/watch?v=e2e-fixture';
 
 const tick = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 20));
+
+/** Player response whose caption track serves the given fixture (mirror of
+ * e2e/server.ts). Absent kind means a manual track, like the fixture map. */
+function playerResponseWithCaptions(fixture: string, kind: string | undefined): unknown {
+  return {
+    videoDetails: { videoId: 'e2e-fixture', title: `unit fixture: ${fixture}` },
+    captions: {
+      playerCaptionsTracklistRenderer: {
+        captionTracks: [
+          { baseUrl: `/api/timedtext?fixture=${fixture}`, ...(kind === undefined ? {} : { kind }), languageCode: 'en' },
+        ],
+      },
+    },
+  };
+}
 
 function sendShortcut(message: unknown): void {
   window.postMessage({ channel: 'speedwatcher:shortcut', message }, '*');
@@ -102,7 +129,9 @@ describe('bridge shortcut relay (background → MAIN world)', () => {
 });
 
 describe('content shortcut envelope handling', () => {
-  it('apply-shortcut applies the recommendation and shows the live line', async () => {
+  it('apply-shortcut applies the rate but keeps the live line hidden on the estimated tier', async () => {
+    // The beforeEach player response has no caption tracks, so the measure
+    // chain renders the estimated heuristic tier.
     const settings = defaultSettings();
     const site = 'youtube.com';
     const rec = recommend({
@@ -125,13 +154,14 @@ describe('content shortcut envelope handling', () => {
     await vi.waitFor(() => {
       expect(video?.playbackRate).toBe(rec.multiplier);
     });
-    // applyMultiplier refreshes the live line immediately.
+    // Estimated-tier rates are priors, not measurements: the live line must
+    // not present the heuristic as the video's measured rate.
     const live = liveLine();
-    expect(live?.textContent).toBe(`now ≈ ${Math.round(rec.effectiveWpm)} wpm at ${rec.multiplier}x`);
-    expect(live?.hidden).toBe(false);
+    expect(live?.textContent).toBe('');
+    expect(live?.hidden).toBe(true);
   });
 
-  it('applies the ratechange listener update to the live line', async () => {
+  it('ratechange cannot resurrect the live line on the estimated tier', async () => {
     await vi.waitFor(() => {
       expect(pillMode()).toBe('recommend');
     });
@@ -145,8 +175,50 @@ describe('content shortcut envelope handling', () => {
     if (video === null) throw new Error('video missing');
     video.playbackRate = 2;
     video.dispatchEvent(new Event('ratechange'));
+    await tick();
+    expect(liveLine()?.textContent).toBe('');
+    expect(liveLine()?.hidden).toBe(true);
+  });
+
+  it('measured-tier pill shows the live line after apply and follows ratechange', async () => {
+    // Point the player response at a real caption fixture and stub the
+    // timedtext fetch so the pipeline renders a measured (manual-cue) pill.
+    const payload = fixture;
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, json: async () => payload })));
+    (window as unknown as Record<string, unknown>).ytInitialPlayerResponse = playerResponseWithCaptions(
+      'real/manual-cue.json',
+      undefined,
+    );
+    document.dispatchEvent(new Event('yt-navigate-start'));
+    document.dispatchEvent(new Event('yt-navigate-finish'));
+
+    const { cues } = parseYouTubeJson3(payload);
+    const naturalRate = manualCueRate(cues);
+    if (naturalRate === null) throw new Error('manual-cue fixture: no natural rate');
+    const rec = recommend({ naturalRate, tier: 'manual-cue', contentType: 'generic', platformMax: 2 });
+    expect(rec.mode).toBe('recommend');
+
     await vi.waitFor(() => {
-      expect(liveLine()?.textContent).toBe('now ≈ 320 wpm at 2x');
+      expect(pillMode()).toBe('recommend');
+    });
+
+    sendShortcut({ type: 'speedwatcher:apply-shortcut' });
+    const video = document.querySelector('video');
+    await vi.waitFor(() => {
+      expect(video?.playbackRate).toBe(rec.multiplier);
+    });
+
+    const fmt = (m: number): string => String(Math.round(m * 100) / 100);
+    expect(liveLine()?.textContent).toBe(
+      `now ≈ ${Math.round(naturalRate * rec.multiplier)} wpm at ${fmt(rec.multiplier)}x`,
+    );
+    expect(liveLine()?.hidden).toBe(false);
+
+    if (video === null) throw new Error('video missing');
+    video.playbackRate = 2;
+    video.dispatchEvent(new Event('ratechange'));
+    await vi.waitFor(() => {
+      expect(liveLine()?.textContent).toBe(`now ≈ ${Math.round(naturalRate * 2)} wpm at 2x`);
     });
   });
 
@@ -179,4 +251,8 @@ describe('content shortcut envelope handling', () => {
     expect(video?.playbackRate).toBe(1);
     expect(pillMode()).toBe('recommend');
   });
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
 });

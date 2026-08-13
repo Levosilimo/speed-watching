@@ -43,6 +43,7 @@ let current: {
   contentType: ContentType;
   naturalRate: number;
   platformMax: number;
+  tier: RateTier;
   /** Rate-unit display label ('wpm' | 'cpm' | 'syl/min' | 'morae/min'). */
   unit: string;
   recommendation: Recommendation;
@@ -257,7 +258,7 @@ function renderRecommendation(
     language,
     ...wordInputs,
   });
-  current = { videoId, site, contentType, naturalRate, platformMax, unit: UNIT_LABELS[language?.unit ?? 'wpm'], recommendation };
+  current = { videoId, site, contentType, naturalRate, platformMax, tier, unit: UNIT_LABELS[language?.unit ?? 'wpm'], recommendation };
   showPill({
     mode: recommendation.mode,
     rateWpm: naturalRate,
@@ -336,6 +337,8 @@ function computeLiveRate(): LiveRate | null {
   if (current === null) return null;
   const mode = current.recommendation.mode;
   if (mode !== 'recommend' && mode !== 'warning') return null;
+  // Estimated-tier rates are priors, not measurements — never present one as live.
+  if (current.tier === 'estimated') return null;
   const video = activeVideo ?? document.querySelector<HTMLVideoElement>('video');
   if (video === null || video.paused || video.playbackRate === 1) return null;
   return { rate: current.naturalRate * video.playbackRate, multiplier: video.playbackRate, unit: current.unit };
