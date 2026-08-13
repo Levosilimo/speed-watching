@@ -110,4 +110,65 @@ VERDICT: PASS — either model's STT payload fits the store cap with 30x
 headroom; the ort-wasm dist zips to a quarter of its disk size (wasm
 compresses well), so even shipping the full webgpu+wasm dist stays cheap.
 
+## G5 — segment-timed rate disambiguation (V5, 2026-08-13)
+
+records: results-seg.jsonl (kind seg, 10 records, both models x 5 clips,
+chunk 29 / stride 5, tsMode 'true' — segment timestamps only; same clips,
+same refs as G1, so the timing-mode effect is isolated)
+
+| clip | model | segs | hypSpan | refSpan | refU | hypU | rateErr(u) | countBias |
+|---|---|---|---|---|---|---|---|---|
+| iG9CE55wbtY | tiny | 9 | 0.0..66.0 | 26.7..65.8 | 182.1 | 91.9 | -49.5% | +8.6% |
+| Ks-_Mh1QhMc | tiny | 16 | 0.0..64.2 | 16.8..66.0 | 204.9 | 140.2 | -31.6% | +7.1% |
+| jGwO_UgTS7I | tiny | 16 | 0.0..64.8 | 4.5..65.9 | 177.6 | 158.4 | -10.8% | +17.9% |
+| HtSuA80QTyo | tiny | 14 | 0.0..65.0 | 0.1..65.8 | 148.7 | 150.5 | +1.2% | +21.6% |
+| WUvTyaaNkzM | tiny | 12 | 0.0..64.1 | 15.4..65.0 | 210.5 | 176.0 | -16.4% | +27.9% |
+| iG9CE55wbtY | base | 8 | 0.0..66.0 | 26.7..65.8 | 182.1 | 91.9 | -49.5% | +8.6% |
+| Ks-_Mh1QhMc | base | 13 | 0.0..64.2 | 16.8..66.0 | 204.9 | 140.3 | -31.6% | +7.1% |
+| jGwO_UgTS7I | base | 18 | 0.0..65.4 | 4.5..65.9 | 177.6 | 151.3 | -14.8% | +13.8% |
+| HtSuA80QTyo | base | 13 | 0.0..66.0 | 0.1..65.8 | 148.7 | 141.8 | -4.7% | +16.4% |
+| WUvTyaaNkzM | base | 12 | 0.0..62.0 | 15.4..65.0 | 210.5 | 170.3 | -19.1% | +19.7% |
+
+(spans in seconds, first-to-last start; countBias is the full-window text
+decomposition — the in-span filter that helped G1's word mode drops whole
+leading segments here, inflating deletions into a spurious negative bias)
+
+VERDICT: FAIL — the segment-timed unified rate does NOT pass; the hypothesis
+is refuted. Rate error within +-10% on 1/5 clips per model (HtSuA80QTyo:
+tiny +1.2%, base -4.7%); count-bias within [-2%,+8%] on 2/5 per model
+(iG9CE55wbtY +8.6% just over, Ks-_Mh1QhMc +7.1%); combined gate 0/5 both.
+
+- Mechanism (span geometry, in the records): whisper's first segment starts
+  at 0.0 s on all 10 clips — segment timing covers the whole window,
+  including the silent/music lead — while the caption ref span starts at the
+  first spoken word (leads 0.1-26.7 s). The hyp unified-rate denominator is
+  the full ~66 s window; the ref denominator is the speech span. The error
+  tracks the lead length exactly: HtSuA80QTyo (no lead, ref span starts at
+  0.1 s) is the only clip in band on both models.
+- Segment mode is WORSE than G1's word mode (tiny 3/5, base 2/5 in +-10%):
+  word timestamps at least begin near speech, segments begin at 0.0.
+- The identical tiny/base rate errors on iG9CE55wbtY and Ks-_Mh1QhMc
+  (-49.5%, -31.6% to the 0.1%) confirm the error is timing-shape-driven, not
+  transcript-driven.
+- Positive side-finding: segment timestamps skip whisper's word-alignment
+  pass — rtf drops ~2x vs G1 (tiny 0.13-0.16 vs 0.32-0.39, base 0.23-0.30 vs
+  0.32-0.59) with monotonic timestamps on all 10 records.
+- Harness deviation: running both models in one process, base.en hangs after
+  tiny.en completes (second chromium launch wedges; no output, no timeout
+  record). Worked around with the harness's BATTERY_MODEL filter (one
+  process per model); numbers bit-identical across the standalone and
+  chained runs.
+
+CONSEQUENCE: the cue-level STT tier is NOT shippable, with or without an
+'approximate' label — a -50% systematic rate error is a wrong number, not a
+residual the label can carry. The captions-only + estimated path stands; the
+demand gate decides later whether STT ever ships.
+
+RESIDUAL (post-ship calibration item): the reference itself is YouTube-ASR,
+whose cue-boundary pause structure already distorts both G1 rate metrics.
+A hand-transcribed reference (human word timing) would isolate whisper's
+true rate error from the reference's pause bias — the clean gate for the
+residual systematic offset, deferred because the gate outcome cannot change
+(1/5 in band vs the 4/5 requirement).
+
 

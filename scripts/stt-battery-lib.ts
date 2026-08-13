@@ -21,6 +21,14 @@ export const BATTERY_BASE = `http://127.0.0.1:${BATTERY_PORT}`;
 export const BATTERY_MODELS = ['Xenova/whisper-tiny.en', 'Xenova/whisper-base.en'] as const;
 export type BatteryModel = (typeof BATTERY_MODELS)[number];
 
+// Env filter so a battery step can be confined to one model (also the
+// workaround for the measured hang when the second model runs in the same
+// process — see verdicts.md G5 harness note).
+export function batteryModels(): BatteryModel[] {
+  const only = process.env.BATTERY_MODEL;
+  return only === undefined ? [...BATTERY_MODELS] : BATTERY_MODELS.filter((m) => m === only);
+}
+
 // Phase-0 word-timed corpus, three content types; every clip is the first
 // ~66 s of the video (the POT range cap; see stt-battery.ts fetchStep).
 export const BATTERY_VIDEOS = [

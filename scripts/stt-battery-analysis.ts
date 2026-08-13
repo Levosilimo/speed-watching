@@ -11,9 +11,13 @@
 // + stride_length_s=5 + force_full_sequences:false. Per-seam word continuity,
 // dedup, out-of-order drops and the seam count-bias.
 //
+// V5 (--segment): the G5 disambiguation — same clips, same chunk config, same
+// refs as V1, only tsMode='true' (whisper's native segment timestamps) vs
+// V1's word timestamps. Lives in scripts/stt-battery-segment.ts.
+//
 // Runs inference through the fixture origin (stt-battery-lib.ts) and appends
-// numeric-only records to scripts/data/stt-battery/results-v1.jsonl and
-// results-v2.jsonl.
+// numeric-only records to scripts/data/stt-battery/results-v1.jsonl,
+// results-v2.jsonl and (segment step) results-seg.jsonl.
 
 import { appendFile } from 'node:fs/promises';
 import type { Server } from 'node:http';
@@ -23,9 +27,9 @@ import { timestampSanity, werDecomposed, type WordTimestamp } from './bench-whis
 import { ratesFor } from './sample-analysis';
 import {
   BATTERY_DIR,
-  BATTERY_MODELS,
   BATTERY_VIDEOS,
   SEAM_VIDEO,
+  batteryModels,
   loadClipRef,
   runInference,
   startServer,
@@ -80,7 +84,7 @@ interface V1Record {
 
 // Hyp rate inputs: each word chunk becomes its own cue (word-timed ASR has no
 // cue boundaries; production feeds these shapes to the same rate helpers).
-function parsedFromChunks(chunks: WordTimestamp[]): ParsedCaptions {
+export function parsedFromChunks(chunks: WordTimestamp[]): ParsedCaptions {
   const segs: Segment[] = chunks.map((c) => ({
     text: c.text,
     startSec: c.start,
@@ -89,12 +93,12 @@ function parsedFromChunks(chunks: WordTimestamp[]): ParsedCaptions {
   return { cues: segs, words: segs };
 }
 
-function rateErrorPct(hyp: number | null, ref: number | null): number | null {
+export function rateErrorPct(hyp: number | null, ref: number | null): number | null {
   if (hyp === null || ref === null || ref === 0) return null;
   return ((hyp - ref) / ref) * 100;
 }
 
-function closeServer(server: Server): Promise<void> {
+export function closeServer(server: Server): Promise<void> {
   return new Promise((resolve) => server.close(() => resolve()));
 }
 
@@ -106,8 +110,7 @@ export async function transcribeStep(): Promise<void> {
     // Same chunk config as the locked seam strategy (transformers.js #1358
     // workaround): chunk 29 + stride 5 without force_full_sequences.
     const chunkConfig: ChunkConfig = { chunkLengthS: 29, strideLengthS: 5, forceFull: false };
-    const onlyModel = process.env.BATTERY_MODEL;
-    const models = onlyModel === undefined ? BATTERY_MODELS : BATTERY_MODELS.filter((m) => m === onlyModel);
+    const models = batteryModels();
     for (const model of models) {
       console.log(`\n[transcribe] ${model} (chunk_length_s=29, stride_length_s=5)`);
       const result = await runInference(model, clips, chunkConfig);
@@ -424,5 +427,3 @@ export async function seamStep(): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
-
-
