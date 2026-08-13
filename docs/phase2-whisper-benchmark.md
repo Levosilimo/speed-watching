@@ -323,3 +323,148 @@ verdict needs the user machine, where the runbook above applies.
 
 `docs/manual-gates-runbook.md` (wt-tc lane) will reference this section for
 its gate-3 WebGPU procedure; that runbook's merge is owned by the wt-tc lane.
+
+## 9. STT battery results
+
+Phase-0 battery: whisper tiny.en vs base.en (q8, WASM, single thread,
+chunk_length_s=29 + stride_length_s=5, the transformers.js #1358 workaround)
+over the 5-clip corpus — the first ~66 s of two talks, two lectures and an
+explainer — scored against the YouTube-ASR caption reference (word rate,
+decomposed WER, timestamp sanity). Runner: scripts/stt-battery*.ts; records:
+`scripts/data/stt-battery/results-v1.jsonl` (V1), `results-v2.jsonl` (V2 +
+smoke), `results-seg.jsonl` (V5 segment-timing), `scripts/data/stt-battery/verdicts.md` (all gates).
+
+### G1 — model lock: not shippable at the word-level rate
+
+Per-clip gates: rate error <=10%, count-bias in [-2%,+8%], WER <=15%.
+Aligned-span values (below) — the full-window values are in the records.
+
+| clip | model | WER | countBias | rateErr(w) | rateErr(u) | tsMonotonic |
+|---|---|---|---|---|---|---|
+| iG9CE55wbtY | tiny | 22.6% | +7.5% | -38.6% | -31.1% | true |
+| Ks-_Mh1QhMc | tiny | 19.3% | +5.7% | -7.5% | -20.4% | true |
+| jGwO_UgTS7I | tiny | 37.9% | +14.5% | -26.8% | -8.9% | true |
+| HtSuA80QTyo | tiny | 32.8% | +20.1% | -26.9% | -1.8% | false |
+| WUvTyaaNkzM | tiny | 21.1% | +17.7% | -20.1% | -0.7% | true |
+| iG9CE55wbtY | base | 20.4% | +6.5% | -20.0% | -20.7% | true |
+| Ks-_Mh1QhMc | base | 19.3% | +6.4% | -2.9% | -15.2% | true |
+| jGwO_UgTS7I | base | 31.0% | +13.1% | -22.3% | -9.3% | true |
+| HtSuA80QTyo | base | 30.6% | +16.4% | -21.0% | -5.0% | true |
+| WUvTyaaNkzM | base | 19.0% | +17.7% | -15.3% | -4.8% | true |
+
+**G1: neither model passes; word-level STT rate is not shippable on this
+corpus.** 0 of 10 records meet WER <=15%. The WER is cross-ASR word
+disagreement, not misrecognition: the seam diag for iG9CE55wbtY shows the
+hyp content-matches the ref ("Good morning. How are you? It's been great..."
+vs "morning are you it's been great..."); whisper and YouTube-ASR pick
+different function words, which the strict word-identity metric counts as
+errors. Count-bias (the extension's word-count concern) passes 4 of 10
+(iG9CE55wbtY + Ks-_Mh1QhMc on both models); the rate error is systematically
+negative because caption cue-boundary pauses shrink the ref speech-duration
+denominator while whisper's continuous word timestamps do not (the unified
+span-trimmed rate error is closer: 3 of 5 clips within +-10% for tiny, 2 of 5
+for base). Tiny.en numbers are bit-identical across three independent runs
+(the two 2026-08-12 smokes and the V1 run).
+
+### Ref-alignment correction
+
+The YouTube-ASR ref covers only the speech span of each 66 s window — silent
+leads of 0.1-26.7 s (4 of 5 clips), so hyp words before the ref's first word
+score as pure insertions. Scoring only the hyp chunks whose start falls
+inside the ref span lowers count-bias (iG9CE55wbtY tiny +8.6% -> +7.5%) but
+changes no gate outcome; the raw full-window values are in the records. The
+ref↔hyp timestamps align within ~0.3 s (diag dump, both iG9CE55wbtY and
+jGwO_UgTS7I).
+
+### G2 — chunk-seam integrity: pass
+
+jGwO_UgTS7I (66 s, crosses the 29 s boundary), base.en, both chunk configs:
+
+| config | seam | seamCountBias | o3 | dup | tsMonotonic | overflow | wholeBias |
+|---|---|---|---|---|---|---|---|
+| chunk=30 stride=null | 30 s | 0.0% | 0 | 0 | true | false | 19.3% |
+| chunk=29 stride=5 | 29 s | +7.7% | 0 | 0 | true | false | 13.8% |
+
+Per-seam count-bias in [-2%,+8%], no out-of-order words, no duplicate word
+pairs, monotonic timestamps, no overflow — the seam strategy holds on both
+configs. The 2026-08-12 v2 record (seam bias 0.69, recall 0) predates the
+clip-relative ref timestamps and is a known reference-alignment artifact.
+
+### G3 — invocation e2e: pass
+
+The rewritten e2e/chromium/offscreen.spec.ts (CDP Extensions.triggerAction)
+passes 5/5 headless and 5/5 headed with E2E_CFT_HEADED=1 (meter level >0.01
+with real tab audio): offscreen createDocument + message ack, lifecycle
+getContexts, manifest action contract (no popup), pre-invocation guidance
+error, triggerAction -> orchestrator `capturing` within 2 s on the active
+tab. xvfb-run is broken on this box (root-owned /tmp/.X11-unix at mode 0777,
+Xvfb aborts; no passwordless sudo) — the headed run used the live X :0
+session with the spec's off-screen window.
+
+### G4 — zip footprint: pass
+
+zip -9 (deflate): whisper-tiny.en 42.4 MB -> 24.8 MB; whisper-base.en 76.8
+MB -> 44.7 MB; onnxruntime-web dist 106.2 MB -> 23.7 MB; transformers.web
+0.4 MB -> 0.11 MB; extension bundle 0.07 MB. STT zip totals: tiny 48.6 MB,
+base 68.5 MB — 2.4-3.3% of the 2 GB store cap.
+
+### G5 — segment-timed rate: refuted (V5)
+
+G1's residual: the word-accurate rate read ~-20% systematically because
+caption cue-boundary pauses shrink the reference speech-duration denominator
+while whisper's continuous word timestamps do not — but the span-trimmed
+unified rate already scored 2-3/5 in +-10%. Segment timestamps are whisper's
+native output (word timing is post-hoc DTW), so the question was whether the
+unified rate over segment timing clears the band. Re-run with tsMode 'true'
+on the same 5 clips, same chunk config (29/5), same references (only the
+timing mode differs):
+
+| clip | model | segs | hypSpan | refSpan | rateErr(u) | countBias |
+|---|---|---|---|---|---|---|
+| iG9CE55wbtY | tiny | 9 | 0.0..66.0 | 26.7..65.8 | -49.5% | +8.6% |
+| Ks-_Mh1QhMc | tiny | 16 | 0.0..64.2 | 16.8..66.0 | -31.6% | +7.1% |
+| jGwO_UgTS7I | tiny | 16 | 0.0..64.8 | 4.5..65.9 | -10.8% | +17.9% |
+| HtSuA80QTyo | tiny | 14 | 0.0..65.0 | 0.1..65.8 | +1.2% | +21.6% |
+| WUvTyaaNkzM | tiny | 12 | 0.0..64.1 | 15.4..65.0 | -16.4% | +27.9% |
+| iG9CE55wbtY | base | 8 | 0.0..66.0 | 26.7..65.8 | -49.5% | +8.6% |
+| Ks-_Mh1QhMc | base | 13 | 0.0..64.2 | 16.8..66.0 | -31.6% | +7.1% |
+| jGwO_UgTS7I | base | 18 | 0.0..65.4 | 4.5..65.9 | -14.8% | +13.8% |
+| HtSuA80QTyo | base | 13 | 0.0..66.0 | 0.1..65.8 | -4.7% | +16.4% |
+| WUvTyaaNkzM | base | 12 | 0.0..62.0 | 15.4..65.0 | -19.1% | +19.7% |
+
+**G5: fail — both models land 1/5 clips within +-10% unified rate error
+(0/5 combined with count-bias); the hypothesis is refuted.** The mechanism
+is in the span geometry: whisper's first segment starts at 0.0 s on all 10
+records (segment timing covers the whole window, silent lead included) while
+the caption ref span starts at the first spoken word — the hyp unified-rate
+denominator is the full ~66 s window, the ref's is the speech span, and the
+error tracks the lead length (HtSuA80QTyo, the only clip with no lead, is
+the only one in band on both models). Segment timing is systematically WORSE
+than G1's word timing (tiny 3/5, base 2/5 in band), and the identical
+tiny/base errors on the first two clips (-49.5%, -31.6%) show the error is
+timing-shape-driven, not transcript-driven. Side-findings: segment
+timestamps skip the word-alignment pass (rtf ~2x better: base 0.23-0.30 vs
+0.32-0.59) and stay monotonic on all 10 records. Harness note: base.en hangs
+when run after tiny.en in one process (second chromium launch wedges);
+worked around with the BATTERY_MODEL filter (one process per model).
+
+Consequence: the cue-level STT tier is not shippable, with or without an
+'approximate' label — a -50% systematic rate error is a wrong number, not a
+residual a label can carry. Captions-only + estimated stands; the demand
+gate decides later. Residual calibration item: the reference is YouTube-ASR
+whose pause structure distorts both G1 rate metrics — a hand-transcribed
+reference (human word timing) would isolate whisper's true rate error from
+the reference's pause bias; deferred because the outcome cannot change
+(1/5 vs the 4/5 requirement).
+
+### Model-download root cause and fix
+
+The models live under `scripts/data/whisper-bench/`, which is gitignored
+(fixture policy — 0 tracked files), so a fresh worktree has no whisper
+weights and every battery lane that assumed them failed at first inference.
+Fix: `bun run scripts/stt-battery.ts --models` downloads both q8 onnx models
+(43 MB + 77 MB) from huggingface.co before any measurement; the download
+step is idempotent (skips existing files) and documented in the script
+header. The audio acquisition has the same shape: the POT-capped stream
+fetch serves unrelated audio for 3 of 5 videos (measured), so the battery
+pulls itag 139 with yt-dlp and slices the window locally.

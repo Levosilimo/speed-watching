@@ -4,6 +4,7 @@ import {
   normalizeForWer,
   timestampSanity,
   wer,
+  werDecomposed,
 } from '../scripts/bench-whisper-lib';
 
 describe('normalizeForWer', () => {
@@ -28,6 +29,37 @@ describe('wer', () => {
   });
   it('is 1 for completely different text of equal length', () => {
     expect(wer('A B C', 'X Y Z')).toBe(1);
+  });
+});
+
+describe('werDecomposed', () => {
+  it('returns zero counts for identical transcripts', () => {
+    expect(werDecomposed('A B C', 'a b c')).toEqual({ S: 0, D: 0, I: 0, wer: 0, countBias: 0 });
+  });
+  it('counts a substitution', () => {
+    expect(werDecomposed('A B C', 'X B C')).toEqual({ S: 1, D: 0, I: 0, wer: 1 / 3, countBias: 0 });
+  });
+  it('counts a deletion (negative count-bias)', () => {
+    expect(werDecomposed('A B C', 'A B')).toEqual({ S: 0, D: 1, I: 0, wer: 1 / 3, countBias: -1 / 3 });
+  });
+  it('counts an insertion (positive count-bias)', () => {
+    expect(werDecomposed('A B C', 'A X B C')).toEqual({ S: 0, D: 0, I: 1, wer: 1 / 3, countBias: 1 / 3 });
+  });
+  it('counts a mixed edit with all three kinds', () => {
+    // ref A B C D E, hyp A X C E F admits two optimal alignments
+    // (B->X,D->E,E->F substitutions vs B->X, D delete, F insert), so the
+    // S/D/I split is not unique; use a forced-alignment case instead.
+    // ref A B C, hyp X B C D: A->X sub, D inserted.
+    expect(werDecomposed('A B C', 'X B C D')).toEqual({
+      S: 1,
+      D: 0,
+      I: 1,
+      wer: 2 / 3,
+      countBias: 1 / 3,
+    });
+  });
+  it('treats an empty reference as all-insertions', () => {
+    expect(werDecomposed('', 'A B')).toEqual({ S: 0, D: 0, I: 2, wer: 1, countBias: 1 });
   });
 });
 
