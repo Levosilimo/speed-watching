@@ -16,7 +16,7 @@
 
 import { browser } from 'wxt/browser';
 import { defineContentScript } from 'wxt/utils/define-content-script';
-import { createBridgeListener } from '@/lib/messaging';
+import { createBridgeListener, isShortcutMessage, SHORTCUT_CHANNEL } from '@/lib/messaging';
 import { OverrideLog } from '@/lib/override-log';
 import { SettingsStore } from '@/lib/settings';
 
@@ -43,5 +43,15 @@ export default defineContentScript({
         window,
       ),
     );
+    // Keyboard shortcuts (chrome.commands) arrive here, not in the MAIN
+    // world: chrome.* is unavailable there (file header). The main script
+    // on youtube watch pages picks the relayed envelope off the window.
+    // One-way relay: no response, so return false instead of keeping the
+    // message channel open for a response nobody sends.
+    browser.runtime.onMessage.addListener((message: unknown): boolean => {
+      if (!isShortcutMessage(message)) return false;
+      window.postMessage({ channel: SHORTCUT_CHANNEL, message }, '*');
+      return false;
+    });
   },
 });

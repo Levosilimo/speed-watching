@@ -7,9 +7,9 @@ import { defineContentScript } from 'wxt/utils/define-content-script';
 import { fetchAndroidCaptions, fetchJson3 } from '@/lib/caption-fetch';
 import { parseYouTubeJson3 } from '@/lib/captions';
 import { priorMidpoint } from '@/lib/heuristics';
-import { resolveLanguage, type LanguageModel } from '@/lib/languages';
+import { resolveLanguage, UNIT_LABELS, type LanguageModel } from '@/lib/languages';
 import { SerializedRunner } from '@/lib/measure-guard';
-import { createBridgeClient } from '@/lib/messaging';
+import { createBridgeClient, isShortcutEnvelope, SHORTCUT_APPLY } from '@/lib/messaging';
 import type { ContentType } from '@/lib/music';
 import { detectMusic } from '@/lib/music';
 import { recommend, type RateTier, type Recommendation } from '@/lib/recommend';
@@ -30,7 +30,7 @@ import {
   wordLevelWpm,
 } from '@/lib/wpm';
 import type { CaptionTrack, PlayerResponse } from '@/lib/youtube';
-import { createPill, type PillApi, type PillState } from '@/ui/pill';
+import { createPill, type LiveRate, type PillApi, type PillState } from '@/ui/pill';
 
 const PLAYER_RESPONSE_TIMEOUT_MS = 10_000;
 
@@ -43,10 +43,15 @@ let current: {
   contentType: ContentType;
   naturalRate: number;
   platformMax: number;
+  /** Rate-unit display label ('wpm' | 'cpm' | 'syl/min' | 'morae/min'). */
+  unit: string;
   recommendation: Recommendation;
 } | null = null;
 
 let pill: { api: PillApi; host: HTMLElement } | null = null;
+
+/** Last rendered pill state — the shortcut handler and live line gate on it. */
+let pillState: PillState | null = null;
 
 /** The element that last fired a media event — the apply target on pages
  * with more than one video. */
@@ -89,6 +94,20 @@ export default defineContentScript({
     document.addEventListener('play', onMediaEvent, true);
     document.addEventListener('playing', onMediaEvent, true);
     document.addEventListener('timeupdate', onMediaEvent, true);
+    // Live-rate line: ratechange and pause also drive the throttled refresh.
+    document.addEventListener('ratechange', onMediaEvent, true);
+    document.addEventListener('pause', onMediaEvent, true);
+    // Keyboard shortcuts (chrome.commands): the background → bridge → window
+    // chain delivers the envelope here — chrome.* is unavailable in this
+    // world. Gated like the pill's Apply button.
+    window.addEventListener('message', (event: MessageEvent): void => {
+      if (!isShortcutEnvelope(event.data)) return;
+      const message = event.data.message;
+      if (message.type === SHORTCUT_APPLY) {
+        if (current === null || pillState === null || (pillState.mode !== 'recommend' && pillState.mode !== 'warning')) return;
+        applyMultiplier(current.recommendation.multiplier);
+      } else if (pillState !== null && pillState.mode !== 'none') dismissCurrent();
+    });
     // E2E-only hooks (SEC-2): the store bundle ships without these.
     if (__E2E__) {
       window.__speedwatcherPill = {
@@ -124,6 +143,7 @@ function onNavigationStart(): void {
 
 function onMediaEvent(event: Event): void {
   if (event.target instanceof HTMLVideoElement) activeVideo = event.target;
+  refreshLiveRate();
 }
 
 function isLive(): boolean {
@@ -237,7 +257,7 @@ function renderRecommendation(
     language,
     ...wordInputs,
   });
-  current = { videoId, site, contentType, naturalRate, platformMax, recommendation };
+  current = { videoId, site, contentType, naturalRate, platformMax, unit: UNIT_LABELS[language?.unit ?? 'wpm'], recommendation };
   showPill({
     mode: recommendation.mode,
     rateWpm: naturalRate,
@@ -305,8 +325,26 @@ function ensurePill(): PillApi {
 }
 
 function showPill(state: PillState): void {
+  pillState = state;
   ensurePill().update(state);
   if (__E2E__ && window.__speedwatcherPill !== undefined) window.__speedwatcherPill.state = state;
+}
+
+// ── Live effective rate (secondary pill line) ─────────────────────────────
+
+function computeLiveRate(): LiveRate | null {
+  if (current === null) return null;
+  const mode = current.recommendation.mode;
+  if (mode !== 'recommend' && mode !== 'warning') return null;
+  const video = activeVideo ?? document.querySelector<HTMLVideoElement>('video');
+  if (video === null || video.paused || video.playbackRate === 1) return null;
+  return { rate: current.naturalRate * video.playbackRate, multiplier: video.playbackRate, unit: current.unit };
+}
+
+function refreshLiveRate(): void {
+  // Never create the pill from a tick — that would mount an empty one pre-measure.
+  if (pill === null) return;
+  pill.api.updateLiveRate(computeLiveRate());
 }
 
 function applyMultiplier(multiplier: number): void {
@@ -315,6 +353,8 @@ function applyMultiplier(multiplier: number): void {
   if (video === null) return;
   // recommend() already clamps to platformMax; min() re-states the invariant.
   video.playbackRate = Math.min(multiplier, current.platformMax);
+  // Show the live line immediately; steady-state ticks are throttled in the pill.
+  refreshLiveRate();
   void logAction('apply', multiplier);
 }
 

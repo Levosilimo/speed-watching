@@ -44,6 +44,19 @@ export default defineConfig({
       },
       default_title: 'Speed Watcher',
     },
+    // Keyboard shortcuts (chrome.commands): Alt+Shift chords are unclaimed
+    // by YouTube's player keys and by Chrome/Firefox UI. commands is a
+    // manifest key, not a permission — the permissions list stays unchanged.
+    commands: {
+      'apply-recommendation': {
+        suggested_key: { default: 'Alt+Shift+S' },
+        description: 'Apply the recommended playback speed',
+      },
+      'dismiss-pill': {
+        suggested_key: { default: 'Alt+Shift+D' },
+        description: 'Dismiss the recommendation pill',
+      },
+    },
     permissions: ['storage', 'tabCapture', 'offscreen'],
     min_chrome_version: '116',
     browser_specific_settings: {
