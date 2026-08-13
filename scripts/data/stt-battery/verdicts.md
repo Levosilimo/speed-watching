@@ -71,3 +71,21 @@ not a seam effect; the G2 gate is per-seam and both configs pass it.
 Note: the 2026-08-12 v2 record (seam countBias 0.69, wholeClipCountBias 2.38,
 recall 0) predates the harness's clip-relative ref timestamps and is a known
 reference-alignment artifact; it is excluded from this verdict.
+
+## G3 — invocation e2e (V3, 2026-08-13)
+
+e2e/chromium/offscreen.spec.ts (CDP Extensions.triggerAction rewrite) on the
+CfT lane, build:e2e bundle, both modes:
+
+- headless: 5/5 passed (offscreen createDocument + ack, lifecycle
+  getContexts, manifest action contract (no popup), pre-invocation guidance
+  error + idle mirror, triggerAction -> orchestrator `capturing` within 2s on
+  the active tab, mirror tabId matches, headless meter pinned at 0).
+- headed (DISPLAY=:0, E2E_CFT_HEADED=1): 5/5 passed, including the meter
+  level > 0.01 assertion with real tab audio.
+
+VERDICT: PASS. Deviation: the box's /tmp/.X11-unix is root-owned with mode
+0777 (no sticky bit), so Xvfb aborts at startup and xvfb-run cannot work
+(no passwordless sudo to fix the mode); the headed run used the live X :0
+session with the spec's off-screen window position.
+
