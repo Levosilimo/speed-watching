@@ -25,8 +25,7 @@ import { RateReapplier, selectVideo } from '@/lib/matcher';
 import { createBridgeClient } from '@/lib/messaging';
 import type { ContentType } from '@/lib/music';
 import { detectMusic } from '@/lib/music';
-import { recommend, type RateTier, type Recommendation } from '@/lib/recommend';
-import {
+import { recommend, type RateTier, type Recommendation } from '@/lib/recommend';import {
   defaultSettings,
   resolveContentType,
   resolvePlatformMax,
@@ -34,7 +33,7 @@ import {
   type Settings,
 } from '@/lib/settings';
 import { manualCueRate } from '@/lib/wpm';
-import { createPill, type PillApi, type PillState } from '@/ui/pill';
+import { createPill, type LiveRate, type PillApi, type PillState } from '@/ui/pill';
 
 const RESOURCE_WAIT_MS = 2000;
 const RESOURCE_POLL_MS = 250;
@@ -49,6 +48,10 @@ let current: {
   contentType: ContentType;
   naturalRate: number;
   platformMax: number;
+  tier: RateTier;
+  /** Rate-unit display label; the generic path never resolves a language, so
+   * always 'wpm' (mirror of content.ts's unit field). */
+  unit: string;
   recommendation: Recommendation;
 } | null = null;
 
@@ -94,6 +97,10 @@ export default defineContentScript({
     document.addEventListener('play', onMediaEvent, true);
     document.addEventListener('playing', onMediaEvent, true);
     document.addEventListener('timeupdate', onMediaEvent, true);
+    // Live-rate line: ratechange and pause also drive the throttled refresh
+    // (mirror of entrypoints/content.ts).
+    document.addEventListener('ratechange', onMediaEvent, true);
+    document.addEventListener('pause', onMediaEvent, true);
     // E2E-only hook (SEC-2): the store bundle must not expose page-callable
     // playback controls — see entrypoints/content.ts for the gate.
     if (__E2E__) {
@@ -149,6 +156,7 @@ function onMediaEvent(event: Event): void {
     activeVideo = event.target;
     void measure();
   }
+  refreshLiveRate();
 }
 
 function measure(): void {
@@ -223,7 +231,7 @@ function renderRecommendation(
     platformMax,
     userTarget: resolveTarget(settings, site, contentType),
   });
-  current = { site, contentType, naturalRate, platformMax, recommendation };
+  current = { site, contentType, naturalRate, platformMax, tier, unit: 'wpm', recommendation };
   showPill({
     mode: recommendation.mode,
     rateWpm: naturalRate,
@@ -275,6 +283,26 @@ function showPill(state: PillState): void {
   if (__E2E__ && window.__speedwatcherPill !== undefined) window.__speedwatcherPill.state = state;
 }
 
+// ── Live effective rate (secondary pill line) ─────────────────────────────
+
+/** Same rule as content.ts: recommend/warning modes on a measured tier
+ * while playing at a non-1 rate; the estimated tier's prior is never shown. */
+function computeLiveRate(): LiveRate | null {
+  if (current === null) return null;
+  const mode = current.recommendation.mode;
+  if (mode !== 'recommend' && mode !== 'warning') return null;
+  if (current.tier === 'estimated') return null;
+  const video = activeVideo ?? document.querySelector<HTMLVideoElement>('video');
+  if (video === null || video.paused || video.playbackRate === 1) return null;
+  return { rate: current.naturalRate * video.playbackRate, multiplier: video.playbackRate, unit: current.unit };
+}
+
+function refreshLiveRate(): void {
+  // Never create the pill from a tick — that would mount an empty one pre-measure.
+  if (pill === null) return;
+  pill.api.updateLiveRate(computeLiveRate());
+}
+
 function applyMultiplier(multiplier: number): void {
   if (current === null) return;
   const video = activeVideo ?? document.querySelector<HTMLVideoElement>('video');
@@ -282,6 +310,8 @@ function applyMultiplier(multiplier: number): void {
   // start() applies the multiplier and re-asserts it (ratechange/play/pause
   // listeners + the re-check interval) until dismiss.
   reapplier.start(video, multiplier, current.platformMax);
+  // Show the live line immediately; steady-state ticks are throttled in the pill.
+  refreshLiveRate();
   void logAction('apply', multiplier);
 }
 
