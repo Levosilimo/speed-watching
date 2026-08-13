@@ -103,5 +103,5 @@ export function createAudioCapture(env: AudioCaptureEnv, hooks: AudioCaptureHook
     }
   }
 
-  return { start, stop };
+  return { start, stop, getStream: () => stream };
 }
