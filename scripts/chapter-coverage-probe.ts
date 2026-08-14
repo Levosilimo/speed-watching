@@ -71,7 +71,7 @@ interface ChapterRecord {
   /** Index in markersMap whose value.chapters was used; 0 = spec position. */
   markersIndex: number | null;
   /** Which data root carried the chapters (playerResponse = spec root). */
-  sourceRoot: 'playerResponse' | 'initialData' | null;
+  sourceRoot: 'playerResponse' | 'initialData' | 'initialData-panel' | null;
   playability: string | null;
   capturedAt: string;
 }

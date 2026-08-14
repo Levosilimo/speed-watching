@@ -39,8 +39,8 @@ export interface PageExtract {
   shapeValid: boolean;
   /** Breakage notes per root (deepest key + keys present there). */
   shapeDrift: string | null;
-  /** Which root carried the chapters used; null when none did. */
-  sourceRoot: 'playerResponse' | 'initialData' | null;
+  /** Which root/path carried the chapters used; null when none did. */
+  sourceRoot: 'playerResponse' | 'initialData' | 'initialData-panel' | null;
   markersIndex: number | null;
   chapters: ChapterInfo[];
 }
@@ -108,6 +108,52 @@ function chaptersOfMap(markersMap: unknown[]): { chapters: ChapterInfo[] | null;
         ? 'markersMap empty'
         : `marker keys: ${markerKeys.join(', ')} — no chapters value`,
   };
+}
+
+// Chapters from the engagement-panel chapter list, present in ytInitialData
+// on modern pages even when the player bar markers are not (auto-chapters
+// ship here). Start times live in the onTap watch URL (t=<seconds>s).
+function chaptersOfPanel(contents: unknown): ChapterInfo[] | null {
+  if (!Array.isArray(contents)) return null;
+  const chapters: ChapterInfo[] = [];
+  for (const entry of contents) {
+    const item = isRecord(entry) ? entry.macroMarkersListItemRenderer : undefined;
+    if (!isRecord(item)) continue;
+    const titleNode = isRecord(item.title) ? item.title : undefined;
+    const title =
+      isRecord(titleNode) && typeof titleNode.simpleText === 'string' ? titleNode.simpleText : '';
+    const onTap = isRecord(item.onTap) ? item.onTap : undefined;
+    const commandMeta =
+      isRecord(onTap) && isRecord(onTap.commandMetadata) ? onTap.commandMetadata : undefined;
+    const webMeta =
+      isRecord(commandMeta) && isRecord(commandMeta.webCommandMetadata)
+        ? commandMeta.webCommandMetadata
+        : undefined;
+    const url = webMeta && typeof webMeta.url === 'string' ? webMeta.url : '';
+    const tMatch = /[?&]t=(\d+)s/.exec(url);
+    chapters.push({
+      title,
+      startMillis: tMatch === null ? null : Number(tMatch[1]) * 1000,
+    });
+  }
+  return chapters.length === 0 ? null : chapters;
+}
+
+// The chapter-list panel inside ytInitialData (first panel carrying the
+// macroMarkersListRenderer); null when absent.
+function panelOf(data: unknown): unknown[] | null {
+  if (!isRecord(data) || !Array.isArray(data.engagementPanels)) return null;
+  for (const panel of data.engagementPanels) {
+    const renderer = isRecord(panel) ? panel.engagementPanelSectionListRenderer : undefined;
+    const content = isRecord(renderer) ? renderer.content : undefined;
+    if (isRecord(content) && content.macroMarkersListRenderer !== undefined) {
+      const list = isRecord(content.macroMarkersListRenderer)
+        ? content.macroMarkersListRenderer.contents
+        : undefined;
+      if (Array.isArray(list)) return list;
+    }
+  }
+  return null;
 }
 
 // Walk the fixed spec path under one root; on breakage record the
@@ -192,15 +238,29 @@ export function extractChapters(data: PageData): PageExtract {
       markersIndex = found.index;
     }
   }
+  // Auto-chapters also ship as the engagement-panel chapter list, which
+  // survives on pages where the player bar markers are not populated.
+  if (chapters === null) {
+    const panelContents = panelOf(data.initialData);
+    const panelChapters = panelContents === null ? null : chaptersOfPanel(panelContents);
+    if (panelChapters !== null) {
+      chapters = panelChapters;
+      sourceRoot = 'initialData-panel';
+    }
+  }
   if (chapters !== null) {
     result.shapeValid = true;
     result.markersIndex = markersIndex;
     const notes = [prWalk, dataWalk].filter((n): n is string => typeof n === 'string');
+    if (sourceRoot === 'initialData-panel' && dataMap !== undefined) {
+      notes.push(`initialData: ${chaptersOfMap(dataMap).note}`);
+    }
     if (notes.length > 0) result.shapeDrift = notes.join('; ');
   } else {
     const notes = [prWalk, dataWalk].filter((n): n is string => typeof n === 'string');
     if (prMap !== undefined) notes.push(`playerResponse: ${chaptersOfMap(prMap).note}`);
     if (dataMap !== undefined) notes.push(`initialData: ${chaptersOfMap(dataMap).note}`);
+    if (panelOf(data.initialData) === null) notes.push('initialData: no macroMarkersListRenderer panel');
     result.shapeDrift = notes.join('; ');
   }
   result.chapters = chapters ?? [];
