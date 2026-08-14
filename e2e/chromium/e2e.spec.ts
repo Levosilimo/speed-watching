@@ -249,14 +249,12 @@ test.beforeAll(async () => {
       await page.evaluate((s) => window.__speedwatcherChapter?.applyFor(s), sec);
     },
     async setChapterConsent(enabled) {
-      // The toggle lives inside the pill host; wait for it to render, then
-      // drive the exact click handler the button is wired to. (In real
-      // browsers mount()'s appendChild(shadow) moves the pill's markup into
-      // the host's light DOM, so the query is NOT shadowRoot-scoped.)
+      // The toggle lives inside the pill's open shadow root; wait for it to
+      // render, then drive the exact click handler the button is wired to.
       await page.waitForFunction(
         () => {
           const host = document.querySelector<HTMLElement>('.speedwatcher-pill-host');
-          const btn = host?.querySelector<HTMLButtonElement>('button.btn-chapter-toggle');
+          const btn = host?.shadowRoot?.querySelector<HTMLButtonElement>('button.btn-chapter-toggle');
           return btn !== null && btn !== undefined && !btn.hidden;
         },
         undefined,
@@ -264,7 +262,7 @@ test.beforeAll(async () => {
       );
       await page.evaluate((want) => {
         const host = document.querySelector<HTMLElement>('.speedwatcher-pill-host');
-        const btn = host?.querySelector<HTMLButtonElement>('button.btn-chapter-toggle');
+        const btn = host?.shadowRoot?.querySelector<HTMLButtonElement>('button.btn-chapter-toggle');
         if (btn === null || btn === undefined) throw new Error('chapter toggle missing');
         if ((btn.getAttribute('aria-pressed') === 'true') !== want) btn.click();
       }, enabled);
@@ -315,6 +313,61 @@ test('pill renders, applies, dismisses; music/unreachable suppress Apply; WEB-bl
   // Network-layer proof the ANDROID innertube fallback actually fired: the
   // web-blocked fixture must have produced one youtubei/v1/player POST.
   expect(androidPosts).toBeGreaterThan(0);
+});
+
+test('pill really paints: shadow root populated, non-zero geometry, in the layout tree', async () => {
+  // The fixture gives #movie_player to the <video> itself; Chromium computes
+  // no layout for children of a video, so the page is restructured to mirror
+  // real YouTube (a div#movie_player wrapping the video) and the measure is
+  // re-run on the new anchor — the same restructure the capture tool does.
+  await driver.navigateToWatch('real/manual-cue.json');
+  await driver.readPillState();
+  await page.evaluate(() => {
+    document.querySelector('.speedwatcher-pill-host')?.remove();
+    const video = document.querySelector('video#movie_player');
+    if (video === null) throw new Error('fixture video missing');
+    const player = document.createElement('div');
+    player.id = 'movie_player';
+    video.id = '';
+    video.replaceWith(player);
+    player.appendChild(video);
+    document.dispatchEvent(new Event('yt-navigate-start'));
+    document.dispatchEvent(new Event('yt-navigate-finish'));
+  });
+  await page.waitForFunction(
+    () => window.__speedwatcherPill?.state?.mode === 'recommend',
+    undefined,
+    { timeout: 15_000 },
+  );
+  const render = await page.evaluate(() => {
+    const host = document.querySelector<HTMLElement>('.speedwatcher-pill-host');
+    const root = host?.shadowRoot;
+    if (root === null || root === undefined) return { error: 'no open shadow root on the host' };
+    const pill = root.querySelector<HTMLElement>('.pill');
+    if (pill === null) return { error: '.pill missing from the shadow root' };
+    const rect = pill.getBoundingClientRect();
+    return {
+      childCount: root.childElementCount,
+      mode: pill.dataset.mode ?? null,
+      width: rect.width,
+      height: rect.height,
+      x: rect.x,
+      y: rect.y,
+      hasOffsetParent: pill.offsetParent !== null,
+    };
+  });
+  console.log('real-render pill geometry:', JSON.stringify(render));
+  if (render === null || 'error' in render) {
+    throw new Error(`pill real-render check failed: ${render === null ? 'no host' : render.error}`);
+  }
+  // (a) the shadow root exists and holds the pill DOM
+  expect(render.childCount).toBeGreaterThan(0);
+  expect(render.mode).toBe('recommend');
+  // (b) the pill has real painted geometry
+  expect(render.width).toBeGreaterThan(0);
+  expect(render.height).toBeGreaterThan(0);
+  // (c) the pill is in the layout tree (has a positioned ancestor)
+  expect(render.hasOffsetParent).toBe(true);
 });
 
 test('estimated renders increment the local demand counter (zero egress)', async () => {

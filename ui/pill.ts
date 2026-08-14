@@ -624,7 +624,9 @@ export function createPill(host: HTMLElement, events?: PillEvents, opts?: PillOp
   return {
     mount() {
       if (destroyed || mounted) return;
-      host.appendChild(shadow);
+      // The shadow root (with the pill DOM inside) attaches in createPill;
+      // appending the root node to the host again would relocate the pill
+      // into the host's light DOM, where shadow hosts render nothing.
       mounted = true;
     },
 
@@ -659,7 +661,6 @@ export function createPill(host: HTMLElement, events?: PillEvents, opts?: PillOp
       mounted = false;
       disposeTheme();
       shadow.innerHTML = '';
-      host.innerHTML = '';
       // The host keeps its shadow root after destroy; a second attachShadow
       // on it would throw, so the content scripts re-resolve the host after
       // video churn. Detach it (with the root) so the next pill mounts clean.

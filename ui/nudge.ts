@@ -187,7 +187,9 @@ export function createNudge(host: HTMLElement, events?: NudgeEvents, opts?: Nudg
       if (state.locale !== undefined) locale = state.locale;
       if (state.range !== undefined) currentRange = state.range;
       shown = true;
-      host.appendChild(shadow);
+      // The overlay lives in the shadow root created by createNudge; re-
+      // appending the root node to the host would move the overlay into the
+      // host's light DOM, which shadow hosts never render.
       render(dom, locale, currentRange);
       dom.overlay.hidden = false;
       // Move focus into the overlay so Enter/Escape work without a click.
@@ -206,7 +208,6 @@ export function createNudge(host: HTMLElement, events?: NudgeEvents, opts?: Nudg
       shown = false;
       mq?.removeEventListener('change', onThemeChange);
       shadow.innerHTML = '';
-      host.innerHTML = '';
       // Same contract as the pill: the host keeps its shadow root after
       // destroy, so the content scripts re-resolve the host after churn;
       // detach it (with the root) so the next show mounts clean.
