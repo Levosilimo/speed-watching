@@ -190,6 +190,8 @@ jobs:
     runs-on: ubuntu-latest
     needs: ci
     timeout-minutes: 25
+    env:
+      GECKODRIVER_VERSION: "0.37.1"   # wrapper otherwise fetches "latest" at runtime
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
@@ -199,15 +201,27 @@ jobs:
         with:
           bun-version: '1.3.14'
       - run: bun install --frozen-lockfile
-      # Real Firefox from the Mozilla APT repo. The Ubuntu snap package is
-      # unusable in CI (snapd is not available on runners), and firefox-esr
-      # lags the release channel.
-      - name: Install Firefox from Mozilla APT repo
-        run: |
-          sudo install -d -m 0755 /etc/apt/keyrings
-          wget -qO- https://packages.mozilla.org/apt/repo-signing-key.gpg | sudo tee /etc/apt/keyrings/packages.mozilla.org.asc > /dev/null
-          echo "deb [signed-by=/etc/apt/keyrings/packages.mozilla.org.asc] https://packages.mozilla.org/apt mozilla main" | sudo tee /etc/apt/sources.list.d/mozilla.list > /dev/null
-          sudo apt-get update -qq
-          sudo apt-get install -y firefox
+      # The three chromium jobs share one playwright cache key; only the
+      # first writer saves, so Firefox needs its own key (restore-keys falls
+      # back to the chromium entry and the cache-hit=false branch then
+      # installs Firefox on top).
+      - name: Cache Playwright Firefox
+        id: playwright-firefox-cache
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-firefox-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-playwright-firefox-
+            ${{ runner.os }}-playwright-
+      # Same browser the local runner verifies: the Playwright-patched build
+      # (e2e/firefox/run.ts resolution order prefers it), which is proven to
+      # speak Marionette to geckodriver 0.37.1.
+      - name: Install Playwright Firefox
+        if: steps.playwright-firefox-cache.outputs.cache-hit != 'true'
+        run: bunx playwright install --with-deps firefox
+      - name: Install Playwright system dependencies
+        if: steps.playwright-firefox-cache.outputs.cache-hit == 'true'
+        run: bunx playwright install-deps firefox
       - run: bun run build:firefox:e2e
       - run: bun run e2e:firefox

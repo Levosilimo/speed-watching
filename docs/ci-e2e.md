@@ -129,8 +129,7 @@ plus the manifest contract that makes onClicked fire (action key, no
 
 ### Firefox (WebDriver + geckodriver)
 
-`selenium-webdriver` talks to geckodriver (npm wrapper package, lazily
-downloads v0.37.1 to a cache dir) via `usingServer`. The addon is installed
+`selenium-webdriver` talks to geckodriver (npm wrapper package; `GECKODRIVER_VERSION` pins the binary — 0.37.1 in CI — because the wrapper otherwise fetches "latest" at runtime) via `usingServer`. The addon is installed
 with `driver.installAddon(.output/firefox-mv3-e2e, temporary = true)`. Firefox
 runs headless (`-headless` — full browser, extensions included; no Xvfb).
 
@@ -158,9 +157,10 @@ Marionette. The suite passes end-to-end with it.
 
 - Local install: `bunx playwright install firefox` (~110 MB download, about
   400 MB on disk).
-- CI: the Mozilla APT repository (`packages.mozilla.org/apt`), not the
-  Ubuntu snap — snapd is not available on runners, and firefox-esr lags the
-  release channel.
+- CI: the `e2e-firefox` job installs the same Playwright-patched Firefox
+  (`bunx playwright install --with-deps firefox`, its own cache key so the
+  chromium jobs' shared cache entry cannot shadow it) and sets
+  `GECKODRIVER_VERSION=0.37.1` so the wrapper cannot drift to a newer driver.
 
 ## gecko.id and MV3
 
@@ -201,7 +201,7 @@ publish time, pinned to `@8`.
 | Pipeline | `bun run ci` | `ci` job (same steps + SARIF upload + zip artifact) |
 | Chromium E2E | `bun run e2e:chromium` (needs `bun run build:e2e` first — the spec fails with instructions otherwise) | `e2e-chromium` job (`playwright install --with-deps chromium`) |
 | Chromium CfT E2E (offscreen) | `bun run e2e:cft` (needs `bun run build:e2e` — offscreen.spec.ts loads `.output/chrome-mv3-e2e`) | `e2e-chromium-cft` job (`xvfb-run -a bun run e2e:cft`) |
-| Firefox E2E | `bun run e2e:firefox` (needs `bun run build:firefox:e2e` + a Firefox binary) | `e2e-firefox` job (Mozilla APT Firefox) |
+| Firefox E2E | `bun run e2e:firefox` (needs `bun run build:firefox:e2e` + a Firefox binary) | `e2e-firefox` job (Playwright-patched Firefox, geckodriver pinned) |
 | Both | `bun run e2e` | — |
 
 `bun run e2e:chromium` starts the fixture server itself via Playwright's
