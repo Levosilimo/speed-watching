@@ -12,10 +12,16 @@
 //      window.__vimeo_player_config__ → config_url → request.text_tracks)
 //   2. HLS: EXT-X-MEDIA TYPE=SUBTITLES URIs from the master playlist
 //      (manifest found via the video src or the resource timeline)
-//   3. WebVTT resource entries any site loaded directly (Coursera et al.)
-//   4. video > track[src] subtitles (Dzen's signed OK.ru VTT with inline
+//   3. video > track[src] subtitles (Dzen's signed OK.ru VTT with inline
 //      word timestamps, Rutube's pic.rtbcdn.ru SRT)
+//   4. WebVTT resource entries any site loaded directly (Coursera et al.)
 //   5. edX sjson transcripts (/api/transcripts/…, same-origin only)
+//
+// The track-src probe (#3) runs before the VTT-entries probe (#4): when a
+// page both loads a .vtt and mounts a <track> for it, the word-level parse
+// (Dzen) is strictly more informative than the cue-level one, and the
+// platform URLs are extensionless anyway (vd*.okcdn.ru/?…, …/*.srt), which
+// the .vtt regex never matches.
 //
 // Every probe is defensive: a failure yields null and the caller falls back
 // to the heuristic estimated tier. Twitch and Coursera endpoints could not
@@ -337,8 +343,8 @@ export async function harvestCaptions(options: HarvestOptions): Promise<CaptionH
   const segments =
     (await safe(() => probeVimeoConfig(options), 'vimeo config')) ??
     (await safe(() => probeHls(options), 'hls')) ??
-    (await safe(() => probeVttEntries(options), 'vtt entries')) ??
     (await safe(() => probeTrackSrcs(options), 'track srcs')) ??
+    (await safe(() => probeVttEntries(options), 'vtt entries')) ??
     (await safe(() => probeEdxTranscripts(options), 'edx transcript'));
   if (segments === null) return null;
   // Cue-level probes return Segment[]; probe #5 returns a full harvest.

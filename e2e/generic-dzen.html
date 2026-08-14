@@ -2,9 +2,11 @@
 <!-- E2E fixture for the generic matcher's track-src probe: a <video> with a
      direct <track> child whose src is a Dzen-shaped word-timed VTT. The
      content script reads video > track[src] (no resource-timeline
-     dependence), fetches it cross-origin (the fixture server sets
-     ACAO:*), expands the inline <TS><c>word</c> runs, and renders the
-     asr-word tier. srclang="ru" exercises the track-language resolution. -->
+     dependence), fetches it, expands the inline <TS><c>word</c> runs, and
+     renders the asr-word tier. srclang="ru" exercises the track-language
+     resolution. (The server resolves /fixtures/<path> under
+     tests/fixtures/synthetic/, so the synthetic/ prefix is not part of
+     the URL — see e2e/server.ts.) -->
 <html lang="ru">
   <head>
     <meta charset="utf-8" />
@@ -12,7 +14,7 @@
   </head>
   <body>
     <video id="generic-video">
-      <track src="/fixtures/synthetic/dzen-word.vtt" kind="subtitles" srclang="ru" />
+      <track src="/fixtures/dzen-word.vtt" kind="subtitles" srclang="ru" />
     </video>
   </body>
 </html>

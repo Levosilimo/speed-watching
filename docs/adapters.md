@@ -6,10 +6,14 @@ one new generic probe — no platform code, no site-list change.
 
 ## Probe #5 — `video > track[src]` subtitles
 
-`lib/captions-harvest.ts`, after the VTT-resource probe. The content script
+`lib/captions-harvest.ts`, after the HLS probe. The content script
 collects every `video > track[src]` attribute on the page; the harvest
 (which stays DOM-free) fetches each src via the injected `fetchImpl` and
-returns the first payload that yields words or cues:
+returns the first payload that yields words or cues. It runs before the
+VTT-entries probe: when a page both loads a `.vtt` and mounts a `<track>`
+for it, the word-level parse is strictly more informative than the
+cue-level one — and Dzen's `vd*.okcdn.ru/?…` and Rutube's `…/*.srt` URLs
+never match the `.vtt`-only regex anyway.
 
 - **Dzen** (`dzen.ru/video`, MSE player, captions on OK.ru CDN): the track
   src is a signed `vd*.okcdn.ru/?…&type=2&subId=…` URL whose body is

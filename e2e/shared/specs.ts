@@ -422,38 +422,6 @@ export async function runGenericSpecs(driver: E2EDriver): Promise<void> {
     throw new Error(`generic: caption tier ${tier}, expected manual-cue`);
   }
 
-  // (f) Dzen-shaped fixture: the track-src probe yields word timings from
-  // the inline VTT runs, so the matcher renders the asr-word tier and the
-  // srclang="ru" track resolution lands the recommendation on the ru
-  // language model (target 168, not the 250 default).
-  await driver.navigateToGenericDzen();
-  const dzenState = expectState(await driver.readPillState(), 'generic-dzen');
-  const dzenExpected = expectedDzenRecommendation();
-  if (dzenState.mode !== dzenExpected.rec.mode) {
-    throw new Error(
-      `generic-dzen: pill mode ${dzenState.mode} !== expected ${dzenExpected.rec.mode}`,
-    );
-  }
-  if (dzenState.tierLabel !== dzenExpected.rec.tierLabel) {
-    throw new Error(
-      `generic-dzen: pill tierLabel ${dzenState.tierLabel} !== expected ${dzenExpected.rec.tierLabel}`,
-    );
-  }
-  if (Math.abs(dzenState.rateWpm - dzenExpected.naturalRate) > WPM_TOLERANCE) {
-    throw new Error(
-      `generic-dzen: pill rateWpm ${dzenState.rateWpm} outside tolerance of ${dzenExpected.naturalRate}`,
-    );
-  }
-  if (Math.abs(dzenState.multiplier - dzenExpected.rec.multiplier) > 1e-9) {
-    throw new Error(
-      `generic-dzen: pill multiplier ${dzenState.multiplier} !== expected ${dzenExpected.rec.multiplier}`,
-    );
-  }
-  const dzenTier = await driver.readCaptionTier();
-  if (dzenTier !== 'asr-word') {
-    throw new Error(`generic-dzen: caption tier ${dzenTier}, expected asr-word`);
-  }
-
   // (b) Apply sets the fixture video's playbackRate.
   await driver.applyPill();
   const applied = await driver.readPlaybackRate();
@@ -485,6 +453,38 @@ export async function runGenericSpecs(driver: E2EDriver): Promise<void> {
   const after = await driver.readPlaybackRate();
   if (after === null || Math.abs(after - 1) > RATE_TOLERANCE) {
     throw new Error(`generic: playbackRate ${after} after dismiss + reset, expected 1 (loop stopped)`);
+  }
+
+  // (f) Dzen-shaped fixture: the track-src probe yields word timings from
+  // the inline VTT runs, so the matcher renders the asr-word tier and the
+  // srclang="ru" track resolution lands the recommendation on the ru
+  // language model (target 168, not the 250 default).
+  await driver.navigateToGenericDzen();
+  const dzenState = expectState(await driver.readPillState(), 'generic-dzen');
+  const dzenExpected = expectedDzenRecommendation();
+  if (dzenState.mode !== dzenExpected.rec.mode) {
+    throw new Error(
+      `generic-dzen: pill mode ${dzenState.mode} !== expected ${dzenExpected.rec.mode}`,
+    );
+  }
+  if (dzenState.tierLabel !== dzenExpected.rec.tierLabel) {
+    throw new Error(
+      `generic-dzen: pill tierLabel ${dzenState.tierLabel} !== expected ${dzenExpected.rec.tierLabel}`,
+    );
+  }
+  if (Math.abs(dzenState.rateWpm - dzenExpected.naturalRate) > WPM_TOLERANCE) {
+    throw new Error(
+      `generic-dzen: pill rateWpm ${dzenState.rateWpm} outside tolerance of ${dzenExpected.naturalRate}`,
+    );
+  }
+  if (Math.abs(dzenState.multiplier - dzenExpected.rec.multiplier) > 1e-9) {
+    throw new Error(
+      `generic-dzen: pill multiplier ${dzenState.multiplier} !== expected ${dzenExpected.rec.multiplier}`,
+    );
+  }
+  const dzenTier = await driver.readCaptionTier();
+  if (dzenTier !== 'asr-word') {
+    throw new Error(`generic-dzen: caption tier ${dzenTier}, expected asr-word`);
   }
 }
 
