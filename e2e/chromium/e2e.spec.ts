@@ -17,6 +17,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import {
   expectedRecommendation,
+  runAutoSpecs,
   runBridgeSpecs,
   runGenericSpecs,
   runMeasurementSpecs,
@@ -292,6 +293,10 @@ test('content script measures fixture wpm; console hook agrees with event hook',
 
 test('bridge settings write flows into the pill (shared with firefox single-world)', async () => {
   await runBridgeSpecs(driver);
+});
+
+test('auto-apply: opt-in settings apply on navigation; estimated/music stay pill-only; stop-auto and manual override disengage per video', async () => {
+  await runAutoSpecs(driver);
 });
 
 test('generic matcher harvests captions, applies, and re-asserts after a reset', async () => {

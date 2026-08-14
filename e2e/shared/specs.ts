@@ -545,3 +545,165 @@ export async function runBridgeSpecs(driver: E2EDriver): Promise<void> {
     await driver.writeSettings(defaultSettings());
   }
 }
+
+/** Auto-apply e2e: opt-in settings force a recommend-mode fixture to apply
+ * itself on navigation; estimated/music stay pill-only; Stop-auto and a
+ * manual rate change disengage per video; the generic path adds the sentinel
+ * re-assert and the loop detach. Note: real/asr-word.json renders the
+ * pause-diluted WARNING under default settings, so the recommend-mode
+ * assertions use real/manual-cue.json (manual-cue tier) — the warning path
+ * is covered by shouldAutoApply's unit tests. The watch fixture's video
+ * never plays, so the applied 'user' relabel (markUserOverride gates on
+ * paused) is asserted on the generic page, whose video autoplays. */
+export async function runAutoSpecs(driver: E2EDriver): Promise<void> {
+  const fixture = 'real/manual-cue.json';
+  // Ensure the content script is up before writing through its hook.
+  await driver.navigateToWatch(fixture);
+  expectState(await driver.readPillState(), fixture);
+  try {
+    await driver.writeSettings({
+      ...defaultSettings(),
+      contentType: 'talk',
+      autoApply: { enabled: true, contentTypes: {} },
+    });
+    // (a) Auto-apply on navigation: the recommend-mode recommendation lands
+    // without an Apply click and the pill reports applied 'auto'.
+    await driver.navigateToWatch(fixture);
+    const state = expectState(await driver.readPillState(), fixture);
+    if (state.mode !== 'recommend') {
+      throw new Error(`${fixture}: pill mode ${state.mode}, expected recommend (auto candidate)`);
+    }
+    if (state.applied !== 'auto') {
+      throw new Error(`${fixture}: pill applied ${state.applied}, expected auto`);
+    }
+    const rate = await driver.readPlaybackRate();
+    if (rate === null || Math.abs(rate - state.multiplier) > RATE_TOLERANCE) {
+      throw new Error(
+        `${fixture}: playbackRate ${rate} without Apply, expected ${state.multiplier} ± ${RATE_TOLERANCE}`,
+      );
+    }
+
+    // (b) Estimated tier stays pill-only: no caption tracks → rate 1, not auto.
+    {
+      const estFixture = 'synthetic/no-tracks.json';
+      await driver.navigateToWatch(estFixture);
+      const est = expectState(await driver.readPillState(), estFixture);
+      if (est.applied === 'auto') {
+        throw new Error(`${estFixture}: estimated tier auto-applied (safety rule)`);
+      }
+      const estRate = await driver.readPlaybackRate();
+      if (estRate === null || Math.abs(estRate - 1) > RATE_TOLERANCE) {
+        throw new Error(`${estFixture}: playbackRate ${estRate}, expected 1 (estimated never auto)`);
+      }
+    }
+
+    // (c) Music never auto-applies.
+    {
+      const musicFixture = 'synthetic/music-lyrics.json';
+      await driver.navigateToWatch(musicFixture);
+      const music = expectState(await driver.readPillState(), musicFixture);
+      if (music.applied === 'auto') {
+        throw new Error(`${musicFixture}: music auto-applied (safety rule)`);
+      }
+      const musicRate = await driver.readPlaybackRate();
+      if (musicRate === null || Math.abs(musicRate - 1) > RATE_TOLERANCE) {
+        throw new Error(`${musicFixture}: playbackRate ${musicRate}, expected 1 (music never auto)`);
+      }
+    }
+
+    // (d) Stop-auto: rate untouched, applied 'none'; auto returns on the next
+    // video (per-video opt-in — navigation arms a fresh lifecycle).
+    await driver.navigateToWatch(fixture);
+    const before = expectState(await driver.readPillState(), fixture);
+    if (before.applied !== 'auto') {
+      throw new Error(`${fixture}: pill applied ${before.applied}, expected auto before stop-auto`);
+    }
+    await driver.stopAuto();
+    const stopped = expectState(await driver.readPillState(), fixture);
+    if (stopped.applied !== 'none') {
+      throw new Error(`${fixture}: pill applied ${stopped.applied}, expected none after stop-auto`);
+    }
+    const stoppedRate = await driver.readPlaybackRate();
+    if (stoppedRate === null || Math.abs(stoppedRate - before.multiplier) > RATE_TOLERANCE) {
+      throw new Error(
+        `${fixture}: playbackRate ${stoppedRate} after stop-auto, expected ${before.multiplier} (rate untouched)`,
+      );
+    }
+    await driver.navigateToWatch(fixture);
+    const after = expectState(await driver.readPillState(), fixture);
+    if (after.applied !== 'auto') {
+      throw new Error(`${fixture}: auto did not re-arm on the next video (per-video opt-in)`);
+    }
+
+    // (e) Manual rate change is respected on youtube: the rate sticks (no
+    // loop exists to fight it). The applied 'user' relabel needs a PLAYING
+    // video (markUserOverride gates on paused, and the watch fixture never
+    // plays) — that assertion lives in the generic sub-spec (f) below.
+    await driver.navigateToWatch(fixture);
+    const auto = expectState(await driver.readPillState(), fixture);
+    if (auto.applied !== 'auto') {
+      throw new Error(`${fixture}: pill applied ${auto.applied}, expected auto before override`);
+    }
+    await driver.setPlaybackRate(1.25);
+    const manualRate = await driver.readPlaybackRate();
+    if (manualRate === null || Math.abs(manualRate - 1.25) > RATE_TOLERANCE) {
+      throw new Error(`${fixture}: playbackRate ${manualRate}, expected 1.25 (manual change must stick)`);
+    }
+    await driver.navigateToWatch(fixture);
+    const fresh = expectState(await driver.readPillState(), fixture);
+    if (fresh.applied !== 'auto') {
+      throw new Error(`${fixture}: auto did not re-arm after a manual rate change (next video)`);
+    }
+
+    // (f) Generic path: auto applies on the talk fixture with the forced
+    // content type; the sentinel re-asserts a reset to 1.0; a manual non-1.0
+    // rate is respected and labels the source 'user' (the fixture video
+    // plays, so the override detection runs); Stop-auto detaches the loop so
+    // a later reset sticks; the next video re-arms.
+    await driver.navigateToGeneric();
+    const g = expectState(await driver.readPillState(), 'generic-auto');
+    if (g.applied !== 'auto') {
+      throw new Error(`generic: pill applied ${g.applied}, expected auto`);
+    }
+    const gRate = await driver.readPlaybackRate();
+    if (gRate === null || Math.abs(gRate - g.multiplier) > RATE_TOLERANCE) {
+      throw new Error(
+        `generic: playbackRate ${gRate} without Apply, expected ${g.multiplier} ± ${RATE_TOLERANCE}`,
+      );
+    }
+    await driver.resetPlaybackRate();
+    await driver.waitForPlaybackRate(g.multiplier);
+    await driver.setPlaybackRate(1.25);
+    await driver.sleep(3500); // > one re-check interval (2s)
+    const gManual = await driver.readPlaybackRate();
+    if (gManual === null || Math.abs(gManual - 1.25) > RATE_TOLERANCE) {
+      throw new Error(
+        `generic: playbackRate ${gManual} after manual 1.25, expected 1.25 (loop must not fight the user)`,
+      );
+    }
+    const gUser = expectState(await driver.readPillState(), 'generic-auto');
+    if (gUser.applied !== 'user') {
+      throw new Error(`generic: pill applied ${gUser.applied}, expected user after manual rate`);
+    }
+    await driver.stopAuto();
+    await driver.resetPlaybackRate();
+    await driver.sleep(3500); // > one re-check interval (2s)
+    const gAfter = await driver.readPlaybackRate();
+    if (gAfter === null || Math.abs(gAfter - 1) > RATE_TOLERANCE) {
+      throw new Error(
+        `generic: playbackRate ${gAfter} after stop-auto + reset, expected 1 (loop detached)`,
+      );
+    }
+    await driver.navigateToGeneric();
+    const gFresh = expectState(await driver.readPillState(), 'generic-auto');
+    if (gFresh.applied !== 'auto') {
+      throw new Error(`generic: auto did not re-arm on the next video (per-video opt-in)`);
+    }
+  } finally {
+    // The settings hook lives on youtube pages only — land back there before
+    // restoring, whatever page the last sub-spec ended on.
+    await driver.navigateToWatch(fixture);
+    expectState(await driver.readPillState(), fixture);
+    await driver.writeSettings(defaultSettings());
+  }
+}

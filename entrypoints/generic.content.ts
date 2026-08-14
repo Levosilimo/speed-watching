@@ -258,9 +258,12 @@ async function measureOnce(): Promise<void> {
       : manualCueRate(harvest.cues, language);
     if (naturalRate !== null) {
       const detected = detectMusic(harvest.cues, naturalRate) ? 'music' : 'generic';
+      // The user/site content-type preference outranks the detected default
+      // (mirror of content.ts): auto-apply gates on this resolved type.
+      const contentType = resolveContentType(settings, site, detected);
       const { tier, wordInputs } = asrTierInputs(asr ? 'asr' : 'manual', harvest.words, harvest.cues);
       if (__E2E__) window.__speedwatcherCaptionTier = tier;
-      renderRecommendation(naturalRate, tier, detected, settings, site, wordInputs, language);
+      renderRecommendation(naturalRate, tier, contentType, settings, site, wordInputs, language);
       return;
     }
   }
