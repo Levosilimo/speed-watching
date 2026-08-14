@@ -384,31 +384,20 @@ function renderFirstRun(dom: PillDom, state: PillState, locale: UiLocale): void 
   });
 }
 
-function render(
-  dom: PillDom,
-  state: PillState,
-  live: LiveRate | null,
-  saved: number | null,
-  locale: UiLocale,
-  destroyed: boolean,
-): void {
-  if (destroyed) return;
-
-  // Button strings live in render so a late locale resolution re-labels
-  // them (buildDom only supplies the structural defaults).
+/** Button strings + aria live here so a late locale resolution re-labels
+ * them (buildDom only supplies the structural defaults). */
+function renderActionLabels(dom: PillDom, locale: UiLocale): void {
   dom.applyBtn.textContent = t('pill.apply', locale);
   dom.applyBtn.setAttribute('aria-label', t('pill.applyAria', locale));
   dom.dismissBtn.setAttribute('aria-label', t('pill.dismissAria', locale));
+}
 
-  const mode = state.mode;
-
-  // Stop-auto button: only while the recommendation is showing AND this
-  // video's rate was applied automatically. In that state it is the undo
-  // affordance — 'Reset to {rate}×' restoring the pre-auto rate when the
-  // content script captured one, plain 'Stop auto' otherwise. Computed
-  // before the none early-return so a hide flips it back even when the
-  // surface goes dark.
-  const showStopAuto = state.applied === 'auto' && mode === 'recommend';
+/** Stop-auto button: only while the recommendation is showing AND this
+ * video's rate was applied automatically. In that state it is the undo
+ * affordance — 'Reset to {rate}×' restoring the pre-auto rate when the
+ * content script captured one, plain 'Stop auto' otherwise. */
+function renderStopAuto(dom: PillDom, state: PillState, locale: UiLocale): void {
+  const showStopAuto = state.applied === 'auto' && state.mode === 'recommend';
   dom.stopAutoBtn.hidden = !showStopAuto;
   if (showStopAuto) {
     const undo = state.undoRate !== undefined;
@@ -417,20 +406,28 @@ function render(
       : t('pill.stopAuto', locale);
     dom.stopAutoBtn.setAttribute('aria-label', undo ? t('pill.resetToAria', locale) : t('pill.stopAutoAria', locale));
   }
+}
 
-  // Chapter consent toggle: only when the page exposed chapter markers and
-  // the recommendation is actionable. aria-pressed mirrors the consent state.
+/** Chapter consent toggle: only when the page exposed chapter markers and
+ * the recommendation is actionable. aria-pressed mirrors the consent state. */
+function renderChapterToggle(dom: PillDom, state: PillState, locale: UiLocale): void {
   const showChapterToggle =
-    state.chaptersAvailable === true && (mode === 'recommend' || mode === 'warning');
+    state.chaptersAvailable === true && (state.mode === 'recommend' || state.mode === 'warning');
   dom.chapterToggleBtn.hidden = !showChapterToggle;
   if (showChapterToggle) {
     dom.chapterToggleBtn.textContent = t('pill.chapter.toggle', locale);
     dom.chapterToggleBtn.setAttribute('aria-label', t('pill.chapter.toggleAria', locale));
     dom.chapterToggleBtn.setAttribute('aria-pressed', state.autoAdjust === true ? 'true' : 'false');
   }
-  // Scheduler status line: while consent is on, the current segment's state
-  // (active / paused after a manual override / a music chapter at 1x).
-  const showChapterStatus = showChapterToggle && state.autoAdjust === true;
+}
+
+/** Scheduler status line: while consent is on, the current segment's state
+ * (active / paused after a manual override / a music chapter at 1x). */
+function renderChapterStatus(dom: PillDom, state: PillState, locale: UiLocale): void {
+  const showChapterStatus =
+    state.chaptersAvailable === true &&
+    (state.mode === 'recommend' || state.mode === 'warning') &&
+    state.autoAdjust === true;
   dom.chapterStatusEl.hidden = !showChapterStatus;
   if (showChapterStatus) {
     const statusKey =
@@ -441,6 +438,27 @@ function render(
           : 'pill.chapter.active';
     dom.chapterStatusEl.textContent = t(statusKey, locale);
   }
+}
+
+function render(
+  dom: PillDom,
+  state: PillState,
+  live: LiveRate | null,
+  saved: number | null,
+  locale: UiLocale,
+  destroyed: boolean,
+): void {
+  if (destroyed) return;
+
+  renderActionLabels(dom, locale);
+
+  const mode = state.mode;
+
+  // Stop-auto and the chapter affordances render before the none
+  // early-return so a hide flips them back even when the surface goes dark.
+  renderStopAuto(dom, state, locale);
+  renderChapterToggle(dom, state, locale);
+  renderChapterStatus(dom, state, locale);
 
   // Hide the live and saved lines outside recommend/warning, even in the
   // none branch below (the pill surface itself is invisible there, but the
