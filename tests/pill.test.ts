@@ -326,9 +326,15 @@ describe('pill contract (lib-16 guard)', () => {
     }
   });
 
-  it('exposes exactly {mount, update, updateLiveRate, destroy} on PillApi', () => {
+  it('exposes exactly {mount, update, updateLiveRate, updateSavedSec, destroy} on PillApi', () => {
     const pill: PillApi = createPill(shadowHost(), {}, { locale: 'en' });
-    expect(Object.keys(pill).sort()).toEqual(['destroy', 'mount', 'update', 'updateLiveRate']);
+    expect(Object.keys(pill).sort()).toEqual([
+      'destroy',
+      'mount',
+      'update',
+      'updateLiveRate',
+      'updateSavedSec',
+    ]);
   });
 
   it('keeps PillState free of nudge fields — the nudge is a separate surface', () => {
@@ -453,5 +459,104 @@ describe('createPill — ru locale', () => {
     } finally {
       window.postMessage = original;
     }
+  });
+});
+
+describe('createPill saved-time line', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    document.body.innerHTML = '';
+  });
+
+  function savedElOf(host: HTMLElement): HTMLSpanElement {
+    const el = rootOf(host).querySelector<HTMLSpanElement>('.saved-time');
+    if (el === null) throw new Error('expected a .saved-time element');
+    return el;
+  }
+
+  it('renders the saved line in recommend mode when saved > 0', () => {
+    const host = shadowHost();
+    const pill = createPill(host, {}, { locale: 'en' });
+    pill.mount();
+    pill.update(state());
+    pill.updateSavedSec(120);
+
+    const saved = savedElOf(host);
+    expect(saved.hidden).toBe(false);
+    expect(saved.textContent).toBe('~2 minutes saved');
+  });
+
+  it('shows the line in warning mode as well', () => {
+    const host = shadowHost();
+    const pill = createPill(host, {}, { locale: 'en' });
+    pill.mount();
+    pill.update(state({ mode: 'warning', reason: 'above-zone' }));
+    pill.updateSavedSec(120);
+
+    expect(savedElOf(host).hidden).toBe(false);
+  });
+
+  it('stays hidden in music, unreachable and none modes even with saved > 0', () => {
+    const host = shadowHost();
+    const pill = createPill(host, {}, { locale: 'en' });
+    pill.mount();
+    for (const mode of ['music', 'unreachable', 'none'] as const) {
+      pill.update(state({ mode, label: `m-${mode}` }));
+      pill.updateSavedSec(120);
+      expect(savedElOf(host).hidden).toBe(true);
+    }
+  });
+
+  it('hides the line for null and for zero saved time', () => {
+    const host = shadowHost();
+    const pill = createPill(host, {}, { locale: 'en' });
+    pill.mount();
+    pill.update(state());
+    pill.updateSavedSec(120);
+    expect(savedElOf(host).hidden).toBe(false);
+
+    pill.updateSavedSec(null);
+    expect(savedElOf(host).hidden).toBe(true);
+
+    // A fresh session at 0 saved is not worth a line.
+    pill.updateSavedSec(0);
+    expect(savedElOf(host).hidden).toBe(true);
+  });
+
+  it('throttles: an equal push is a no-op', () => {
+    const host = shadowHost();
+    const pill = createPill(host, {}, { locale: 'en' });
+    pill.mount();
+    pill.update(state());
+    const saved = savedElOf(host);
+
+    pill.updateSavedSec(120);
+    pill.updateSavedSec(120);
+    expect(saved.textContent).toBe('~2 minutes saved');
+    expect(saved.hidden).toBe(false);
+  });
+
+  it('drops the stale value when a full update leaves recommend/warning', () => {
+    const host = shadowHost();
+    const pill = createPill(host, {}, { locale: 'en' });
+    pill.mount();
+    pill.update(state());
+    pill.updateSavedSec(120);
+    pill.update(state({ mode: 'none', label: '' }));
+    expect(savedElOf(host).hidden).toBe(true);
+
+    // Back to recommend without a fresh push: the stale line must not
+    // resurrect itself.
+    pill.update(state());
+    expect(savedElOf(host).hidden).toBe(true);
+  });
+
+  it('localizes the saved line for ru', () => {
+    const host = shadowHost();
+    const pill = createPill(host, {}, { locale: 'ru' });
+    pill.mount();
+    pill.update(state());
+    pill.updateSavedSec(120);
+    expect(savedElOf(host).textContent).toBe('~2 минуты сэкономлено');
   });
 });

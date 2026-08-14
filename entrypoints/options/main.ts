@@ -15,8 +15,10 @@ import {
   type Settings,
   type UiLanguageSetting,
 } from '../../lib/settings';
+import { TIME_SAVED_STORAGE_KEY, TimeSavedStore } from '../../lib/time-saved';
 import {
   applyI18n,
+  formatTimeSaved,
   resolveUiLanguage,
   t,
   type I18nKey,
@@ -26,8 +28,10 @@ import {
 // The STT demand-gate diagnostics are dev-only (lib-13: store-review
 // liabilities); ./dev.ts is imported only in dev builds, so the store bundle
 // ships none of them. The audio capture test below ships.
+// Awaited so the dynamic import cannot float past the importing context's
+// teardown (the vitest module-cache quirk documented in options-a11y.test.ts).
 if (import.meta.env.DEV) {
-  void import('./dev');
+  await import('./dev');
 }
 
 function el(id: string): HTMLElement {
@@ -37,12 +41,15 @@ function el(id: string): HTMLElement {
 }
 
 // ── Settings: single storage namespace ───────────────────────────────────
-// chrome.storage.local holds exactly three keys — 'sw.settings' (SettingsStore),
-// 'sw.overrideLog' (OverrideLog), and 'sw.demand' (DemandStore); see the
-// lib/settings.ts module doc. ui/storage.ts's parallel 'sw:' schema is retired.
+// chrome.storage.local holds exactly five keys — 'sw.settings'
+// (SettingsStore), 'sw.overrideLog' (OverrideLog), 'sw.demand' (DemandStore),
+// 'sw.channelRates' (ChannelMemory), and 'sw.timeSavedSec' (TimeSavedStore);
+// see the lib/settings.ts module doc. ui/storage.ts's parallel 'sw:' schema
+// is retired.
 
 const settingsStore = new SettingsStore(browser.storage.local, SETTINGS_STORAGE_KEY);
 const overrideLog = new OverrideLog(browser.storage.local);
+const timeSavedStore = new TimeSavedStore(browser.storage.local);
 
 // ── Settings: WPM Slider ─────────────────────────────────────────────────
 
@@ -96,6 +103,9 @@ function renderLocale(): void {
   document.documentElement.lang = uiLocale;
   applyI18n(document, uiLocale);
   renderProbe();
+  // The saved-time headline is localized text (the other habit stats are
+  // numbers) — re-render it on a language switch.
+  void refreshHabits();
 }
 
 uiLangSelect.addEventListener('change', () => {
@@ -210,10 +220,17 @@ externalApiToggle.addEventListener('change', () => {
 
 const habitTotal = el('habit-total');
 const habitAvgMult = el('habit-avg-mult');
+const habitSaved = el('habit-saved');
 const habitList = el('habit-list');
 
-function renderHabits(habits: OverrideLogEntry[]): void {
+function renderHabits(habits: OverrideLogEntry[], savedSec: number): void {
   habitTotal.textContent = String(habits.length);
+  // The saved-time stat: the 'tracking started' line until the first accrue
+  // (no sw.timeSavedSec yet — never fabricate a value).
+  habitSaved.textContent =
+    savedSec === 0
+      ? t('options.timeSavedStarted', uiLocale)
+      : t('options.timeSavedHeadline', uiLocale, formatTimeSaved(savedSec, uiLocale));
 
   // Same semantics as OverrideLog.report(): the average covers only applied
   // multipliers — dismisses and adjusts never set the playback speed.
@@ -246,6 +263,13 @@ function renderHabits(habits: OverrideLogEntry[]): void {
     li.append(name, countEl);
     habitList.appendChild(li);
   }
+}
+
+/** Habits and the saved-time stat share one refresh (both render from
+ * chrome.storage.local, and the onChanged branches below re-render both). */
+async function refreshHabits(): Promise<void> {
+  const [habits, savedSec] = await Promise.all([overrideLog.entries(), timeSavedStore.get()]);
+  renderHabits(habits, savedSec);
 }
 
 // ── Audio Capture Test (shipped; the tabCapture/offscreen justification) ──
@@ -339,9 +363,10 @@ if (probeSupported) {
 // ── Load persisted state ─────────────────────────────────────────────────
 
 async function loadSettings(): Promise<void> {
-  const [settings, habits] = await Promise.all([
+  const [settings, habits, savedSec] = await Promise.all([
     settingsStore.load(),
     overrideLog.entries(),
+    timeSavedStore.get(),
   ]);
   uiLocale = resolveUiLanguage(settings.uiLanguage, navigator.language);
   uiLangSelect.value = settings.uiLanguage ?? 'auto';
@@ -352,7 +377,7 @@ async function loadSettings(): Promise<void> {
   setActivePreset(settings.contentType ?? 'generic');
   externalApiToggle.checked = settings.externalApiEnabled;
   renderOverrides(siteList(settings));
-  renderHabits(habits);
+  renderHabits(habits, savedSec);
 }
 
 // Render the browser-language default immediately, then refine with the
@@ -366,12 +391,15 @@ void loadSettings();
 // miss onChanged events while the log moves.
 browser.storage.local.onChanged.addListener((changes) => {
   if (changes[OVERRIDE_LOG_STORAGE_KEY] !== undefined) {
-    void overrideLog.entries().then(renderHabits);
+    void refreshHabits();
+  }
+  if (changes[TIME_SAVED_STORAGE_KEY] !== undefined) {
+    void refreshHabits();
   }
 });
 
 function refreshFromStorage(): void {
-  void overrideLog.entries().then(renderHabits);
+  void refreshHabits();
 }
 
 window.addEventListener('focus', refreshFromStorage);

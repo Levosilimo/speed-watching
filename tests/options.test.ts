@@ -12,6 +12,7 @@ import { SETTINGS_STORAGE_KEY } from '../lib/settings';
 const optionsHtml = readFileSync(join(process.cwd(), 'entrypoints/options/index.html'), 'utf8');
 const LOG_KEY = 'sw.overrideLog';
 const DEMAND_KEY = 'sw.demand';
+const TIME_SAVED_KEY = 'sw.timeSavedSec';
 
 let storageData = new Map<string, unknown>();
 type OnChangedListener = (changes: Record<string, { newValue?: unknown }>) => void;
@@ -196,6 +197,40 @@ describe('options storage refresh wiring', () => {
     document.dispatchEvent(new Event('visibilitychange'));
     await flush();
     expect(document.getElementById('habit-avg-mult')?.textContent).toBe('1.50×');
+  });
+});
+
+describe('options time-saved stat', () => {
+  it('renders the headline from the stored value', async () => {
+    storageData.set(TIME_SAVED_KEY, 33732);
+    await import('../entrypoints/options/main');
+    await flush();
+    expect(document.getElementById('habit-saved')?.textContent).toBe(
+      '≈ 9 hours reclaimed (estimate)',
+    );
+  });
+
+  it('shows the tracking-started line when the value is 0 or absent', async () => {
+    await import('../entrypoints/options/main');
+    await flush();
+    expect(document.getElementById('habit-saved')?.textContent).toBe(
+      'Time-saved tracking started',
+    );
+  });
+
+  it('re-renders the headline from the sw.timeSavedSec onChanged branch', async () => {
+    storageData.set(TIME_SAVED_KEY, 0);
+    await import('../entrypoints/options/main');
+    await flush();
+    expect(document.getElementById('habit-saved')?.textContent).toBe(
+      'Time-saved tracking started',
+    );
+    storageData.set(TIME_SAVED_KEY, 90);
+    fireOnChanged(TIME_SAVED_KEY, 90);
+    await flush();
+    expect(document.getElementById('habit-saved')?.textContent).toBe(
+      '≈ 2 minutes reclaimed (estimate)',
+    );
   });
 });
 

@@ -61,7 +61,8 @@ describe('options accessibility structure', () => {
     expect(grid?.tagName).toBe('DL');
     expect(document.getElementById('habit-total')?.tagName).toBe('DT');
     expect(document.getElementById('habit-avg-mult')?.tagName).toBe('DT');
-    expect(document.querySelectorAll('.habit-stat dd')).toHaveLength(2);
+    expect(document.getElementById('habit-saved')?.tagName).toBe('DT');
+    expect(document.querySelectorAll('.habit-stat dd')).toHaveLength(3);
   });
 
   it('moves focus to the add-input after removing an override', async () => {

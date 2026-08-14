@@ -33,13 +33,14 @@ const genericDzenHtml = readFileSync(
 
 const FIXTURE_NAME = /^(real|synthetic)\/[a-z0-9-]+\.json$/;
 /** Generic-matcher fixtures: safe path charset, resolved under syntheticRoot. */
-const FIXTURE_FILE = /^[a-z0-9/.-]+\.(vtt|m3u8|json|srt)$/;
+const FIXTURE_FILE = /^[a-z0-9/.-]+\.(vtt|m3u8|json|srt|webm)$/;
 
 const CONTENT_TYPE_BY_EXT: Record<string, string> = {
   vtt: 'text/vtt',
   m3u8: 'application/vnd.apple.mpegurl',
   json: 'application/json',
   srt: 'text/plain',
+  webm: 'video/webm',
 };
 
 interface FixtureServer {

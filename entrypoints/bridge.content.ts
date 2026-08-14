@@ -3,8 +3,9 @@
 // + OverrideLog + ChannelMemory that MAIN-world scripts cannot touch
 // (chrome.* is unavailable in the page world). Answers the window
 // postMessage envelopes defined in lib/messaging.ts straight from
-// chrome.storage.local — no service-worker round trip. Demand increments
-// and the nudge messages are the exceptions: they are forwarded to the
+// chrome.storage.local — no service-worker round trip. Demand increments,
+// the nudge messages, and time-saved accrues are the exceptions: they are
+// forwarded to the
 // background, the single writer (lib-11#3), so per-frame stores never
 // interleave get→set pairs.
 //
@@ -55,6 +56,8 @@ export default defineContentScript({
             browser.runtime.sendMessage({ type: 'nudge:recordApply', multiplier }),
           forwardNudgeDismiss: (forever) =>
             browser.runtime.sendMessage({ type: 'nudge:dismiss', forever }),
+          forwardAccrue: (deltaSec, multiplier) =>
+            browser.runtime.sendMessage({ type: 'timeSaved:accrue', deltaSec, multiplier }),
         },
         window,
       ),

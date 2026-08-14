@@ -216,6 +216,37 @@ describe('background wiring', () => {
     expect(sendResponse).not.toHaveBeenCalled();
   });
 
+  it('answers timeSaved:accrue through its single TimeSavedStore', async () => {
+    installLocalStorage();
+    const main = (backgroundModule as { main: () => unknown }).main;
+    main();
+    const listener = registeredListener();
+
+    const response = await driveMessage(listener, {
+      type: 'timeSaved:accrue',
+      deltaSec: 60,
+      multiplier: 2,
+    });
+
+    expect(response).toBe(30);
+  });
+
+  it('serializes concurrent timeSaved:accrue from two frames without loss', async () => {
+    installLocalStorage();
+    const main = (backgroundModule as { main: () => unknown }).main;
+    main();
+    const listener = registeredListener();
+
+    // Two frames race their accrues; the single background-owned chain
+    // serializes them so neither get→set interleaves.
+    const [a, b] = await Promise.all([
+      driveMessage(listener, { type: 'timeSaved:accrue', deltaSec: 60, multiplier: 2 }, 1),
+      driveMessage(listener, { type: 'timeSaved:accrue', deltaSec: 30, multiplier: 1.5 }, 2),
+    ]);
+    expect(a).toBe(30);
+    expect(b).toBe(30 + (30 * 0.5) / 1.5); // +10
+  });
+
   it('ignores an action click without a tab id', async () => {
     const main = (backgroundModule as { main: () => unknown }).main;
     main();

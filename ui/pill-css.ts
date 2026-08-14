@@ -90,6 +90,12 @@ export function pillCss(t: Theme): string {
       white-space: nowrap;
     }
 
+    .saved-time {
+      font-size: ${TOKENS.textXs};
+      color: ${t.textSecondary};
+      white-space: nowrap;
+    }
+
     .actions {
       display: flex;
       align-items: center;

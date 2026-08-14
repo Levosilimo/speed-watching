@@ -4,10 +4,11 @@
 // Requests and responses travel as postMessage envelopes on the shared
 // window. Settings, log, and channel-memory requests the bridge answers
 // directly from chrome.storage.local — no service-worker round trip.
-// demand:increment and the nudge messages are the exceptions: the bridge
-// forwards them to the background (runtime.sendMessage), the single
-// writer, so increments from every frame serialize on one DemandStore /
-// NudgeStore instead of interleaving per-frame get→set pairs (lib-11#3).
+// demand:increment, the nudge messages, and timeSaved:accrue are the
+// exceptions: the bridge forwards them to the background
+// (runtime.sendMessage), the single writer, so increments from every frame
+// serialize on one DemandStore / NudgeStore / TimeSavedStore instead of
+// interleaving per-frame get→set pairs (lib-11#3).
 // World choice documented in entrypoints/content.ts.
 //
 // Transport choice: postMessage, not CustomEvents. Firefox does not deliver
@@ -61,6 +62,25 @@ export function isNudgeRecordApply(value: unknown): value is NudgeRecordApplyMes
   );
 }
 
+interface TimeSavedAccrueMessage {
+  type: 'timeSaved:accrue';
+  deltaSec: number;
+  multiplier: number;
+}
+
+/** Shape check for timeSaved:accrue crossing the postMessage boundary: the
+ * delta must be a finite number (the store's (0, 1] bound is the accrue
+ * authority) and the multiplier must sit in the SEC-3 log bounds. */
+export function isTimeSavedAccrueMessage(value: unknown): value is TimeSavedAccrueMessage {
+  return (
+    isRecord(value) &&
+    value.type === 'timeSaved:accrue' &&
+    typeof value.deltaSec === 'number' &&
+    Number.isFinite(value.deltaSec) &&
+    isFiniteNumberIn(value.multiplier, MULTIPLIER_MIN, MULTIPLIER_MAX)
+  );
+}
+
 /** Runtime message the bridge sends the background for nudge:dismiss —
  * 'Got it' (cooldown) or 'Don't show again' (permanent). */
 interface NudgeDismissMessage {
@@ -71,7 +91,6 @@ interface NudgeDismissMessage {
 export function isNudgeDismiss(value: unknown): value is NudgeDismissMessage {
   return isRecord(value) && value.type === 'nudge:dismiss' && typeof value.forever === 'boolean';
 }
-
 /** Runtime message the background sends the active tab on a keyboard
  * shortcut (chrome.commands, wxt.config.ts). The ISOLATED bridge receives
  * it and relays it to the MAIN-world script (see ShortcutEnvelope). */
@@ -107,7 +126,8 @@ export type BridgeRequest =
   | { type: 'channel:put'; channelKey: string; record: ChannelRecord }
   | DemandIncrementMessage
   | NudgeRecordApplyMessage
-  | NudgeDismissMessage;
+  | NudgeDismissMessage
+  | TimeSavedAccrueMessage;
 
 export type BridgeResult<T extends BridgeRequest> = T extends { type: 'settings:get' }
   ? Settings
@@ -160,6 +180,8 @@ export interface BridgeDeps {
   forwardNudgeRecordApply: (multiplier: number) => Promise<unknown>;
   /** Forwards nudge:dismiss to the background — the single writer. */
   forwardNudgeDismiss: (forever: boolean) => Promise<unknown>;
+  /** Forwards timeSaved:accrue to the background — the single writer. */
+  forwardAccrue: (deltaSec: number, multiplier: number) => Promise<unknown>;
 }
 
 export function isFiniteNumberIn(value: unknown, min: number, max: number): boolean {
@@ -196,9 +218,10 @@ function isContentTypePrefs(value: unknown): boolean {
 
 // SEC-3 bounds for log:append entries: the pill recommends within
 // platformMax (<= 4) and no speech track runs above 1000 wpm, so anything
-// outside these ranges is forgery.
-const MULTIPLIER_MIN = 0.1;
-const MULTIPLIER_MAX = 10;
+// outside these ranges is forgery. Shared with lib/time-saved.ts, whose
+// accrue gate uses the same multiplier bounds.
+export const MULTIPLIER_MIN = 0.1;
+export const MULTIPLIER_MAX = 10;
 export const NATURAL_RATE_MIN = 1;
 export const NATURAL_RATE_MAX = 1000;
 const USER_ACTIONS = new Set(['apply', 'dismiss', 'adjust']);
@@ -312,6 +335,15 @@ export async function handleBridgeRequest(
         throw new Error('nudge:dismiss: invalid forever flag');
       }
       return deps.forwardNudgeDismiss(request.forever);
+    case 'timeSaved:accrue':
+      // Shape validation at the boundary: out-of-range payloads are rejected
+      // here and never reach the background writer (the store re-checks the
+      // (0, 1] delta bound — the wire guard only proves finite numbers).
+      if (!isTimeSavedAccrueMessage(request)) {
+        throw new Error('timeSaved:accrue: invalid accrue payload');
+      }
+      await deps.forwardAccrue(request.deltaSec, request.multiplier);
+      return undefined;
   }
 }
 
