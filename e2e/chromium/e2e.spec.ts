@@ -19,6 +19,7 @@ import {
   expectedRecommendation,
   runAutoSpecs,
   runBridgeSpecs,
+  runChapterSpecs,
   runGenericSpecs,
   runMeasurementSpecs,
   runMultiVideoSpecs,
@@ -209,6 +210,42 @@ test.beforeAll(async () => {
         await hook.set(next);
       }, settings);
     },
+    async readChapterHook() {
+      await page.waitForFunction(
+        () => window.__speedwatcherChapter !== undefined,
+        undefined,
+        { timeout: 15_000 },
+      );
+      return page.evaluate(() => {
+        const hook = window.__speedwatcherChapter;
+        if (hook === undefined) return null;
+        return { rates: hook.rates, activeIndex: hook.activeIndex };
+      });
+    },
+    async chapterApplyFor(sec) {
+      await page.evaluate((s) => window.__speedwatcherChapter?.applyFor(s), sec);
+    },
+    async setChapterConsent(enabled) {
+      // The toggle lives inside the pill host; wait for it to render, then
+      // drive the exact click handler the button is wired to. (In real
+      // browsers mount()'s appendChild(shadow) moves the pill's markup into
+      // the host's light DOM, so the query is NOT shadowRoot-scoped.)
+      await page.waitForFunction(
+        () => {
+          const host = document.querySelector<HTMLElement>('.speedwatcher-pill-host');
+          const btn = host?.querySelector<HTMLButtonElement>('button.btn-chapter-toggle');
+          return btn !== null && btn !== undefined && !btn.hidden;
+        },
+        undefined,
+        { timeout: 15_000 },
+      );
+      await page.evaluate((want) => {
+        const host = document.querySelector<HTMLElement>('.speedwatcher-pill-host');
+        const btn = host?.querySelector<HTMLButtonElement>('button.btn-chapter-toggle');
+        if (btn === null || btn === undefined) throw new Error('chapter toggle missing');
+        if ((btn.getAttribute('aria-pressed') === 'true') !== want) btn.click();
+      }, enabled);
+    },
   };
 });
 
@@ -368,6 +405,10 @@ test('applied generic playback accrues sw.timeSavedSec (time-saved metric)', asy
 
 test('multi-video page: Apply targets the video that actually plays', async () => {
   await runMultiVideoSpecs(driver);
+});
+
+test('chaptered fixture: consent toggle arms the per-chapter scheduler', async () => {
+  await runChapterSpecs(driver);
 });
 
 test('measure race: a slow in-flight measure cannot overwrite a newer one', async () => {

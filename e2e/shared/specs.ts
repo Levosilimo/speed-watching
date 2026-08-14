@@ -20,12 +20,15 @@ import { fileURLToPath } from 'node:url';
 import vttjs from 'vtt.js';
 import { parseVtt, parseVttWords, type VttHost } from '../../lib/captions-harvest';
 import { parseYouTubeJson3 } from '../../lib/captions';
+import { chapteredInitialData, KIND_BY_FIXTURE, LANG_BY_FIXTURE } from './fixtures';
+import { segmentRates, type RateSegment } from '../../lib/chapters';
 import { priorMidpoint } from '../../lib/heuristics';
 import { resolveLanguage } from '../../lib/languages';
 import { detectMusic } from '../../lib/music';
 import { recommend, type RateTier, type Recommendation } from '../../lib/recommend';
 import { defaultSettings, resolveUserTarget, type Settings } from '../../lib/settings';
 import type { PillState } from '../../ui/pill';
+import { chaptersOf } from '../../lib/youtube';
 import {
   asrTierInputs,
   correctedCueLevelWpm,
@@ -36,7 +39,6 @@ import {
   wordLevelWpm,
 } from '../../lib/wpm';
 import type { MeasureEventDetail } from '../../lib/measure-hooks';
-import { KIND_BY_FIXTURE, LANG_BY_FIXTURE } from './fixtures';
 
 export type Measurement = MeasureEventDetail;
 
@@ -45,6 +47,11 @@ export type CaptionSource = 'web' | 'android' | 'none';
 declare global {
   interface Window {
     __speedwatcherLastMeasure?: MeasureEventDetail;
+    __speedwatcherChapter?: {
+      rates: RateSegment[];
+      activeIndex: number;
+      applyFor(sec: number): void;
+    };
   }
 }
 
@@ -103,6 +110,15 @@ export interface E2EDriver {
   sleep(ms: number): Promise<void>;
   /** Write settings through the bridge — same path the options page uses. */
   writeSettings(settings: Settings): Promise<void>;
+  /** The chapter hook: the per-chapter plan and the enforced segment index. */
+  readChapterHook(): Promise<{
+    rates: Array<{ startSec: number; endSec: number; multiplier: number; mode: string }>;
+    activeIndex: number;
+  } | null>;
+  /** Seek the fixture video and fire the scheduler's timeupdate tick. */
+  chapterApplyFor(sec: number): Promise<void>;
+  /** Toggle chapter consent via the pill's toggle button (waits for it). */
+  setChapterConsent(enabled: boolean): Promise<void>;
 }
 
 interface ExpectedStats {
@@ -718,5 +734,178 @@ export async function runAutoSpecs(driver: E2EDriver): Promise<void> {
     await driver.navigateToWatch(fixture);
     expectState(await driver.readPillState(), fixture);
     await driver.writeSettings(defaultSettings());
+  }
+}
+
+/**
+ * Chaptered-fixture e2e: the consent toggle arms the scheduler, boundary
+ * steps land the segment multipliers, and a manual rate yields until the
+ * next boundary. Expected rates are recomputed from the same pure lib
+ * functions the content script uses (segmentRates over the fixture's cues
+ * and the chaptered initial data), so the assertions are math-level.
+ * The fixture video never plays — the driver crosses boundaries through
+ * the __speedwatcherChapter hook's applyFor (currentTime + timeupdate).
+ */
+function expectedChapterPlan(fixture: string): {
+  rates: RateSegment[];
+  whole: Recommendation;
+} {
+  const json = JSON.parse(readFileSync(join(fixtureRoot, fixture), 'utf8')) as unknown;
+  const { words, cues } = parseYouTubeJson3(json);
+  const chapters = chaptersOf(chapteredInitialData(fixture));
+  if (chapters === null) throw new Error(`${fixture}: no chapters in the chaptered initial data`);
+  const kind = KIND_BY_FIXTURE[fixture] ?? 'manual';
+  const naturalRate =
+    kind === 'asr' ? filteredTokensOverTrimmedSpan(cues) : manualCueRate(cues);
+  if (naturalRate === null) throw new Error(`${fixture}: no natural rate`);
+  const { tier } = asrTierInputs(kind, words, cues);
+  const whole = recommend({
+    naturalRate,
+    tier,
+    contentType: 'generic',
+    platformMax: 2,
+    userTarget: resolveUserTarget(defaultSettings(), 'youtube.com', 'generic'),
+  });
+  const rates = segmentRates(cues, chapters, kind, undefined, {
+    platformMax: 2,
+    contentType: 'generic',
+    userTarget: resolveUserTarget(defaultSettings(), 'youtube.com', 'generic'),
+  });
+  // The plan must actually diverge per segment — otherwise the step
+  // assertions below cannot distinguish a working scheduler from a no-op.
+  const multipliers = new Set(rates.map((rate) => rate.multiplier));
+  if (multipliers.size < 3) {
+    throw new Error(`${fixture}: segment multipliers must diverge: ${JSON.stringify(rates)}`);
+  }
+  if (!rates.some((rate) => rate.mode === 'music')) {
+    throw new Error(`${fixture}: expected a music segment in the plan`);
+  }
+  return { rates, whole };
+}
+
+export async function runChapterSpecs(driver: E2EDriver): Promise<void> {
+  const fixture = 'synthetic/chaptered.json';
+  const { rates, whole } = expectedChapterPlan(fixture);
+  const first = rates[0]!;
+  const music = rates[1]!;
+  const last = rates[2]!;
+
+  // (a) The pill advertises the toggle and the hook exposes the plan; a
+  // fixture without chapter markers exposes neither.
+  await driver.navigateToWatch(fixture);
+  const state = expectState(await driver.readPillState(), fixture);
+  if (state.chaptersAvailable !== true) {
+    throw new Error(`${fixture}: chaptersAvailable ${state.chaptersAvailable}, expected true`);
+  }
+  if (state.autoAdjust === true) {
+    throw new Error(`${fixture}: autoAdjust true before any consent`);
+  }
+  const hook = await driver.readChapterHook();
+  if (hook === null) throw new Error(`${fixture}: chapter hook missing`);
+  if (hook.activeIndex !== -1) {
+    throw new Error(`${fixture}: activeIndex ${hook.activeIndex}, expected -1 before any tick`);
+  }
+  const multOf = (list: typeof hook.rates): number[] => list.map((rate) => rate.multiplier);
+  if (JSON.stringify(multOf(hook.rates)) !== JSON.stringify(rates.map((rate) => rate.multiplier))) {
+    throw new Error(
+      `${fixture}: hook rates ${JSON.stringify(multOf(hook.rates))}, expected ${JSON.stringify(rates.map((rate) => rate.multiplier))}`,
+    );
+  }
+  await driver.navigateToWatch('real/asr-word.json');
+  const plain = expectState(await driver.readPillState(), 'real/asr-word.json');
+  if (plain.chaptersAvailable === true) {
+    throw new Error('real/asr-word.json: chaptersAvailable true without chapter markers');
+  }
+
+  // (b) No consent: even with auto-apply holding the whole-video rate, a
+  // boundary crossing leaves the rate untouched.
+  await driver.navigateToWatch(fixture);
+  expectState(await driver.readPillState(), fixture);
+  try {
+    await driver.writeSettings({
+      ...defaultSettings(),
+      contentType: 'talk',
+      autoApply: { enabled: true, contentTypes: {} },
+    });
+    await driver.navigateToWatch(fixture);
+    const auto = expectState(await driver.readPillState(), fixture);
+    if (auto.applied !== 'auto') {
+      throw new Error(`${fixture}: pill applied ${auto.applied}, expected auto before the no-consent step`);
+    }
+    await driver.waitForPlaybackRate(whole.multiplier);
+    await driver.chapterApplyFor(40); // crosses into the music segment
+    const untouched = await driver.readPlaybackRate();
+    if (untouched === null || Math.abs(untouched - whole.multiplier) > RATE_TOLERANCE) {
+      throw new Error(
+        `${fixture}: rate ${untouched} after a boundary without consent, expected ${whole.multiplier} (no step without consent)`,
+      );
+    }
+  } finally {
+    await driver.writeSettings(defaultSettings());
+  }
+
+  // (c) Consent on: the scheduler steps to each segment's multiplier on
+  // boundary crossings; the music segment lands at 1×.
+  await driver.navigateToWatch(fixture);
+  expectState(await driver.readPillState(), fixture);
+  await driver.setChapterConsent(true);
+  const consented = expectState(await driver.readPillState(), fixture);
+  if (consented.autoAdjust !== true) {
+    throw new Error(`${fixture}: autoAdjust ${consented.autoAdjust}, expected true after the toggle`);
+  }
+  const idle = await driver.readPlaybackRate();
+  if (idle === null || Math.abs(idle - 1) > RATE_TOLERANCE) {
+    throw new Error(`${fixture}: consent alone changed the rate to ${idle}, expected 1`);
+  }
+  await driver.chapterApplyFor(10);
+  await driver.waitForPlaybackRate(first.multiplier);
+  await driver.chapterApplyFor(40);
+  await driver.waitForPlaybackRate(music.multiplier);
+  const musicState = expectState(await driver.readPillState(), fixture);
+  if (musicState.chapterStatus !== 'music') {
+    throw new Error(`${fixture}: pill chapterStatus ${musicState.chapterStatus}, expected music`);
+  }
+  const musicHook = await driver.readChapterHook();
+  if (musicHook === null || musicHook.activeIndex !== 1) {
+    throw new Error(`${fixture}: activeIndex ${musicHook?.activeIndex}, expected 1 in the music segment`);
+  }
+  await driver.chapterApplyFor(70);
+  await driver.waitForPlaybackRate(last.multiplier);
+
+  // (d) A manual rate yields the scheduler until the next boundary; the
+  // pill shows the paused status.
+  await driver.chapterApplyFor(10);
+  await driver.waitForPlaybackRate(first.multiplier);
+  await driver.setPlaybackRate(1.25);
+  const manual = await driver.readPlaybackRate();
+  if (manual === null || Math.abs(manual - 1.25) > RATE_TOLERANCE) {
+    throw new Error(`${fixture}: playbackRate ${manual}, expected 1.25 after the manual change`);
+  }
+  await driver.chapterApplyFor(20); // same segment — no boundary to step on
+  const held = await driver.readPlaybackRate();
+  if (held === null || Math.abs(held - 1.25) > RATE_TOLERANCE) {
+    throw new Error(
+      `${fixture}: playbackRate ${held} after an in-segment tick, expected 1.25 (yielded scheduler must not re-assert)`,
+    );
+  }
+  const yieldedState = expectState(await driver.readPillState(), fixture);
+  if (yieldedState.chapterStatus !== 'yielded') {
+    throw new Error(`${fixture}: pill chapterStatus ${yieldedState.chapterStatus}, expected yielded`);
+  }
+  await driver.chapterApplyFor(40); // the next boundary re-arms the plan
+  await driver.waitForPlaybackRate(music.multiplier);
+
+  // (e) Consent off stops the scheduler: a later boundary does nothing.
+  await driver.setChapterConsent(false);
+  const off = expectState(await driver.readPillState(), fixture);
+  if (off.autoAdjust !== false) {
+    throw new Error(`${fixture}: autoAdjust ${off.autoAdjust}, expected false after the toggle`);
+  }
+  await driver.chapterApplyFor(70);
+  const stopped = await driver.readPlaybackRate();
+  if (stopped === null || Math.abs(stopped - music.multiplier) > RATE_TOLERANCE) {
+    throw new Error(
+      `${fixture}: rate ${stopped} after a boundary with consent off, expected ${music.multiplier} (scheduler stopped)`,
+    );
   }
 }

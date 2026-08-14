@@ -15,7 +15,13 @@ import { createServer, type Server } from 'node:http';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { BLOCKED_FIXTURES, KIND_BY_FIXTURE, LANG_BY_FIXTURE, NO_TRACK_FIXTURES } from './shared/fixtures';
+import {
+  BLOCKED_FIXTURES,
+  chapteredInitialData,
+  KIND_BY_FIXTURE,
+  LANG_BY_FIXTURE,
+  NO_TRACK_FIXTURES,
+} from './shared/fixtures';
 
 export const FIXTURE_PORT = 4319;
 
@@ -170,6 +176,12 @@ export function createFixtureServer(port = FIXTURE_PORT): Promise<FixtureServer>
       .replace(
         '__PLAYER_RESPONSE_JSON__',
         JSON.stringify(playerResponse).replaceAll('</', '<\\/'),
+      )
+      // Chapter markers for the chaptered fixtures; null elsewhere (the
+      // content script's chaptersOf reads the absence signal).
+      .replace(
+        '__INITIAL_DATA_JSON__',
+        JSON.stringify(chapteredInitialData(fixture)).replaceAll('</', '<\\/'),
       )
       // multi=1 serves a second <video>: the multi-video e2e asserts that
       // active-element selection follows the video that actually plays.

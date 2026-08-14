@@ -20,6 +20,8 @@ import type { ContentType } from '@/lib/music';
 import { detectMusic } from '@/lib/music';
 import { shouldAutoApply } from '@/lib/auto-apply';
 import { recommend, SAFE_ZONE_CEILING_WPM, TARGET_WPM, type RateTier, type Recommendation } from '@/lib/recommend';
+import { segmentRates, type RateSegment } from '@/lib/chapters';
+import { ChapterScheduler } from '@/lib/chapter-scheduler';
 import {
   defaultSettings,
   resolveContentType,
@@ -37,7 +39,7 @@ import {
   wordLevelWpm,
 } from '@/lib/wpm';
 import type { CaptionTrack, PlayerResponse } from '@/lib/youtube';
-import { channelKeyOf } from '@/lib/youtube';
+import { channelKeyOf, chaptersOf } from '@/lib/youtube';
 import { createPill, type AppliedSource, type LiveRate, type PillApi, type PillState } from '@/ui/pill';
 import { createNudgeHost } from '@/ui/nudge-host';
 import {
@@ -99,6 +101,14 @@ let savedMultiplier: number | null = null;
 // Serializes measure() against overlapping triggers (initial load + SPA navigation).
 const measureRunner = new SerializedRunner();
 
+// Per-chapter rate plan (chapters feature): built once per measure when the
+// page exposes chapter markers; null without them (or on the estimated tier).
+let chapterRates: RateSegment[] | null = null;
+/** Session-scoped consent: the pill toggle arms the scheduler per video. */
+let chapterConsent = false;
+/** Applies the current segment's multiplier at every chapter boundary. */
+const chapterScheduler = new ChapterScheduler();
+
 const NONE_STATE: PillState = {
   mode: 'none',
   rateWpm: 0,
@@ -122,6 +132,13 @@ declare global {
     // E2E hook: settings write through the bridge (same path the options
     // page uses) — the shared specs exercise the bridge in both browsers.
     __speedwatcherSettings?: { set(settings: Settings): Promise<void> };
+    // E2E hook: the chapter scheduler's plan, the enforced segment, and a
+    // seek+tick driver (currentTime + timeupdate) for boundary tests.
+    __speedwatcherChapter?: {
+      rates: RateSegment[];
+      activeIndex: number;
+      applyFor(sec: number): void;
+    };
   }
 }
 
@@ -174,6 +191,22 @@ export default defineContentScript({
       window.__speedwatcherSettings = {
         set: (settings) => bridge.request({ type: 'settings:set', settings }).then(() => undefined),
       };
+      window.__speedwatcherChapter = {
+        get rates() {
+          return chapterRates ?? [];
+        },
+        get activeIndex() {
+          return chapterScheduler.activeIndex;
+        },
+        // Seek + tick: the scheduler steps on timeupdate, so the driver
+        // crosses boundaries without the fixture video ever playing.
+        applyFor: (sec: number) => {
+          const video = activeVideo ?? document.querySelector<HTMLVideoElement>('video');
+          if (video === null) return;
+          video.currentTime = sec;
+          video.dispatchEvent(new Event('timeupdate'));
+        },
+      };
     }
     void measure();
     // SPA navigation: invalidate the old video's recommendation before the
@@ -193,6 +226,9 @@ function onNavigationStart(): void {
   autoState = 'pending';
   appliedSource = 'none';
   preAutoRate = null;
+  chapterRates = null;
+  chapterConsent = false;
+  chapterScheduler.stop();
   showPill(NONE_STATE);
   nudgeSurface.teardown();
 }
@@ -202,6 +238,7 @@ function onMediaEvent(event: Event): void {
   markUserOverride();
   refreshLiveRate();
   refreshSavedSec();
+  refreshChapterStatus();
 }
 
 function isLive(): boolean {
@@ -244,6 +281,10 @@ async function measureOnce(): Promise<void> {
     return;
   }
   const { words, cues } = parseYouTubeJson3(json);
+  // Chapter markers ride the page's ytInitialData (not the player response);
+  // absent → null and the feature stays off for this video.
+  chapterRates = null; // any earlier plan belongs to a previous measure
+  const chapters = chaptersOf(window.ytInitialData);
   const kind = track.kind ?? 'manual';
   const lang = track.languageCode ?? '?';
   if (words.length >= 2) {
@@ -282,6 +323,16 @@ async function measureOnce(): Promise<void> {
   if (detectMusic(cues, naturalRate, language?.unit ?? 'wpm')) detected = 'music';
   const contentType = resolveContentType(settings, site, detected);
   const { tier, wordInputs } = asrTierInputs(kind, words, cues);
+  // The per-chapter plan: one rate per chapter through the same per-kind rule
+  // and recommend() inputs as the whole-video recommendation below. Sub-floor
+  // chapters inherit the whole-video recommendation inside segmentRates.
+  if (chapters !== null) {
+    chapterRates = segmentRates(cues, chapters, kind, language, {
+      platformMax: resolvePlatformMax(settings, site),
+      contentType,
+      userTarget: resolveUserTarget(settings, site, contentType),
+    });
+  }
   renderRecommendation(videoId, naturalRate, tier, contentType, settings, site, wordInputs, language, startedAt);
   rememberChannelRate(response.videoDetails, naturalRate, language);
 }
@@ -369,6 +420,9 @@ function renderRecommendation(
     applied: appliedSource,
     undoRate: appliedSource === 'auto' ? preAutoRate ?? 1 : undefined,
     firstRun,
+    chaptersAvailable: chapterRates !== null,
+    autoAdjust: chapterConsent,
+    chapterStatus: chapterConsent ? chapterStatusNow() : undefined,
   });
 }
 
@@ -427,6 +481,22 @@ function ensurePill(): PillApi {
     },
     onDismiss: () => dismissCurrent(),
     onStopAuto: () => stopAutoForVideo(),
+    onAutoAdjust: (enabled: boolean) => {
+      chapterConsent = enabled;
+      if (enabled) {
+        startChapterScheduler();
+      } else {
+        chapterScheduler.stop();
+      }
+      // Re-render so the toggle's aria-pressed and the status line flip.
+      if (pillState !== null) {
+        showPill({
+          ...pillState,
+          autoAdjust: enabled,
+          chapterStatus: enabled ? chapterStatusNow() : undefined,
+        });
+      }
+    },
   });
   api.mount();
   pill = { api, host };
@@ -514,9 +584,18 @@ function markUserOverride(): void {
 }
 
 function applyMultiplier(multiplier: number): void {
-  if (current === null) return;
+  applyAndTrack(multiplier, 'apply');
+}
+
+/** Shared apply choke point: the platformMax clamp, the time-saved session
+ * and its tracker attach, the live-rate and saved-time refresh, the nudge
+ * report, and the override log. `action` distinguishes user/auto applies
+ * ('apply') from scheduler boundary steps ('adjust') in the log. Returns
+ * the clamped rate actually applied (the scheduler's read-back contract). */
+function applyAndTrack(multiplier: number, action: 'apply' | 'adjust'): number {
+  if (current === null) return multiplier;
   const video = activeVideo ?? document.querySelector<HTMLVideoElement>('video');
-  if (video === null) return;
+  if (video === null) return multiplier;
   // recommend() already clamps to platformMax; min() re-states the invariant.
   const applied = Math.min(multiplier, current.platformMax);
   video.playbackRate = applied;
@@ -527,8 +606,38 @@ function applyMultiplier(multiplier: number): void {
   // Show the live line immediately; steady-state ticks are throttled in the pill.
   refreshLiveRate();
   refreshSavedSec();
-  void logAction('apply', multiplier);
+  void logAction(action, multiplier);
   nudgeSurface.reportApply(multiplier, current.range);
+  return applied;
+}
+
+/** Arms the per-chapter scheduler on the current video's plan; a no-op
+ * without a plan or a video element. The callback routes every boundary
+ * step through the shared apply choke point as an 'adjust'. */
+function startChapterScheduler(): void {
+  if (chapterRates === null) return;
+  const video = activeVideo ?? document.querySelector<HTMLVideoElement>('video');
+  if (video === null) return;
+  chapterScheduler.start(video, chapterRates, (multiplier) => applyAndTrack(multiplier, 'adjust'));
+}
+
+/** The scheduler's status for the pill line: paused after a manual rate,
+ * 1× in a music segment, plain running otherwise. Undefined while the
+ * scheduler is not armed (or the plan is missing). */
+function chapterStatusNow(): 'active' | 'yielded' | 'music' | undefined {
+  if (chapterRates === null || !chapterScheduler.active) return undefined;
+  if (chapterScheduler.hasYielded) return 'yielded';
+  const segment = chapterRates[chapterScheduler.activeIndex];
+  if (segment !== undefined && segment.mode === 'music') return 'music';
+  return 'active';
+}
+
+/** Pushes a pill re-render only when the scheduler status changed (the
+ * boundary steps and rate changes flow through onMediaEvent). */
+function refreshChapterStatus(): void {
+  if (!chapterConsent || pillState === null) return;
+  const status = chapterStatusNow();
+  if (pillState.chapterStatus !== status) showPill({ ...pillState, chapterStatus: status });
 }
 
 function dismissCurrent(): void {
@@ -548,8 +657,7 @@ function dismissCurrent(): void {
 }
 
 /** Best-effort: a dead bridge must not undo the playback change. */
-/** Best-effort: a dead bridge must not undo the playback change. */
-function logAction(userAction: 'apply' | 'dismiss', multiplier: number): void {
+function logAction(userAction: 'apply' | 'dismiss' | 'adjust', multiplier: number): void {
   if (current === null) return;
   void bridge
     .request({

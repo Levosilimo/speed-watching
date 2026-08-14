@@ -812,3 +812,108 @@ describe('createPill live-line duplication (P2b)', () => {
     expect(live.textContent).toBe('now ≈ 251 wpm at 1.6x');
   });
 });
+
+describe('createPill chapter consent toggle (chapters feature)', () => {
+  function toggleOf(host: HTMLElement): HTMLButtonElement {
+    const el = rootOf(host).querySelector<HTMLButtonElement>('.btn-chapter-toggle');
+    if (el === null) throw new Error('expected a .btn-chapter-toggle element');
+    return el;
+  }
+  function statusOf(host: HTMLElement): HTMLSpanElement {
+    const el = rootOf(host).querySelector<HTMLSpanElement>('.chapter-status');
+    if (el === null) throw new Error('expected a .chapter-status element');
+    return el;
+  }
+
+  it('renders ONLY for chaptersAvailable in recommend/warning; other modes hide it', () => {
+    const host = shadowHost();
+    const pill = createPill(host, {}, { locale: 'en' });
+    pill.mount();
+    const toggle = toggleOf(host);
+    // Without chapters: never shown, whatever the mode.
+    pill.update(state({ chaptersAvailable: false }));
+    expect(toggle.hidden).toBe(true);
+    pill.update(state({ chaptersAvailable: true }));
+    expect(toggle.hidden).toBe(false);
+    pill.update(state({ chaptersAvailable: true, mode: 'warning', reason: 'above-zone' }));
+    expect(toggle.hidden).toBe(false);
+    for (const mode of ['music', 'unreachable', 'none'] as const) {
+      pill.update(state({ chaptersAvailable: true, mode, label: mode }));
+      expect(toggle.hidden).toBe(true);
+    }
+    // A stale chaptersAvailable must flip back off when the surface hides.
+    pill.update(state({ chaptersAvailable: true }));
+    expect(toggle.hidden).toBe(false);
+    pill.update(state({ mode: 'none', label: '', chaptersAvailable: true }));
+    expect(toggle.hidden).toBe(true);
+  });
+
+  it('fires onAutoAdjust with the consent toggling; aria-pressed tracks the state', () => {
+    const onAutoAdjust = vi.fn();
+    const onApply = vi.fn();
+    const host = shadowHost();
+    const pill = createPill(host, { onAutoAdjust, onApply }, { locale: 'en' });
+    pill.mount();
+    const toggle = toggleOf(host);
+    pill.update(state({ chaptersAvailable: true }));
+    expect(toggle.getAttribute('aria-pressed')).toBe('false');
+    expect(toggle.textContent).toBe('Auto-adjust per chapter');
+    expect(toggle.getAttribute('aria-label')).toBe(
+      'Automatically adjust playback speed at chapter boundaries',
+    );
+    toggle.click();
+    expect(onAutoAdjust).toHaveBeenCalledExactlyOnceWith(true);
+    expect(onApply).not.toHaveBeenCalled();
+    pill.update(state({ chaptersAvailable: true, autoAdjust: true }));
+    expect(toggle.getAttribute('aria-pressed')).toBe('true');
+    toggle.click();
+    expect(onAutoAdjust).toHaveBeenLastCalledWith(false);
+  });
+
+  it('Enter on the toggle does not route to Apply (the pill keydown stands down)', () => {
+    const onAutoAdjust = vi.fn();
+    const onApply = vi.fn();
+    const host = shadowHost();
+    const pill = createPill(host, { onAutoAdjust, onApply }, { locale: 'en' });
+    pill.mount();
+    pill.update(state({ chaptersAvailable: true }));
+    // A synthetic keydown cannot run the browser's native button activation;
+    // the guard's half is that the pill's Enter routing stays off the toggle.
+    toggleOf(host).dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+    expect(onApply).not.toHaveBeenCalled();
+    expect(onAutoAdjust).not.toHaveBeenCalled();
+  });
+
+  it('status line: hidden off; active/yielded/music copy while on', () => {
+    const host = shadowHost();
+    const pill = createPill(host, {}, { locale: 'en' });
+    pill.mount();
+    const status = statusOf(host);
+    pill.update(state({ chaptersAvailable: true }));
+    expect(status.hidden).toBe(true);
+    pill.update(state({ chaptersAvailable: true, autoAdjust: true }));
+    expect(status.hidden).toBe(false);
+    expect(status.textContent).toBe('Chapter rates on');
+    pill.update(state({ chaptersAvailable: true, autoAdjust: true, chapterStatus: 'yielded' }));
+    expect(status.textContent).toBe('Paused chapter rates');
+    pill.update(state({ chaptersAvailable: true, autoAdjust: true, chapterStatus: 'music' }));
+    expect(status.textContent).toBe('1× in music chapter');
+    // Consent off hides the status again; the string must not linger.
+    pill.update(state({ chaptersAvailable: true, autoAdjust: false, chapterStatus: 'music' }));
+    expect(status.hidden).toBe(true);
+  });
+
+  it('localizes the toggle and the status line for ru', () => {
+    const host = shadowHost();
+    const pill = createPill(host, {}, { locale: 'ru' });
+    pill.mount();
+    pill.update(state({ chaptersAvailable: true }));
+    const toggle = toggleOf(host);
+    expect(toggle.textContent).toBe('Авто-подстройка по главам');
+    expect(toggle.getAttribute('aria-label')).toBe(
+      'Автоматически менять скорость на границах глав',
+    );
+    pill.update(state({ chaptersAvailable: true, autoAdjust: true, chapterStatus: 'music' }));
+    expect(statusOf(host).textContent).toBe('1× в музыкальной главе');
+  });
+});

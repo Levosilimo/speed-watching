@@ -96,6 +96,12 @@ export function pillCss(t: Theme): string {
       white-space: nowrap;
     }
 
+    .chapter-status {
+      font-size: ${TOKENS.textXs};
+      color: ${t.textSecondary};
+      white-space: nowrap;
+    }
+
     .actions {
       display: flex;
       align-items: center;
@@ -172,7 +178,8 @@ export function pillCss(t: Theme): string {
       box-shadow: 0 0 0 3px ${t.focusRing};
     }
 
-    .btn-stop-auto {
+    .btn-stop-auto,
+    .btn-chapter-toggle {
       padding: ${TOKENS.sp1} ${TOKENS.sp2};
       font-family: ${TOKENS.fontSans};
       font-size: ${TOKENS.textXs};
@@ -185,15 +192,23 @@ export function pillCss(t: Theme): string {
                   color ${TOKENS.durationFast} ease;
     }
 
-    .btn-stop-auto:hover {
+    .btn-stop-auto:hover,
+    .btn-chapter-toggle:hover {
       background: ${t.border};
       color: ${t.text};
     }
 
-    .btn-stop-auto:focus-visible {
+    .btn-stop-auto:focus-visible,
+    .btn-chapter-toggle:focus-visible {
       outline: 2px solid ${t.primary};
       outline-offset: 1px;
       box-shadow: 0 0 0 3px ${t.focusRing};
+    }
+
+    .btn-chapter-toggle[aria-pressed="true"] {
+      background: ${t.primary};
+      border-color: ${t.primary};
+      color: ${t.bg};
     }
 
     .warning-note {
