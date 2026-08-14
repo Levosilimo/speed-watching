@@ -9,6 +9,9 @@ export interface CaptionTrack {
 }
 
 export interface PlayerResponse {
+  playabilityStatus?: {
+    status?: string;
+  };
   captions?: {
     playerCaptionsTracklistRenderer?: {
       captionTracks?: CaptionTrack[];

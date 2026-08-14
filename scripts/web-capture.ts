@@ -84,10 +84,12 @@ export async function waitForFreshTimedtext(
 
 /**
  * Open the settings gear → Subtitles/CC panel and pick the ASR-preferred
- * track (auto-generated, else English, else the first non-Off/non-Options
- * item). Returns false when no menu or no pickable track exists.
+ * track: auto-generated (or the localized/ASR marker), else the track in
+ * `lang` (English by default; `русск|russian` for ru), else the first
+ * non-Off/non-Options item. Returns false when no menu or no pickable
+ * track exists.
  */
-export async function pickAsrTrackFromMenu(page: Page): Promise<boolean> {
+export async function pickAsrTrackFromMenu(page: Page, lang = 'en'): Promise<boolean> {
   try {
     await page
       .click('button.ytp-settings-button', { timeout: 4000 })
@@ -105,20 +107,21 @@ export async function pickAsrTrackFromMenu(page: Page): Promise<boolean> {
     });
     if (!ccItem) return false;
     await page.waitForTimeout(400);
-    const picked = await page.evaluate((): boolean => {
+    const picked = await page.evaluate((lang) => {
       const label = (el: Element): string =>
         (el.getAttribute('aria-label') ?? el.textContent ?? '').trim();
       const items = Array.from(document.querySelectorAll('.ytp-menuitem'));
       const skip = (el: Element): boolean =>
         /^off$/i.test(label(el)) || /^options?$/i.test(label(el));
+      const langPick = lang === 'ru' ? /русск|russian/i : /english/i;
       const pick =
-        items.find((el) => /auto[- ]?generated|\(asr\)/i.test(label(el))) ??
-        items.find((el) => /english/i.test(label(el))) ??
+        items.find((el) => /auto[- ]?generated|автомат|\(asr\)/i.test(label(el))) ??
+        items.find((el) => langPick.test(label(el))) ??
         items.find((el, _i) => !skip(el));
       if (!pick) return false;
       (pick as HTMLElement).click();
       return true;
-    });
+    }, lang);
     await page.keyboard.press('Escape').catch(() => undefined);
     return picked;
   } catch {
@@ -148,16 +151,26 @@ export async function readPlayerInfo(page: Page): Promise<{
   trackCount: number;
   asrCount: number;
   manualCount: number;
+  /** Language codes of every asr track, raw as served. */
+  asrLangs: string[];
+  /** First asr track's languageCode; null when the video has no asr. */
+  asrLang: string | null;
+  /** playabilityStatus.status from the player response; null when absent. */
+  playabilityStatus: string | null;
 }> {
   return page.evaluate(() => {
     const pr: PlayerResponse | undefined = window.ytInitialPlayerResponse;
     const tracks =
       pr?.captions?.playerCaptionsTracklistRenderer?.captionTracks ?? [];
+    const asr = tracks.filter((t) => t.kind === 'asr');
     return {
       title: pr?.videoDetails?.title ?? null,
       trackCount: tracks.length,
-      asrCount: tracks.filter((t) => t.kind === 'asr').length,
+      asrCount: asr.length,
       manualCount: tracks.filter((t) => t.kind !== 'asr').length,
+      asrLangs: asr.map((t) => t.languageCode ?? '?'),
+      asrLang: asr[0]?.languageCode ?? null,
+      playabilityStatus: pr?.playabilityStatus?.status ?? null,
     };
   });
 }
