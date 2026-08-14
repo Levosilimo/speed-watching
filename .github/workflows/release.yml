@@ -42,4 +42,4 @@ jobs:
           files: |
             .output/*.zip
             userscript/dist/speed-watcher.user.js
-          body_file: .output/release-body.md
+          body_path: .output/release-body.md
