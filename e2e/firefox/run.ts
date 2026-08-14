@@ -24,6 +24,7 @@ import { Options as FirefoxOptions, Driver as FirefoxDriver } from 'selenium-web
 import { start as startGeckodriver } from 'geckodriver';
 import { createFixtureServer } from '../server';
 import type { PillState } from '../../ui/pill';
+import type { RateTier } from '../../lib/recommend';
 import {
   runBridgeSpecs,
   runGenericSpecs,
@@ -171,12 +172,15 @@ async function main(): Promise<void> {
       async navigateToGeneric() {
         await driver.get(`${server.baseUrl}/generic`);
       },
+      async navigateToGenericDzen() {
+        await driver.get(`${server.baseUrl}/generic-dzen`);
+      },
       async readCaptionTier() {
         const deadline = Date.now() + 15_000;
         while (Date.now() < deadline) {
           const value = await driver.executeScript('return window.__speedwatcherCaptionTier');
           if (value !== null && value !== undefined) {
-            return value as unknown as 'captions' | 'estimated';
+            return value as unknown as RateTier;
           }
           await new Promise((resolve) => setTimeout(resolve, 250));
         }

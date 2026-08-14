@@ -39,6 +39,7 @@ function options(overrides: Partial<HarvestOptions> = {}): HarvestOptions {
   return {
     videoSrc: null,
     resourceUrls: [],
+    trackSrcs: [],
     hostname: 'example.com',
     pageOrigin: 'https://example.com',
     vimeoConfig: null,
@@ -130,8 +131,8 @@ describe('harvestCaptions', () => {
         fetchImpl,
       }),
     );
-    expect(result?.length).toBe(4);
-    expect(result?.[0]).toEqual({ text: 'Welcome back to the show.', startSec: 0, durSec: 2.5 });
+    expect(result?.cues.length).toBe(4);
+    expect(result?.cues[0]).toEqual({ text: 'Welcome back to the show.', startSec: 0, durSec: 2.5 });
   });
 
   it('accepts the manifest named by the video src', async () => {
@@ -148,7 +149,7 @@ describe('harvestCaptions', () => {
         fetchImpl,
       }),
     );
-    expect(result?.length).toBe(4);
+    expect(result?.cues.length).toBe(4);
   });
 
   it('returns null when the master playlist has no subtitle entries', async () => {
@@ -192,7 +193,7 @@ describe('harvestCaptions', () => {
         fetchImpl,
       }),
     );
-    expect(result?.length).toBe(4);
+    expect(result?.cues.length).toBe(4);
   });
 
   it('skips the Vimeo config probe on non-Vimeo hosts', async () => {
@@ -220,7 +221,7 @@ describe('harvestCaptions', () => {
         fetchImpl,
       }),
     );
-    expect(result?.length).toBe(4);
+    expect(result?.cues.length).toBe(4);
   });
 
   it('parses an edX sjson transcript from the resource timeline', async () => {
@@ -235,9 +236,9 @@ describe('harvestCaptions', () => {
         fetchImpl,
       }),
     );
-    expect(result?.[1]?.text).toBe('This is the second sentence.');
-    expect(result?.[1]?.startSec).toBe(2.4);
-    expect(result?.[1]?.durSec).toBeCloseTo(1.8, 12);
+    expect(result?.cues[1]?.text).toBe('This is the second sentence.');
+    expect(result?.cues[1]?.startSec).toBe(2.4);
+    expect(result?.cues[1]?.durSec).toBeCloseTo(1.8, 12);
   });
 
   it('skips cross-origin transcript endpoints', async () => {

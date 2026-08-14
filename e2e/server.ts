@@ -26,15 +26,20 @@ const genericHtml = readFileSync(
   join(fileURLToPath(new URL('.', import.meta.url)), 'generic.html'),
   'utf8',
 );
+const genericDzenHtml = readFileSync(
+  join(fileURLToPath(new URL('.', import.meta.url)), 'generic-dzen.html'),
+  'utf8',
+);
 
 const FIXTURE_NAME = /^(real|synthetic)\/[a-z0-9-]+\.json$/;
 /** Generic-matcher fixtures: safe path charset, resolved under syntheticRoot. */
-const FIXTURE_FILE = /^[a-z0-9/.-]+\.(vtt|m3u8|json)$/;
+const FIXTURE_FILE = /^[a-z0-9/.-]+\.(vtt|m3u8|json|srt)$/;
 
 const CONTENT_TYPE_BY_EXT: Record<string, string> = {
   vtt: 'text/vtt',
   m3u8: 'application/vnd.apple.mpegurl',
   json: 'application/json',
+  srt: 'text/plain',
 };
 
 interface FixtureServer {
@@ -69,6 +74,14 @@ export function createFixtureServer(port = FIXTURE_PORT): Promise<FixtureServer>
       // Generic-matcher fixture page (non-YouTube origin).
       res.setHeader('Content-Type', 'text/html; charset=utf-8');
       res.end(genericHtml);
+      return;
+    }
+
+    if (path === '/generic-dzen') {
+      // Track-src probe fixture: a <video><track> mounting a Dzen-shaped
+      // word-timed VTT (generic matcher e2e, asr-word tier).
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      res.end(genericDzenHtml);
       return;
     }
 

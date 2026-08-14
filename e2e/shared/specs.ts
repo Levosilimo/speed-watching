@@ -18,12 +18,12 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import vttjs from 'vtt.js';
-import { parseVtt, type VttHost } from '../../lib/captions-harvest';
+import { parseVtt, parseVttWords, type VttHost } from '../../lib/captions-harvest';
 import { parseYouTubeJson3 } from '../../lib/captions';
 import { priorMidpoint } from '../../lib/heuristics';
 import { resolveLanguage } from '../../lib/languages';
 import { detectMusic } from '../../lib/music';
-import { recommend, type Recommendation } from '../../lib/recommend';
+import { recommend, type RateTier, type Recommendation } from '../../lib/recommend';
 import { defaultSettings, resolveUserTarget, type Settings } from '../../lib/settings';
 import type { PillState } from '../../ui/pill';
 import {
@@ -83,8 +83,10 @@ export interface E2EDriver {
   readCaptionSource(): Promise<CaptionSource | null>;
   /** Navigate to the generic player fixture page (non-YouTube origin). */
   navigateToGeneric(): Promise<void>;
+  /** Navigate to the Dzen-shaped track-src fixture page. */
+  navigateToGenericDzen(): Promise<void>;
   /** Which caption tier the generic matcher rendered. */
-  readCaptionTier(): Promise<'captions' | 'estimated' | null>;
+  readCaptionTier(): Promise<RateTier | null>;
   /** Set the page video's playbackRate to 1 (simulates a player reset). */
   resetPlaybackRate(): Promise<void>;
   /** Set the page video's playbackRate to an explicit value (user manual). */
@@ -368,6 +370,33 @@ function expectedGenericRecommendation(): { rec: Recommendation; naturalRate: nu
   return { rec, naturalRate };
 }
 
+/** The recommendation the generic matcher must produce from the Dzen
+ * fixture: the track-src probe yields word timings + cues from the VTT, the
+ * asr branch measures the presentation rate over the cues and renders
+ * asr-word (mirror of entrypoints/generic.content.ts). The fixture page's
+ * track declares srclang="ru", so the ru language model (target 168) must
+ * drive the recommendation — the multiplier assertion is the end-to-end
+ * proof of the language resolution. */
+function expectedDzenRecommendation(): { rec: Recommendation; naturalRate: number } {
+  const vtt = readFileSync(join(fixtureRoot, 'synthetic/dzen-word.vtt'), 'utf8');
+  const words = parseVttWords(vtt, VTT_HOST);
+  const cues = parseVtt(vtt, VTT_HOST);
+  const language = resolveLanguage('ru') ?? undefined;
+  const naturalRate = filteredTokensOverTrimmedSpan(cues, language);
+  if (naturalRate === null) throw new Error('dzen-word.vtt: no natural rate');
+  const detected = detectMusic(cues, naturalRate) ? 'music' : 'generic';
+  const { tier, wordInputs } = asrTierInputs('asr', words, cues);
+  const rec = recommend({
+    naturalRate,
+    tier,
+    contentType: detected,
+    platformMax: 2,
+    language,
+    ...wordInputs,
+  });
+  return { rec, naturalRate };
+}
+
 /** Generic matcher e2e: harvest → pill → apply → re-assert → dismiss stops
  * the loop. The re-apply evidence is behavioral: after a simulated player
  * reset the rate must come back, and after dismiss it must stay. */
@@ -389,8 +418,8 @@ export async function runGenericSpecs(driver: E2EDriver): Promise<void> {
     throw new Error(`generic: pill multiplier ${state.multiplier} !== expected ${rec.multiplier}`);
   }
   const tier = await driver.readCaptionTier();
-  if (tier !== 'captions') {
-    throw new Error(`generic: caption tier ${tier}, expected captions`);
+  if (tier !== 'manual-cue') {
+    throw new Error(`generic: caption tier ${tier}, expected manual-cue`);
   }
 
   // (b) Apply sets the fixture video's playbackRate.
@@ -424,6 +453,38 @@ export async function runGenericSpecs(driver: E2EDriver): Promise<void> {
   const after = await driver.readPlaybackRate();
   if (after === null || Math.abs(after - 1) > RATE_TOLERANCE) {
     throw new Error(`generic: playbackRate ${after} after dismiss + reset, expected 1 (loop stopped)`);
+  }
+
+  // (f) Dzen-shaped fixture: the track-src probe yields word timings from
+  // the inline VTT runs, so the matcher renders the asr-word tier and the
+  // srclang="ru" track resolution lands the recommendation on the ru
+  // language model (target 168, not the 250 default).
+  await driver.navigateToGenericDzen();
+  const dzenState = expectState(await driver.readPillState(), 'generic-dzen');
+  const dzenExpected = expectedDzenRecommendation();
+  if (dzenState.mode !== dzenExpected.rec.mode) {
+    throw new Error(
+      `generic-dzen: pill mode ${dzenState.mode} !== expected ${dzenExpected.rec.mode}`,
+    );
+  }
+  if (dzenState.tierLabel !== dzenExpected.rec.tierLabel) {
+    throw new Error(
+      `generic-dzen: pill tierLabel ${dzenState.tierLabel} !== expected ${dzenExpected.rec.tierLabel}`,
+    );
+  }
+  if (Math.abs(dzenState.rateWpm - dzenExpected.naturalRate) > WPM_TOLERANCE) {
+    throw new Error(
+      `generic-dzen: pill rateWpm ${dzenState.rateWpm} outside tolerance of ${dzenExpected.naturalRate}`,
+    );
+  }
+  if (Math.abs(dzenState.multiplier - dzenExpected.rec.multiplier) > 1e-9) {
+    throw new Error(
+      `generic-dzen: pill multiplier ${dzenState.multiplier} !== expected ${dzenExpected.rec.multiplier}`,
+    );
+  }
+  const dzenTier = await driver.readCaptionTier();
+  if (dzenTier !== 'asr-word') {
+    throw new Error(`generic-dzen: caption tier ${dzenTier}, expected asr-word`);
   }
 }
 
