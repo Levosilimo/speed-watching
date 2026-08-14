@@ -46,6 +46,9 @@ export interface PillState {
   range?: RateRange;
   /** Auto-applied this video; shows the Stop-auto button in recommend mode. */
   applied?: AppliedSource;
+  /** The rate the stop-auto/dismiss undo restores (the pre-auto rate);
+   * absent → plain 'Stop auto' with no rate change. */
+  undoRate?: number;
 }
 
 export interface PillEvents {
@@ -196,11 +199,17 @@ function wireEvents(
     restoreFocus(host);
   });
 
-  // Keyboard: Enter applies, Escape dismisses. Both route through the
-  // button handlers so the focus restoration is shared with clicks.
+  // Keyboard: Enter applies (or undoes auto in the auto-applied state),
+  // Escape dismisses. Both route through the button handlers so the focus
+  // restoration is shared with clicks.
   dom.pill.addEventListener('keydown', (e: KeyboardEvent) => {
     if (e.key === 'Enter' && !e.defaultPrevented) {
-      dom.applyBtn.click();
+      const state = getState();
+      if (state?.applied === 'auto' && state.mode === 'recommend') {
+        dom.stopAutoBtn.click();
+      } else {
+        dom.applyBtn.click();
+      }
     } else if (e.key === 'Escape' && !e.defaultPrevented) {
       dom.dismissBtn.click();
     }
@@ -272,23 +281,32 @@ function renderSaved(dom: PillDom, mode: PillMode, saved: number | null, locale:
 }
 
 /** Localized main line: English renders the recommendation verbatim; ru
- * rebuilds it from the structured state (unit recovered from the label). */
+ * rebuilds it from the structured state (unit recovered from the label).
+ * In the auto-applied state the line leads with the 'Auto · ' marker and
+ * drops the leading arrow (P1b: 'Auto · 1.6x ≈ 240 wpm'). */
 function localizedLabel(state: PillState, locale: UiLocale): string {
-  if (locale === 'en') return state.label;
-  const mult = formatMultiplier(state.multiplier, 'ru');
-  const rate = Math.round(state.effectiveWpm);
-  const unit = unitLabel(extractUnit(state.label), 'ru');
-  switch (state.mode) {
-    case 'music':
-      return t('pill.label.music', 'ru');
-    case 'unreachable':
-      return t('pill.label.unreachable', 'ru', { mult, rate, unit });
-    default:
-      return (
-        t('pill.label.recommend', 'ru', { mult, rate, unit }) +
-        (state.reason === 'capped-below' ? t('pill.label.cappedSuffix', 'ru') : '')
-      );
+  const prefix = state.applied === 'auto' ? t('pill.label.autoPrefix', locale) : '';
+  let text: string;
+  if (locale === 'en') {
+    text = state.label;
+  } else {
+    const mult = formatMultiplier(state.multiplier, 'ru');
+    const rate = Math.round(state.effectiveWpm);
+    const unit = unitLabel(extractUnit(state.label), 'ru');
+    switch (state.mode) {
+      case 'music':
+        text = t('pill.label.music', 'ru');
+        break;
+      case 'unreachable':
+        text = t('pill.label.unreachable', 'ru', { mult, rate, unit });
+        break;
+      default:
+        text =
+          t('pill.label.recommend', 'ru', { mult, rate, unit }) +
+          (state.reason === 'capped-below' ? t('pill.label.cappedSuffix', 'ru') : '');
+    }
   }
+  return prefix === '' ? text : prefix + text.replace(/^→\s*/, '');
 }
 
 /** Localized tier badge; unknown labels pass through unchanged. */
@@ -323,13 +341,19 @@ function render(
   const mode = state.mode;
 
   // Stop-auto button: only while the recommendation is showing AND this
-  // video's rate was applied automatically. Computed before the none
-  // early-return so a hide flips it back even when the surface goes dark.
+  // video's rate was applied automatically. In that state it is the undo
+  // affordance — 'Reset to {rate}×' restoring the pre-auto rate when the
+  // content script captured one, plain 'Stop auto' otherwise. Computed
+  // before the none early-return so a hide flips it back even when the
+  // surface goes dark.
   const showStopAuto = state.applied === 'auto' && mode === 'recommend';
   dom.stopAutoBtn.hidden = !showStopAuto;
   if (showStopAuto) {
-    dom.stopAutoBtn.textContent = t('pill.stopAuto', locale);
-    dom.stopAutoBtn.setAttribute('aria-label', t('pill.stopAutoAria', locale));
+    const undo = state.undoRate !== undefined;
+    dom.stopAutoBtn.textContent = undo
+      ? t('pill.resetTo', locale, { rate: formatMultiplier(state.undoRate ?? 1, locale) })
+      : t('pill.stopAuto', locale);
+    dom.stopAutoBtn.setAttribute('aria-label', undo ? t('pill.resetToAria', locale) : t('pill.stopAutoAria', locale));
   }
 
   // Hide the live and saved lines outside recommend/warning, even in the
@@ -370,8 +394,9 @@ function render(
     dom.warningNote.hidden = true;
   }
 
-  // Apply button variant + visibility
-  if (mode === 'unreachable' || mode === 'music') {
+  // Apply button variant + visibility: hidden for unreachable/music and in
+  // the auto-applied state, where the undo affordance replaces it (P1b).
+  if (mode === 'unreachable' || mode === 'music' || state.applied === 'auto') {
     dom.applyBtn.hidden = true;
   } else {
     dom.applyBtn.hidden = false;

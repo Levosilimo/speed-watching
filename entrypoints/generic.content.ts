@@ -83,6 +83,10 @@ let pillState: PillState | null = null;
 let autoState: 'pending' | 'auto' | 'stopped' = 'pending';
 /** How the current rate got applied — rides into the pill as applied. */
 let appliedSource: AppliedSource = 'none';
+/** The playback rate that was playing before auto applied it (P1a): the
+ * Stop-auto/dismiss undo restores this, not a blind 1×. null while auto
+ * never applied this video, and after the user takes over manually. */
+let preAutoRate: number | null = null;
 /** Video-swap epoch: bumped by every video reset so an in-flight measure
  * cannot render — or auto-apply — for the video it measured after the swap
  * (mirror of content.ts's navigation epoch). */
@@ -189,6 +193,7 @@ function handleVideoMutations(): void {
     epoch += 1;
     autoState = 'pending';
     appliedSource = 'none';
+    preAutoRate = null;
     return;
   }
   if (active !== activeVideo) {
@@ -199,6 +204,7 @@ function handleVideoMutations(): void {
     epoch += 1;
     autoState = 'pending';
     appliedSource = 'none';
+    preAutoRate = null;
     void measure();
   }
 }
@@ -214,6 +220,7 @@ function onMediaEvent(event: Event): void {
     epoch += 1;
     autoState = 'pending';
     appliedSource = 'none';
+    preAutoRate = null;
     void measure();
   }
   markUserOverride();
@@ -331,6 +338,9 @@ function renderRecommendation(
   });
   current = { site, contentType, naturalRate, platformMax, tier, unit: language?.unit ?? 'wpm', recommendation, range };
   if (autoState === 'pending' && shouldAutoApply(settings, recommendation, tier, contentType)) {
+    // The undo anchor: the rate the user was at before auto took over.
+    preAutoRate =
+      (activeVideo ?? document.querySelector<HTMLVideoElement>('video'))?.playbackRate ?? null;
     applyMultiplier(recommendation.multiplier);
     autoState = 'auto';
     appliedSource = 'auto';
@@ -345,6 +355,7 @@ function renderRecommendation(
     reason: recommendation.reason ?? undefined,
     range,
     applied: appliedSource,
+    undoRate: appliedSource === 'auto' ? preAutoRate ?? 1 : undefined,
   });
 }
 
@@ -374,10 +385,11 @@ function ensurePill(): PillApi {
   if (pill !== null && pill.host === host && host.isConnected) return pill.api;
   // The player was replaced (SPA navigation): rebuild on the fresh host.
   pill?.api.destroy();
-  const api = createPill(host, {
+    const api = createPill(host, {
     onApply: (multiplier) => {
       autoState = 'stopped';
       appliedSource = 'user';
+      preAutoRate = null;
       applyMultiplier(multiplier);
     },
     onDismiss: () => dismissCurrent(),
@@ -431,15 +443,28 @@ function refreshSavedSec(): void {
   pill.api.updateSavedSec(computeSavedSec());
 }
 
-/** Disengages auto-apply for this video: rate untouched, re-assert loop
- * detached (a later reset to 1.0 sticks), pill drops its stop-auto state.
- * Not logged. */
+/** Disengages auto-apply for this video: the auto-applied rate is undone
+ * back to the pre-auto rate (P1a — the in-pill escape hatch; a manual
+ * override already means the user took over), the re-assert loop is
+ * detached, and the pill drops its stop-auto state. Not logged. */
 function stopAutoForVideo(): void {
   if (current === null) return;
+  const wasAuto = appliedSource === 'auto';
   autoState = 'stopped';
   appliedSource = 'none';
+  // Detach the loop BEFORE restoring: the reapplier's ratechange listener
+  // would otherwise treat the restored 1.0 as a reset and re-assert it.
   reapplier.stop();
-  if (pillState !== null) showPill({ ...pillState, applied: 'none' });
+  if (wasAuto && preAutoRate !== null) restorePreAutoRate();
+  preAutoRate = null;
+  if (pillState !== null) showPill({ ...pillState, applied: 'none', undoRate: undefined });
+}
+
+/** Restores the pre-auto playback rate on the current video. */
+function restorePreAutoRate(): void {
+  const video = activeVideo ?? document.querySelector<HTMLVideoElement>('video');
+  if (video === null) return;
+  video.playbackRate = preAutoRate ?? 1;
 }
 
 /** Manual-override detection on ratechange: mirror of entrypoints/content.ts
@@ -454,11 +479,12 @@ function markUserOverride(): void {
   if (Math.abs(video.playbackRate - savedMultiplier) <= RATE_EPSILON) return; // our own apply
   autoState = 'stopped';
   appliedSource = 'user';
+  preAutoRate = null; // the user took over — no undo anchor left
   // The user took over: detach the re-assert loop, or a later reset to
   // exactly 1.0 (the sentinel's re-assert trigger) would fight back to the
   // old auto rate (mirror of stopAutoForVideo).
   reapplier.stop();
-  if (pillState !== null) showPill({ ...pillState, applied: 'user' });
+  if (pillState !== null) showPill({ ...pillState, applied: 'user', undoRate: undefined });
 }
 
 function applyMultiplier(multiplier: number): void {
@@ -481,6 +507,7 @@ function applyMultiplier(multiplier: number): void {
 
 function dismissCurrent(): void {
   if (current === null) return;
+  const wasAuto = appliedSource === 'auto';
   autoState = 'stopped';
   appliedSource = 'none';
   // Detach first: the unflushed tail is credited to the store before the
@@ -489,6 +516,8 @@ function dismissCurrent(): void {
   savedSec = null;
   savedMultiplier = null;
   reapplier.stop();
+  if (wasAuto && preAutoRate !== null) restorePreAutoRate();
+  preAutoRate = null;
   showPill(NONE_STATE);
   void logAction('dismiss', current.recommendation.multiplier);
 }

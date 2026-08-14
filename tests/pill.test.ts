@@ -79,6 +79,62 @@ describe('createPill stop-auto button', () => {
     );
   });
 
+  it('becomes the undo affordance in the auto state: Apply hidden, Reset to {rate}× label', () => {
+    const host = shadowHost();
+    const pill = createPill(host, {}, { locale: 'en' });
+    pill.mount();
+    const root = rootOf(host);
+    pill.update(state({ applied: 'auto', undoRate: 1 }));
+    const apply = root.querySelector<HTMLButtonElement>('.btn-apply')!;
+    const stopAuto = stopAutoOf(host);
+    // P1b: the redundant Apply is dropped in the auto-applied state.
+    expect(apply.hidden).toBe(true);
+    expect(stopAuto.hidden).toBe(false);
+    // P1a: the undo restores the pre-auto rate — the button says what it
+    // will do.
+    expect(stopAuto.textContent).toBe('Reset to 1×');
+    expect(stopAuto.getAttribute('aria-label')).toBe(
+      'Restore the playback speed that played before auto-apply',
+    );
+    pill.update(state({ applied: 'auto', undoRate: 1.25 }));
+    expect(stopAuto.textContent).toBe('Reset to 1.25×');
+  });
+
+  it('localizes the undo affordance and the auto label marker for ru', () => {
+    const host = shadowHost();
+    const pill = createPill(host, {}, { locale: 'ru' });
+    pill.mount();
+    const root = rootOf(host);
+    pill.update(state({ applied: 'auto', undoRate: 1 }));
+    expect(stopAutoOf(host).textContent).toBe('Сбросить до 1×');
+    expect(root.querySelector('.label')?.textContent).toBe('Авто · 1,55× ≈ 248 слов/мин');
+  });
+
+  it('leads the label line with the Auto marker and drops the arrow (P1b)', () => {
+    const host = shadowHost();
+    const pill = createPill(host, {}, { locale: 'en' });
+    pill.mount();
+    pill.update(state({ applied: 'auto', undoRate: 1 }));
+    expect(rootOf(host).querySelector('.label')?.textContent).toBe('Auto · 1.55x ≈ 248 wpm');
+    // Without the auto state the verbatim recommendation label stays.
+    pill.update(state());
+    expect(rootOf(host).querySelector('.label')?.textContent).toBe('→ 1.55x ≈ 248 wpm');
+  });
+
+  it('routes Enter to the undo in the auto-applied state, not Apply', () => {
+    const onStopAuto = vi.fn();
+    const onApply = vi.fn();
+    const host = shadowHost();
+    const pill = createPill(host, { onStopAuto, onApply }, { locale: 'en' });
+    pill.mount();
+    pill.update(state({ applied: 'auto', undoRate: 1 }));
+    rootOf(host).querySelector('.pill')!.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Enter' }),
+    );
+    expect(onStopAuto).toHaveBeenCalledExactlyOnceWith();
+    expect(onApply).not.toHaveBeenCalled();
+  });
+
   it('keeps the stop-auto button outside the live-region main text', () => {
     const host = shadowHost();
     const pill = createPill(host, {}, { locale: 'en' });

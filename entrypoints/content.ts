@@ -74,6 +74,10 @@ let activeVideo: HTMLVideoElement | null = null;
 let autoState: 'pending' | 'auto' | 'stopped' = 'pending';
 /** How the current rate got applied — rides into the pill as applied. */
 let appliedSource: AppliedSource = 'none';
+/** The playback rate that was playing before auto applied it (P1a): the
+ * Stop-auto/dismiss undo restores this, not a blind 1×. null while auto
+ * never applied this video, and after the user takes over manually. */
+let preAutoRate: number | null = null;
 
 /** Navigation epoch: bumped by every video reset (onNavigationStart) so an
  * in-flight measure that began before the reset cannot render — or
@@ -142,6 +146,7 @@ export default defineContentScript({
         if (current === null || pillState === null || (pillState.mode !== 'recommend' && pillState.mode !== 'warning')) return;
         autoState = 'stopped';
         appliedSource = 'user';
+        preAutoRate = null;
         applyMultiplier(current.recommendation.multiplier);
       } else if (pillState !== null && pillState.mode !== 'none') dismissCurrent();
     });
@@ -187,6 +192,7 @@ function onNavigationStart(): void {
   savedMultiplier = null;
   autoState = 'pending';
   appliedSource = 'none';
+  preAutoRate = null;
   showPill(NONE_STATE);
   nudgeSurface.teardown();
 }
@@ -335,6 +341,9 @@ function renderRecommendation(
     target: resolveUserTarget(settings, site, contentType) ?? language?.target ?? TARGET_WPM,
     recommendation, range };
   if (autoState === 'pending' && shouldAutoApply(settings, recommendation, tier, contentType)) {
+    // The undo anchor: the rate the user was at before auto took over.
+    preAutoRate =
+      (activeVideo ?? document.querySelector<HTMLVideoElement>('video'))?.playbackRate ?? null;
     applyMultiplier(recommendation.multiplier);
     autoState = 'auto';
     appliedSource = 'auto';
@@ -349,6 +358,7 @@ function renderRecommendation(
     reason: recommendation.reason ?? undefined,
     range,
     applied: appliedSource,
+    undoRate: appliedSource === 'auto' ? preAutoRate ?? 1 : undefined,
   });
 }
 
@@ -398,10 +408,11 @@ function ensurePill(): PillApi {
   if (pill !== null && pill.host === host && host.isConnected) return pill.api;
   // The player was replaced (SPA navigation): rebuild on the fresh host.
   pill?.api.destroy();
-  const api = createPill(host, {
+    const api = createPill(host, {
     onApply: (multiplier) => {
       autoState = 'stopped';
       appliedSource = 'user';
+      preAutoRate = null;
       applyMultiplier(multiplier);
     },
     onDismiss: () => dismissCurrent(),
@@ -454,14 +465,25 @@ function refreshSavedSec(): void {
   pill.api.updateSavedSec(computeSavedSec());
 }
 
-/** Disengages auto-apply for this video: the applied rate stays untouched
- * (never fight a non-1.0 rate) and the pill drops its stop-auto state.
- * Not logged — auto's own log entries already exist. */
+/** Disengages auto-apply for this video: the auto-applied rate is undone
+ * back to the pre-auto rate (P1a — the in-pill escape hatch; a manual
+ * override already means the user took over) and the pill drops its
+ * stop-auto state. Not logged — auto's own log entries already exist. */
 function stopAutoForVideo(): void {
   if (current === null) return;
+  const wasAuto = appliedSource === 'auto';
   autoState = 'stopped';
   appliedSource = 'none';
-  if (pillState !== null) showPill({ ...pillState, applied: 'none' });
+  if (wasAuto && preAutoRate !== null) restorePreAutoRate();
+  preAutoRate = null;
+  if (pillState !== null) showPill({ ...pillState, applied: 'none', undoRate: undefined });
+}
+
+/** Restores the pre-auto playback rate on the current video. */
+function restorePreAutoRate(): void {
+  const video = activeVideo ?? document.querySelector<HTMLVideoElement>('video');
+  if (video === null) return;
+  video.playbackRate = preAutoRate ?? 1;
 }
 
 /** Manual-override detection on ratechange: while auto applied a rate, any
@@ -477,7 +499,8 @@ function markUserOverride(): void {
   if (Math.abs(video.playbackRate - savedMultiplier) <= RATE_EPSILON) return; // our own apply
   autoState = 'stopped';
   appliedSource = 'user';
-  if (pillState !== null) showPill({ ...pillState, applied: 'user' });
+  preAutoRate = null; // the user took over — no undo anchor left
+  if (pillState !== null) showPill({ ...pillState, applied: 'user', undoRate: undefined });
 }
 
 function applyMultiplier(multiplier: number): void {
@@ -500,6 +523,7 @@ function applyMultiplier(multiplier: number): void {
 
 function dismissCurrent(): void {
   if (current === null) return;
+  const wasAuto = appliedSource === 'auto';
   autoState = 'stopped';
   appliedSource = 'none';
   // Detach first: the unflushed tail is credited to the store before the
@@ -507,6 +531,8 @@ function dismissCurrent(): void {
   savedTracker.detach();
   savedSec = null;
   savedMultiplier = null;
+  if (wasAuto && preAutoRate !== null) restorePreAutoRate();
+  preAutoRate = null;
   showPill(NONE_STATE);
   void logAction('dismiss', current.recommendation.multiplier);
 }

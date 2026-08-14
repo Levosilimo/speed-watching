@@ -623,10 +623,12 @@ export async function runAutoSpecs(driver: E2EDriver): Promise<void> {
     if (stopped.applied !== 'none') {
       throw new Error(`${fixture}: pill applied ${stopped.applied}, expected none after stop-auto`);
     }
+    // P1a: stop-auto in the auto state is the undo — the pre-auto rate (1,
+    // the fixture never played) is restored, not left at the auto rate.
     const stoppedRate = await driver.readPlaybackRate();
-    if (stoppedRate === null || Math.abs(stoppedRate - before.multiplier) > RATE_TOLERANCE) {
+    if (stoppedRate === null || Math.abs(stoppedRate - 1) > RATE_TOLERANCE) {
       throw new Error(
-        `${fixture}: playbackRate ${stoppedRate} after stop-auto, expected ${before.multiplier} (rate untouched)`,
+        `${fixture}: playbackRate ${stoppedRate} after stop-auto, expected 1 (pre-auto rate restored)`,
       );
     }
     await driver.navigateToWatch(fixture);
