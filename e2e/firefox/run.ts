@@ -222,6 +222,46 @@ async function main(): Promise<void> {
           throw new Error(`writeSettings failed: ${String(result)}`);
         }
       },
+      async readChapterHook() {
+        const deadline = Date.now() + 15_000;
+        while (Date.now() < deadline) {
+          const value = await driver.executeScript(
+            'return window.__speedwatcherChapter ? { rates: window.__speedwatcherChapter.rates, activeIndex: window.__speedwatcherChapter.activeIndex } : null',
+          );
+          if (value !== null && value !== undefined) {
+            return value as unknown as {
+              rates: Array<{ startSec: number; endSec: number; multiplier: number; mode: string }>;
+              activeIndex: number;
+            };
+          }
+          await new Promise((resolve) => setTimeout(resolve, 250));
+        }
+        return null;
+      },
+      async chapterApplyFor(sec) {
+        await driver.executeScript(
+          'window.__speedwatcherChapter && window.__speedwatcherChapter.applyFor(arguments[0])',
+          sec,
+        );
+      },
+      async setChapterConsent(enabled) {
+        const deadline = Date.now() + 15_000;
+        while (Date.now() < deadline) {
+          const visible = await driver.executeScript(
+            'const host = document.querySelector(".speedwatcher-pill-host");' +
+              'const btn = host && host.shadowRoot && host.shadowRoot.querySelector("button.btn-chapter-toggle");' +
+              'return btn ? !btn.hidden : false',
+          );
+          if (visible === true) break;
+          await new Promise((resolve) => setTimeout(resolve, 250));
+        }
+        await driver.executeScript(
+          'const host = document.querySelector(".speedwatcher-pill-host");' +
+            'const btn = host && host.shadowRoot && host.shadowRoot.querySelector("button.btn-chapter-toggle");' +
+            'if (btn && ((btn.getAttribute("aria-pressed") === "true") !== arguments[0])) btn.click();',
+          enabled,
+        );
+      },
     };
     await runMeasurementSpecs(e2e);
     await runPillSpecs(e2e);
