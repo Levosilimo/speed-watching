@@ -1,9 +1,9 @@
 {
   "videos": [
     {
-      "videoId": "l1uVuFP3-5s",
+      "videoId": "YjsY60G6YEc",
       "register": "news",
-      "title": "Aaj Tak — Superfast News LIVE: बड़ी खबरें फटाफट अंदाज में | Monsoon Session | Congress | BJP | Breaking",
+      "title": "Aaj Tak — news bulletin (fallback pick)",
       "language": "hi",
       "provenance": "Aaj Tak, IN (Devanagari hi)"
     },
@@ -22,11 +22,11 @@
       "provenance": "Aaj Tak, IN (Devanagari hi)"
     },
     {
-      "videoId": "2nvrs7mBi80",
+      "videoId": "T-ai0o3x4EY",
       "register": "lecture",
-      "title": "Shrenik Jain — Don’t watch NPTEL videos 🚫❓❓❓",
+      "title": "NPTEL IIT Bombay — Course Introduction (Maternal Infant Young Child Nutrition)",
       "language": "hi",
-      "provenance": "NPTEL, IN (Devanagari hi)"
+      "provenance": "NPTEL IIT Bombay, IN (Devanagari hi)"
     },
     {
       "videoId": "O9Tjcc0Dm-E",
@@ -113,11 +113,11 @@
       "provenance": "university lecture, MSA (regional)"
     },
     {
-      "videoId": "yK07ltJ1pcA",
+      "videoId": "Ml9T2TXHH4I",
       "register": "lecture",
-      "title": "Alyamamah Uni — محاضرة البروفيسور أحمد زويل الحائز على جائزة نوبل في جامعة اليمامة",
+      "title": "Sana'a University — المحاضرة الأولى لمادة الفيزياء",
       "language": "ar",
-      "provenance": "university lecture, MSA (regional)"
+      "provenance": "Sana'a University, YE (MSA)"
     },
     {
       "videoId": "xPCPy9yUcbU",
@@ -232,9 +232,9 @@
       "provenance": "university lecture, ID"
     },
     {
-      "videoId": "yslj7zpN3K4",
+      "videoId": "l8CH-eQsHBw",
       "register": "explainer",
-      "title": "Kok Bisa? — What Is the Fastest Way to Get Cancer?",
+      "title": "Kok Bisa? — The Incredible Weirdness of the Quantum World",
       "language": "id",
       "provenance": "Kok Bisa, ID"
     },
@@ -365,11 +365,11 @@
       "provenance": "VN podcast"
     },
     {
-      "videoId": "NAOBo3I96yc",
+      "videoId": "hFHj6x-mSmk",
       "register": "podcast",
-      "title": "Vì sao thế nhỉ! — Dành cho những ngày cậu chẳng biết đi đâu về đâu? | Podcast ",
+      "title": "Vietcetera — Đừng trì hoãn điều nhỏ nhặt (Dịch giả T)",
       "language": "vi",
-      "provenance": "VN podcast"
+      "provenance": "Vietcetera, VN"
     },
     {
       "videoId": "_0O4JsIRkOk",
@@ -422,9 +422,6 @@
     }
   ],
   "fallbacks": {
-    "hi:news": [
-      "YjsY60G6YEc"
-    ],
     "hi:lecture": [
       "tUFzcOvqq0U"
     ],

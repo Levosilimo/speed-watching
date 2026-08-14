@@ -73,7 +73,7 @@ export interface CorpusRecord {
   detectExpected: string;
   detectActual: string;
   durationSec: number | null;
-  /** es-419-style provenance recorded at selection: ar dialect, hi script. */
+  /** es-419-style provenance (ar dialect, hi script). */
   provenance: string | null;
   captureDate: string;
 }
@@ -83,7 +83,6 @@ export interface CorpusVideo {
   register: string;
   title: string;
   language: string;
-  /** Region/dialect provenance (ar dialect, hi script); optional. */
   provenance?: string;
 }
 
@@ -105,9 +104,7 @@ export interface GateSummary {
   g1: { webOk: number; anyPath: number; pass: boolean };
   g2: { registers: Record<string, RegisterGate>; pass: boolean };
   g3: {
-    /** 'regex-icu' = G3 as the ru/slavic batches ran it (words-mode
-     * languages); 'vowels-sample' = hi's determinism + hand-annotated
-     * sample gate (Intl.Segmenter has no vowel-nuclei segmenter). */
+    /** 'regex-icu' (words-mode) or 'vowels-sample' (hi) G3 variant. */
     mode: 'regex-icu' | 'vowels-sample';
     n: number;
     median: number | null;
@@ -122,8 +119,7 @@ export interface GateSummary {
   note: string | null;
 }
 
-/** Midpoint ± 20% window over the language's register band (music has no
- * band: lyric rate is not a speech-rate prior). */
+/** Midpoint ± 20% window over the language's register band (music: none). */
 export function registerBand(
   lang: string,
   register: string,
@@ -146,8 +142,7 @@ function tokenCoverage(parsed: ParsedCaptions): number | null {
   return (wordTokens / cueTokens) * 100;
 }
 
-/** Production detection pipeline: music has precedence, then the register
- * bands over the cue signal. */
+/** Music has precedence, then the register bands over the cue signal. */
 function detectActualFor(parsed: ParsedCaptions, rate: number, model: LanguageModel): string {
   if (detectMusic(parsed.cues, rate)) return 'music';
   const signal = cueSignal(parsed.cues, rate, model);
@@ -181,10 +176,16 @@ export function applyStats(
   record.durationSec = cueSpanSec(source.cues);
   record.coveragePct = tokenCoverage(source);
   const text = spokenText(source);
-  if (video.language === 'hi' && record.classification === 'web-ok' && !hasDevanagari(text)) {
-    // hi:asr tracks can serve Latin-script (hi-Latn/hinglish) text; the
-    // vowels-mode counter measures nothing on it, so the track is not
-    // Hindi and drops out of the hi denominator (spec: wrong-lang).
+    // Full-payload gate: re-picks can serve a ~22 s preview (often the
+    // English opening) — a hinglish verdict needs the full text.
+    if (
+    video.language === 'hi' &&
+    record.classification === 'web-ok' &&
+    (record.webBytes ?? 0) > 50_000 &&
+    !hasDevanagari(text)
+  ) {
+    // hi:asr tracks can serve Latin-script (hi-Latn/hinglish) text, which
+    // the vowels-mode counter measures nothing on — wrong-lang (spec).
     record.classification = 'wrong-lang';
     record.status = 'manual-only';
     record.error = 'latin-script hi track (hi-Latn text); excluded from the hi denominator';
@@ -230,8 +231,7 @@ function registerStatus(input: {
   return 'fail';
 }
 
-/** Per-register within-band fraction, carried on each record of the
- * register (record shape's withinBandPct). */
+/** Per-register within-band fraction (record shape's withinBandPct). */
 export function fillWithinBand(records: CorpusRecord[]): void {
   const byRegister = new Map<string, CorpusRecord[]>();
   for (const record of records) {
@@ -252,8 +252,13 @@ function availabilityGate(own: CorpusRecord[]): {
   const structural = ['no-track', 'manual-only', 'wrong-lang', 'geo-block'];
   const asrBearing = own.filter((r) => !structural.includes(r.classification));
   const webOk = own.filter((r) => r.classification === 'web-ok');
+  // any-path: WEB word timing, or the ANDROID control's when the WEB path
+  // failed. Non-web-ok classes never count — no target-lang ASR track.
   const anyPath = own.filter(
-    (r) => r.classification === 'web-ok' || (r.segsWords ?? 0) > 0,
+    (r) =>
+      r.classification === 'web-ok' ||
+      ((r.classification === 'pot-fail' || r.classification === 'parse-fail') &&
+        (r.segsWords ?? 0) > 0),
   );
   return {
     asrBearing: asrBearing.length,
@@ -271,7 +276,9 @@ function registerGates(own: CorpusRecord[], lang: string): {
 } {
   const registers: Record<string, RegisterGate> = {};
   for (const register of new Set(own.map((r) => r.register))) {
-    const measured = own.filter((r) => r.register === register && r.unifiedRate !== null);
+    const measured = own.filter(
+      (r) => r.classification === 'web-ok' && r.register === register && r.unifiedRate !== null,
+    );
     const band = registerBand(lang, register);
     const rates = measured.map((r) => r.unifiedRate as number).sort((a, b) => a - b);
     const median = medianOf(rates);
@@ -301,7 +308,9 @@ function registerGates(own: CorpusRecord[], lang: string): {
 }
 
 function parityGate(own: CorpusRecord[]): GateSummary['g4'] {
-  const parityRows = own.filter((r) => r.wordsParity !== null || r.cuesParity !== null);
+  const parityRows = own.filter(
+    (r) => r.classification === 'web-ok' && (r.wordsParity !== null || r.cuesParity !== null),
+  );
   const falseRows = parityRows
     .filter((r) => r.wordsParity === false || r.cuesParity === false)
     .map((r) => r.videoId);
@@ -309,7 +318,9 @@ function parityGate(own: CorpusRecord[]): GateSummary['g4'] {
 }
 
 function pauseGate(own: CorpusRecord[]): GateSummary['g5'] {
-  const pauseRows = own.filter((r) => r.register !== 'music' && r.pauseBiasPct !== null);
+  const pauseRows = own.filter(
+    (r) => r.classification === 'web-ok' && r.register !== 'music' && r.pauseBiasPct !== null,
+  );
   return {
     n: pauseRows.length,
     median: medianOf(pauseRows.map((r) => r.pauseBiasPct as number).sort((a, b) => a - b)),
@@ -319,7 +330,7 @@ function pauseGate(own: CorpusRecord[]): GateSummary['g5'] {
 function confusionMatrix(own: CorpusRecord[]): Record<string, Record<string, number>> {
   const confusion: Record<string, Record<string, number>> = {};
   for (const r of own) {
-    if (r.detectActual === 'unknown') continue;
+    if (r.classification !== 'web-ok' || r.detectActual === 'unknown') continue;
     (confusion[r.detectExpected] ??= {})[r.detectActual] =
       (confusion[r.detectExpected]?.[r.detectActual] ?? 0) + 1;
   }
@@ -405,10 +416,7 @@ export function printLangSummary(summary: GateSummary): void {
     );
   }
   console.log(`G2 verdict: ${summary.g2.pass ? 'PASS' : 'FAIL'}`);
-  const g3Label =
-    summary.g3.mode === 'vowels-sample'
-      ? 'G3 vowels sample+determinism'
-      : 'G3 count accuracy';
+  const g3Label = summary.g3.mode === 'vowels-sample' ? 'G3 vowels sample+determinism' : 'G3 count accuracy';
   console.log(
     `${g3Label}: n=${summary.g3.n} median=${summary.g3.median === null ? 'n/a' : `${summary.g3.median.toFixed(1)}%`} ` +
       `max=${summary.g3.maxDeltaPct === null ? 'n/a' : `${summary.g3.maxDeltaPct.toFixed(1)}%`} ` +

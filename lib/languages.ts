@@ -29,6 +29,14 @@
 // validated by a 16-video corpus; uk's lecture/talk bands are measured
 // (its news/podcast/explainer registers retain the ru-copied bands); pl/cs
 // keep their ratio-scaled generic band, corpus-validated in place.
+// The 2026-08 captionless-reach batch (docs/phase0-captionless-corpus.md)
+// extends the corpus set to ar/id/vi (ms/tl copy id): their per-register
+// bands are the measured medians ± 20 (in the language's unit), labeled
+// corpus-derived — G2 passes on them by construction (the uk correction
+// pattern); the generic band is the union mid of the register bands.
+// hi measured but stays ratio-derived: its medians sit far above the
+// derived band and the Devanagari counter overcounts code-mixed
+// (hinglish) text, so no band is built (addendum-measured).
 // syllable-per-word factors (ar 2.0, id/ms/tl 1.5) are typological
 // approximations, documented as such; the multiplier itself is
 // factor-invariant (target and rate share the unit), so only the displayed
@@ -54,9 +62,10 @@ export interface LanguageModel {
   /** Estimated-tier natural-rate range, in `unit`. */
   priors: { min: number; max: number };
   /** Evidence tier of the priors: 'corpus' = measured natural-rate corpus,
-   * absent = literature-sourced. ru (2026-08 phase0-russian-corpus) and
-   * uk/pl/cs (2026-08 phase0-slavic-corpus) carry 'corpus'; every other
-   * language stays literature. */
+   * absent = literature-sourced. ru (2026-08 phase0-russian-corpus),
+   * uk/pl/cs (2026-08 phase0-slavic-corpus), and ar/id/vi/ms/tl (2026-08
+   * phase0-captionless-corpus) carry 'corpus'; every other language stays
+   * literature (hi measured but addendum-only — see the header note). */
   priorsSource?: 'literature' | 'corpus';
   /** Per-register estimated-tier ranges, in `unit` (detectContentType's
    * bands and priorRange's register lookup). The generic entry mirrors
@@ -79,13 +88,98 @@ export const LANGUAGES: Record<string, LanguageModel> = {
   zh: { code: 'zh', unit: 'cpm', target: 240, ceiling: 258, tokenizerMode: 'chars', derived: false, priors: { min: 125, max: 182 } },
   th: { code: 'th', unit: 'cpm', target: 282, ceiling: 290, tokenizerMode: 'chars', derived: true, priors: { min: 147, max: 214 } },
   ko: { code: 'ko', unit: 'syl', target: 340, ceiling: 350, tokenizerMode: 'words', derived: true, priors: { min: 177, max: 258 }, hangulBlocks: true },
-  ar: { code: 'ar', unit: 'syl', target: 330, ceiling: 360, tokenizerMode: 'words', derived: true, priors: { min: 172, max: 251 }, syllablesPerWord: 2.0 },
+  ar: {
+    code: 'ar',
+    unit: 'syl',
+    target: 330,
+    ceiling: 360,
+    tokenizerMode: 'words',
+    derived: true,
+    priorsSource: 'corpus',
+    priors: { min: 195, max: 235 },
+    registerPriors: {
+      news: { min: 195, max: 235 },
+      lecture: { min: 165, max: 205 },
+      explainer: { min: 150, max: 190 },
+      podcast: { min: 235, max: 275 },
+      generic: { min: 195, max: 235 },
+    },
+    syllablesPerWord: 2.0,
+  },
   tr: { code: 'tr', unit: 'syl', target: 340, ceiling: 350, tokenizerMode: 'vowels', derived: true, priors: { min: 177, max: 258 } },
   hi: { code: 'hi', unit: 'syl', target: 240, ceiling: 247, tokenizerMode: 'vowels', derived: true, priors: { min: 125, max: 182 } },
-  vi: { code: 'vi', unit: 'wpm', target: 280, ceiling: 290, tokenizerMode: 'words', derived: true, priors: { min: 146, max: 213 } },
-  id: { code: 'id', unit: 'syl', target: 400, ceiling: 412, tokenizerMode: 'words', derived: true, priors: { min: 208, max: 304 }, syllablesPerWord: 1.5 },
-  ms: { code: 'ms', unit: 'syl', target: 400, ceiling: 412, tokenizerMode: 'words', derived: true, priors: { min: 208, max: 304 }, syllablesPerWord: 1.5 },
-  tl: { code: 'tl', unit: 'syl', target: 400, ceiling: 412, tokenizerMode: 'words', derived: true, priors: { min: 208, max: 304 }, syllablesPerWord: 1.5 },
+  vi: {
+    code: 'vi',
+    unit: 'wpm',
+    target: 280,
+    ceiling: 290,
+    tokenizerMode: 'words',
+    derived: true,
+    priorsSource: 'corpus',
+    priors: { min: 185, max: 225 },
+    registerPriors: {
+      news: { min: 205, max: 245 },
+      lecture: { min: 160, max: 200 },
+      explainer: { min: 190, max: 230 },
+      podcast: { min: 180, max: 220 },
+      generic: { min: 185, max: 225 },
+    },
+  },
+  id: {
+    code: 'id',
+    unit: 'syl',
+    target: 400,
+    ceiling: 412,
+    tokenizerMode: 'words',
+    derived: true,
+    priorsSource: 'corpus',
+    priors: { min: 200, max: 240 },
+    registerPriors: {
+      news: { min: 185, max: 225 },
+      lecture: { min: 160, max: 200 },
+      explainer: { min: 175, max: 215 },
+      podcast: { min: 240, max: 280 },
+      generic: { min: 200, max: 240 },
+    },
+    syllablesPerWord: 1.5,
+  },
+  // ms/tl carry id's measured priors wholesale (shared band + factor).
+  ms: {
+    code: 'ms',
+    unit: 'syl',
+    target: 400,
+    ceiling: 412,
+    tokenizerMode: 'words',
+    derived: true,
+    priorsSource: 'corpus',
+    priors: { min: 200, max: 240 },
+    registerPriors: {
+      news: { min: 185, max: 225 },
+      lecture: { min: 160, max: 200 },
+      explainer: { min: 175, max: 215 },
+      podcast: { min: 240, max: 280 },
+      generic: { min: 200, max: 240 },
+    },
+    syllablesPerWord: 1.5,
+  },
+  tl: {
+    code: 'tl',
+    unit: 'syl',
+    target: 400,
+    ceiling: 412,
+    tokenizerMode: 'words',
+    derived: true,
+    priorsSource: 'corpus',
+    priors: { min: 200, max: 240 },
+    registerPriors: {
+      news: { min: 185, max: 225 },
+      lecture: { min: 160, max: 200 },
+      explainer: { min: 175, max: 215 },
+      podcast: { min: 240, max: 280 },
+      generic: { min: 200, max: 240 },
+    },
+    syllablesPerWord: 1.5,
+  },
   // ru/uk register bands are the gathered Russian rate norms themselves: news
   // and dictation 120–150 wpm, conversational ~100–140, lecture ~95–135,
   // explainer ~100–140 (Kazabeeva 2015 pedagogy norms; the "fast" band tops

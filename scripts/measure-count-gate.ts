@@ -67,7 +67,9 @@ export const DEVANAGARI_G3_SAMPLE: VowelsSampleRow[] = [
  * hand-annotated sample, ±10% tolerance per check (the documented
  * epenthetic-schwa deviation band). */
 export function vowelsGate(own: CorpusRecord[]): GateSummary['g3'] {
-  const rows = own.filter((r) => r.register !== 'music' && r.countDeltaPct !== null);
+  const rows = own.filter(
+    (r) => r.classification === 'web-ok' && r.register !== 'music' && r.countDeltaPct !== null,
+  );
   const checks = [
     ...rows.map((r) => ({ label: `determinism ${r.videoId}`, delta: r.countDeltaPct as number })),
     ...DEVANAGARI_G3_SAMPLE.map((row) => {
@@ -100,7 +102,9 @@ export function medianOf(sorted: number[]): number | null {
 
 /** Words-mode G3: production counter vs Intl.Segmenter per video. */
 export function countGate(own: CorpusRecord[]): GateSummary['g3'] {
-  const countRows = own.filter((r) => r.register !== 'music' && r.countDeltaPct !== null);
+  const countRows = own.filter(
+    (r) => r.classification === 'web-ok' && r.register !== 'music' && r.countDeltaPct !== null,
+  );
   const deltas = countRows.map((r) => r.countDeltaPct as number).sort((a, b) => a - b);
   return {
     mode: 'regex-icu',
