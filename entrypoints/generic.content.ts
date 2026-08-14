@@ -42,6 +42,7 @@ import {
 } from '@/lib/settings';
 import { asrTierInputs, filteredTokensOverTrimmedSpan, manualCueRate } from '@/lib/wpm';
 import { createPill, type AppliedSource, type LiveRate, type PillApi, type PillState } from '@/ui/pill';
+import { createNudgeHost } from '@/ui/nudge-host';
 import {
   RATE_EPSILON,
   savedSeconds,
@@ -55,6 +56,7 @@ const RESOURCE_POLL_MS = 250;
 const OBSERVER_DEBOUNCE_MS = 300;
 
 const bridge = createBridgeClient(window);
+const nudgeSurface = createNudgeHost(bridge);
 
 /** Current video's recommendation context; null until the first measure. */
 let current: {
@@ -186,27 +188,29 @@ function handleVideoMutations(): void {
       pill = null;
     }
     reapplier.stop();
-    savedTracker.detach();
-    savedSec = null;
-    savedMultiplier = null;
     current = null;
-    epoch += 1;
-    autoState = 'pending';
-    appliedSource = 'none';
-    preAutoRate = null;
+    resetSession();
     return;
   }
   if (active !== activeVideo) {
     activeVideo = active;
-    savedTracker.detach();
-    savedSec = null;
-    savedMultiplier = null;
-    epoch += 1;
-    autoState = 'pending';
-    appliedSource = 'none';
-    preAutoRate = null;
+    resetSession();
     void measure();
   }
+}
+
+/** Video swap or removal: end the old video's session — tracker, lifecycle
+ * state, and the nudge surface — and bump the epoch so an in-flight measure
+ * goes stale (mirror of content.ts's onNavigationStart). */
+function resetSession(): void {
+  savedTracker.detach();
+  savedSec = null;
+  savedMultiplier = null;
+  epoch += 1;
+  autoState = 'pending';
+  appliedSource = 'none';
+  preAutoRate = null;
+  nudgeSurface.teardown();
 }
 
 function onMediaEvent(event: Event): void {
@@ -214,13 +218,7 @@ function onMediaEvent(event: Event): void {
   // the user is watching; a swap re-measures and ends the old session.
   if (event.target instanceof HTMLVideoElement && event.target !== activeVideo) {
     activeVideo = event.target;
-    savedTracker.detach();
-    savedSec = null;
-    savedMultiplier = null;
-    epoch += 1;
-    autoState = 'pending';
-    appliedSource = 'none';
-    preAutoRate = null;
+    resetSession();
     void measure();
   }
   markUserOverride();
@@ -513,6 +511,9 @@ function applyMultiplier(multiplier: number): void {
   refreshLiveRate();
   refreshSavedSec();
   void logAction('apply', multiplier);
+  // Mirror of content.ts: generic high-speed applies are speech-eligible too
+  // (E6) — the nudge counts them with this video's language range.
+  nudgeSurface.reportApply(multiplier, current.range);
 }
 
 function dismissCurrent(): void {

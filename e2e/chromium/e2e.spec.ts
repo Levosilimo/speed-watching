@@ -303,6 +303,44 @@ test('generic matcher harvests captions, applies, and re-asserts after a reset',
   await runGenericSpecs(driver);
 });
 
+test('generic apply at >=1.5x counts toward the recall nudge (E6)', async () => {
+  // E6: the generic matcher mirrors content.ts's nudge wiring — a
+  // high-speed apply on a non-YouTube player counts too. The talk fixture
+  // renders 1.05x at the default target, so raise the target to 360 and let
+  // the manual-cue clamp land at exactly 1.5x (>= NUDGE_MULTIPLIER_MIN).
+  const readNudge = (): Promise<number> =>
+    serviceWorker.evaluate(async () => {
+      const items = await new Promise<Record<string, unknown>>((resolve) =>
+        chrome.storage.local.get('sw.nudge', (items) => resolve(items)),
+      );
+      const record = items['sw.nudge'] as { highApplied?: number } | undefined;
+      return typeof record?.highApplied === 'number' ? record.highApplied : 0;
+    });
+  // Deterministic baseline: other specs apply high-speed pills too, and a
+  // counter at 3 would show the overlay and reset mid-assertion.
+  await serviceWorker.evaluate(async () => {
+    await new Promise<void>((resolve) =>
+      chrome.storage.local.set({ 'sw.nudge': { highApplied: 0 } }, () => resolve()),
+    );
+  });
+  await driver.navigateToWatch('real/manual-cue.json');
+  await driver.readPillState();
+  try {
+    await driver.writeSettings({ ...defaultSettings(), target: 360 });
+    await driver.navigateToGeneric();
+    const state = await driver.readPillState();
+    if (state === null || state.multiplier < 1.5) {
+      throw new Error(`generic nudge: pill multiplier ${state?.multiplier}, expected >= 1.5`);
+    }
+    await driver.applyPill();
+    await expect.poll(async () => readNudge(), { timeout: 10_000 }).toBe(1);
+  } finally {
+    await driver.navigateToWatch('real/manual-cue.json');
+    await driver.readPillState();
+    await driver.writeSettings(defaultSettings());
+  }
+});
+
 test('applied generic playback accrues sw.timeSavedSec (time-saved metric)', async () => {
   // The tracker flushes to the background store every 10 s and on detach, so
   // the assertion reads around a fresh apply and forces the flush with a
