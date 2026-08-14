@@ -386,7 +386,7 @@ function expectedDzenRecommendation(): { rec: Recommendation; naturalRate: numbe
   const language = resolveLanguage('ru') ?? undefined;
   const naturalRate = filteredTokensOverTrimmedSpan(cues, language);
   if (naturalRate === null) throw new Error('dzen-word.vtt: no natural rate');
-  const detected = detectMusic(cues, naturalRate) ? 'music' : 'generic';
+  const detected = detectMusic(cues, naturalRate, language?.unit ?? 'wpm') ? 'music' : 'generic';
   const { tier, wordInputs } = asrTierInputs('asr', words, cues);
   const rec = recommend({
     naturalRate,

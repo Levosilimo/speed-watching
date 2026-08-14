@@ -168,7 +168,7 @@ async function measureOnce(): Promise<void> {
   }
   const signal = cueSignal(cues, naturalRate, language);
   let detected: ContentType = signal === null ? 'generic' : detectContentType(signal);
-  if (detectMusic(cues, naturalRate)) detected = 'music';
+  if (detectMusic(cues, naturalRate, language?.unit ?? 'wpm')) detected = 'music';
   const { tier, wordInputs } = asrTierInputs(kind, words, cues);
   renderRecommendation(videoId, naturalRate, tier, detected, userTarget, wordInputs, language);
   rememberChannelRate(response.videoDetails, naturalRate, language);

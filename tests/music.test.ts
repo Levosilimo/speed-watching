@@ -3,11 +3,13 @@ import type { Segment } from '../lib/captions';
 import { parseYouTubeJson3 } from '../lib/captions';
 import {
   MUSIC_MARKER_RATIO_MIN,
+  MUSIC_RATE_CAP_BY_UNIT,
   MUSIC_RATE_CAP_WPM,
   containsNotes,
   detectMusic,
   markerRatio,
 } from '../lib/music';
+import { LANGUAGES } from '../lib/languages';
 import { filteredTokensOverTrimmedSpan } from '../lib/wpm';
 import { readFixture } from './fixtures/helpers';
 
@@ -74,5 +76,44 @@ describe('detectMusic', () => {
     expect(markerRatio(cues)).toBe(0.3);
     expect(containsNotes(cues)).toBe(false);
     expect(detectMusic(cues, rate)).toBe(true);
+  });
+
+  it('pins the per-unit caps', () => {
+    expect(MUSIC_RATE_CAP_BY_UNIT).toEqual({ wpm: 90, mora: 150, syl: 90, cpm: 250 });
+  });
+
+  it('trips the cpm cap on the th lyric control band (158.0/219.1 cpm)', () => {
+    // 20 cues × 4 Thai graphemes ('♪ สวัสดี ♪'; ♪ is a symbol, excluded)
+    // over a 22.8 s span ≈ 210 cpm — inside the corpus's th lyric control
+    // band. Under the old flat 90 wpm floor these never tripped; the
+    // unit-aware cpm cap (250) catches them, the wpm default does not.
+    const thCues: Segment[] = [...Array(20)].map((_, i) => ({
+      text: '♪ สวัสดี ♪',
+      startSec: i * 1.2,
+      durSec: 1.2,
+    }));
+    const rate = filteredTokensOverTrimmedSpan(thCues, LANGUAGES['th']);
+    if (rate === null) throw new Error('rate must be computable on the th cues');
+    expect(rate).toBeGreaterThan(MUSIC_RATE_CAP_BY_UNIT.wpm);
+    expect(rate).toBeLessThan(MUSIC_RATE_CAP_BY_UNIT.cpm);
+    expect(detectMusic(thCues, rate, 'cpm')).toBe(true);
+    expect(detectMusic(thCues, rate)).toBe(false); // the unit-blind bug
+  });
+
+  it('trips the mora cap on the ja lyric control band (89.3/115.3 morae/min)', () => {
+    // 20 cues × 4 kana ('♪ ララララ ♪') over a 34.2 s span ≈ 140
+    // morae/min — between the ja lyric controls and the 150 cap; ja
+    // speech never measures below ~291 morae/min, so the cap is safe.
+    const jaCues: Segment[] = [...Array(20)].map((_, i) => ({
+      text: '♪ ララララ ♪',
+      startSec: i * 1.8,
+      durSec: 1.8,
+    }));
+    const rate = filteredTokensOverTrimmedSpan(jaCues, LANGUAGES['ja']);
+    if (rate === null) throw new Error('rate must be computable on the ja cues');
+    expect(rate).toBeGreaterThan(MUSIC_RATE_CAP_BY_UNIT.wpm);
+    expect(rate).toBeLessThan(MUSIC_RATE_CAP_BY_UNIT.mora);
+    expect(detectMusic(jaCues, rate, 'mora')).toBe(true);
+    expect(detectMusic(jaCues, rate)).toBe(false); // the unit-blind bug
   });
 });

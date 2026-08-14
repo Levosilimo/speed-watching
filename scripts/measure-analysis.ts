@@ -152,7 +152,7 @@ function tokenCoverage(parsed: ParsedCaptions): number | null {
 
 /** Music has precedence, then the register bands over the cue signal. */
 function detectActualFor(parsed: ParsedCaptions, rate: number, model: LanguageModel): string {
-  if (detectMusic(parsed.cues, rate)) return 'music';
+  if (detectMusic(parsed.cues, rate, model.unit)) return 'music';
   const signal = cueSignal(parsed.cues, rate, model);
   return signal === null ? 'unknown' : detectContentType(signal);
 }
