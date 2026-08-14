@@ -8,12 +8,15 @@ Speed Watcher browser extension's manual-cue tier: the rate math
 
 ## Install
 
-Put the files into a subdirectory of your mpv scripts folder, so mpv does
-not auto-load `rate.lua` and `languages.lua` as scripts of their own:
+Put the files into a subdirectory of your mpv scripts folder. The script
+directory is loaded as one unit: mpv auto-loads only `main.lua` from it, and
+`main.lua` pulls in `rate.lua` and `languages.lua` via `require` — without
+the `main.lua` name nothing loads (mpv would otherwise treat the directory's
+files as separate scripts).
 
 ```
 mkdir -p ~/.config/mpv/scripts/speed-watcher
-cp speed-watcher.lua rate.lua languages.lua ~/.config/mpv/scripts/speed-watcher/
+cp main.lua rate.lua languages.lua ~/.config/mpv/scripts/speed-watcher/
 ```
 
 Options go in `~/.config/mpv/script-opts/speed_watcher.conf`:
