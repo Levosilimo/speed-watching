@@ -1,0 +1,416 @@
+{
+ "wireMagic": "pb3",
+ "pens": [
+  {}
+ ],
+ "wsWinStyles": [
+  {},
+  {
+   "mhModeHint": 2,
+   "juJustifCode": 0,
+   "sdScrollDir": 3
+  }
+ ],
+ "wpWinPositions": [
+  {},
+  {
+   "apPoint": 6,
+   "ahHorPos": 20,
+   "avVerPos": 100,
+   "rcRows": 2,
+   "ccCols": 40
+  }
+ ],
+ "events": [
+  {
+   "tStartMs": 0,
+   "dDurationMs": 7937659,
+   "id": 1,
+   "wpWinPosId": 1,
+   "wsWinStyleId": 1
+  },
+  {
+   "tStartMs": 120,
+   "dDurationMs": 6589,
+   "wWinId": 1,
+   "segs": [
+    {
+     "utf8": "[музыка]"
+    }
+   ]
+  },
+  {
+   "tStartMs": 7030,
+   "wWinId": 1,
+   "aAppend": 1,
+   "segs": [
+    {
+     "utf8": "\n"
+    }
+   ]
+  },
+  {
+   "tStartMs": 7040,
+   "dDurationMs": 5260,
+   "wWinId": 1,
+   "segs": [
+    {
+     "utf8": "Элементарные",
+     "acAsrConf": 227
+    },
+    {
+     "utf8": " частицы",
+     "tOffsetMs": 1000,
+     "acAsrConf": 227
+    }
+   ]
+  },
+  {
+   "tStartMs": 9669,
+   "dDurationMs": 2631,
+   "wWinId": 1,
+   "aAppend": 1,
+   "segs": [
+    {
+     "utf8": "\n"
+    }
+   ]
+  },
+  {
+   "tStartMs": 9679,
+   "dDurationMs": 5141,
+   "wWinId": 1,
+   "segs": [
+    {
+     "utf8": "интуитивно",
+     "acAsrConf": 227
+    },
+    {
+     "utf8": " понятно",
+     "tOffsetMs": 1000,
+     "acAsrConf": 227
+    },
+    {
+     "utf8": " что",
+     "tOffsetMs": 1181,
+     "acAsrConf": 227
+    },
+    {
+     "utf8": " это",
+     "tOffsetMs": 1601,
+     "acAsrConf": 227
+    },
+    {
+     "utf8": " означает",
+     "tOffsetMs": 1781,
+     "acAsrConf": 227
+    },
+    {
+     "utf8": " это",
+     "tOffsetMs": 2021,
+     "acAsrConf": 227
+    }
+   ]
+  },
+  {
+   "tStartMs": 12290,
+   "dDurationMs": 2530,
+   "wWinId": 1,
+   "aAppend": 1,
+   "segs": [
+    {
+     "utf8": "\n"
+    }
+   ]
+  },
+  {
+   "tStartMs": 12300,
+   "dDurationMs": 4860,
+   "wWinId": 1,
+   "segs": [
+    {
+     "utf8": "что-то",
+     "acAsrConf": 227
+    },
+    {
+     "utf8": " такое",
+     "tOffsetMs": 299,
+     "acAsrConf": 227
+    },
+    {
+     "utf8": " такое",
+     "tOffsetMs": 540,
+     "acAsrConf": 227
+    },
+    {
+     "utf8": " самое",
+     "tOffsetMs": 1320,
+     "acAsrConf": 227
+    },
+    {
+     "utf8": " элементарное",
+     "tOffsetMs": 1860,
+     "acAsrConf": 227
+    }
+   ]
+  },
+  {
+   "tStartMs": 14810,
+   "dDurationMs": 2350,
+   "wWinId": 1,
+   "aAppend": 1,
+   "segs": [
+    {
+     "utf8": "\n"
+    }
+   ]
+  },
+  {
+   "tStartMs": 14820,
+   "dDurationMs": 5539,
+   "wWinId": 1,
+   "segs": [
+    {
+     "utf8": "что",
+     "acAsrConf": 227
+    },
+    {
+     "utf8": " уже",
+     "tOffsetMs": 300,
+     "acAsrConf": 227
+    },
+    {
+     "utf8": " нельзя",
+     "tOffsetMs": 479,
+     "acAsrConf": 227
+    },
+    {
+     "utf8": " расколоть",
+     "tOffsetMs": 660,
+     "acAsrConf": 227
+    },
+    {
+     "utf8": " на",
+     "tOffsetMs": 1440,
+     "acAsrConf": 227
+    },
+    {
+     "utf8": " части",
+     "tOffsetMs": 1680,
+     "acAsrConf": 227
+    },
+    {
+     "utf8": " нельзя",
+     "tOffsetMs": 1920,
+     "acAsrConf": 227
+    }
+   ]
+  },
+  {
+   "tStartMs": 17150,
+   "dDurationMs": 3209,
+   "wWinId": 1,
+   "aAppend": 1,
+   "segs": [
+    {
+     "utf8": "\n"
+    }
+   ]
+  },
+  {
+   "tStartMs": 17160,
+   "dDurationMs": 5459,
+   "wWinId": 1,
+   "segs": [
+    {
+     "utf8": "найти",
+     "acAsrConf": 227
+    },
+    {
+     "utf8": " из",
+     "tOffsetMs": 360,
+     "acAsrConf": 227
+    },
+    {
+     "utf8": " чего",
+     "tOffsetMs": 959,
+     "acAsrConf": 227
+    },
+    {
+     "utf8": " это",
+     "tOffsetMs": 1080,
+     "acAsrConf": 227
+    },
+    {
+     "utf8": " с",
+     "tOffsetMs": 1379,
+     "acAsrConf": 227
+    },
+    {
+     "utf8": " частица",
+     "tOffsetMs": 1560,
+     "acAsrConf": 227
+    },
+    {
+     "utf8": " состоит",
+     "tOffsetMs": 1800,
+     "acAsrConf": 227
+    }
+   ]
+  },
+  {
+   "tStartMs": 20349,
+   "dDurationMs": 2270,
+   "wWinId": 1,
+   "aAppend": 1,
+   "segs": [
+    {
+     "utf8": "\n"
+    }
+   ]
+  },
+  {
+   "tStartMs": 20359,
+   "dDurationMs": 3701,
+   "wWinId": 1,
+   "segs": [
+    {
+     "utf8": "исторически",
+     "acAsrConf": 227
+    },
+    {
+     "utf8": " в",
+     "tOffsetMs": 1000,
+     "acAsrConf": 227
+    },
+    {
+     "utf8": " то",
+     "tOffsetMs": 1481,
+     "acAsrConf": 227
+    },
+    {
+     "utf8": " же",
+     "tOffsetMs": 1541,
+     "acAsrConf": 227
+    },
+    {
+     "utf8": " время",
+     "tOffsetMs": 1661,
+     "acAsrConf": 227
+    },
+    {
+     "utf8": " понятия",
+     "tOffsetMs": 1721,
+     "acAsrConf": 227
+    }
+   ]
+  },
+  {
+   "tStartMs": 22609,
+   "dDurationMs": 1451,
+   "wWinId": 1,
+   "aAppend": 1,
+   "segs": [
+    {
+     "utf8": "\n"
+    }
+   ]
+  },
+  {
+   "tStartMs": 22619,
+   "dDurationMs": 3660,
+   "wWinId": 1,
+   "segs": [
+    {
+     "utf8": "менялось",
+     "acAsrConf": 211
+    }
+   ]
+  },
+  {
+   "tStartMs": 24050,
+   "dDurationMs": 2229,
+   "wWinId": 1,
+   "aAppend": 1,
+   "segs": [
+    {
+     "utf8": "\n"
+    }
+   ]
+  },
+  {
+   "tStartMs": 24060,
+   "dDurationMs": 5299,
+   "wWinId": 1,
+   "segs": [
+    {
+     "utf8": "наверное",
+     "acAsrConf": 227
+    },
+    {
+     "utf8": " самый",
+     "tOffsetMs": 600,
+     "acAsrConf": 227
+    },
+    {
+     "utf8": " элементарными",
+     "tOffsetMs": 1139,
+     "acAsrConf": 227
+    },
+    {
+     "utf8": " частицами",
+     "tOffsetMs": 1860,
+     "acAsrConf": 227
+    }
+   ]
+  },
+  {
+   "tStartMs": 26269,
+   "dDurationMs": 3090,
+   "wWinId": 1,
+   "aAppend": 1,
+   "segs": [
+    {
+     "utf8": "\n"
+    }
+   ]
+  },
+  {
+   "tStartMs": 26279,
+   "dDurationMs": 6000,
+   "wWinId": 1,
+   "segs": [
+    {
+     "utf8": "когда-то",
+     "acAsrConf": 227
+    },
+    {
+     "utf8": " считались",
+     "tOffsetMs": 781,
+     "acAsrConf": 227
+    },
+    {
+     "utf8": " атомы",
+     "tOffsetMs": 1080,
+     "acAsrConf": 227
+    },
+    {
+     "utf8": " потому",
+     "tOffsetMs": 1561,
+     "acAsrConf": 227
+    },
+    {
+     "utf8": " что",
+     "tOffsetMs": 2521,
+     "acAsrConf": 227
+    },
+    {
+     "utf8": " еще",
+     "tOffsetMs": 2881,
+     "acAsrConf": 227
+    }
+   ]
+  }
+ ],
+ "windows": []
+}
