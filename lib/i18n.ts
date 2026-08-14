@@ -23,7 +23,7 @@ const EN = {
   'pill.dismissAria': 'Dismiss',
   'pill.stopAuto': 'Stop auto',
   'pill.stopAutoAria': 'Stop applying the recommended speed automatically',
-  'pill.warning.aboveZone': 'Past the 250–275 wpm range commonly cited for comfortable listening',
+  'pill.warning.aboveZone': 'Past the {lo}–{hi} {unit} range commonly cited for comfortable listening',
   'pill.warning.cappedBelow': 'Estimate uncertain — capped at 1.5x for safety',
   'pill.warning.pauseDiluted': 'Speech runs fast at this speed — estimate uncertain',
   'pill.liveRate': 'now ≈ {rate} {unit} at {mult}x',
@@ -34,7 +34,7 @@ const EN = {
   'pill.label.cappedSuffix': ' (capped below safe zone)',
   'nudge.title': 'At a glance, was that still fully clear?',
   'nudge.body':
-    'Fast playback can feel as clear as normal speed even when recall dips — speed-watching mostly affects how confident you feel about understanding, not what you objectively catch. If anything felt rushed, 250–275 wpm is the comfortable range to fall back to.',
+    'Fast playback can feel as clear as normal speed even when recall dips — speed-watching mostly affects how confident you feel about understanding, not what you objectively catch. If anything felt rushed, {lo}–{hi} {unit} is the comfortable range to fall back to.',
   'nudge.gotIt': 'Got it',
   'nudge.dontShowAgain': "Don't show again",
   'tier.asrWord': 'from captions',

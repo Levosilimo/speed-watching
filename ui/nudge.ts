@@ -7,13 +7,17 @@
 import { DARK, LIGHT, type Theme } from './styles';
 import { nudgeCss } from './nudge-css';
 import { createBridgeClient } from '../lib/messaging';
-import { resolveUiLanguage, t, type UiLocale } from '../lib/i18n';
+import { resolveUiLanguage, t, unitLabel, type UiLocale } from '../lib/i18n';
+import type { RateRange } from '../lib/languages';
 import type { UiLanguageSetting } from '../lib/settings';
 
 export interface NudgeState {
   /** UI locale; unset → resolved from settings.uiLanguage via the bridge,
    * falling back to the browser UI language. */
   locale?: UiLocale;
+  /** The current track language's safe zone, for the body's range copy;
+   * absent → the en 250–275 wpm defaults. */
+  range?: RateRange;
 }
 
 export interface NudgeEvents {
@@ -111,9 +115,15 @@ function wireEvents(dom: NudgeDom, host: HTMLElement, events: NudgeEvents | unde
   });
 }
 
-function render(dom: NudgeDom, locale: UiLocale): void {
+function render(dom: NudgeDom, locale: UiLocale, range?: RateRange): void {
   dom.titleEl.textContent = t('nudge.title', locale);
-  dom.bodyEl.textContent = t('nudge.body', locale);
+  // The body's fallback range keys to the TRACK language (P0), not the UI
+  // locale — absent range → the en 250–275 wpm defaults.
+  dom.bodyEl.textContent = t('nudge.body', locale, {
+    lo: range?.lo ?? 250,
+    hi: range?.hi ?? 275,
+    unit: unitLabel(range?.unit ?? 'wpm', locale),
+  });
   dom.gotItBtn.textContent = t('nudge.gotIt', locale);
   dom.dontShowAgainBtn.textContent = t('nudge.dontShowAgain', locale);
 }
@@ -136,7 +146,10 @@ export function createNudge(host: HTMLElement, events?: NudgeEvents, opts?: Nudg
   const shadow = host.attachShadow({ mode: 'open' });
   let destroyed = false;
   let shown = false;
-  let locale: UiLocale = opts?.locale ?? 'en';
+  let currentRange: RateRange | undefined;
+  // Browser-language seed (no English flash for ru users); the bridge
+  // round-trip refines it with settings.uiLanguage when unpinned.
+  let locale: UiLocale = opts?.locale ?? resolveUiLanguage(undefined, navigator.language);
 
   const dom = buildDom();
 
@@ -175,9 +188,10 @@ export function createNudge(host: HTMLElement, events?: NudgeEvents, opts?: Nudg
     show(state) {
       if (destroyed) return;
       if (state.locale !== undefined) locale = state.locale;
+      if (state.range !== undefined) currentRange = state.range;
       shown = true;
       host.appendChild(shadow);
-      render(dom, locale);
+      render(dom, locale, currentRange);
       dom.overlay.hidden = false;
       // Move focus into the overlay so Enter/Escape work without a click.
       dom.gotItBtn.focus();

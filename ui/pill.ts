@@ -10,6 +10,7 @@
 import { DARK, LIGHT, type Theme } from './styles';
 import { pillCss } from './pill-css';
 import { createBridgeClient } from '../lib/messaging';
+import type { RateRange } from '../lib/languages';
 import {
   extractUnit,
   formatMultiplier,
@@ -39,6 +40,10 @@ export interface PillState {
   label: string;
   /** Warning-mode copy selector: cliff crossing vs clamp cap vs articulatory load. */
   reason?: 'above-zone' | 'capped-below' | 'pause-diluted';
+  /** The resolved track language's safe zone (target–ceiling, its unit);
+   * absent → the en 250–275 wpm defaults. Drives the warning copy and the
+   * first-run line's unit. */
+  range?: RateRange;
   /** Auto-applied this video; shows the Stop-auto button in recommend mode. */
   applied?: AppliedSource;
 }
@@ -205,36 +210,34 @@ function wireEvents(
 export function warningNoteCopy(
   reason?: 'above-zone' | 'capped-below' | 'pause-diluted',
   locale: UiLocale = 'en',
+  range?: RateRange,
 ): string {
-  if (locale === 'ru') {
-    const key =
-      reason === 'capped-below'
-        ? 'pill.warning.cappedBelow'
-        : reason === 'pause-diluted'
-          ? 'pill.warning.pauseDiluted'
-          : 'pill.warning.aboveZone';
-    return t(key, 'ru');
-  }
-  if (reason === 'capped-below') {
-    return 'Estimate uncertain — capped at 1.5x for safety';
-  }
-  if (reason === 'pause-diluted') {
-    return 'Speech runs fast at this speed — estimate uncertain';
-  }
-  return 'Past the 250–275 wpm range commonly cited for comfortable listening';
+  const key =
+    reason === 'capped-below'
+      ? 'pill.warning.cappedBelow'
+      : reason === 'pause-diluted'
+        ? 'pill.warning.pauseDiluted'
+        : 'pill.warning.aboveZone';
+  // The above-zone copy renders the TRACK language's range (P0): a ru track
+  // warns past 168–180 слов/мин, never the en 250–275. Absent range → en.
+  const params =
+    key === 'pill.warning.aboveZone'
+      ? {
+          lo: range?.lo ?? 250,
+          hi: range?.hi ?? 275,
+          unit: unitLabel(range?.unit ?? 'wpm', locale),
+        }
+      : undefined;
+  return t(key, locale, params);
 }
 
 /** Formats the live-rate line, e.g. 'now ≈ 248 wpm at 1.55x'. */
 export function liveRateText(live: LiveRate, locale: UiLocale = 'en'): string {
-  if (locale === 'ru') {
-    return t('pill.liveRate', 'ru', {
-      rate: Math.round(live.rate),
-      unit: unitLabel(extractUnit(live.unit), 'ru'),
-      mult: formatMultiplier(live.multiplier, 'ru'),
-    });
-  }
-  const multiplier = String(Math.round(live.multiplier * 100) / 100);
-  return `now ≈ ${Math.round(live.rate)} ${live.unit} at ${multiplier}x`;
+  return t('pill.liveRate', locale, {
+    rate: Math.round(live.rate),
+    unit: unitLabel(extractUnit(live.unit), locale),
+    mult: formatMultiplier(live.multiplier, locale),
+  });
 }
 
 /** Throttle gate: true only when pushing `next` would change the live line.
@@ -296,11 +299,9 @@ function localizedTier(tierLabelText: string, locale: UiLocale): string {
 }
 
 function localizedApplyAria(state: PillState, locale: UiLocale): string {
-  const mult =
-    locale === 'ru' ? state.multiplier.toFixed(1).replace('.', ',') : state.multiplier.toFixed(1);
-  return locale === 'ru'
-    ? t('pill.applyAriaSpeed', 'ru', { mult })
-    : `Apply ${mult}x playback speed`;
+  return t('pill.applyAriaSpeed', locale, {
+    mult: locale === 'ru' ? state.multiplier.toFixed(1).replace('.', ',') : state.multiplier.toFixed(1),
+  });
 }
 
 function render(
@@ -363,7 +364,7 @@ function render(
 
   // Warning note (only for warning mode; copy picked by reason)
   if (mode === 'warning') {
-    dom.warningNote.textContent = warningNoteCopy(state.reason, locale);
+    dom.warningNote.textContent = warningNoteCopy(state.reason, locale, state.range);
     dom.warningNote.hidden = false;
   } else {
     dom.warningNote.hidden = true;
@@ -398,7 +399,10 @@ export function createPill(host: HTMLElement, events?: PillEvents, opts?: PillOp
   let mounted = false;
   let destroyed = false;
   let currentState: PillState | null = null;
-  let locale: UiLocale = opts?.locale ?? 'en';
+  // Browser-language seed (no English flash for ru users); the bridge
+  // round-trip refines it with settings.uiLanguage when the caller did not
+  // pin a locale — the same two-step the options page uses.
+  let locale: UiLocale = opts?.locale ?? resolveUiLanguage(undefined, navigator.language);
   // Throttled live-rate and saved-time state: render()/updateLiveRate()/
   // updateSavedSec() all drive the lines so a line update never re-renders
   // the recommendation and a recommendation update re-evaluates visibility.

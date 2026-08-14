@@ -10,7 +10,7 @@ import { defineContentScript } from 'wxt/utils/define-content-script';
 import { fetchAndroidCaptions, fetchJson3 } from '@/lib/caption-fetch';
 import { parseYouTubeJson3 } from '@/lib/captions';
 import { cueSignal, detectContentType, priorMidpoint } from '@/lib/heuristics';
-import { resolveLanguage, UNIT_LABELS, type LanguageModel } from '@/lib/languages';
+import { resolveLanguage, UNIT_LABELS, type LanguageModel, type RateRange } from '@/lib/languages';
 import { logWpm, waitForPlayerResponse } from '@/lib/measure-hooks';
 import { SerializedRunner } from '@/lib/measure-guard';
 import { buildWpmResponse, type MeasurementContext } from '@/lib/wpm-provider';
@@ -19,7 +19,7 @@ import { isWpmEnvelope, isWpmGetRequest, WPM_CHANNEL } from '@/lib/wpm-protocol'
 import type { ContentType } from '@/lib/music';
 import { detectMusic } from '@/lib/music';
 import { shouldAutoApply } from '@/lib/auto-apply';
-import { recommend, TARGET_WPM, type RateTier, type Recommendation } from '@/lib/recommend';
+import { recommend, SAFE_ZONE_CEILING_WPM, TARGET_WPM, type RateTier, type Recommendation } from '@/lib/recommend';
 import {
   defaultSettings,
   resolveContentType,
@@ -51,7 +51,13 @@ const bridge = createBridgeClient(window);
 const nudgeSurface = createNudgeHost(bridge);
 
 /** Current video's recommendation context; null until the first measure. */
-let current: (MeasurementContext & { videoId: string; recommendation: Recommendation }) | null = null;
+let current: (MeasurementContext & {
+  videoId: string;
+  recommendation: Recommendation;
+  /** The track language's safe zone — the pill warning and nudge copy key
+   * on it (P0); en defaults when the track language is unmapped. */
+  range: RateRange;
+}) | null = null;
 let pill: { api: PillApi; host: HTMLElement } | null = null;
 
 /** Last rendered pill state — the shortcut handler and live line gate on it. */
@@ -310,6 +316,11 @@ function renderRecommendation(
   // the recommendation belongs to the old video — render nothing.
   if (startedAt !== undefined && epoch !== startedAt) return;
   const platformMax = resolvePlatformMax(settings, site);
+  const range: RateRange = {
+    lo: language?.target ?? TARGET_WPM,
+    hi: language?.ceiling ?? SAFE_ZONE_CEILING_WPM,
+    unit: language?.unit ?? 'wpm',
+  };
   const recommendation = recommend({
     naturalRate,
     tier,
@@ -322,7 +333,7 @@ function renderRecommendation(
   current = { videoId, site, contentType, naturalRate, platformMax, tier,
     unit: UNIT_LABELS[language?.unit ?? 'wpm'], language: language?.code ?? null,
     target: resolveUserTarget(settings, site, contentType) ?? language?.target ?? TARGET_WPM,
-    recommendation };
+    recommendation, range };
   if (autoState === 'pending' && shouldAutoApply(settings, recommendation, tier, contentType)) {
     applyMultiplier(recommendation.multiplier);
     autoState = 'auto';
@@ -336,6 +347,7 @@ function renderRecommendation(
     tierLabel: recommendation.tierLabel,
     label: recommendation.label,
     reason: recommendation.reason ?? undefined,
+    range,
     applied: appliedSource,
   });
 }
@@ -483,7 +495,7 @@ function applyMultiplier(multiplier: number): void {
   refreshLiveRate();
   refreshSavedSec();
   void logAction('apply', multiplier);
-  nudgeSurface.reportApply(multiplier);
+  nudgeSurface.reportApply(multiplier, current.range);
 }
 
 function dismissCurrent(): void {

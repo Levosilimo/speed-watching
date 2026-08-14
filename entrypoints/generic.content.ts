@@ -25,13 +25,13 @@
 import { defineContentScript } from 'wxt/utils/define-content-script';
 import { harvestCaptions, type VttHost } from '@/lib/captions-harvest';
 import { priorMidpoint } from '@/lib/heuristics';
-import { resolveLanguage, type LanguageModel } from '@/lib/languages';
+import { resolveLanguage, type LanguageModel, type RateRange } from '@/lib/languages';
 import { SerializedRunner } from '@/lib/measure-guard';
 import { RateReapplier, selectVideo } from '@/lib/matcher';
 import { createBridgeClient } from '@/lib/messaging';
 import type { ContentType } from '@/lib/music';
 import { detectMusic } from '@/lib/music';
-import { recommend, type RateTier, type Recommendation } from '@/lib/recommend';
+import { recommend, SAFE_ZONE_CEILING_WPM, TARGET_WPM, type RateTier, type Recommendation } from '@/lib/recommend';
 import { shouldAutoApply } from '@/lib/auto-apply';
 import {
   defaultSettings,
@@ -67,6 +67,9 @@ let current: {
    * track declares one (Dzen's ru → wpm), else the wpm default. */
   unit: string;
   recommendation: Recommendation;
+  /** The track language's safe zone — the pill warning and nudge copy key
+   * on it (P0); en defaults when the track language is unmapped. */
+  range: RateRange;
 } | null = null;
 
 let pill: { api: PillApi; host: HTMLElement } | null = null;
@@ -312,6 +315,11 @@ function renderRecommendation(
   // recommendation belongs to the old video — render nothing.
   if (startedAt !== undefined && epoch !== startedAt) return;
   const platformMax = resolvePlatformMax(settings, site);
+  const range: RateRange = {
+    lo: language?.target ?? TARGET_WPM,
+    hi: language?.ceiling ?? SAFE_ZONE_CEILING_WPM,
+    unit: language?.unit ?? 'wpm',
+  };
   const recommendation = recommend({
     naturalRate,
     tier,
@@ -321,7 +329,7 @@ function renderRecommendation(
     language,
     ...wordInputs,
   });
-  current = { site, contentType, naturalRate, platformMax, tier, unit: language?.unit ?? 'wpm', recommendation };
+  current = { site, contentType, naturalRate, platformMax, tier, unit: language?.unit ?? 'wpm', recommendation, range };
   if (autoState === 'pending' && shouldAutoApply(settings, recommendation, tier, contentType)) {
     applyMultiplier(recommendation.multiplier);
     autoState = 'auto';
@@ -335,6 +343,7 @@ function renderRecommendation(
     tierLabel: recommendation.tierLabel,
     label: recommendation.label,
     reason: recommendation.reason ?? undefined,
+    range,
     applied: appliedSource,
   });
 }

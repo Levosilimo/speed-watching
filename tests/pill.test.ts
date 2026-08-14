@@ -545,6 +545,56 @@ describe('createPill — ru locale', () => {
   });
 });
 
+describe('warningNoteCopy keys the range to the track language (P0)', () => {
+  it('renders the en 250–275 defaults when no track range resolves', () => {
+    expect(warningNoteCopy('above-zone')).toBe(
+      'Past the 250–275 wpm range commonly cited for comfortable listening',
+    );
+    expect(warningNoteCopy('above-zone', 'ru')).toBe(
+      'Скорость выше диапазона 250–275 слов/мин, который обычно считают комфортным',
+    );
+  });
+
+  it('renders the ru track range (168–180 слов/мин), never the en 250–275', () => {
+    const note = warningNoteCopy('above-zone', 'ru', { lo: 168, hi: 180, unit: 'wpm' });
+    expect(note).toContain('168–180');
+    expect(note).toContain('слов/мин');
+    expect(note).not.toContain('250');
+    // The en UI renders the same track range in English.
+    expect(warningNoteCopy('above-zone', 'en', { lo: 168, hi: 180, unit: 'wpm' })).toContain(
+      'Past the 168–180 wpm range',
+    );
+  });
+
+  it('renders the resolved track range through the pill surface', () => {
+    const host = shadowHost();
+    const pill = createPill(host, {}, { locale: 'ru' });
+    pill.mount();
+    pill.update(
+      state({
+        mode: 'warning',
+        reason: 'above-zone',
+        label: 'w',
+        effectiveWpm: 200,
+        range: { lo: 168, hi: 180, unit: 'wpm' },
+      }),
+    );
+    const note = rootOf(host).querySelector<HTMLDivElement>('.warning-note')!;
+    expect(note.textContent).toBe(
+      'Скорость выше диапазона 168–180 слов/мин, который обычно считают комфортным',
+    );
+  });
+
+  it('keeps capped-below and pause-diluted copy free of range params', () => {
+    expect(warningNoteCopy('capped-below', 'ru', { lo: 168, hi: 180, unit: 'wpm' })).toBe(
+      'Оценка неточна — для безопасности скорость ограничена 1,5×',
+    );
+    expect(warningNoteCopy('pause-diluted', 'en', { lo: 168, hi: 180, unit: 'wpm' })).toBe(
+      'Speech runs fast at this speed — estimate uncertain',
+    );
+  });
+});
+
 describe('createPill saved-time line', () => {
   afterEach(() => {
     vi.restoreAllMocks();

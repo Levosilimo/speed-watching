@@ -5,11 +5,13 @@
 
 import { createNudge, type NudgeApi } from './nudge';
 import type { BridgeClient } from '../lib/messaging';
+import type { RateRange } from '../lib/languages';
 
 export interface NudgeSurface {
   /** Counts an apply toward the nudge; renders the overlay on {show:true}.
-   * Report-only — never blocks or slows the apply path. */
-  reportApply(multiplier: number): void;
+   * Report-only — never blocks or slows the apply path. range is the
+   * current track language's safe zone, for the body copy. */
+  reportApply(multiplier: number, range?: RateRange): void;
   /** 'Got it' (cooldown) or 'Don't show again' (permanent). */
   dismiss(forever: boolean): void;
   /** Navigation teardown: destroys the overlay and its host. */
@@ -51,11 +53,11 @@ export function createNudgeHost(bridge: BridgeClient): NudgeSurface {
   }
 
   return {
-    reportApply(multiplier: number): void {
+    reportApply(multiplier: number, range?: RateRange): void {
       void bridge
         .request({ type: 'nudge:recordApply', multiplier })
         .then((result) => {
-          if (result.show) ensureNudge().show({});
+          if (result.show) ensureNudge().show({ range });
         })
         .catch(() => undefined);
     },
