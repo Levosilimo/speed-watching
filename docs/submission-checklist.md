@@ -85,9 +85,10 @@ permissions now would force the re-accept disable when STT lands.
 - [ ] Host the privacy policy and the homepage, then replace the two
   placeholder URLs above.
 - [ ] Regenerate `docs/store-screenshot.png` (see the listing tab row).
-- [ ] `.github/workflows/publish.yml` hardcodes
-  `speed-watcher-0.0.1-chrome.zip` in its CWS upload step — update it to
-  `0.0.2` when the workflow is activated.
+- [ ] `.github/workflows/publish.yml` pins the CWS upload zip to
+  `speed-watcher-0.0.2-chrome.zip` (the `.output` glob would match two
+  zips once a second release exists) — bump the pin to the next version on
+  every release, before tagging.
 - [ ] AMO submission is separate: same version, Firefox metadata in
   `docs/amo-listing.md`, and the `data_collection_permissions` declaration
   ships in the firefox build (built-in `wxt.config.ts`).
