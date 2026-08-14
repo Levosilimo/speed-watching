@@ -33,6 +33,7 @@ const EN = {
   'pill.warning.pauseDiluted': 'Speech runs fast at this speed — estimate uncertain',
   'pill.liveRate': 'now ≈ {rate} {unit} at {mult}x',
   'pill.savedTime': '~{amount} {unit} saved (estimate)',
+  'pill.skipSilence': 'silence: slowed',
   'pill.chapter.toggle': 'Auto-adjust per chapter',
   'pill.chapter.toggleAria': 'Automatically adjust playback speed at chapter boundaries',
   'pill.chapter.active': 'Chapter rates on',
@@ -108,6 +109,10 @@ const EN = {
     'When on, the recommended speed applies automatically to each new video. Only confident caption-based recommendations for talks, lectures, explainers, and podcasts auto-apply — music and estimated guesses never do. A manual speed change or "Stop auto" overrides it for that video; it returns on the next one. Off by default.',
   'options.autoToggle': 'Apply the recommended speed automatically',
   'options.autoTypeLabel': 'Apply to these content types',
+  'options.skipLabel': 'Skip silence',
+  'options.skipNote':
+    'Slows playback through silent gaps instead of seeking — about 15% less time on typical lectures and podcasts',
+  'options.skipToggle': 'Slow playback through silent gaps',
   'options.tiersLabel': 'Tier labels',
   'options.tier.asrWordDesc':
     'Word-timed ASR captions. The most common tier — ~94% of sampled videos with speech captions in our measurements.',

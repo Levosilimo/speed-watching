@@ -9,6 +9,7 @@
 import { type ChannelRecord } from './channel-memory';
 import { isContentType, type ContentType } from './music';
 import type { OverrideLogEntry } from './override-log';
+import { MAX_GAP_SEC, MAX_PAUSE_RATE, MIN_GAP_SEC, MIN_PAUSE_RATE, type SkipSilencePrefs } from './skip-silence';
 import {
   PLATFORM_MAX_MAX,
   PLATFORM_MAX_MIN,
@@ -108,6 +109,8 @@ export type BridgeRequest =
   | { type: 'settings:get' }
   | { type: 'settings:set'; settings: Settings }
   | { type: 'settings:seenFirstRun' }
+  | { type: 'skip:get' }
+  | { type: 'skip:set'; prefs: SkipSilencePrefs }
   | { type: 'log:append'; entry: Omit<OverrideLogEntry, 'ts'> }
   | { type: 'channel:get'; channelKey: string }
   | { type: 'channel:put'; channelKey: string; record: ChannelRecord }
@@ -118,11 +121,13 @@ export type BridgeRequest =
 
 export type BridgeResult<T extends BridgeRequest> = T extends { type: 'settings:get' }
   ? Settings
-  : T extends { type: 'channel:get' }
-    ? ChannelRecord | null
-    : T extends { type: 'nudge:recordApply' }
-      ? { show: boolean }
-      : void;
+  : T extends { type: 'skip:get' }
+    ? SkipSilencePrefs
+    : T extends { type: 'channel:get' }
+      ? ChannelRecord | null
+      : T extends { type: 'nudge:recordApply' }
+        ? { show: boolean }
+        : void;
 
 export interface BridgeEnvelope {
   channel: typeof BRIDGE_CHANNEL;
@@ -165,6 +170,7 @@ function isSiteOverride(value: unknown): boolean {
     return false;
   }
   if (value.contentType !== undefined && !isContentType(value.contentType)) return false;
+  if (value.skipSilence !== undefined && typeof value.skipSilence !== 'boolean') return false;
   return true;
 }
 
@@ -183,6 +189,18 @@ export function isAutoApplyPrefs(value: unknown): value is AutoApplyPrefs {
     typeof value.enabled === 'boolean' &&
     isRecord(value.contentTypes) &&
     Object.values(value.contentTypes).every((flag) => typeof flag === 'boolean')
+  );
+}
+
+/** Runtime shape check for skip-silence prefs crossing the postMessage
+ * boundary: strict toggle, gap/pause bounds matching the lib's
+ * normalize-on-read clamps. */
+export function isSkipPrefs(value: unknown): value is SkipSilencePrefs {
+  return (
+    isRecord(value) &&
+    typeof value.enabled === 'boolean' &&
+    isFiniteNumberIn(value.minGapSec, MIN_GAP_SEC, MAX_GAP_SEC) &&
+    isFiniteNumberIn(value.pauseRate, MIN_PAUSE_RATE, MAX_PAUSE_RATE)
   );
 }
 

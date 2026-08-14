@@ -19,6 +19,17 @@ import { isWpmEnvelope, isWpmGetRequest, WPM_CHANNEL } from '@/lib/wpm-protocol'
 import type { ContentType } from '@/lib/music';
 import { detectMusic } from '@/lib/music';
 import { shouldAutoApply } from '@/lib/auto-apply';
+import {
+  buildGapIndex,
+  defaultSkipSilence,
+  normalizeSkipSilence,
+  pauseRateFor,
+  resolveSkipSilence,
+  shouldSkip,
+  SkipSilenceActuator,
+  type GapSpan,
+  type SkipSilencePrefs,
+} from '@/lib/skip-silence';
 import { recommend, SAFE_ZONE_CEILING_WPM, TARGET_WPM, type RateTier, type Recommendation } from '@/lib/recommend';
 import { segmentRates, type RateSegment } from '@/lib/chapters';
 import { ChapterScheduler } from '@/lib/chapter-scheduler';
@@ -98,6 +109,13 @@ let savedSec: number | null = null;
 /** The multiplier the session is gated on; null while no session runs. */
 let savedMultiplier: number | null = null;
 
+// Skip-silence session (lib/skip-silence.ts): the actuator dips the rate
+// inside caption gaps while the toggle is on and the video has a gap index.
+const skipActuator = new SkipSilenceActuator();
+/** The current video's gap plan; null when the toggle is off, the timeline
+ * has no gap >= minGapSec, or no recommendation applied yet. */
+let skipPlan: { index: GapSpan[]; prefs: SkipSilencePrefs } | null = null;
+
 // Serializes measure() against overlapping triggers (initial load + SPA navigation).
 const measureRunner = new SerializedRunner();
 
@@ -132,6 +150,9 @@ declare global {
     // E2E hook: settings write through the bridge (same path the options
     // page uses) — the shared specs exercise the bridge in both browsers.
     __speedwatcherSettings?: { set(settings: Settings): Promise<void> };
+    // E2E hook: skip-silence prefs write through the bridge, mirroring the
+    // settings hook (the shared specs toggle the slow-through feature).
+    __speedwatcherSkip?: { set(prefs: SkipSilencePrefs): Promise<void> };
     // E2E hook: the chapter scheduler's plan, the enforced segment, and a
     // seek+tick driver (currentTime + timeupdate) for boundary tests.
     __speedwatcherChapter?: {
@@ -191,6 +212,9 @@ export default defineContentScript({
       window.__speedwatcherSettings = {
         set: (settings) => bridge.request({ type: 'settings:set', settings }).then(() => undefined),
       };
+      window.__speedwatcherSkip = {
+        set: (prefs) => bridge.request({ type: 'skip:set', prefs }).then(() => undefined),
+      };
       window.__speedwatcherChapter = {
         get rates() {
           return chapterRates ?? [];
@@ -223,6 +247,8 @@ function onNavigationStart(): void {
   savedTracker.detach();
   savedSec = null;
   savedMultiplier = null;
+  skipActuator.detach();
+  skipPlan = null;
   autoState = 'pending';
   appliedSource = 'none';
   preAutoRate = null;
@@ -276,41 +302,9 @@ async function fetchAndParseCaptions(
   return { ok: true, words, cues, track, language };
 }
 
-/** The 3-branch measurement log (word-level when the payload carries per-
- * word timings, cue-level otherwise); false when the captions parsed empty,
- * which routes the caller to the estimated path. */
-function logMeasuredWpm(
-  videoId: string,
-  kind: string,
-  lang: string,
-  words: Segment[],
-  cues: Segment[],
-): boolean {
-  if (words.length >= 2) {
-    logWpm(videoId, kind, lang, {
-      word: wordLevelWpm(words),
-      cue: cueLevelWpm(cues),
-      corrected: correctedCueLevelWpm(cues),
-      nWords: totalWords(words),
-    });
-    return true;
-  }
-  if (cues.length > 0) {
-    logWpm(videoId, kind, lang, {
-      cue: cueLevelWpm(cues),
-      corrected: correctedCueLevelWpm(cues),
-      nWords: totalWords(cues),
-    });
-    return true;
-  }
-  if (__E2E__) {
-    console.info(`[speed-watcher] video=${videoId} kind=${kind} lang=${lang}: captions parsed but empty — estimated`);
-  }
-  return false;
-}
-
 async function measureOnce(): Promise<void> {
   const startedAt = epoch;
+  skipPlan = null;
   const response = await waitForPlayerResponse();
   if (!response) {
     if (__E2E__) console.info('[speed-watcher] wpm: player response never appeared');
@@ -337,7 +331,7 @@ async function measureOnce(): Promise<void> {
   const chapters = chaptersOf(window.ytInitialData);
   const kind = track.kind ?? 'manual';
   const lang = track.languageCode ?? '?';
-  if (!logMeasuredWpm(videoId, kind, lang, words, cues)) {
+  if (!logParsedRates(videoId, kind, lang, words, cues)) {
     void showEstimatedPill(videoId, settings, site, language, response.videoDetails, startedAt);
     return;
   }
@@ -348,6 +342,10 @@ async function measureOnce(): Promise<void> {
     void showEstimatedPill(videoId, settings, site, language, response.videoDetails, startedAt);
     return;
   }
+  // Skip-silence plan: the toggle and this video's gap index (see
+  // planSkipSilence); null when the toggle is off or no gap clears
+  // minGapSec.
+  skipPlan = await planSkipSilence(words, cues, settings, site);
   // Auto-detect the register from the measured signal; the user/site
   // preference still outranks it in resolveContentType. Music is checked
   // first — lyric tracks share no speech register (detectContentType
@@ -469,6 +467,65 @@ async function loadSettings(): Promise<Settings> {
   }
 }
 
+/** The skip-silence prefs; a dead bridge falls back to the default (off)
+ * and a malformed answer normalizes the same way the store would. */
+async function loadSkipPrefs(): Promise<SkipSilencePrefs> {
+  try {
+    return normalizeSkipSilence(await bridge.request({ type: 'skip:get' }));
+  } catch {
+    return defaultSkipSilence();
+  }
+}
+
+/** The e2e console hook's wpm summary for the parsed timeline; false when
+ * the captions parsed empty (the caller falls back to the estimated tier). */
+function logParsedRates(
+  videoId: string,
+  kind: string,
+  lang: string,
+  words: Segment[],
+  cues: Segment[],
+): boolean {
+  if (words.length >= 2) {
+    logWpm(videoId, kind, lang, {
+      word: wordLevelWpm(words),
+      cue: cueLevelWpm(cues),
+      corrected: correctedCueLevelWpm(cues),
+      nWords: totalWords(words),
+    });
+    return true;
+  }
+  if (cues.length > 0) {
+    logWpm(videoId, kind, lang, {
+      cue: cueLevelWpm(cues),
+      corrected: correctedCueLevelWpm(cues),
+      nWords: totalWords(cues),
+    });
+    return true;
+  }
+  if (__E2E__) {
+    console.info(`[speed-watcher] video=${videoId} kind=${kind} lang=${lang}: captions parsed but empty — estimated`);
+  }
+  return false;
+}
+
+/** The skip-silence plan for this video, or null when the toggle is off or
+ * no gap clears minGapSec. The word series when the payload carries word
+ * timing (>= 2 timed words), else the cue series — the speechDurationSec
+ * convention. The site override's skipSilence flag wins over the toggle. */
+async function planSkipSilence(
+  words: readonly Segment[],
+  cues: readonly Segment[],
+  settings: Settings,
+  site: string,
+): Promise<{ index: GapSpan[]; prefs: SkipSilencePrefs } | null> {
+  const skipPrefs = resolveSkipSilence(await loadSkipPrefs(), settings.sites[site]);
+  const series = words.length >= 2 ? words : cues;
+  return shouldSkip(series, skipPrefs)
+    ? { index: buildGapIndex(series, skipPrefs.minGapSec), prefs: skipPrefs }
+    : null;
+}
+
 // ── Caption fetch: WEB primary, ANDROID innertube fallback ────────────────
 
 async function fetchCaptions(track: CaptionTrack, videoId: string): Promise<unknown | null> {
@@ -588,6 +645,10 @@ function stopAutoForVideo(): void {
   const wasAuto = appliedSource === 'auto';
   autoState = 'stopped';
   appliedSource = 'none';
+  // Detach the skip actuator too: its 1.0 reset trigger would otherwise
+  // re-dip the restored pre-auto rate (mirror of the reapplier detach on
+  // the generic path).
+  skipActuator.detach();
   if (wasAuto && preAutoRate !== null) restorePreAutoRate();
   preAutoRate = null;
   if (pillState !== null) showPill({ ...pillState, applied: 'none', undoRate: undefined });
@@ -611,9 +672,13 @@ function markUserOverride(): void {
   if (video.playbackRate === 1) return; // reset, not an override
   if (savedMultiplier === null) return;
   if (Math.abs(video.playbackRate - savedMultiplier) <= RATE_EPSILON) return; // our own apply
+  // Our own skip-silence dip is not an override either — the actuator holds
+  // the pause target inside a gap, below the applied rate.
+  if (skipActuator.active && Math.abs(video.playbackRate - skipActuator.target) <= RATE_EPSILON) return;
   autoState = 'stopped';
   appliedSource = 'user';
   preAutoRate = null; // the user took over — no undo anchor left
+  skipActuator.detach();
   if (pillState !== null) showPill({ ...pillState, applied: 'user', undoRate: undefined });
 }
 
@@ -637,12 +702,29 @@ function applyAndTrack(multiplier: number, action: 'apply' | 'adjust'): number {
   savedSec = 0;
   savedMultiplier = applied;
   savedTracker.attach(video, applied, flushSavedTick);
+  attachSkip(video, applied);
   // Show the live line immediately; steady-state ticks are throttled in the pill.
   refreshLiveRate();
   refreshSavedSec();
   void logAction(action, multiplier);
   nudgeSurface.reportApply(multiplier, current.range);
   return applied;
+}
+
+/** Arms skip-silence on an apply: the actuator dips to the pause rate
+ * inside caption gaps while a plan exists. DRM content (mediaKeys) and
+ * dip targets that equal the applied rate never attach. */
+function attachSkip(video: HTMLVideoElement, applied: number): void {
+  if (skipPlan === null) return;
+  // Chrome reports mediaKeys as undefined until EME is used, so the DRM
+  // gate is a truthy check, not a null check.
+  if (video.mediaKeys) return;
+  if (pauseRateFor(applied, skipPlan.prefs) >= applied) return;
+  skipActuator.attach(video, skipPlan.index, skipPlan.prefs, applied, (inGap) => {
+    // The saved-line area swaps to the slowed-silence indicator for the
+    // duration of the gap; re-render only on transitions.
+    if (pillState !== null) showPill({ ...pillState, skipSlowed: inGap });
+  });
 }
 
 /** Arms the per-chapter scheduler on the current video's plan; a no-op
@@ -684,6 +766,8 @@ function dismissCurrent(): void {
   savedTracker.detach();
   savedSec = null;
   savedMultiplier = null;
+  skipActuator.detach();
+  skipPlan = null;
   if (wasAuto && preAutoRate !== null) restorePreAutoRate();
   preAutoRate = null;
   showPill(NONE_STATE);

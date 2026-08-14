@@ -58,6 +58,9 @@ export interface PillState {
   autoAdjust?: boolean;
   /** Scheduler status line copy picker; absent ≡ 'active'. */
   chapterStatus?: 'active' | 'yielded' | 'music';
+  /** Skip-silence active and inside a caption gap: the saved-time line
+   * area shows the slowed-silence indicator instead of saved time. */
+  skipSlowed?: boolean;
 }
 
 export interface PillEvents {
@@ -335,8 +338,20 @@ function renderLive(dom: PillDom, state: PillState | null, live: LiveRate | null
  * a meaningful amount accumulated (P2c: the per-video floor is 30 s — a
  * sub-minute gain is not worth a line) and a positive amount is pushed —
  * null hides it (before apply, paused, rate diverged). Full state updates
- * re-evaluate it via render(). */
-function renderSaved(dom: PillDom, mode: PillMode, saved: number | null, locale: UiLocale): void {
+ * re-evaluate it via render(). While skip-silence holds a gap (slowed) the
+ * line shows the indicator instead. */
+function renderSaved(
+  dom: PillDom,
+  mode: PillMode,
+  saved: number | null,
+  locale: UiLocale,
+  slowed = false,
+): void {
+  if (slowed && (mode === 'recommend' || mode === 'warning')) {
+    dom.savedEl.hidden = false;
+    dom.savedEl.textContent = t('pill.skipSilence', locale);
+    return;
+  }
   const visible = saved !== null && saved >= 30 && (mode === 'recommend' || mode === 'warning');
   dom.savedEl.hidden = !visible;
   if (visible) dom.savedEl.textContent = t('pill.savedTime', locale, formatTimeSaved(saved, locale));
@@ -481,7 +496,7 @@ function render(
   // elements must not keep stale text).
   if (mode !== 'recommend' && mode !== 'warning') {
     renderLive(dom, state, null, locale);
-    renderSaved(dom, mode, null, locale);
+    renderSaved(dom, mode, null, locale, state.skipSlowed === true);
   }
 
   if (mode === 'none') {
@@ -493,7 +508,7 @@ function render(
   dom.pill.removeAttribute('aria-hidden');
   dom.pill.dataset.mode = mode;
   renderLive(dom, state, live, locale);
-  renderSaved(dom, mode, saved, locale);
+  renderSaved(dom, mode, saved, locale, state.skipSlowed === true);
 
   // Label
   dom.labelEl.textContent = localizedLabel(state, locale);
@@ -635,7 +650,7 @@ export function createPill(host: HTMLElement, events?: PillEvents, opts?: PillOp
     updateSavedSec(saved: number | null) {
       if (destroyed || saved === savedSec) return;
       savedSec = saved;
-      renderSaved(dom, currentState?.mode ?? 'none', saved, locale);
+      renderSaved(dom, currentState?.mode ?? 'none', saved, locale, currentState?.skipSlowed === true);
     },
 
     destroy() {

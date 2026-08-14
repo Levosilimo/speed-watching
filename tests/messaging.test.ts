@@ -27,6 +27,7 @@ import type { ContentType } from '../lib/music';
 import { OverrideLog } from '../lib/override-log';
 import type { OverrideLogEntry } from '../lib/override-log';
 import { defaultSettings, SettingsStore } from '../lib/settings';
+import { SkipSilenceStore, defaultSkipSilence } from '../lib/skip-silence';
 import { mockStorage } from './fixtures/helpers';
 
 /** postMessage-based host: the same surface the client and the bridge
@@ -70,6 +71,7 @@ function serve(
 ): BridgeDeps {
   const deps: BridgeDeps = {
     settings: new SettingsStore(mockStorage()),
+    skip: new SkipSilenceStore(mockStorage()),
     log: new OverrideLog(mockStorage()),
     channels: new ChannelMemory(mockStorage()),
     forwardDemand,
@@ -174,6 +176,7 @@ describe('messaging bridge', () => {
       { ...defaultSettings(), conservative: 'yes' },
       { ...defaultSettings(), sites: 'garbage' },
       { ...defaultSettings(), sites: { 'youtube.com': { target: 900 } } },
+      { ...defaultSettings(), sites: { 'youtube.com': { skipSilence: 'yes' } } },
       { ...defaultSettings(), contentTypes: { lecture: 'fast' } },
       { ...defaultSettings(), contentType: 'bogus' },
       { ...defaultSettings(), externalApiEnabled: 'yes' },
@@ -191,6 +194,61 @@ describe('messaging bridge', () => {
         } as unknown as BridgeRequest),
       ).rejects.toThrow('invalid settings payload');
       expect(await store.load()).toEqual(before);
+    }
+  });
+
+  it('accepts a site override with a boolean skipSilence flag', async () => {
+    const { host } = fakeWindow();
+    const { settings } = serve(host);
+    const client = createBridgeClient(host);
+    await client.request({
+      type: 'settings:set',
+      settings: {
+        ...defaultSettings(),
+        sites: { 'youtube.com': { skipSilence: true } },
+      },
+    });
+    expect((await settings.load()).sites['youtube.com']).toEqual({ skipSilence: true });
+  });
+
+  it('round-trips skip:get through the handler', async () => {
+    const { host } = fakeWindow();
+    const { skip } = serve(host);
+    await skip.save({ ...defaultSkipSilence(), enabled: true, pauseRate: 1.2 });
+    const client = createBridgeClient(host);
+    expect(await client.request({ type: 'skip:get' })).toEqual({
+      ...defaultSkipSilence(),
+      enabled: true,
+      pauseRate: 1.2,
+    });
+  });
+
+  it('round-trips skip:set into the store', async () => {
+    const { host } = fakeWindow();
+    const { skip } = serve(host);
+    const client = createBridgeClient(host);
+    const prefs = { ...defaultSkipSilence(), enabled: true };
+    await client.request({ type: 'skip:set', prefs });
+    expect(await skip.load()).toEqual(prefs);
+  });
+
+  it('rejects forged skip:set prefs and saves nothing', async () => {
+    const malformed: Array<Record<string, unknown>> = [
+      { enabled: 'yes', minGapSec: 1.5, pauseRate: 1.1 },
+      { enabled: true, minGapSec: 0.5, pauseRate: 1.1 },
+      { enabled: true, minGapSec: 1.5, pauseRate: 2 },
+      { enabled: true, minGapSec: 61, pauseRate: 1.1 },
+      { enabled: true, minGapSec: 'long', pauseRate: 1.1 },
+    ];
+    for (const prefs of malformed) {
+      const { host } = fakeWindow();
+      const { skip } = serve(host);
+      const client = createBridgeClient(host);
+      const before = await skip.load();
+      await expect(
+        client.request({ type: 'skip:set', prefs } as unknown as BridgeRequest),
+      ).rejects.toThrow('invalid prefs');
+      expect(await skip.load()).toEqual(before);
     }
   });
 

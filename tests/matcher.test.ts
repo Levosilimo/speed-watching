@@ -214,4 +214,47 @@ describe('RateReapplier', () => {
     video.fire('ratechange');
     expect(video.playbackRate).toBe(2);
   });
+
+  it('setRates arms the pair and currentRateFor picks per gap state', () => {
+    const loop = new RateReapplier();
+    loop.setRates(1.5, 1.1);
+    expect(loop.currentRateFor(false)).toBe(1.5);
+    expect(loop.currentRateFor(true)).toBe(1.1);
+  });
+
+  it('currentRateFor falls back to the applied rate without a pair', () => {
+    const video = new FakeVideo();
+    const loop = new RateReapplier();
+    loop.start(video, 1.5, 2);
+    expect(loop.currentRateFor(true)).toBe(1.5);
+  });
+
+  it('re-asserts the pair base, never the pause rate, on a 1.0 reset', () => {
+    const video = new FakeVideo();
+    const loop = new RateReapplier();
+    loop.start(video, 1.5, 2);
+    loop.setRates(1.5, 1.1);
+    video.playbackRate = 1; // player reset mid-gap
+    video.fire('ratechange');
+    expect(video.playbackRate).toBe(1.5);
+  });
+
+  it('the pause rate is not a re-assert trigger for a user change', () => {
+    const video = new FakeVideo();
+    const loop = new RateReapplier();
+    loop.start(video, 1.5, 2);
+    loop.setRates(1.5, 1.1);
+    video.playbackRate = 1.8; // user change outside the pair
+    video.fire('ratechange');
+    expect(video.playbackRate).toBe(1.8);
+  });
+
+  it('stop() clears the pair', () => {
+    const video = new FakeVideo();
+    const loop = new RateReapplier();
+    loop.start(video, 1.5, 2);
+    loop.setRates(1.5, 1.1);
+    loop.stop();
+    expect(loop.currentRateFor(true)).toBe(1);
+  });
 });

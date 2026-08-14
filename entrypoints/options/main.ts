@@ -18,6 +18,7 @@ import {
   type Settings,
   type UiLanguageSetting,
 } from '../../lib/settings';
+import { SkipSilenceStore } from '../../lib/skip-silence';
 import { resolveLanguage } from '../../lib/languages';
 import { TIME_SAVED_STORAGE_KEY, TimeSavedStore } from '../../lib/time-saved';
 import {
@@ -45,14 +46,16 @@ function el(id: string): HTMLElement {
 }
 
 // ── Settings: single storage namespace ───────────────────────────────────
-// chrome.storage.local holds exactly six keys — 'sw.settings'
+// chrome.storage.local holds exactly seven keys — 'sw.settings'
 // (SettingsStore), 'sw.overrideLog' (OverrideLog), 'sw.demand' (DemandStore),
 // 'sw.channelRates' (ChannelMemory), 'sw.timeSavedSec' (TimeSavedStore),
-// and 'sw.nudge' (NudgeStore); see the lib/settings.ts module doc.
+// 'sw.nudge' (NudgeStore), and 'sw.skipSilence' (SkipSilenceStore); see the
+// lib/settings.ts module doc.
 
 const settingsStore = new SettingsStore(browser.storage.local, SETTINGS_STORAGE_KEY);
 const overrideLog = new OverrideLog(browser.storage.local);
 const timeSavedStore = new TimeSavedStore(browser.storage.local);
+const skipSilenceStore = new SkipSilenceStore(browser.storage.local);
 
 // ── Settings: WPM Slider ─────────────────────────────────────────────────
 
@@ -271,6 +274,14 @@ autoTypeBoxes.forEach((box) => {
   });
 });
 
+// ── Settings: Skip silence (slow-through-pauses opt-in) ─────────────────
+
+const skipToggle = el('skip-toggle') as HTMLInputElement;
+
+skipToggle.addEventListener('change', () => {
+  void skipSilenceStore.update((prefs) => ({ ...prefs, enabled: skipToggle.checked }));
+});
+
 // ── Settings: Habits Report ──────────────────────────────────────────────
 
 const habitTotal = el('habit-total');
@@ -344,6 +355,7 @@ async function loadSettings(): Promise<void> {
   setActivePreset(settings.contentType ?? 'generic');
   externalApiToggle.checked = settings.externalApiEnabled;
   autoToggle.checked = settings.autoApply.enabled;
+  skipToggle.checked = (await skipSilenceStore.load()).enabled;
   autoTypeBoxes.forEach((box) => {
     const type = box.dataset.type as ContentType;
     box.checked = settings.autoApply.contentTypes[type] ?? DEFAULT_AUTO_TYPES.has(type);

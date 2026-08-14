@@ -24,6 +24,7 @@ import {
   runMeasurementSpecs,
   runMultiVideoSpecs,
   runPillSpecs,
+  runSkipSpecs,
   type CaptionSource,
   type E2EDriver,
 } from '../shared/specs';
@@ -209,6 +210,28 @@ test.beforeAll(async () => {
         if (hook === undefined) throw new Error('__speedwatcherSettings hook missing');
         await hook.set(next);
       }, settings);
+    },
+    async writeSkipPrefs(prefs) {
+      await page.evaluate(async (next) => {
+        const hook = window.__speedwatcherSkip;
+        if (hook === undefined) throw new Error('__speedwatcherSkip hook missing');
+        await hook.set(next);
+      }, prefs);
+    },
+    async setLiveStream() {
+      // The live badge plus a navigation cycle: yt-navigate-start clears the
+      // old video context, the finish re-measures and renders the live
+      // suppression (mirror of the SPA transition).
+      await page.evaluate(() => {
+        const anchor = document.querySelector('#movie_player');
+        if (anchor !== null) {
+          const badge = document.createElement('div');
+          badge.className = 'ytp-live-badge';
+          anchor.appendChild(badge);
+        }
+        document.dispatchEvent(new Event('yt-navigate-start'));
+        document.dispatchEvent(new Event('yt-navigate-finish'));
+      });
     },
     async readChapterHook() {
       await page.waitForFunction(
@@ -409,6 +432,10 @@ test('multi-video page: Apply targets the video that actually plays', async () =
 
 test('chaptered fixture: consent toggle arms the per-chapter scheduler', async () => {
   await runChapterSpecs(driver);
+});
+
+test('skip-silence: the toggle dips the rate inside caption gaps; off/music/live never dip', async () => {
+  await runSkipSpecs(driver);
 });
 
 test('measure race: a slow in-flight measure cannot overwrite a newer one', async () => {
