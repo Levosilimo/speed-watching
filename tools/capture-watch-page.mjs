@@ -81,17 +81,15 @@ async function routeWatchRequests(context) {
   });
 }
 
-/** Wait for the recommend-mode pill and give its host the capture layout.
+/** Wait for the recommend-mode pill and give its host a paintable layout.
  *
  * On the fixture page #movie_player is the <video> element itself (on real
  * YouTube it is a div wrapping the video), and Chromium computes no styles
  * for children of a <video> — a pill host inside it never paints. So the
  * page is restructured to mirror YouTube and the measure is re-run on the
- * new anchor. The re-created host is then re-styled into a bottom-right
- * flex box: its production inline styles (absolute, 0×0, top-right) beat
- * the shadow stylesheet's :host rule, so without the re-style the pill
- * would paint from the player's top-right corner, overflowing the viewport.
- * The shadow root stays attached — the pill renders inside it normally.
+ * new anchor. The host needs no styling: its shadow :host rule anchors it
+ * fixed to the viewport's bottom-right, so the pill paints wherever the
+ * player sits.
  */
 async function remountPill(page) {
   await page.waitForFunction(
@@ -117,14 +115,6 @@ async function remountPill(page) {
     undefined,
     { timeout: 20_000 },
   );
-  await page.evaluate(() => {
-    const host = document.querySelector('.speedwatcher-pill-host');
-    if (host === null) return;
-    host.style.cssText =
-      'position:absolute;right:0;bottom:18px;width:320px;height:64px;' +
-      'display:flex;justify-content:flex-end;align-items:flex-end;' +
-      'pointer-events:none;';
-  });
 }
 
 async function main() {

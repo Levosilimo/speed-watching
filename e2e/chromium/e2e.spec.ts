@@ -354,6 +354,7 @@ test('pill really paints: shadow root populated, non-zero geometry, in the layou
       x: rect.x,
       y: rect.y,
       hasOffsetParent: pill.offsetParent !== null,
+      viewport: { width: window.innerWidth, height: window.innerHeight },
     };
   });
   console.log('real-render pill geometry:', JSON.stringify(render));
@@ -368,6 +369,16 @@ test('pill really paints: shadow root populated, non-zero geometry, in the layou
   expect(render.height).toBeGreaterThan(0);
   // (c) the pill is in the layout tree (has a positioned ancestor)
   expect(render.hasOffsetParent).toBe(true);
+  // (d) the pill anchors fixed to the viewport's bottom-right (the shadow
+  // :host rule): fully inside the viewport, in its right-bottom half.
+  const right = render.x + render.width;
+  const bottom = render.y + render.height;
+  expect(render.x).toBeGreaterThanOrEqual(0);
+  expect(render.y).toBeGreaterThanOrEqual(0);
+  expect(right).toBeLessThanOrEqual(render.viewport.width);
+  expect(bottom).toBeLessThanOrEqual(render.viewport.height);
+  expect(right).toBeGreaterThan(render.viewport.width / 2);
+  expect(bottom).toBeGreaterThan(render.viewport.height / 2);
 });
 
 test('estimated renders increment the local demand counter (zero egress)', async () => {
