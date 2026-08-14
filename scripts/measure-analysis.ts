@@ -342,6 +342,7 @@ function verdictFor(
   g2: GateSummary['g2'],
   g3: GateSummary['g3'],
   registers: Record<string, RegisterGate>,
+  asrBearing: number,
 ): { verdict: GateSummary['verdict']; note: string | null } {
   const underpowered = Object.values(registers).some((g) => g.status === 'underpowered');
   if (lang === 'sr') {
@@ -350,7 +351,7 @@ function verdictFor(
     return {
       verdict: 'stays-derived',
       note:
-        g1.asrBearing === 0
+        asrBearing === 0
           ? 'sr availability probe: no sr ASR tracks (not on YouTube\'s ASR language list); structural fail recorded'
           : 'sr availability probe: sr ASR tracks present; measured',
     };
@@ -384,7 +385,7 @@ export function summarizeLang(records: CorpusRecord[], lang: string): GateSummar
   const g3 = countGate(own);
   const g4 = parityGate(own);
   const g5 = pauseGate(own);
-  const { verdict, note } = verdictFor(lang, g1, g2, g3, registers);
+  const { verdict, note } = verdictFor(lang, g1, g2, g3, registers, asrBearing);
   return {
     language: lang,
     records: own.length,
