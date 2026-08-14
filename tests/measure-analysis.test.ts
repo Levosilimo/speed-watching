@@ -90,6 +90,7 @@ function baseRecord(over: Partial<CorpusRecord>): CorpusRecord {
     durationSec: 600,
     provenance: null,
     captureDate: '2026-08-14',
+    fullTimeline: null,
     ...over,
   };
 }

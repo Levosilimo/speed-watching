@@ -11,10 +11,11 @@
 // (--video=ID); structural failures print the fallback-pool substitution
 // list from the manifest's per-language pools.
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { type BrowserContext } from 'playwright';
+import { parseYouTubeJson3 } from '../lib/captions';
 import { truncateForFixture } from './sample-analysis';
 import {
   fillWithinBand,
@@ -33,6 +34,8 @@ const OUT_DIR = join(ROOT, 'data', 'ru-corpus');
 const RESULTS_FILE = join(OUT_DIR, 'ru-corpus.jsonl');
 const SUMMARY_FILE = join(OUT_DIR, 'ru-corpus-summary.json');
 const FIXTURES_DIR = join(ROOT, '..', 'tests', 'fixtures', 'real');
+const GAP_FULL_DIR = join(ROOT, 'data', 'gap-full');
+const GAP_FULL_README = join(GAP_FULL_DIR, 'README.md');
 const PAGE_PACE_MS = 2500;
 
 /** Legacy ru fallback pools (same register, verified ru:asr), used only as
@@ -105,6 +108,81 @@ function printSubstitutions(records: CorpusRecord[], fallbacks: Map<string, stri
       `  ${r.videoId} [${r.language}:${r.register}] ${r.classification} (${r.error ?? ''}) -> fallback: ${pool.join(', ') || 'none'}`,
     );
   }
+}
+
+/** Full-timeline sidecars (--gap-full): the production parseYouTubeJson3
+ * output for every web-ok record — words + cues over the WHOLE video, the
+ * gap-yield re-measurement's analysis input. The raw payloads (up to ~3.8
+ * MB) are not committed; only the parsed timeline + metadata. The README
+ * regenerates from the sidecar set so re-runs stay consistent. */
+function emitFullTimelines(
+  records: CorpusRecord[],
+  webPayloads: Map<string, unknown>,
+): void {
+  const webOk = records.filter((r) => r.classification === 'web-ok');
+  if (webOk.length === 0) return;
+  mkdirSync(GAP_FULL_DIR, { recursive: true });
+  for (const record of webOk) {
+    const payload = webPayloads.get(record.videoId);
+    if (payload === undefined) continue;
+    const parsed = parseYouTubeJson3(payload);
+    const file = `${record.videoId}.json`;
+    writeFileSync(
+      join(GAP_FULL_DIR, file),
+      JSON.stringify({
+        videoId: record.videoId,
+        title: record.title,
+        language: record.language,
+        register: record.register,
+        captureDate: record.captureDate,
+        durationSec: record.durationSec,
+        webBytes: record.webBytes,
+        words: parsed.words,
+        cues: parsed.cues,
+      }),
+      'utf8',
+    );
+    record.fullTimeline = `gap-full/${file}`;
+    console.log(
+      `full timeline -> ${join(GAP_FULL_DIR, file)} (${parsed.words.length} words, ${parsed.cues.length} cues)`,
+    );
+  }
+  const sidecars = readdirSync(GAP_FULL_DIR)
+    .filter((f) => f.endsWith('.json'))
+    .sort();
+  if (sidecars.length === 0) return;
+  const header = [
+    '# Full caption timelines — provenance (gap-yield re-measurement)',
+    '',
+    'Captured 2026-08-14 from a residential IP via the POT-aware harness',
+    '(scripts/measure-corpus.ts --gap-full): the player’s signed',
+    '/api/timedtext response with CC toggled on and the lang ASR track',
+    're-picked (largest word-timed capture across re-picks). Each file holds',
+    'the production parseYouTubeJson3 output (words + cues) for the whole',
+    'video — the raw payloads (up to ~3.8 MB) are not committed, and these',
+    'are not the truncated heads the fixtures use. The captions are the',
+    'work of their creators; copyright remains with them.',
+    '',
+    '| file | videoId | title | capture date | words | cues | durationSec | webBytes |',
+    '|---|---|---|---|---|---|---|---|',
+  ].join('\n');
+  const rows = sidecars.map((f) => {
+    const s = JSON.parse(readFileSync(join(GAP_FULL_DIR, f), 'utf8')) as {
+      videoId: string;
+      title: string | null;
+      captureDate: string;
+      durationSec: number | null;
+      webBytes: number | null;
+      words: unknown[];
+      cues: unknown[];
+    };
+    return (
+      `| ${f} | ${s.videoId} | ${(s.title ?? '?').replace(/\|/g, '/')} | ${s.captureDate} | ` +
+      `${s.words.length} | ${s.cues.length} | ${s.durationSec ?? '?'} | ${s.webBytes ?? '-'} |`
+    );
+  });
+  writeFileSync(GAP_FULL_README, `${header}\n${rows.join('\n')}\n`, 'utf8');
+  console.log(`provenance README -> ${GAP_FULL_README} (${sidecars.length} sidecars)`);
 }
 
 /** The one committed ru transcript fixture: truncated to 20 events, plus a
@@ -186,6 +264,7 @@ async function main(): Promise<void> {
   const args = process.argv.slice(2);
   const headed = args.includes('--headed');
   const noFixtures = args.includes('--no-fixtures');
+  const gapFull = args.includes('--gap-full');
   const fixtureAnchor = args
     .find((a) => a.startsWith('--fixture-anchor='))
     ?.slice('--fixture-anchor='.length);
@@ -225,6 +304,7 @@ async function main(): Promise<void> {
   const prior = loadPriorRecords();
   for (const record of runRecords) prior.set(record.videoId, record);
   const all = [...prior.values()];
+  if (gapFull) emitFullTimelines(runRecords, webPayloads);
   const summaries = langs.map((l) => summarizeLang(all, l));
   writeResults(all, summaries, runRecords);
   for (const summary of summaries) printLangSummary(summary);

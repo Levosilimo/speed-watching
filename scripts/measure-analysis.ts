@@ -83,6 +83,9 @@ export interface CorpusRecord {
   /** es-419-style provenance (ar dialect, hi script). */
   provenance: string | null;
   captureDate: string;
+  /** Sidecar with the full parsed timeline (scripts/data/gap-full/), written
+   * only under measure-corpus.ts --gap-full; null on plain corpus runs. */
+  fullTimeline: string | null;
 }
 
 export interface CorpusVideo {
