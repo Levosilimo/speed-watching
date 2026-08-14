@@ -1,0 +1,229 @@
+[
+  {
+    "language": "ru",
+    "records": 16,
+    "classification": {
+      "web-ok": 16
+    },
+    "asrBearing": 16,
+    "g1": {
+      "webOk": 16,
+      "anyPath": 16,
+      "pass": true
+    },
+    "g2": {
+      "registers": {
+        "news": {
+          "n": 3,
+          "median": 134.55178014669525,
+          "bandMin": 108,
+          "bandMax": 162,
+          "bandMid": 135,
+          "inBandFraction": 1,
+          "status": "pass"
+        },
+        "lecture": {
+          "n": 5,
+          "median": 123.4282404687159,
+          "bandMin": 92,
+          "bandMax": 138,
+          "bandMid": 115,
+          "inBandFraction": 0.8,
+          "status": "pass"
+        },
+        "podcast": {
+          "n": 3,
+          "median": 142.75426545535123,
+          "bandMin": 96,
+          "bandMax": 144,
+          "bandMid": 120,
+          "inBandFraction": 0.6666666666666666,
+          "status": "pass"
+        },
+        "explainer": {
+          "n": 3,
+          "median": 135.18163815212807,
+          "bandMin": 96,
+          "bandMax": 144,
+          "bandMid": 120,
+          "inBandFraction": 1,
+          "status": "pass"
+        },
+        "music": {
+          "n": 2,
+          "median": 117.53829858159227,
+          "bandMin": null,
+          "bandMax": null,
+          "bandMid": null,
+          "inBandFraction": 0,
+          "status": "no-band"
+        }
+      },
+      "pass": true
+    },
+    "g3": {
+      "n": 14,
+      "median": 0.024990743915356665,
+      "maxDeltaPct": 0.2008032128514056,
+      "violations": [],
+      "pass": true
+    },
+    "g4": {
+      "rows": 16,
+      "falseRows": [],
+      "pass": true
+    },
+    "g5": {
+      "n": 14,
+      "median": -57.11409305933013
+    },
+    "confusion": {
+      "news": {
+        "generic": 1,
+        "news": 2
+      },
+      "lecture": {
+        "generic": 4,
+        "news": 1
+      },
+      "podcast": {
+        "generic": 2,
+        "news": 1
+      },
+      "explainer": {
+        "news": 3
+      },
+      "music": {
+        "generic": 1,
+        "news": 1
+      }
+    },
+    "verdict": "corpus-validated",
+    "note": null
+  },
+  {
+    "language": "uk",
+    "records": 4,
+    "classification": {
+      "web-ok": 4
+    },
+    "asrBearing": 4,
+    "g1": {
+      "webOk": 4,
+      "anyPath": 4,
+      "pass": true
+    },
+    "g2": {
+      "registers": {
+        "lecture": {
+          "n": 2,
+          "median": 134.9621773510499,
+          "bandMin": 92,
+          "bandMax": 138,
+          "bandMid": 115,
+          "inBandFraction": 0.5,
+          "status": "pass"
+        },
+        "talk": {
+          "n": 2,
+          "median": 160.29103604808256,
+          "bandMin": 96,
+          "bandMax": 144,
+          "bandMid": 120,
+          "inBandFraction": 0,
+          "status": "fail"
+        }
+      },
+      "pass": false
+    },
+    "g3": {
+      "n": 4,
+      "median": 0.46274556971261277,
+      "maxDeltaPct": 0.6149456388055295,
+      "violations": [],
+      "pass": true
+    },
+    "g4": {
+      "rows": 4,
+      "falseRows": [],
+      "pass": true
+    },
+    "g5": {
+      "n": 4,
+      "median": -47.71582517086614
+    },
+    "confusion": {
+      "lecture": {
+        "news": 1,
+        "generic": 1
+      },
+      "talk": {
+        "generic": 2
+      }
+    },
+    "verdict": "addendum-measured",
+    "note": "uk ASR only; ru-broadcasting uk-topic channels classify wrong-lang"
+  },
+  {
+    "language": "pl",
+    "records": 4,
+    "classification": {
+      "web-ok": 4
+    },
+    "asrBearing": 4,
+    "g1": {
+      "webOk": 4,
+      "anyPath": 4,
+      "pass": true
+    },
+    "g2": {
+      "registers": {
+        "news": {
+          "n": 1,
+          "median": 128.23184472606556,
+          "bandMin": 94.80000000000001,
+          "bandMax": 142.2,
+          "bandMid": 118.5,
+          "inBandFraction": 1,
+          "status": "underpowered"
+        },
+        "lecture": {
+          "n": 3,
+          "median": 104.94946877429386,
+          "bandMin": 94.80000000000001,
+          "bandMax": 142.2,
+          "bandMid": 118.5,
+          "inBandFraction": 1,
+          "status": "pass"
+        }
+      },
+      "pass": false
+    },
+    "g3": {
+      "n": 4,
+      "median": 0.01417635384179189,
+      "maxDeltaPct": 0.03873716831299632,
+      "violations": [],
+      "pass": true
+    },
+    "g4": {
+      "rows": 4,
+      "falseRows": [],
+      "pass": true
+    },
+    "g5": {
+      "n": 4,
+      "median": -84.07258486724662
+    },
+    "confusion": {
+      "news": {
+        "generic": 1
+      },
+      "lecture": {
+        "generic": 3
+      }
+    },
+    "verdict": "underpowered",
+    "note": null
+  }
+]

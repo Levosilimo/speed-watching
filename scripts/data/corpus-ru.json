@@ -15,12 +15,12 @@
   { "videoId": "g174qjV_R8w", "register": "explainer", "title": "Научпок" },
   { "videoId": "gOygVzLWwmo", "register": "music", "title": "ARTIK&ASTI" },
   { "videoId": "l3QdCo4Z-98", "register": "music", "title": "5УТРА" },
-  { "videoId": "jeF_L_Qxdl4", "register": "talk", "title": "", "language": "uk" },
-  { "videoId": "JaUQnACIk5A", "register": "talk", "title": "", "language": "uk" },
-  { "videoId": "NEDLxqo1ATs", "register": "talk", "title": "", "language": "uk" },
-  { "videoId": "KKEsuCWyBro", "register": "talk", "title": "", "language": "uk" },
-  { "videoId": "eLi9wpqzT70", "register": "talk", "title": "", "language": "pl" },
-  { "videoId": "Ixdj05Wn8qg", "register": "talk", "title": "", "language": "pl" },
-  { "videoId": "M5GnO-TgNq8", "register": "talk", "title": "", "language": "pl" },
-  { "videoId": "r-5Y1w7y6TU", "register": "talk", "title": "", "language": "pl" }
+  { "videoId": "jeF_L_Qxdl4", "register": "lecture", "title": "Грицак — Історія України", "language": "uk" },
+  { "videoId": "JaUQnACIk5A", "register": "lecture", "title": "Історія України (промо)", "language": "uk" },
+  { "videoId": "NEDLxqo1ATs", "register": "talk", "title": "Холоденко інтерв'ю", "language": "uk" },
+  { "videoId": "KKEsuCWyBro", "register": "talk", "title": "Бакалова інтерв'ю", "language": "uk" },
+  { "videoId": "eLi9wpqzT70", "register": "news", "title": "Wiadomości wPolsce24", "language": "pl" },
+  { "videoId": "Ixdj05Wn8qg", "register": "lecture", "title": "Nowak — Skąd się wzięła Ukraina", "language": "pl" },
+  { "videoId": "M5GnO-TgNq8", "register": "lecture", "title": "Michalkiewicz wykład", "language": "pl" },
+  { "videoId": "r-5Y1w7y6TU", "register": "lecture", "title": "Zembrzuski — Spinoza", "language": "pl" }
 ]
