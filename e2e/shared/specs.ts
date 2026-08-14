@@ -685,6 +685,17 @@ export async function runAutoSpecs(driver: E2EDriver): Promise<void> {
     if (gUser.applied !== 'user') {
       throw new Error(`generic: pill applied ${gUser.applied}, expected user after manual rate`);
     }
+    // E1: the override itself must have detached the re-assert loop — a
+    // later reset to 1.0 sticks (without the fix the sentinel re-asserts the
+    // old auto rate and fights the reset).
+    await driver.resetPlaybackRate();
+    await driver.sleep(3500); // > one re-check interval (2s)
+    const gReset = await driver.readPlaybackRate();
+    if (gReset === null || Math.abs(gReset - 1) > RATE_TOLERANCE) {
+      throw new Error(
+        `generic: playbackRate ${gReset} after override + reset, expected 1 (loop detached by the override)`,
+      );
+    }
     await driver.stopAuto();
     await driver.resetPlaybackRate();
     await driver.sleep(3500); // > one re-check interval (2s)

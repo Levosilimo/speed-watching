@@ -433,6 +433,10 @@ function markUserOverride(): void {
   if (Math.abs(video.playbackRate - savedMultiplier) <= RATE_EPSILON) return; // our own apply
   autoState = 'stopped';
   appliedSource = 'user';
+  // The user took over: detach the re-assert loop, or a later reset to
+  // exactly 1.0 (the sentinel's re-assert trigger) would fight back to the
+  // old auto rate (mirror of stopAutoForVideo).
+  reapplier.stop();
   if (pillState !== null) showPill({ ...pillState, applied: 'user' });
 }
 
