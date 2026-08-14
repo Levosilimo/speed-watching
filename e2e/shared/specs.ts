@@ -136,7 +136,7 @@ export function expectedStats(fixture: string): ExpectedStats {
  * entrypoints/content.ts: the track language feeds the rate measurement and
  * the unit label, the settings target rides through resolveUserTarget —
  * unset under default settings, so the language model's own target applies
- * on language tracks (en 250, ja 380 morae/min) — and word-timed ASR
+ * on language tracks (en 250, ja 470 morae/min) — and word-timed ASR
  * tracks carry the articulatory inputs that can fire the pause-diluted
  * warning. */
 export function expectedRecommendation(fixture: string): { rec: Recommendation; naturalRate: number } {

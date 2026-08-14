@@ -326,17 +326,17 @@ describe('recommend — labels', () => {
 });
 
 describe('recommend — language-aware targets', () => {
-  it('ja: mora target 380 — a 200 mora/min track recommends ~1.9x', () => {
+  it('ja: mora target 470 — a 250 mora/min track recommends ~1.9x', () => {
     const r = recommend({
-      naturalRate: 200,
+      naturalRate: 250,
       tier: 'asr-cue',
       contentType: 'lecture',
       platformMax: 2,
       language: LANGUAGES['ja'],
     });
-    expect(r.multiplier).toBeCloseTo(1.9, 6); // 380/200
+    expect(r.multiplier).toBeCloseTo(1.9, 6); // 470/250 = 1.88 → 1.9
     expect(r.mode).toBe('recommend');
-    expect(r.label).toContain('≈ 380 morae/min');
+    expect(r.label).toContain('≈ 475 morae/min');
   });
 
   it('en: the unset-target default is byte-identical to an explicit 250', () => {

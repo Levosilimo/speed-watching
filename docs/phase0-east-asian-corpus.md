@@ -172,6 +172,17 @@ bounded within the G3-validated band and far smaller than the correction
 gap, so the ja correction direction is reliable (unlike hi, whose
 loanword-schwa overcount was unquantified and potentially 2x).
 
+**ja target/ceiling re-derived after this batch** (docs/languages.md):
+the old 380/400 priced a mora at English-syllable information (6.33/6.67
+morae/s × 6.3 bits/mora ≈ 40–42 bits/s — over the ~39.4 bits/s ceiling),
+while Coupé places Japanese at high syllabic rate / low info per
+syllable and CSJ natives run 8.01 morae/s on average (Maekawa 2003,
+7.6–8.4 band) — 480.6 morae/min. The measured 450–490 morae/min
+lecture/podcast band is the info-rate-consistent position, so ja's
+target/ceiling moved to 470/495 (7.83/8.25 morae/s), bracketing CSJ and
+the measured band top; the old 380 target would have recommended 0.81×
+on native ja lectures.
+
 ## Built bands (corpus-derived)
 
 G2 validates the current (derived) band first; every language fails it,
@@ -208,7 +219,8 @@ flagging it fast.
   bands replace 177–258.
 - **Targets and ceilings stay `derived: true` for all three** — a rate
   corpus measures speech rate, not comprehension of the safe zone; the
-  ru boundary holds. ja 380/400, th 282/290, ko 340/350 unchanged.
+  ru boundary holds. ja re-derived to 470/495 (2026-08 — the correction
+  note above), th 282/290 and ko 340/350 unchanged.
   The `priors.max < target` invariant is relaxed for corpus-measured
   languages (uk talk precedent); ratio-derived languages keep it.
 

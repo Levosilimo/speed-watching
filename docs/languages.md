@@ -20,13 +20,23 @@ language's syllabic rate and word structure:
 - **char-unit (cpm)** — zh 240–258 cpm, where the 258 ceiling
   (Lee & Chan, 4.3 char/s) is the **only comprehension-measured ceiling in
   the set**; th ~282 cpm derived.
-- **mora-unit (morae/min)** — ja 380 target / 400 ceiling, in the same
-  band as the old char estimate but measured by the mora estimator: each
-  kana code point = 1 mora (incl. ー and っ), each kanji ≈ 1.85 morae
-  (on-yomi-dominant average). The estimator lands within ±5–8% of a true
-  analyzer — inside the ±10% band that chars-mode misses (kanji carry
-  ~1.8–2.0 morae per character, so grapheme counts understate morae
-  ~25–35% and would over-recommend the multiplier).
+- **mora-unit (morae/min)** — ja 470 target / 495 ceiling, re-derived
+  2026-08 from the model's own frame. The old 380/400 priced a mora at
+  English-syllable information (6.33/6.67 morae/s × 6.3 bits/mora ≈ 40–42
+  bits/s — over the ~39.4 bits/s ceiling), but Coupé places Japanese at
+  the high-syllabic-rate / low-info-per-syllable corner and CSJ natives
+  run 7.6–8.4 morae/s (Maekawa 2003: 8.01 avg ≈ 480.6 morae/min). The
+  east-asian corpus's lecture/podcast band (450–490 morae/min =
+  7.5–8.2/s) sits exactly at the info-rate-consistent position, so the
+  old 0.81× recommendation on native ja lectures was over-conservative.
+  Re-derived at ~5.0 bits/mora (39.4 ÷ 5.0 ≈ 7.9 morae/s ≈ 472/min →
+  470); the 495 ceiling brackets CSJ 8.01 morae/s (480.6/min) and the
+  measured band top (490). The mora estimator counts each kana code point
+  as 1 mora (incl. ー and っ) and each kanji ≈ 1.85 morae
+  (on-yomi-dominant average), within ±5–8% of a true analyzer — inside
+  the ±10% band that chars-mode misses (kanji carry ~1.8–2.0 morae per
+  character, so grapheme counts understate morae ~25–35% and would
+  over-recommend the multiplier).
 - **syllable-unit (syl/min)** — measured speech syllabic rates: ko/tr
   330–350, ar 300–360 (low confidence), hi 240 (6.55 syl/s class), id/ms
   ~400 (≈ 267 wpm at 1.5 syl/word — the English band with a small lift),
@@ -51,7 +61,7 @@ vowel letters (one vowel per syllable), hi counts Devanagari vowel nuclei.
 | pt | wpm | 165 | 167 | words | yes | 86–125 |
 | fr | wpm | 250 | 253 | words | yes | 130–190 |
 | de | wpm | 175 | 181 | words | yes | 91–133 |
-| ja | mora/min | 380 | 400 | mora | yes | 395–435 (per register, below) § |
+| ja | mora/min | 470 | 495 | mora | yes | 395–435 (per register, below) § |
 | zh | cpm | 240 | 258 | chars | no* | 125–182 |
 | th | cpm | 282 | 290 | chars | yes | 505–545 (per register, below) § |
 | ko | syl/min | 340 | 350 | words (+Hangul blocks) | yes | 305–345 (per register, below) § |
@@ -84,10 +94,11 @@ ratio-derived (addendum-measured — see the register section below).
 § ja's, th's and ko's priors are **corpus-measured** (2026-08,
 docs/phase0-east-asian-corpus.md); their targets and ceilings remain
 derived. These are the first corpus bands whose natural rates reach or
-exceed the derived targets (ja generic 395–435 straddles the 380 target,
-th 505–545 nearly doubles 282, ko 305–345 meets 340) — the estimated
-tier's range overlaps the safe zone, which is the measured finding, not
-a modeling error.
+exceed the derived targets (ja lecture/podcast 450–490 straddles the
+re-derived 470 target, th 505–545 runs ~1.8× its 282 — see the th cpm
+caveat below — ko 305–345 meets 340) — the estimated tier's range
+overlaps the safe zone, which is the measured finding, not a modeling
+error.
 
 Priors scale the English estimated-tier ratio (0.52–0.76 × target) to each
 language's target — the same below-target relationship as the English
@@ -178,7 +189,7 @@ pre-correction fail against the ratio-derived bands is in the corpus
 are the first corpus bands that reach or exceed the derived targets, so
 natural-rate content in the estimated tier overlaps the safe zone
 instead of being flagged fast; the targets and ceilings stay derived
-(ja 380/400, th 282/290, ko 340/350).
+(ja 470/495, th 282/290, ko 340/350).
 
 | register | ja band (morae/min) | th band (cpm) | ko band (syl/min) |
 |---|---|---|---|

@@ -12,8 +12,18 @@
 //   - char-unit (cpm): zh 240–258 cpm, where the 258 ceiling
 //     (Lee & Chan, 4.3 char/s) is the only comprehension-measured ceiling
 //     in the set; th ~282 cpm derived.
-//   - mora-unit (morae/min): ja 380–400 in the same band as the old
-//     char estimate, measured by the mora estimator — each kana = 1 mora,
+//   - mora-unit (morae/min): ja 470–495, re-derived 2026-08 from the
+//     model's own frame (the old 380–400 priced a mora at English-syllable
+//     information — 6.33/6.67 morae/s × 6.3 bits/mora ≈ 40–42 bits/s,
+//     over the ~39.4 bits/s ceiling — while Coupé places ja at high
+//     syllabic rate / low info per syllable and CSJ natives run 8.01
+//     morae/s avg, Maekawa 2003, band 7.6–8.4). The east-asian corpus's
+//     lecture/podcast 450–490 morae/min (7.5–8.2/s) sits exactly at the
+//     info-rate-consistent position, so the old 0.81× recommendation on
+//     native ja lectures was over-conservative; re-derived at ~5.0
+//     bits/mora: 39.4 ÷ 5.0 ≈ 7.9 morae/s ≈ 472/min → 470 target, 495
+//     ceiling brackets CSJ 8.01 morae/s (480.6/min) and the measured band
+//     top (490). Measured by the mora estimator — each kana = 1 mora,
 //     kanji × ~1.85 (on-yomi-dominant average; ±5–8% of a true analyzer).
 //   - syllable-unit (syl/min): measured speech syllabic rates — ko/tr
 //     330–350, ar 300–360 (low confidence), hi 240 (6.55 syl/s class),
@@ -88,8 +98,8 @@ export const LANGUAGES: Record<string, LanguageModel> = {
   ja: {
     code: 'ja',
     unit: 'mora',
-    target: 380,
-    ceiling: 400,
+    target: 470,
+    ceiling: 495,
     tokenizerMode: 'mora',
     derived: true,
     priorsSource: 'corpus',

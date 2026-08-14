@@ -58,7 +58,7 @@ describe('language table', () => {
     expect(LANGUAGES['pt']).toMatchObject({ target: 165, ceiling: 167 });
     expect(LANGUAGES['fr']).toMatchObject({ target: 250, ceiling: 253 });
     expect(LANGUAGES['de']).toMatchObject({ target: 175, ceiling: 181 });
-    expect(LANGUAGES['ja']).toMatchObject({ unit: 'mora', target: 380, ceiling: 400, tokenizerMode: 'mora' });
+    expect(LANGUAGES['ja']).toMatchObject({ unit: 'mora', target: 470, ceiling: 495, tokenizerMode: 'mora' });
     expect(LANGUAGES['zh']).toMatchObject({ unit: 'cpm', target: 240, ceiling: 258, tokenizerMode: 'chars' });
     expect(LANGUAGES['th']).toMatchObject({ unit: 'cpm', tokenizerMode: 'chars' });
     expect(LANGUAGES['ko']).toMatchObject({ unit: 'syl', target: 340, ceiling: 350, hangulBlocks: true });
