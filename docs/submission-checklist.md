@@ -54,6 +54,7 @@ Permission justifications (one box per declared permission):
 | `storage` | Settings (`sw.settings`), the 500-entry override log (`sw.overrideLog`), and demand counters (`sw.demand`) — all `chrome.storage.local`, nothing synced |
 | `tabCapture` | The shipped audio capture test (options-page "Test audio capture" button): user-gesture-gated, captures the audio of the video tab the user is watching, shows a live level meter, never invoked without the click. Declared from day one because the Chrome API refuses it as optional; keeping it in v1 keeps the v1→v1.1 update permission-neutral |
 | `offscreen` | `chrome.offscreen.createDocument` fails without the manifest permission; the audio capture test calls it with reason `USER_MEDIA` |
+| `contextMenus` | The measure-link context menu: right-click a video link, "Measure this video's rate" opens it in a tab where the existing measurement pipeline shows the pill |
 | `<all_urls>` (content scripts) | Embedded players live in cross-origin iframes — a curated site list misses them. No outbound requests: caption fetch runs in the page context, same-origin |
 
 ## 4. Distribution tab

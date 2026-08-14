@@ -62,6 +62,7 @@ submission time; "Photos, Music & Videos" if "Video" is not offered).
 | No `host_permissions` | Caption harvesting fetches from measured origins (Vimeo player config, HLS subtitle manifests, transcript endpoints), but every fetch runs from the MAIN world — the page's own context — and the `<all_urls>` content-script match already grants host access, so no host permission is declared (declaring one would only inflate the review surface). |
 | `storage` | Settings (`sw.settings`) and the override/habits log (`sw.overrideLog`), both in `chrome.storage.local` (browser.storage.local in Firefox). Nothing syncs, nothing leaves the machine. |
 | `tabCapture`, `offscreen` | The audio capture test (options-page "Test audio capture" button), Chrome-only. Firefox has no offscreen API, so Firefox builds hide the test and these APIs are never called. |
+| `contextMenus` | The measure-link context menu: right-click a video link, "Measure this video's rate" opens it in a tab where the normal measurement runs. |
 
 No other permissions: no `tabs`, no `webRequest`, no background network
 access, no remote code, no analytics.

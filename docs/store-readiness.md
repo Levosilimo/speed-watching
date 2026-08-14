@@ -18,6 +18,7 @@ from caption speech rate). No secondary purposes are present or planned.
 | `storage` | Settings (`sw.settings`), override log (`sw.overrideLog`), audio-probe session state. Everything is `chrome.storage.local`; nothing syncs. |
 | `tabCapture` | Required-not-optional: the Chrome API refuses this permission as optional, so it must sit in the manifest from day one. Serves the shipped audio capture test — the options-page "Test audio capture" button, which captures the audio of the video tab the user is watching, shows a live level meter, and stops on demand — and the future on-device STT feature, which stays feature-gated behind an explicit user opt-in. `tabCapture` is never called without a user gesture. |
 | `offscreen` | `chrome.offscreen.createDocument` fails without this manifest permission (live Chrome docs); `lib/capture-orchestrator.ts` calls it with reason `USER_MEDIA` for the audio capture test. Offscreen documents cannot be created lazily on Chrome 116–, hence the static declaration. |
+| `contextMenus` | The measure-link context menu (background `installContextMenu`): right-clicking a video link shows "Measure this video's rate", which opens the link in a tab where the existing measurement pipeline takes over — the pill appears there with no extra logic. |
 
 No `host_permissions` block (STORE-4): the content scripts match
 `<all_urls>` with `all_frames` (embedded players live in cross-origin
@@ -34,11 +35,11 @@ contexts.
 Run `bun run check:cws` after every build. It runs the offline
 [`cws-check`](https://github.com/0prob/cws-check) CLI over
 `.output/chrome-mv3` — the bundle CWS reviewers actually scan — and exits 1
-on MV2, remote-code, or unsafe-CSP findings. Reference run on v0.0.1
-(2026-08-12):
+on MV2, remote-code, or unsafe-CSP findings. Reference run on v0.0.2
+(2026-08-14, manifest with all four permissions):
 
 ```
-cws-check — Speed Watcher v0.0.1
+cws-check — Speed Watcher v0.0.2
 
 Manifest version
   ✓ manifest_version 3 — current.
@@ -71,7 +72,7 @@ No issues detected by this tool. This does not replace human review of your sing
   checker's high-scrutiny list, but they are the declared surface a human
   reviewer will question; the justification lives in the Permissions table
   above (user-gesture-gated audio capture test, feature-gated STT).
-- **single-purpose — clean since the STORE-4 cut**: 3 declared
+- **single-purpose — clean since the STORE-4 cut**: 4 declared
   permissions, no `host_permissions`, so cws-check reports a modest count.
   The count only grows with new permissions — re-check the single-purpose
   story before adding any.
