@@ -21,6 +21,8 @@ const EN = {
   'pill.applyAria': 'Apply recommended playback speed',
   'pill.applyAriaSpeed': 'Apply {mult}x playback speed',
   'pill.dismissAria': 'Dismiss',
+  'pill.stopAuto': 'Stop auto',
+  'pill.stopAutoAria': 'Stop applying the recommended speed automatically',
   'pill.warning.aboveZone': 'Past the 250–275 wpm range commonly cited for comfortable listening',
   'pill.warning.cappedBelow': 'Estimate uncertain — capped at 1.5x for safety',
   'pill.warning.pauseDiluted': 'Speech runs fast at this speed — estimate uncertain',
@@ -56,6 +58,7 @@ const EN = {
   'options.preset.lecture': 'Lecture',
   'options.preset.talk': 'Talk',
   'options.preset.podcast': 'Podcast',
+  'options.preset.explainer': 'Explainer',
   'options.preset.music': 'Music',
   'options.preset.generic': 'Generic',
   'options.languageLabel': 'Interface language',
@@ -88,6 +91,11 @@ const EN = {
   'options.integrationNote':
     'Allow other extensions you install to ask Speed Watcher for the measured speech rate of the current video. Off by default; only approved partner extensions can query.',
   'options.integrationToggle': 'Allow measurement requests from partner extensions',
+  'options.autoLabel': 'Auto-apply speed',
+  'options.autoNote':
+    'When on, the recommended speed applies automatically to each new video. Only confident caption-based recommendations for talks, lectures, explainers, and podcasts auto-apply — music and estimated guesses never do. A manual speed change or "Stop auto" overrides it for that video; it returns on the next one. Off by default.',
+  'options.autoToggle': 'Apply the recommended speed automatically',
+  'options.autoTypeLabel': 'Apply to these content types',
   'options.tiersLabel': 'Tier labels',
   'options.tier.asrWordDesc':
     'Word-timed ASR captions. The most common tier — ~94% of sampled videos with speech captions in our measurements.',

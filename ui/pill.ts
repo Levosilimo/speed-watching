@@ -26,6 +26,10 @@ import type { UiLanguageSetting } from '../lib/settings';
 // ── Types (matches the seam contract exactly) ────────────────────────────
 export type PillMode = 'recommend' | 'warning' | 'unreachable' | 'music' | 'none';
 
+/** How the current rate got applied: by auto-apply, by the user, or not
+ * applied. Absent from a PillState ≡ 'none'. */
+export type AppliedSource = 'auto' | 'user' | 'none';
+
 export interface PillState {
   mode: PillMode;
   rateWpm: number;
@@ -35,11 +39,15 @@ export interface PillState {
   label: string;
   /** Warning-mode copy selector: cliff crossing vs clamp cap vs articulatory load. */
   reason?: 'above-zone' | 'capped-below' | 'pause-diluted';
+  /** Auto-applied this video; shows the Stop-auto button in recommend mode. */
+  applied?: AppliedSource;
 }
 
 export interface PillEvents {
   onApply?: (multiplier: number) => void;
   onDismiss?: () => void;
+  /** Stop-auto: disengage auto-apply for this video (rate untouched). */
+  onStopAuto?: () => void;
 }
 
 export interface PillOptions {
@@ -78,6 +86,7 @@ interface PillDom {
   warningNote: HTMLDivElement;
   applyBtn: HTMLButtonElement;
   dismissBtn: HTMLButtonElement;
+  stopAutoBtn: HTMLButtonElement;
 }
 
 function buildDom(): PillDom {
@@ -127,10 +136,25 @@ function buildDom(): PillDom {
   dismissBtn.textContent = '×';
   dismissBtn.setAttribute('aria-label', 'Dismiss');
 
-  actions.append(applyBtn, dismissBtn);
+  const stopAutoBtn = document.createElement('button');
+  stopAutoBtn.type = 'button';
+  stopAutoBtn.className = 'btn-stop-auto';
+  stopAutoBtn.hidden = true;
+
+  actions.append(applyBtn, dismissBtn, stopAutoBtn);
   pill.append(mainText, actions);
 
-  return { pill, labelEl, tierEl, liveEl, savedEl, warningNote, applyBtn, dismissBtn };
+  return {
+    pill,
+    labelEl,
+    tierEl,
+    liveEl,
+    savedEl,
+    warningNote,
+    applyBtn,
+    dismissBtn,
+    stopAutoBtn,
+  };
 }
 
 /** The player area that hosted the pill — #movie_player on YouTube, else the
@@ -159,6 +183,11 @@ function wireEvents(
 
   dom.dismissBtn.addEventListener('click', () => {
     events?.onDismiss?.();
+    restoreFocus(host);
+  });
+
+  dom.stopAutoBtn.addEventListener('click', () => {
+    events?.onStopAuto?.();
     restoreFocus(host);
   });
 
@@ -291,6 +320,16 @@ function render(
   dom.dismissBtn.setAttribute('aria-label', t('pill.dismissAria', locale));
 
   const mode = state.mode;
+
+  // Stop-auto button: only while the recommendation is showing AND this
+  // video's rate was applied automatically. Computed before the none
+  // early-return so a hide flips it back even when the surface goes dark.
+  const showStopAuto = state.applied === 'auto' && mode === 'recommend';
+  dom.stopAutoBtn.hidden = !showStopAuto;
+  if (showStopAuto) {
+    dom.stopAutoBtn.textContent = t('pill.stopAuto', locale);
+    dom.stopAutoBtn.setAttribute('aria-label', t('pill.stopAutoAria', locale));
+  }
 
   // Hide the live and saved lines outside recommend/warning, even in the
   // none branch below (the pill surface itself is invisible there, but the

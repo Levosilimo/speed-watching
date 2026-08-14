@@ -8,6 +8,89 @@ import {
   type PillState,
 } from '../ui/pill';
 
+describe('createPill stop-auto button', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    document.body.innerHTML = '';
+  });
+
+  function stopAutoOf(host: HTMLElement): HTMLButtonElement {
+    const el = rootOf(host).querySelector<HTMLButtonElement>('.btn-stop-auto');
+    if (el === null) throw new Error('expected a .btn-stop-auto element');
+    return el;
+  }
+
+  it('renders ONLY for applied === auto in recommend mode (user/none/absent hide)', () => {
+    const host = shadowHost();
+    const pill = createPill(host, {}, { locale: 'en' });
+    pill.mount();
+    const stopAuto = stopAutoOf(host);
+    pill.update(state({ applied: 'user' }));
+    expect(stopAuto.hidden).toBe(true);
+    pill.update(state({ applied: 'none' }));
+    expect(stopAuto.hidden).toBe(true);
+    pill.update(state()); // absent ≡ none
+    expect(stopAuto.hidden).toBe(true);
+    pill.update(state({ applied: 'auto' }));
+    expect(stopAuto.hidden).toBe(false);
+    expect(stopAuto.textContent).toBe('Stop auto');
+    expect(stopAuto.getAttribute('aria-label')).toBe(
+      'Stop applying the recommended speed automatically',
+    );
+    // Non-recommend modes never show it, even while applied === auto.
+    pill.update(state({ applied: 'auto', mode: 'warning', reason: 'above-zone' }));
+    expect(stopAuto.hidden).toBe(true);
+  });
+
+  it('stale-hides after a NONE_STATE update', () => {
+    const host = shadowHost();
+    const pill = createPill(host, {}, { locale: 'en' });
+    pill.mount();
+    const stopAuto = stopAutoOf(host);
+    pill.update(state({ applied: 'auto' }));
+    expect(stopAuto.hidden).toBe(false);
+    pill.update(state({ mode: 'none', label: '', applied: 'none' }));
+    expect(stopAuto.hidden).toBe(true);
+  });
+
+  it('fires onStopAuto on click; onApply and onDismiss stay silent', () => {
+    const onStopAuto = vi.fn();
+    const onApply = vi.fn();
+    const onDismiss = vi.fn();
+    const host = shadowHost();
+    const pill = createPill(host, { onStopAuto, onApply, onDismiss }, { locale: 'en' });
+    pill.mount();
+    pill.update(state({ applied: 'auto' }));
+    stopAutoOf(host).click();
+    expect(onStopAuto).toHaveBeenCalledExactlyOnceWith();
+    expect(onApply).not.toHaveBeenCalled();
+    expect(onDismiss).not.toHaveBeenCalled();
+  });
+
+  it('localizes the stop-auto label for ru', () => {
+    const host = shadowHost();
+    const pill = createPill(host, {}, { locale: 'ru' });
+    pill.mount();
+    pill.update(state({ applied: 'auto' }));
+    const stopAuto = stopAutoOf(host);
+    expect(stopAuto.textContent).toBe('Остановить авто');
+    expect(stopAuto.getAttribute('aria-label')).toBe(
+      'Перестать автоматически применять рекомендованную скорость',
+    );
+  });
+
+  it('keeps the stop-auto button outside the live-region main text', () => {
+    const host = shadowHost();
+    const pill = createPill(host, {}, { locale: 'en' });
+    pill.mount();
+    pill.update(state({ applied: 'auto' }));
+    expect(rootOf(host).querySelector('.main-text .btn-stop-auto')).toBeNull();
+    expect(rootOf(host).querySelector<HTMLDivElement>('.actions')?.contains(
+      rootOf(host).querySelector('.btn-stop-auto')!,
+    )).toBe(true);
+  });
+});
+
 // The pill's shadow root is open (accessibility: closed roots are invisible
 // to assistive tech), so tests reach the surface through host.shadowRoot.
 
