@@ -40,10 +40,16 @@ target stays `derived: true` — the estimate chain in `lib/languages.ts`).
   script re-reads `track[src]` at measure time, but an expired URL still
   fetches 403 → the probe returns null → estimated tier. No refresh
   attempt (the player's own refresh is page-internal).
-- **CORS inference.** The probe runs page-context `fetch` against CDNs it
-  has never exercised from a content script. The e2e fixture server proves
-  the path with `Access-Control-Allow-Origin: *`; a real CDN that withholds
-  CORS headers degrades safely to estimated — never a crash.
+- **CORS measured.** The cdn-probe (`docs/adapters-cdn-probe.md`) issued the
+  exact page-context cors-mode `fetch` against real carriers: 3/3 carriers
+  fetch-ok across 3 track-bearing Dzen videos (100% ≥ 80% floor), zero
+  cors-blocked, zero parse-fail. The ok responses recorded no ACAO header to
+  the page yet resolved with 200 and real VTT bytes — a cors-mode fetch
+  rejects unless the response passes the browser's CORS check, so the path is
+  measured, not inferred. A carrier that withholds CORS still degrades
+  safely to estimated — never a crash. Rutube's `pic.rtbcdn.ru` carriers
+  were not reachable in the probe run (no player mounted); their fetch
+  behavior stays unmeasured.
 - **Rutube author gate (~50%).** Trending videos whose authors did not
   enable subtitles expose no `<track>` element at all → null → estimated.
   The SRT hash URL is never guessed.
