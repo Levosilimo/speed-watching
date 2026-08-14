@@ -796,6 +796,75 @@ describe('createPill saved-time line', () => {
   });
 });
 
+describe('createPill skip-silence indicator', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    document.body.innerHTML = '';
+  });
+
+  function savedElOf(host: HTMLElement): HTMLSpanElement {
+    const el = rootOf(host).querySelector<HTMLSpanElement>('.saved-time');
+    if (el === null) throw new Error('expected a .saved-time element');
+    return el;
+  }
+
+  it('shows the indicator in recommend mode while skipSlowed, even with no saved time', () => {
+    const host = shadowHost();
+    const pill = createPill(host, {}, { locale: 'en' });
+    pill.mount();
+    pill.update(state({ skipSlowed: true }));
+    const saved = savedElOf(host);
+    expect(saved.hidden).toBe(false);
+    expect(saved.textContent).toBe('silence: slowed');
+  });
+
+  it('shows the indicator in warning mode too', () => {
+    const host = shadowHost();
+    const pill = createPill(host, {}, { locale: 'en' });
+    pill.mount();
+    pill.update(state({ mode: 'warning', reason: 'above-zone', skipSlowed: true }));
+    expect(savedElOf(host).hidden).toBe(false);
+  });
+
+  it('hides the indicator outside recommend/warning even while skipSlowed', () => {
+    const host = shadowHost();
+    const pill = createPill(host, {}, { locale: 'en' });
+    pill.mount();
+    pill.update(state({ mode: 'none', label: '', skipSlowed: true }));
+    expect(savedElOf(host).hidden).toBe(true);
+  });
+
+  it('a saved-time push during the gap keeps the indicator', () => {
+    const host = shadowHost();
+    const pill = createPill(host, {}, { locale: 'en' });
+    pill.mount();
+    pill.update(state({ skipSlowed: true }));
+    const saved = savedElOf(host);
+    expect(saved.textContent).toBe('silence: slowed');
+    pill.updateSavedSec(null); // the content script's gate hides saved time in the gap
+    expect(saved.hidden).toBe(false);
+    expect(saved.textContent).toBe('silence: slowed');
+  });
+
+  it('returns to the saved-time text when the gap ends (state flip)', () => {
+    const host = shadowHost();
+    const pill = createPill(host, {}, { locale: 'en' });
+    pill.mount();
+    pill.update(state({ skipSlowed: true }));
+    pill.update(state({ skipSlowed: false }));
+    pill.updateSavedSec(120);
+    expect(savedElOf(host).textContent).toBe('~2 minutes saved (estimate)');
+  });
+
+  it('localizes the indicator for ru', () => {
+    const host = shadowHost();
+    const pill = createPill(host, {}, { locale: 'ru' });
+    pill.mount();
+    pill.update(state({ skipSlowed: true }));
+    expect(savedElOf(host).textContent).toBe('тишина: замедлено');
+  });
+});
+
 describe('createPill live-line duplication (P2b)', () => {
   it('hides the live line when it duplicates the label (same rate, same multiplier)', () => {
     const host = shadowHost();

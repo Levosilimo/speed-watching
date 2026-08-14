@@ -316,3 +316,26 @@ describe('options auto-apply', () => {
     expect(Object.keys(stored.autoApply.contentTypes)).toEqual(['talk']);
   });
 });
+
+describe('options skip-silence toggle', () => {
+  function master(): HTMLInputElement {
+    return document.getElementById('skip-toggle') as HTMLInputElement;
+  }
+
+  it('defaults off and persists the toggle through its own store key', async () => {
+    await import('../entrypoints/options/main');
+    await flush();
+    expect(master().checked).toBe(false);
+    master().checked = true;
+    master().dispatchEvent(new Event('change'));
+    await flush();
+    expect(storageData.get('sw.skipSilence')).toMatchObject({ enabled: true });
+  });
+
+  it('reflects a persisted enabled pref on load', async () => {
+    storageData.set('sw.skipSilence', { enabled: true, minGapSec: 1.5, pauseRate: 1.1 });
+    await import('../entrypoints/options/main');
+    await flush();
+    expect(master().checked).toBe(true);
+  });
+});
