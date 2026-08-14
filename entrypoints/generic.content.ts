@@ -583,7 +583,9 @@ function applyMultiplier(multiplier: number): void {
  * never attach. */
 function attachSkip(video: HTMLVideoElement, applied: number): void {
   if (skipPlan === null) return;
-  if (video.mediaKeys !== null) return;
+  // Chrome reports mediaKeys as undefined until EME is used, so the DRM
+  // gate is a truthy check, not a null check.
+  if (video.mediaKeys) return;
   const pause = pauseRateFor(applied, skipPlan.prefs);
   if (pause >= applied) return;
   reapplier.setRates(applied, pause);

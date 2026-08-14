@@ -699,7 +699,9 @@ function applyAndTrack(multiplier: number, action: 'apply' | 'adjust'): number {
  * dip targets that equal the applied rate never attach. */
 function attachSkip(video: HTMLVideoElement, applied: number): void {
   if (skipPlan === null) return;
-  if (video.mediaKeys !== null) return;
+  // Chrome reports mediaKeys as undefined until EME is used, so the DRM
+  // gate is a truthy check, not a null check.
+  if (video.mediaKeys) return;
   if (pauseRateFor(applied, skipPlan.prefs) >= applied) return;
   skipActuator.attach(video, skipPlan.index, skipPlan.prefs, applied, (inGap) => {
     // The saved-line area swaps to the slowed-silence indicator for the
