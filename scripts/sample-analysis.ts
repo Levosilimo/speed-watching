@@ -11,8 +11,9 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { ParsedCaptions, Segment } from '../lib/captions';
-import { countWordTokens, isBracketMarker } from '../lib/tokenizer';
-import { filteredTokensOverTrimmedSpan } from '../lib/wpm';
+import type { LanguageModel } from '../lib/languages';
+import { isBracketMarker } from '../lib/tokenizer';
+import { filteredTokensOverTrimmedSpan, unitTokens } from '../lib/wpm';
 
 export type SampleStatus =
   | 'web-captured'
@@ -103,18 +104,20 @@ export function speechDurSec(words: readonly Segment[]): number | null {
 /**
  * Pause-bias inputs on one payload:
  * - unifiedRate: the extension's unified ASR rule
- *   (filteredTokensOverTrimmedSpan) applied to the captured cues.
- * - wordAccurateRate: the same filtered letter/digit tokens over the
- *   pause-excluded speech duration (per-word inter-start spans).
+ *   (filteredTokensOverTrimmedSpan) applied to the captured cues in the
+ *   language's rate unit (unitTokens: words, graphemes, morae, vowel
+ *   nuclei, or word runs × syllablesPerWord).
+ * - wordAccurateRate: the same unit tokens over the pause-excluded speech
+ *   duration (per-word inter-start spans).
  * - pauseBiasPct: how much of the applied speed pauses eat:
  *   (unifiedRate - wordAccurateRate) / unifiedRate.
  */
-export function ratesFor(parsed: ParsedCaptions): RateStats | null {
-  const unifiedRate = filteredTokensOverTrimmedSpan(parsed.cues);
+export function ratesFor(parsed: ParsedCaptions, language?: LanguageModel): RateStats | null {
+  const unifiedRate = filteredTokensOverTrimmedSpan(parsed.cues, language);
   const speechDur = speechDurSec(parsed.words);
   if (unifiedRate === null || speechDur === null) return null;
   const tokens = parsed.cues.reduce(
-    (sum, cue) => (isBracketMarker(cue.text) ? sum : sum + countWordTokens(cue.text)),
+    (sum, cue) => (isBracketMarker(cue.text) ? sum : sum + unitTokens(cue.text, language)),
     0,
   );
   const wordAccurateRate = (tokens / speechDur) * 60;

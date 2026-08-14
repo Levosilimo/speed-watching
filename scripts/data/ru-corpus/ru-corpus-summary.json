@@ -62,6 +62,7 @@
       "pass": true
     },
     "g3": {
+      "mode": "regex-icu",
       "n": 14,
       "median": 0.024990743915356665,
       "maxDeltaPct": 0.2008032128514056,
@@ -137,6 +138,7 @@
       "pass": true
     },
     "g3": {
+      "mode": "regex-icu",
       "n": 6,
       "median": 0.46274556971261277,
       "maxDeltaPct": 0.831353919239905,
@@ -208,6 +210,7 @@
       "pass": true
     },
     "g3": {
+      "mode": "regex-icu",
       "n": 7,
       "median": 0.02835270768358378,
       "maxDeltaPct": 0.07748934521503294,
@@ -275,6 +278,7 @@
       "pass": true
     },
     "g3": {
+      "mode": "regex-icu",
       "n": 4,
       "median": 0.06547035473187565,
       "maxDeltaPct": 0.11231748408835641,
@@ -328,6 +332,7 @@
       "pass": false
     },
     "g3": {
+      "mode": "regex-icu",
       "n": 0,
       "median": null,
       "maxDeltaPct": null,
@@ -346,5 +351,407 @@
     "confusion": {},
     "verdict": "stays-derived",
     "note": "sr availability probe: no sr ASR tracks (not on YouTube's ASR language list); structural fail recorded"
+  },
+  {
+    "language": "hi",
+    "records": 16,
+    "classification": {
+      "web-ok": 15,
+      "pot-fail": 1
+    },
+    "asrBearing": 16,
+    "g1": {
+      "webOk": 15,
+      "anyPath": 16,
+      "pass": true
+    },
+    "g2": {
+      "registers": {
+        "explainer": {
+          "n": 3,
+          "median": 334.4931203542622,
+          "bandMin": 122.80000000000001,
+          "bandMax": 184.2,
+          "bandMid": 153.5,
+          "inBandFraction": 0,
+          "status": "fail"
+        },
+        "news": {
+          "n": 3,
+          "median": 261.07465042923303,
+          "bandMin": 122.80000000000001,
+          "bandMax": 184.2,
+          "bandMid": 153.5,
+          "inBandFraction": 0,
+          "status": "fail"
+        },
+        "lecture": {
+          "n": 3,
+          "median": 264.8812664339444,
+          "bandMin": 122.80000000000001,
+          "bandMax": 184.2,
+          "bandMid": 153.5,
+          "inBandFraction": 0,
+          "status": "fail"
+        },
+        "podcast": {
+          "n": 3,
+          "median": 294.04376012965963,
+          "bandMin": 122.80000000000001,
+          "bandMax": 184.2,
+          "bandMid": 153.5,
+          "inBandFraction": 0,
+          "status": "fail"
+        },
+        "music": {
+          "n": 3,
+          "median": 77.1209898407927,
+          "bandMin": null,
+          "bandMax": null,
+          "bandMid": null,
+          "inBandFraction": 0,
+          "status": "no-band"
+        }
+      },
+      "pass": false
+    },
+    "g3": {
+      "mode": "vowels-sample",
+      "n": 19,
+      "median": 0,
+      "maxDeltaPct": 0,
+      "violations": [],
+      "pass": true
+    },
+    "g4": {
+      "rows": 15,
+      "falseRows": [],
+      "pass": true
+    },
+    "g5": {
+      "n": 12,
+      "median": -29.518884525675254
+    },
+    "confusion": {
+      "explainer": {
+        "generic": 3
+      },
+      "news": {
+        "generic": 3
+      },
+      "lecture": {
+        "generic": 3
+      },
+      "podcast": {
+        "generic": 3
+      },
+      "music": {
+        "music": 3
+      }
+    },
+    "verdict": "stays-derived",
+    "note": null
+  },
+  {
+    "language": "ar",
+    "records": 15,
+    "classification": {
+      "web-ok": 15
+    },
+    "asrBearing": 15,
+    "g1": {
+      "webOk": 15,
+      "anyPath": 15,
+      "pass": true
+    },
+    "g2": {
+      "registers": {
+        "news": {
+          "n": 3,
+          "median": 215.13706793802146,
+          "bandMin": 172,
+          "bandMax": 258,
+          "bandMid": 215,
+          "inBandFraction": 1,
+          "status": "pass"
+        },
+        "lecture": {
+          "n": 3,
+          "median": 185.80090153482422,
+          "bandMin": 148,
+          "bandMax": 222,
+          "bandMid": 185,
+          "inBandFraction": 1,
+          "status": "pass"
+        },
+        "explainer": {
+          "n": 3,
+          "median": 168.4444965420232,
+          "bandMin": 136,
+          "bandMax": 204,
+          "bandMid": 170,
+          "inBandFraction": 1,
+          "status": "pass"
+        },
+        "podcast": {
+          "n": 3,
+          "median": 255.78896532813982,
+          "bandMin": 204,
+          "bandMax": 306,
+          "bandMid": 255,
+          "inBandFraction": 0.6666666666666666,
+          "status": "pass"
+        },
+        "music": {
+          "n": 3,
+          "median": 92.67990074441687,
+          "bandMin": null,
+          "bandMax": null,
+          "bandMid": null,
+          "inBandFraction": 0,
+          "status": "no-band"
+        }
+      },
+      "pass": true
+    },
+    "g3": {
+      "mode": "regex-icu",
+      "n": 12,
+      "median": 0,
+      "maxDeltaPct": 0.12121212121212122,
+      "violations": [],
+      "pass": true
+    },
+    "g4": {
+      "rows": 15,
+      "falseRows": [],
+      "pass": true
+    },
+    "g5": {
+      "n": 12,
+      "median": -105.60357659242254
+    },
+    "confusion": {
+      "news": {
+        "generic": 1,
+        "news": 2
+      },
+      "lecture": {
+        "generic": 3
+      },
+      "explainer": {
+        "generic": 3
+      },
+      "podcast": {
+        "generic": 3
+      },
+      "music": {
+        "generic": 3
+      }
+    },
+    "verdict": "corpus-validated",
+    "note": null
+  },
+  {
+    "language": "id",
+    "records": 15,
+    "classification": {
+      "web-ok": 15
+    },
+    "asrBearing": 15,
+    "g1": {
+      "webOk": 15,
+      "anyPath": 15,
+      "pass": true
+    },
+    "g2": {
+      "registers": {
+        "news": {
+          "n": 3,
+          "median": 206.8934738390964,
+          "bandMin": 164,
+          "bandMax": 246,
+          "bandMid": 205,
+          "inBandFraction": 1,
+          "status": "pass"
+        },
+        "lecture": {
+          "n": 3,
+          "median": 181.30466472303206,
+          "bandMin": 144,
+          "bandMax": 216,
+          "bandMid": 180,
+          "inBandFraction": 0.6666666666666666,
+          "status": "pass"
+        },
+        "explainer": {
+          "n": 3,
+          "median": 196.82675814751286,
+          "bandMin": 156,
+          "bandMax": 234,
+          "bandMid": 195,
+          "inBandFraction": 1,
+          "status": "pass"
+        },
+        "podcast": {
+          "n": 3,
+          "median": 259.72804194527134,
+          "bandMin": 208,
+          "bandMax": 312,
+          "bandMid": 260,
+          "inBandFraction": 1,
+          "status": "pass"
+        },
+        "music": {
+          "n": 3,
+          "median": 66.1894489115513,
+          "bandMin": null,
+          "bandMax": null,
+          "bandMid": null,
+          "inBandFraction": 0,
+          "status": "no-band"
+        }
+      },
+      "pass": true
+    },
+    "g3": {
+      "mode": "regex-icu",
+      "n": 12,
+      "median": 0.060222655990575163,
+      "maxDeltaPct": 1.0510863182618908,
+      "violations": [],
+      "pass": true
+    },
+    "g4": {
+      "rows": 15,
+      "falseRows": [],
+      "pass": true
+    },
+    "g5": {
+      "n": 12,
+      "median": -52.530098043237246
+    },
+    "confusion": {
+      "news": {
+        "news": 1,
+        "generic": 2
+      },
+      "lecture": {
+        "generic": 3
+      },
+      "explainer": {
+        "generic": 3
+      },
+      "podcast": {
+        "generic": 3
+      },
+      "music": {
+        "music": 2,
+        "generic": 1
+      }
+    },
+    "verdict": "corpus-validated",
+    "note": null
+  },
+  {
+    "language": "vi",
+    "records": 15,
+    "classification": {
+      "web-ok": 15
+    },
+    "asrBearing": 15,
+    "g1": {
+      "webOk": 15,
+      "anyPath": 15,
+      "pass": true
+    },
+    "g2": {
+      "registers": {
+        "news": {
+          "n": 3,
+          "median": 223.72188958087187,
+          "bandMin": 180,
+          "bandMax": 270,
+          "bandMid": 225,
+          "inBandFraction": 1,
+          "status": "pass"
+        },
+        "lecture": {
+          "n": 3,
+          "median": 179.8482219662618,
+          "bandMin": 144,
+          "bandMax": 216,
+          "bandMid": 180,
+          "inBandFraction": 0.3333333333333333,
+          "status": "pass"
+        },
+        "explainer": {
+          "n": 3,
+          "median": 210.80978128116257,
+          "bandMin": 168,
+          "bandMax": 252,
+          "bandMid": 210,
+          "inBandFraction": 1,
+          "status": "pass"
+        },
+        "podcast": {
+          "n": 3,
+          "median": 200.29441379797424,
+          "bandMin": 160,
+          "bandMax": 240,
+          "bandMid": 200,
+          "inBandFraction": 0.6666666666666666,
+          "status": "pass"
+        },
+        "music": {
+          "n": 3,
+          "median": 81.14197074900281,
+          "bandMin": null,
+          "bandMax": null,
+          "bandMid": null,
+          "inBandFraction": 0,
+          "status": "no-band"
+        }
+      },
+      "pass": true
+    },
+    "g3": {
+      "mode": "regex-icu",
+      "n": 12,
+      "median": 0.01611570935730932,
+      "maxDeltaPct": 0.3085824493731919,
+      "violations": [],
+      "pass": true
+    },
+    "g4": {
+      "rows": 15,
+      "falseRows": [],
+      "pass": true
+    },
+    "g5": {
+      "n": 12,
+      "median": -20.4591788148946
+    },
+    "confusion": {
+      "news": {
+        "news": 3
+      },
+      "lecture": {
+        "generic": 2,
+        "news": 1
+      },
+      "explainer": {
+        "generic": 3
+      },
+      "podcast": {
+        "generic": 3
+      },
+      "music": {
+        "music": 2,
+        "generic": 1
+      }
+    },
+    "verdict": "corpus-validated",
+    "note": null
   }
 ]

@@ -124,10 +124,72 @@ describe('language table', () => {
   });
 
   it('keeps the register priors off every other language', () => {
+    const withRegisters = ['ru', 'uk', 'ar', 'id', 'vi', 'ms', 'tl'];
     for (const [code, model] of Object.entries(LANGUAGES)) {
-      if (code === 'ru' || code === 'uk') continue;
+      if (withRegisters.includes(code)) continue;
       expect(model.registerPriors, code).toBeUndefined();
     }
+  });
+
+  it('anchors ar/id/vi register priors to the captionless-reach corpus', () => {
+    // Built bands = measured median ± 20 (2026-08 phase0-captionless-corpus),
+    // labeled corpus-derived; the generic band is the union mid.
+    const ar = LANGUAGES['ar']!;
+    expect(ar.priorsSource).toBe('corpus');
+    expect(ar.priors).toEqual({ min: 195, max: 235 });
+    expect(ar.registerPriors).toEqual({
+      news: { min: 195, max: 235 },
+      lecture: { min: 165, max: 205 },
+      explainer: { min: 150, max: 190 },
+      podcast: { min: 235, max: 275 },
+      generic: { min: 195, max: 235 },
+    });
+    const id = LANGUAGES['id']!;
+    expect(id.priorsSource).toBe('corpus');
+    expect(id.priors).toEqual({ min: 200, max: 240 });
+    expect(id.registerPriors).toEqual({
+      news: { min: 185, max: 225 },
+      lecture: { min: 160, max: 200 },
+      explainer: { min: 175, max: 215 },
+      podcast: { min: 240, max: 280 },
+      generic: { min: 200, max: 240 },
+    });
+    const vi = LANGUAGES['vi']!;
+    expect(vi.priorsSource).toBe('corpus');
+    expect(vi.priors).toEqual({ min: 185, max: 225 });
+    expect(vi.registerPriors).toEqual({
+      news: { min: 205, max: 245 },
+      lecture: { min: 160, max: 200 },
+      explainer: { min: 190, max: 230 },
+      podcast: { min: 180, max: 220 },
+      generic: { min: 185, max: 225 },
+    });
+    for (const code of ['ar', 'id', 'vi']) {
+      const model = LANGUAGES[code]!;
+      expect(model.priors, code).toEqual(model.registerPriors?.generic);
+      for (const [type, band] of Object.entries(model.registerPriors ?? {})) {
+        expect(band!.min, `${code} ${type}`).toBeGreaterThan(0);
+        expect(band!.max, `${code} ${type}`).toBeLessThan(model.target);
+      }
+    }
+  });
+
+  it('copies id measured priors to ms/tl', () => {
+    for (const code of ['ms', 'tl']) {
+      const model = LANGUAGES[code]!;
+      expect(model.priorsSource, code).toBe('corpus');
+      expect(model.priors, code).toEqual(LANGUAGES['id']?.priors);
+      expect(model.registerPriors, code).toEqual(LANGUAGES['id']?.registerPriors);
+    }
+  });
+
+  it('keeps hi measured but ratio-derived (addendum-only)', () => {
+    // hi's medians sit far above the derived band and the Devanagari
+    // counter overcounts code-mixed text — no band is built.
+    const hi = LANGUAGES['hi']!;
+    expect(hi.priorsSource).toBeUndefined();
+    expect(hi.registerPriors).toBeUndefined();
+    expect(hi.priors).toEqual({ min: 125, max: 182 });
   });
 
   it('uses the script counters only where intended', () => {

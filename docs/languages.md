@@ -55,13 +55,13 @@ vowel letters (one vowel per syllable), hi counts Devanagari vowel nuclei.
 | zh | cpm | 240 | 258 | chars | no* | 125–182 |
 | th | cpm | 282 | 290 | chars | yes | 147–214 |
 | ko | syl/min | 340 | 350 | words (+Hangul blocks) | yes | 177–258 |
-| ar | syl/min | 330 | 360 | words | yes | 172–251 |
+| ar | syl/min | 330 | 360 | words | yes | 195–235 (per register, below) ‡ |
 | tr | syl/min | 340 | 350 | vowels | yes | 177–258 |
 | hi | syl/min | 240 | 247 | vowels | yes | 125–182 |
-| vi | wpm | 280 | 290 | words | yes | 146–213 |
-| id | syl/min | 400 | 412 | words | yes | 208–304 |
-| ms | syl/min | 400 | 412 | words | yes | 208–304 |
-| tl | syl/min | 400 | 412 | words | yes | 208–304 |
+| vi | wpm | 280 | 290 | words | yes | 185–225 (per register, below) ‡ |
+| id | syl/min | 400 | 412 | words | yes | 200–240 (per register, below) ‡ |
+| ms | syl/min | 400 | 412 | words | yes | 200–240 (per register, below) ‡ |
+| tl | syl/min | 400 | 412 | words | yes | 200–240 (per register, below) ‡ |
 | ru | wpm | 168 | 180 | words | yes | 105–145 (per register, below) † |
 | uk | wpm | 168 | 180 | words | yes | 120–160 (per register, below) † |
 | pl | wpm | 185 | 200 | words | yes | 96–141 † |
@@ -76,10 +76,17 @@ docs/phase0-russian-corpus.md, docs/phase0-slavic-corpus.md); their
 **targets and ceilings remain derived** (168/180, 185/200 — a rate corpus
 measures speech rate, not comprehension of the safe zone).
 
+‡ ar's, id's, vi's (and ms/tl's, copied from id) priors are
+**corpus-measured** (2026-08, docs/phase0-captionless-corpus.md); their
+targets and ceilings remain derived. hi also measured but stays
+ratio-derived (addendum-measured — see the register section below).
+
 Priors scale the English estimated-tier ratio (0.52–0.76 × target) to each
 language's target — the same below-target relationship as the English
-generic prior, pending per-language corpus measurement. **ru/uk/pl/cs are
-the exception**: their priors are corpus-measured, not ratio-scaled (below).
+generic prior, pending per-language corpus measurement. **ru/uk/pl/cs and
+ar/id/vi/ms/tl are the exceptions**: their priors are corpus-measured, not
+ratio-scaled (below). hi is the measured-but-not-corrected exception (the
+loanword-overcount caveat in the captionless-corpus doc).
 
 ## Slavic register priors
 
@@ -125,6 +132,31 @@ it. (The old 185 was ratio-derived; the nudge makes the ceiling
 norm-grounded like the priors.) uk talk rides the ceiling: its measured
 band tops out at 180, so interview content recommends ≈ 1.0×.
 
+## Captionless-reach register priors (ar/id/vi, ms/tl copies)
+
+ar, id and vi carry a per-register prior table (`registerPriors` in
+`lib/languages.ts`), built from the 2026-08 captionless-reach corpus
+(docs/phase0-captionless-corpus.md): each band is the measured register
+median ± 20 in the language's unit, rounded to 5, labeled corpus-derived;
+G2 passing on them is by construction (the uk correction pattern — the
+pre-correction fail against the ratio-derived bands is in the corpus doc).
+The generic band is the union mid of the register bands. ms/tl copy id
+wholesale (shared band + syllablesPerWord 1.5).
+
+| register | ar band (syl/min) | id band (syl/min) | vi band (wpm) |
+|---|---|---|---|
+| news | 195–235 | 185–225 | 205–245 |
+| lecture | 165–205 | 160–200 | 160–200 |
+| explainer | 150–190 | 175–215 | 190–230 |
+| podcast | 235–275 | 240–280 | 180–220 |
+| generic | 195–235 | 200–240 | 185–225 |
+
+hi measured but stays ratio-derived (priors 125–182, no registerPriors):
+the measured medians sit far above the derived band, and the Devanagari
+counter overcounts code-mixed text (Hindi orthography writes inherent
+schwas in English loanwords — टिप्स counts 2, spoken 1), so no band is
+built. The hi data is committed in the corpus (addendum-measured).
+
 ## Tokenizer modes
 
 `countWordTokens(text, mode)` in `lib/tokenizer.ts`:
@@ -150,7 +182,10 @@ band tops out at 180, so interview content recommends ≈ 1.0×.
   where a halant (्) removes the preceding consonant's vowel and a
   word-final consonant loses its schwa (Hindi's regular final-schwa
   deletion). Residual deviation: epenthetic schwas inside halant clusters
-  (नमस्ते counts 2, spoken 3) — within ±10%.
+  (नमस्ते counts 2, spoken 3) — within ±10%. Latin-script hi (hi-Latn
+  tracks) counts word runs: `unitTokens` resolves the mode from the text
+  (hasDevanagari), not just the model's tokenizerMode — the Devanagari
+  counter returns 0 on Latin text.
 
 Music detection (`isBracketMarker`, `hasNoteSymbol`) is mode-independent and
 keeps working in every mode.
@@ -211,12 +246,12 @@ keeps working in every mode.
 
 ## Deferred / known limits
 
-- **Corpus measurement** — ru/uk/pl/cs natural-rate priors are now
-  corpus-measured (2026-08, phase0-russian-corpus,
-  phase0-slavic-corpus); every other language's targets and priors remain
-  derived. The harness plan for further per-language corpora is deferred;
-  the `logWpm` measurement hooks remain word-based and English-labeled
-  until a harness runs per language.
+- **Corpus measurement** — ru/uk/pl/cs (phase0-russian-corpus,
+  phase0-slavic-corpus) and ar/id/vi/ms/tl (phase0-captionless-corpus)
+  natural-rate priors are corpus-measured; every other language's targets
+  and priors remain derived (hi measured but addendum-only, see the
+  register section). The `logWpm` measurement hooks remain word-based and
+  English-labeled until a harness runs per language.
 - **generic.content.ts** stays on the English/default path by design.
 - The options-page target slider is wpm-labeled; a user target set there
   applies as a raw number in the track language's unit.

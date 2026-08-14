@@ -1,0 +1,483 @@
+{
+  "videos": [
+    {
+      "videoId": "YjsY60G6YEc",
+      "register": "news",
+      "title": "Aaj Tak — news bulletin (fallback pick)",
+      "language": "hi",
+      "provenance": "Aaj Tak, IN (Devanagari hi)"
+    },
+    {
+      "videoId": "RE_PIzcawY4",
+      "register": "news",
+      "title": "Aaj Tak — AAJTAK 2 LIVE । PARLIAMENT SESSION का आखिरी दिन, आज AMIT SHAH देंगे जवाब!  AT2 LIVE ।",
+      "language": "hi",
+      "provenance": "Aaj Tak, IN (Devanagari hi)"
+    },
+    {
+      "videoId": "A6_oNO5r4ew",
+      "register": "news",
+      "title": "Aaj Tak — AAJTAK 2 LIVE | SURYAGRAHAN 2026 | साल का आखिरी ग्रहण, कहां-कहां से दिखेगा? भारत पर असर? AT2",
+      "language": "hi",
+      "provenance": "Aaj Tak, IN (Devanagari hi)"
+    },
+    {
+      "videoId": "T-ai0o3x4EY",
+      "register": "lecture",
+      "title": "NPTEL IIT Bombay — Course Introduction (Maternal Infant Young Child Nutrition)",
+      "language": "hi",
+      "provenance": "NPTEL IIT Bombay, IN (Devanagari hi)"
+    },
+    {
+      "videoId": "O9Tjcc0Dm-E",
+      "register": "lecture",
+      "title": "NPTEL-NOC IITM — Machine Learning (Ml) In Hindi - Course Intro",
+      "language": "hi",
+      "provenance": "NPTEL, IN (Devanagari hi)"
+    },
+    {
+      "videoId": "p65zuSdNq_c",
+      "register": "lecture",
+      "title": "Er. Aadarsh Mahara  — Every NPTEL Student Needs to See This Before the Exam🎯 | Guaranteed Help 📈 (You’ll Thank Me Late",
+      "language": "hi",
+      "provenance": "NPTEL, IN (Devanagari hi)"
+    },
+    {
+      "videoId": "5F-nvPWJqaA",
+      "register": "podcast",
+      "title": "Ranveer Allahbadia — MINDF*CKING HISTORY - 7 Mysterious Places On Earth | Abhijit Chavda On TRS",
+      "language": "hi",
+      "provenance": "The Ranveer Show, IN (Devanagari hi)"
+    },
+    {
+      "videoId": "DF-JGLoEsho",
+      "register": "podcast",
+      "title": "Ranveer Allahbadia — Watch This After Dhurandhar 2 - Honsla Eendhan Badla Podcast 🔥 I Anirudhya Mitra | TRS",
+      "language": "hi",
+      "provenance": "The Ranveer Show, IN (Devanagari hi)"
+    },
+    {
+      "videoId": "ghlRhpL3FQ8",
+      "register": "podcast",
+      "title": "Ranveer Allahbadia — You Won't Believe This Episode - How To Birth A 'Super Soul' | TRS",
+      "language": "hi",
+      "provenance": "The Ranveer Show, IN (Devanagari hi)"
+    },
+    {
+      "videoId": "O5gwxm3NxFU",
+      "register": "music",
+      "title": "ABT Lofi Music — Best Of Arijit Singh 2024 | Arijit Singh Hits Songs | Arijit Singh Jukebox Songs | Indian Songs",
+      "language": "hi",
+      "provenance": "Bollywood lyric, IN (Devanagari hi)"
+    },
+    {
+      "videoId": "gdGUeX1i0n0",
+      "register": "music",
+      "title": "ABT Lofi Music — Best Of Arijit Singh 2024 | Arijit Singh Hits Songs | Arijit Singh Jukebox Songs | Indian Songs",
+      "language": "hi",
+      "provenance": "Bollywood lyric, IN (Devanagari hi)"
+    },
+    {
+      "videoId": "00DvaPstcpo",
+      "register": "music",
+      "title": "Bollywood Chartbusters — LONG DRIVE Bollywood Mix - Arijit Singh | Full Album | 2 Hour Nonstop | Apna Bana Le, Zaalima &",
+      "language": "hi",
+      "provenance": "Bollywood lyric, IN (Devanagari hi)"
+    },
+    {
+      "videoId": "9kiiZm-1vlU",
+      "register": "news",
+      "title": "AlJazeera Arabic  قناة الجزيرة — الحوثيون يعلنون استهداف مصفاة أرامكو في جازان والسعودية تعلن إخماد الحريق",
+      "language": "ar",
+      "provenance": "Al Jazeera, MSA (QA)"
+    },
+    {
+      "videoId": "hDEPrYGIu8Y",
+      "register": "news",
+      "title": "AlJazeera Arabic  قناة الجزيرة — American Company HKN Begins Oil Production in 7 Largest Fields in Northeastern Syria",
+      "language": "ar",
+      "provenance": "Al Jazeera, MSA (QA)"
+    },
+    {
+      "videoId": "04EjflyMKYQ",
+      "register": "news",
+      "title": "AlJazeera Arabic  قناة الجزيرة — ما أفق العملية البرية المحتملة للولايات المتحدة في إيران؟",
+      "language": "ar",
+      "provenance": "Al Jazeera, MSA (QA)"
+    },
+    {
+      "videoId": "ZD-YmiHjmoA",
+      "register": "lecture",
+      "title": " ( تبيّن لي ) Safwan   — محاضرة جامعة السوربون كاملة مع الأسئلة دون تقطيع👌 أخطر ما قاله د. محمد شحرور رحمه الله",
+      "language": "ar",
+      "provenance": "university lecture, MSA (regional)"
+    },
+    {
+      "videoId": "Ml9T2TXHH4I",
+      "register": "lecture",
+      "title": "Sana'a University — المحاضرة الأولى لمادة الفيزياء",
+      "language": "ar",
+      "provenance": "Sana'a University, YE (MSA)"
+    },
+    {
+      "videoId": "xPCPy9yUcbU",
+      "register": "lecture",
+      "title": "حسن الترابي — محاضرة حسن الترابي. الفقه الاسلامي بين التقليد والتجديد. جامعة الخرطوم - كلية العلوم الرياضية. ٢٠٠٨",
+      "language": "ar",
+      "provenance": "university lecture, MSA (regional)"
+    },
+    {
+      "videoId": "C2psZY9I6CY",
+      "register": "explainer",
+      "title": "Al Jazeera Documentary الجزيرة الوثائقية — ميشيل عفلق.. قصة مؤسس الحزب الذي أوصل صدام وحافظ إلى الحكم",
+      "language": "ar",
+      "provenance": "documentary/explainer, MSA (QA)"
+    },
+    {
+      "videoId": "IK8ZX1yXkJo",
+      "register": "explainer",
+      "title": "Al Jazeera Documentary الجزيرة الوثائقية — إرنستو الغابة.. لماذا ترك كل شيء وعاش في الغابة؟",
+      "language": "ar",
+      "provenance": "documentary/explainer, MSA (QA)"
+    },
+    {
+      "videoId": "S8yQ2hgmABU",
+      "register": "explainer",
+      "title": "Al Jazeera Documentary الجزيرة الوثائقية — شولا كوهين.. عميلة الموساد في قلب لبنان",
+      "language": "ar",
+      "provenance": "documentary/explainer, MSA (QA)"
+    },
+    {
+      "videoId": "pJ0auP7dbcY",
+      "register": "podcast",
+      "title": "إذاعة ثمانية — كيف تنجح العلاقات مع ياسر الحزيمي | بودكاست فنجان",
+      "language": "ar",
+      "provenance": "Finjan podcast, Gulf (SA)"
+    },
+    {
+      "videoId": "06LO3tyqOUc",
+      "register": "podcast",
+      "title": "إذاعة ثمانية — كيف تعمل السياسة الأمريكية | بودكاست فنجان",
+      "language": "ar",
+      "provenance": "Finjan podcast, Gulf (SA)"
+    },
+    {
+      "videoId": "r0v4_1hSvC8",
+      "register": "podcast",
+      "title": "إذاعة ثمانية — كيف يفكر بوتين | بودكاست فنجان",
+      "language": "ar",
+      "provenance": "Finjan podcast, Gulf (SA)"
+    },
+    {
+      "videoId": "fGFB29lQ-Vs",
+      "register": "music",
+      "title": "Rotana — Amr Diab - Khalik Maaya | عمرو دياب - خليك معايا",
+      "language": "ar",
+      "provenance": "Egyptian pop lyric (EG)"
+    },
+    {
+      "videoId": "FF10_N6qqYg",
+      "register": "music",
+      "title": "Mazzika - مزيكا — Best of Amr Diab | أجمل اغاني عمرو دياب",
+      "language": "ar",
+      "provenance": "Egyptian pop lyric (EG)"
+    },
+    {
+      "videoId": "u_G1NCwQZ4E",
+      "register": "music",
+      "title": "Amr Diab and Orange Egypt — Amr Diab & Orange - Lola El Banat (Official Music Video) - عمرو دياب  واورنچ - لولا البنات",
+      "language": "ar",
+      "provenance": "Egyptian pop lyric (EG)"
+    },
+    {
+      "videoId": "Gy4pUPEQ0xk",
+      "register": "news",
+      "title": "KOMPASTV — FULL! Rumors of Police Chief Replacement Grow, Experts Analyze \"Testing the Waters\" & President P...",
+      "language": "id",
+      "provenance": "Kompas TV, ID"
+    },
+    {
+      "videoId": "hDvx3yfWE3M",
+      "register": "news",
+      "title": "KOMPASTV — 🔴LIVE - Ijazah Jokowi Dipersoalkan, Ijazah Gibran Disayembarakan | ROSI",
+      "language": "id",
+      "provenance": "Kompas TV, ID"
+    },
+    {
+      "videoId": "QWLeG2j2nZM",
+      "register": "news",
+      "title": "KOMPASTV — 🔴BREAKING NEWS - Hundreds of Firearms Discovered at School",
+      "language": "id",
+      "provenance": "Kompas TV, ID"
+    },
+    {
+      "videoId": "-ugXzISUuyo",
+      "register": "lecture",
+      "title": "Recehin Quote & News — dr. Tirta Berbagi Ilmu Soal Bisnis hingga Longlife Learning di ITB",
+      "language": "id",
+      "provenance": "university lecture, ID"
+    },
+    {
+      "videoId": "ZQ1GhQp7lDo",
+      "register": "lecture",
+      "title": "MALAKA — Public Lecture: Communication & Thinking | University of Indonesia",
+      "language": "id",
+      "provenance": "university lecture, ID"
+    },
+    {
+      "videoId": "txOWhzgrZpM",
+      "register": "lecture",
+      "title": "Bagus Muljadi — Bisa Jadi Anda Salah Paham Tentang Berpikir Kritis",
+      "language": "id",
+      "provenance": "university lecture, ID"
+    },
+    {
+      "videoId": "l8CH-eQsHBw",
+      "register": "explainer",
+      "title": "Kok Bisa? — The Incredible Weirdness of the Quantum World",
+      "language": "id",
+      "provenance": "Kok Bisa, ID"
+    },
+    {
+      "videoId": "6WlMwI0l_js",
+      "register": "explainer",
+      "title": "Kok Bisa? — Why Is Something This Dangerous in So Many People's Homes?",
+      "language": "id",
+      "provenance": "Kok Bisa, ID"
+    },
+    {
+      "videoId": "z2UIb6Bf2_4",
+      "register": "explainer",
+      "title": "Kok Bisa? — The Hidden Reason Why Feeling Boredom Is So Important",
+      "language": "id",
+      "provenance": "Kok Bisa, ID"
+    },
+    {
+      "videoId": "gs3VxACKogM",
+      "register": "podcast",
+      "title": "Raditya Dika — Deddy Corbuzier. Dah, Judulnya Cukup Gitu Aja.",
+      "language": "id",
+      "provenance": "Deddy Corbuzier, ID"
+    },
+    {
+      "videoId": "dldMBB72FAA",
+      "register": "podcast",
+      "title": "Paraswara and Cinta Laura Kiehl — How to Build Business and A.I. Frameworks | RAYMOND CHIN | C.E.O.",
+      "language": "id",
+      "provenance": "Raymond Chin, ID"
+    },
+    {
+      "videoId": "IMswdofAdnA",
+      "register": "podcast",
+      "title": "Raditya Dika — Sadar Setelah Setahun..",
+      "language": "id",
+      "provenance": "Raymond Chin, ID"
+    },
+    {
+      "videoId": "AtLiblWZf7Q",
+      "register": "music",
+      "title": "ViraLirik — KUMPULAN LAGU TULUS COCOK SAAT BERAKTIVITAS,,",
+      "language": "id",
+      "provenance": "Tulus lyric, ID"
+    },
+    {
+      "videoId": "RO75uUZiAw0",
+      "register": "music",
+      "title": "Tulus — TULUS - Teh Hijau (Official Lyric Video)",
+      "language": "id",
+      "provenance": "Tulus lyric, ID"
+    },
+    {
+      "videoId": "_N6vSc_mT6I",
+      "register": "music",
+      "title": "Tulus — TULUS - Hati-Hati di Jalan (Official Lyric Video)",
+      "language": "id",
+      "provenance": "Tulus lyric, ID"
+    },
+    {
+      "videoId": "6rtke1OhMPo",
+      "register": "news",
+      "title": "VTV24 — Evening News Panorama July 25: Implementation of the Politburo's Decision on Personnel Work | VTV24",
+      "language": "vi",
+      "provenance": "VTV, VN"
+    },
+    {
+      "videoId": "U0VWCO-xo6Q",
+      "register": "news",
+      "title": "VTV24 — Evening News Panorama June 30: The 1-Year Milestone of the 3-Tier Government Model | VTV24",
+      "language": "vi",
+      "provenance": "VTV, VN"
+    },
+    {
+      "videoId": "_BvpgTQ5oHI",
+      "register": "news",
+      "title": "VTV24 — News Panorama Afternoon 6/15: One-way locking of unverified mobile subscribers | VTV24",
+      "language": "vi",
+      "provenance": "VTV, VN"
+    },
+    {
+      "videoId": "a0ZW8fOD5SY",
+      "register": "lecture",
+      "title": "Con Chào Mào — Scientific Socialism Session 5",
+      "language": "vi",
+      "provenance": "university lecture, VN"
+    },
+    {
+      "videoId": "_g_1znJ2uJw",
+      "register": "lecture",
+      "title": "Nguyen Thuy Quynh HNUE — ĐỂ BÀI GIẢNG HẤP DẪN HƠN - KĨ NĂNG DIỄN GIẢNG CỦA GIÁO VIÊN",
+      "language": "vi",
+      "provenance": "university lecture, VN"
+    },
+    {
+      "videoId": "vLLBAuRH6Lw",
+      "register": "lecture",
+      "title": "CHÁNH NIỆM MỖI NGÀY — Phật Dạy Học Cách Buông Bỏ Để Tâm An, Sống Trọn Vẹn Từng Khoảnh Khắc",
+      "language": "vi",
+      "provenance": "university lecture, VN"
+    },
+    {
+      "videoId": "OgHiCHKIIZA",
+      "register": "explainer",
+      "title": "Bix — 100 điều khoa học vẫn chưa thể giải thích — Cùng khoa học ngủ gật",
+      "language": "vi",
+      "provenance": "science explainer, VN"
+    },
+    {
+      "videoId": "OAwE_x2yidk",
+      "register": "explainer",
+      "title": "Ngủ Cùng Tri Thức — Các Nhà Khoa Học Giải Thích Vì Sao Tiến Hóa Chọn Cái Chết Thay Vì Sống Mãi Mãi",
+      "language": "vi",
+      "provenance": "science explainer, VN"
+    },
+    {
+      "videoId": "cJRsTK__9sM",
+      "register": "explainer",
+      "title": "Bí Ẩn Nền Văn Minh — 4 Đường Hầm Cổ Đại Không Thể Giải Thích: Khoa Học Kinh Hoàng Trước Dấu Vết Máy Móc 30.000 Năm",
+      "language": "vi",
+      "provenance": "science explainer, VN"
+    },
+    {
+      "videoId": "ECiKtkjDrbw",
+      "register": "podcast",
+      "title": "Vietcetera — Chỉ yêu thôi thì không đủ - Hoàng Nam Tiến | #HaveASip 172",
+      "language": "vi",
+      "provenance": "VN podcast"
+    },
+    {
+      "videoId": "hFHj6x-mSmk",
+      "register": "podcast",
+      "title": "Vietcetera — Đừng trì hoãn điều nhỏ nhặt (Dịch giả T)",
+      "language": "vi",
+      "provenance": "Vietcetera, VN"
+    },
+    {
+      "videoId": "_0O4JsIRkOk",
+      "register": "podcast",
+      "title": "Vietcetera — Bạn có biết bao nhiêu ngôn ngữ, chỉ cần nhớ một từ tiếng Việt - Cô Tôn Nữ Thị Ninh | #HaveASip 234",
+      "language": "vi",
+      "provenance": "VN podcast"
+    },
+    {
+      "videoId": "aqEodtRNBMY",
+      "register": "music",
+      "title": "Hoa Duong Concert — MỸ TÂM - 10 BÀI HÁT HAY NHẤT | Chuyện Như Chưa Bắt Đầu , Đừng Hỏi Em , Như Một Giấc Mơ",
+      "language": "vi",
+      "provenance": "Mỹ Tâm lyric, VN"
+    },
+    {
+      "videoId": "1iXvBEeTvIs",
+      "register": "music",
+      "title": "Hoa Duong Concert — MỸ TÂM - 10 Bài Hát ĐƯỢC NGHE NHIỀU NHẤT | Đừng Hỏi Em & Chuyện Như Chưa Bắt Đầu",
+      "language": "vi",
+      "provenance": "Mỹ Tâm lyric, VN"
+    },
+    {
+      "videoId": "oJd3NRQa-C8",
+      "register": "music",
+      "title": "Nhạc Hay Việt Nam — Mỹ Tâm Tình Lỡ Cách Xa - Những Ca Khúc Hay Nhất Của Mỹ Tâm 2020 Nghe Đi Nghe Lại Vẫn Thấy Hay",
+      "language": "vi",
+      "provenance": "Mỹ Tâm lyric, VN"
+    },
+    {
+      "videoId": "ZpCVHrGbBYg",
+      "register": "explainer",
+      "title": "Swami GovindaDev Giri — Vedas & Science (Rishi Samvad)",
+      "language": "hi",
+      "provenance": "Science Samvad, IN (Devanagari hi)"
+    },
+    {
+      "videoId": "Zgdn_lDRUew",
+      "register": "explainer",
+      "title": "Dhruv Rathee — Why is Assam DROWNING?",
+      "language": "hi",
+      "provenance": "Dhruv Rathee, IN (Devanagari hi)"
+    },
+    {
+      "videoId": "yTV22sMVHPQ",
+      "register": "explainer",
+      "title": "Dhruv Rathee — Iran Israel War",
+      "language": "hi",
+      "provenance": "Dhruv Rathee, IN (Devanagari hi)"
+    }
+  ],
+  "fallbacks": {
+    "hi:lecture": [
+      "tUFzcOvqq0U"
+    ],
+    "hi:explainer": [
+      "Myd5I653DMQ"
+    ],
+    "hi:podcast": [
+      "ku5BobRq0to"
+    ],
+    "hi:music": [
+      "yKbFhvKbXxw"
+    ],
+    "ar:news": [
+      "CFHhFJbNK64"
+    ],
+    "ar:lecture": [
+      "1l6-MzGJ5DA"
+    ],
+    "ar:explainer": [
+      "FBP_nFpcNmM"
+    ],
+    "ar:podcast": [
+      "bwi8SZLFe2U"
+    ],
+    "ar:music": [
+      "FirJe3W2Lf8"
+    ],
+    "id:news": [
+      "ErIay6XeWDo"
+    ],
+    "id:lecture": [
+      "n_jiMASNzW0"
+    ],
+    "id:explainer": [
+      "QiCjfr1HS70"
+    ],
+    "id:podcast": [
+      "OVEZmqevwn4"
+    ],
+    "id:music": [
+      "Vv4g2viFPm0"
+    ],
+    "vi:news": [
+      "qnUhaPaQNN8"
+    ],
+    "vi:lecture": [
+      "57nnaI6f98g"
+    ],
+    "vi:explainer": [
+      "3gHZn0Wm5tA"
+    ],
+    "vi:podcast": [
+      "j9AuAesO8iw"
+    ],
+    "vi:music": [
+      "fKxzF3sG0P0"
+    ]
+  }
+}

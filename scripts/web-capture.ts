@@ -85,9 +85,10 @@ export async function waitForFreshTimedtext(
 /**
  * Open the settings gear → Subtitles/CC panel and pick the ASR-preferred
  * track: auto-generated (or the localized/ASR marker), else the track in
- * `lang` (English by default; `русск|russian` for ru), else the first
- * non-Off/non-Options item. Returns false when no menu or no pickable
- * track exists.
+ * `lang` (English by default; the localized/script name for the corpus
+ * languages: русск|russian, hindi|हिन्दी, arabic|العربية, indonesian,
+ * vietnamese|tiếng việt), else the first non-Off/non-Options item.
+ * Returns false when no menu or no pickable track exists.
  */
 export async function pickAsrTrackFromMenu(page: Page, lang = 'en'): Promise<boolean> {
   try {
@@ -113,7 +114,13 @@ export async function pickAsrTrackFromMenu(page: Page, lang = 'en'): Promise<boo
       const items = Array.from(document.querySelectorAll('.ytp-menuitem'));
       const skip = (el: Element): boolean =>
         /^off$/i.test(label(el)) || /^options?$/i.test(label(el));
-      const langPick = lang === 'ru' ? /русск|russian/i : /english/i;
+      const langPick =
+        lang === 'ru' ? /русск|russian/i :
+        lang === 'hi' ? /hindi|हिन्दी/i :
+        lang === 'ar' ? /arabic|العربية/i :
+        lang === 'id' ? /indonesian|bahasa indonesia/i :
+        lang === 'vi' ? /vietnamese|tiếng việt/i :
+        /english/i;
       const pick =
         items.find((el) => /auto[- ]?generated|автомат|\(asr\)/i.test(label(el))) ??
         items.find((el) => langPick.test(label(el))) ??

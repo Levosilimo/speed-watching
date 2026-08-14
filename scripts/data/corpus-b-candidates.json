@@ -1,0 +1,129 @@
+{
+  "hi": {
+    "news": [
+      { "query": "aaj tak news today", "provenance": "Aaj Tak, IN (Devanagari hi)" },
+      { "query": "abp news latest", "provenance": "ABP News, IN (Devanagari hi)" },
+      { "query": "ndtv india hindi news", "provenance": "NDTV India, IN (Devanagari hi)" },
+      { "query": "dd news bulletin", "provenance": "DD News, IN (Devanagari hi)" }
+    ],
+    "lecture": [
+      { "query": "nptel hindi lecture", "provenance": "NPTEL, IN (Devanagari hi)" },
+      { "query": "study iq education history hindi", "provenance": "StudyIQ, IN (Devanagari hi)" },
+      { "query": "physics wallah hindi lecture", "provenance": "Physics Wallah, IN (Devanagari hi)" },
+      { "query": "unacademy hindi lecture", "provenance": "Unacademy, IN (Devanagari hi)" }
+    ],
+    "explainer": [
+      { "query": "science samvad", "provenance": "Science Samvad, IN (Devanagari hi)" },
+      { "query": "dhruv rathee hindi", "provenance": "Dhruv Rathee, IN (Devanagari hi)" },
+      { "query": "vigyan hindi video", "provenance": "IN explainer (Devanagari hi)" },
+      { "query": "random facts hindi", "provenance": "IN explainer (Devanagari hi)" }
+    ],
+    "podcast": [
+      { "query": "ranveer show podcast", "provenance": "The Ranveer Show, IN (Devanagari hi)" },
+      { "query": "raj shamani podcast", "provenance": "Raj Shamani, IN (Devanagari hi)" },
+      { "query": "dostcast podcast", "provenance": "Dostcast, IN (Devanagari hi)" },
+      { "query": "hindi podcast interview", "provenance": "IN podcast (Devanagari hi)" }
+    ],
+    "music": [
+      { "query": "arijit singh song hindi", "provenance": "Bollywood lyric, IN (Devanagari hi)" },
+      { "query": "bollywood hits hindi song", "provenance": "Bollywood lyric, IN (Devanagari hi)" },
+      { "query": "neha kakkar hindi song", "provenance": "Bollywood lyric, IN (Devanagari hi)" },
+      { "query": "old hindi songs", "provenance": "Hindi classic lyric, IN (Devanagari hi)" }
+    ]
+  },
+  "ar": {
+    "news": [
+      { "query": "الجزيرة تقرير", "provenance": "Al Jazeera, MSA (QA)" },
+      { "query": "العربية اخبار", "provenance": "Al Arabiya, MSA (AE)" },
+      { "query": "بي بي سي عربي", "provenance": "BBC Arabic, MSA (UK)" },
+      { "query": "فرانس 24 عربي", "provenance": "France24 Arabic, MSA (FR)" }
+    ],
+    "lecture": [
+      { "query": "محاضرة جامعية", "provenance": "university lecture, MSA (regional)" },
+      { "query": "شرح درس اللغة العربية", "provenance": "educational lecture, MSA" },
+      { "query": "محاضرات في الفيزياء", "provenance": "science lecture, MSA" },
+      { "query": "درس تاريخ جامعي", "provenance": "history lecture, MSA" }
+    ],
+    "explainer": [
+      { "query": "الجزيرة الوثائقية", "provenance": "documentary/explainer, MSA (QA)" },
+      { "query": "تفسير علمي بالعربية", "provenance": "science explainer, MSA" },
+      { "query": "معلومة في دقيقة", "provenance": "explainer, MSA" },
+      { "query": "كيف يعمل", "provenance": "explainer, MSA" }
+    ],
+    "podcast": [
+      { "query": "فنجان بودكاست", "provenance": "Finjan podcast, Gulf (SA)" },
+      { "query": "سوالف بزنس", "provenance": "Sowalif Business, Gulf (SA)" },
+      { "query": "بودكاست ثمانية", "provenance": "Thmanyah, MSA (SA)" },
+      { "query": "بودكاست مقابلة", "provenance": "interview podcast, MSA" }
+    ],
+    "music": [
+      { "query": "عمرو دياب اغنية", "provenance": "Egyptian pop lyric (EG)" },
+      { "query": "كاظم الساهر", "provenance": "Iraqi pop lyric (IQ)" },
+      { "query": "فيروز اغاني", "provenance": "Levantine lyric (LB)" },
+      { "query": "اغنية عربية 2026", "provenance": "Arabic pop lyric (regional)" }
+    ]
+  },
+  "id": {
+    "news": [
+      { "query": "kompas tv berita", "provenance": "Kompas TV, ID" },
+      { "query": "cnn indonesia berita", "provenance": "CNN Indonesia, ID" },
+      { "query": "metro tv berita", "provenance": "Metro TV, ID" },
+      { "query": "tribunnews", "provenance": "Tribunnews, ID" }
+    ],
+    "lecture": [
+      { "query": "kuliah umum", "provenance": "university lecture, ID" },
+      { "query": "guru gembul", "provenance": "Guru Gembul, ID" },
+      { "query": "ceramah ilmu", "provenance": "lecture, ID" },
+      { "query": "belajar sejarah indonesia", "provenance": "history lecture, ID" }
+    ],
+    "explainer": [
+      { "query": "kok bisa", "provenance": "Kok Bisa, ID" },
+      { "query": "sains indonesia", "provenance": "science explainer, ID" },
+      { "query": "apa itu", "provenance": "explainer, ID" },
+      { "query": "fakta menarik indonesia", "provenance": "explainer, ID" }
+    ],
+    "podcast": [
+      { "query": "deddy corbuzier podcast", "provenance": "Deddy Corbuzier, ID" },
+      { "query": "raymond chin podcast", "provenance": "Raymond Chin, ID" },
+      { "query": "podcast indonesia", "provenance": "ID podcast" },
+      { "query": "obrolan podcast", "provenance": "ID podcast" }
+    ],
+    "music": [
+      { "query": "tulus lagu", "provenance": "Tulus lyric, ID" },
+      { "query": "raisa lagu", "provenance": "Raisa lyric, ID" },
+      { "query": "lagu indonesia terbaru", "provenance": "ID pop lyric" },
+      { "query": "musik indonesia hits", "provenance": "ID pop lyric" }
+    ]
+  },
+  "vi": {
+    "news": [
+      { "query": "vtv thoi su", "provenance": "VTV, VN" },
+      { "query": "vnexpress", "provenance": "VnExpress, VN" },
+      { "query": "vtc tin tuc", "provenance": "VTC, VN" },
+      { "query": "tin tuc 24h", "provenance": "VN news" }
+    ],
+    "lecture": [
+      { "query": "bai giang dai hoc", "provenance": "university lecture, VN" },
+      { "query": "thay giao day hoc", "provenance": "lecture, VN" },
+      { "query": "hoc lich su viet nam", "provenance": "history lecture, VN" },
+      { "query": "bai giang toan", "provenance": "math lecture, VN" }
+    ],
+    "explainer": [
+      { "query": "khoa hoc giai thich", "provenance": "science explainer, VN" },
+      { "query": "kien thuc video", "provenance": "explainer, VN" },
+      { "query": "tai sao lai", "provenance": "explainer, VN" },
+      { "query": "hieu biet moi ngay", "provenance": "explainer, VN" }
+    ],
+    "podcast": [
+      { "query": "podcast tieng viet", "provenance": "VN podcast" },
+      { "query": "hieu tv podcast", "provenance": "Hieu TV, VN" },
+      { "query": "chuyen ke podcast", "provenance": "VN podcast" }
+    ],
+    "music": [
+      { "query": "my tam ca khuc", "provenance": "Mỹ Tâm lyric, VN" },
+      { "query": "son tung mtp", "provenance": "Sơn Tùng lyric, VN" },
+      { "query": "nhac viet 2026", "provenance": "VN pop lyric" },
+      { "query": "nhac tre moi", "provenance": "VN pop lyric" }
+    ]
+  }
+}
