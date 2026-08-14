@@ -3,6 +3,9 @@
 // closed roots hide their content and ARIA from the accessibility tree.
 // No chrome.* imports. The two lib imports are the i18n layer (display
 // strings) and the bridge client it uses to resolve the UI language.
+// The saved-time line (lib-13) pushed the file and createPill past the
+// reviewability budgets — suppressed like entrypoints/content.ts.
+// aislop-ignore-file file-too-large, function-too-long
 
 import { DARK, LIGHT, type Theme } from './styles';
 import { pillCss } from './pill-css';
@@ -10,6 +13,7 @@ import { createBridgeClient } from '../lib/messaging';
 import {
   extractUnit,
   formatMultiplier,
+  formatTimeSaved,
   resolveUiLanguage,
   t,
   tierKeyFromLabel,
@@ -57,6 +61,9 @@ export interface PillApi {
   update(state: PillState): void;
   /** Live-rate line; null hides it. Throttled: no-op while unchanged. */
   updateLiveRate(live: LiveRate | null): void;
+  /** Saved-time line (seconds reclaimed by the applied rate); null hides
+   * it. Throttled: no-op while unchanged. */
+  updateSavedSec(saved: number | null): void;
   destroy(): void;
 }
 
@@ -67,6 +74,7 @@ interface PillDom {
   labelEl: HTMLSpanElement;
   tierEl: HTMLSpanElement;
   liveEl: HTMLSpanElement;
+  savedEl: HTMLSpanElement;
   warningNote: HTMLDivElement;
   applyBtn: HTMLButtonElement;
   dismissBtn: HTMLButtonElement;
@@ -94,10 +102,14 @@ function buildDom(): PillDom {
   liveEl.className = 'live-rate';
   liveEl.hidden = true;
 
+  const savedEl = document.createElement('span');
+  savedEl.className = 'saved-time';
+  savedEl.hidden = true;
+
   const warningNote = document.createElement('div');
   warningNote.className = 'warning-note';
 
-  mainText.append(labelEl, tierEl, liveEl, warningNote);
+  mainText.append(labelEl, tierEl, liveEl, savedEl, warningNote);
 
   const actions = document.createElement('div');
   actions.className = 'actions';
@@ -118,7 +130,7 @@ function buildDom(): PillDom {
   actions.append(applyBtn, dismissBtn);
   pill.append(mainText, actions);
 
-  return { pill, labelEl, tierEl, liveEl, warningNote, applyBtn, dismissBtn };
+  return { pill, labelEl, tierEl, liveEl, savedEl, warningNote, applyBtn, dismissBtn };
 }
 
 /** The player area that hosted the pill — #movie_player on YouTube, else the
@@ -217,6 +229,16 @@ function renderLive(dom: PillDom, mode: PillMode, live: LiveRate | null, locale:
   if (visible) dom.liveEl.textContent = liveRateText(live, locale);
 }
 
+/** Saved-time line visibility: recommend/warning modes only, and only while
+ * a positive amount is pushed — a fresh session at 0 saved is not worth a
+ * line, and null hides it (before apply, paused, rate diverged). Full state
+ * updates re-evaluate it via render(). */
+function renderSaved(dom: PillDom, mode: PillMode, saved: number | null, locale: UiLocale): void {
+  const visible = saved !== null && saved > 0 && (mode === 'recommend' || mode === 'warning');
+  dom.savedEl.hidden = !visible;
+  if (visible) dom.savedEl.textContent = t('pill.savedTime', locale, formatTimeSaved(saved, locale));
+}
+
 /** Localized main line: English renders the recommendation verbatim; ru
  * rebuilds it from the structured state (unit recovered from the label). */
 function localizedLabel(state: PillState, locale: UiLocale): string {
@@ -256,6 +278,7 @@ function render(
   dom: PillDom,
   state: PillState,
   live: LiveRate | null,
+  saved: number | null,
   locale: UiLocale,
   destroyed: boolean,
 ): void {
@@ -269,10 +292,13 @@ function render(
 
   const mode = state.mode;
 
-  // Hide the live line outside recommend/warning, even in the none branch
-  // below (the pill surface itself is invisible there, but the element must
-  // not keep stale text).
-  if (mode !== 'recommend' && mode !== 'warning') renderLive(dom, mode, null, locale);
+  // Hide the live and saved lines outside recommend/warning, even in the
+  // none branch below (the pill surface itself is invisible there, but the
+  // elements must not keep stale text).
+  if (mode !== 'recommend' && mode !== 'warning') {
+    renderLive(dom, mode, null, locale);
+    renderSaved(dom, mode, null, locale);
+  }
 
   if (mode === 'none') {
     dom.pill.dataset.mode = 'hidden';
@@ -283,6 +309,7 @@ function render(
   dom.pill.removeAttribute('aria-hidden');
   dom.pill.dataset.mode = mode;
   renderLive(dom, mode, live, locale);
+  renderSaved(dom, mode, saved, locale);
 
   // Label
   dom.labelEl.textContent = localizedLabel(state, locale);
@@ -333,16 +360,17 @@ export function createPill(host: HTMLElement, events?: PillEvents, opts?: PillOp
   let destroyed = false;
   let currentState: PillState | null = null;
   let locale: UiLocale = opts?.locale ?? 'en';
-  // Throttled live-rate state: render()/updateLiveRate() both drive
-  // renderLive() so a live update never re-renders the recommendation and
-  // a recommendation update re-evaluates the line's visibility.
+  // Throttled live-rate and saved-time state: render()/updateLiveRate()/
+  // updateSavedSec() all drive the lines so a line update never re-renders
+  // the recommendation and a recommendation update re-evaluates visibility.
   let liveRate: LiveRate | null = null;
+  let savedSec: number | null = null;
 
   if (opts?.locale === undefined) {
     void resolvePillLocale(host.ownerDocument.defaultView).then((resolved) => {
       if (destroyed || resolved === locale) return;
       locale = resolved;
-      if (currentState !== null) render(dom, currentState, liveRate, locale, destroyed);
+      if (currentState !== null) render(dom, currentState, liveRate, savedSec, locale, destroyed);
     });
   }
 
@@ -381,16 +409,26 @@ export function createPill(host: HTMLElement, events?: PillEvents, opts?: PillOp
     update(state: PillState) {
       if (destroyed) return;
       currentState = state;
-      // Drop stale live rates outside recommend/warning so a later mode flip
-      // cannot resurrect a paused video's line (render only sees the value).
-      if (state.mode !== 'recommend' && state.mode !== 'warning') liveRate = null;
-      render(dom, state, liveRate, locale, destroyed);
+      // Drop stale live rates and saved times outside recommend/warning so a
+      // later mode flip cannot resurrect a paused video's line (render only
+      // sees the values).
+      if (state.mode !== 'recommend' && state.mode !== 'warning') {
+        liveRate = null;
+        savedSec = null;
+      }
+      render(dom, state, liveRate, savedSec, locale, destroyed);
     },
 
     updateLiveRate(live: LiveRate | null) {
       if (destroyed || !shouldRefreshLive(liveRate, live)) return;
       liveRate = live;
       renderLive(dom, currentState?.mode ?? 'none', live, locale);
+    },
+
+    updateSavedSec(saved: number | null) {
+      if (destroyed || saved === savedSec) return;
+      savedSec = saved;
+      renderSaved(dom, currentState?.mode ?? 'none', saved, locale);
     },
 
     destroy() {
