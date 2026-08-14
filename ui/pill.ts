@@ -3,9 +3,10 @@
 // closed roots hide their content and ARIA from the accessibility tree.
 // No chrome.* imports. The two lib imports are the i18n layer (display
 // strings) and the bridge client it uses to resolve the UI language.
-// The saved-time line (lib-13) pushed the file and createPill past the
-// reviewability budgets — suppressed like entrypoints/content.ts.
-// aislop-ignore-file file-too-large, function-too-long
+// The saved-time line (lib-13) pushed the file past the reviewability
+// budget — suppressed like entrypoints/content.ts; a reviewed exception,
+// not license to grow further.
+// aislop-ignore-file file-too-large
 
 import { DARK, LIGHT, type Theme } from './styles';
 import { pillCss } from './pill-css';
@@ -526,6 +527,31 @@ async function resolvePillLocale(win: Window | null): Promise<UiLocale> {
   return resolveUiLanguage(setting, navigator.language);
 }
 
+/** Bridge round-trip for settings.uiLanguage; no-op when the caller pinned
+ * a locale. onResolved runs after the round-trip, so the caller guards
+ * against its own post-destroy/state drift. */
+function bootstrapLocale(
+  opts: PillOptions | undefined,
+  host: HTMLElement,
+  onResolved: (resolved: UiLocale) => void,
+): void {
+  if (opts?.locale !== undefined) return;
+  void resolvePillLocale(host.ownerDocument.defaultView).then(onResolved);
+}
+
+/** (prefers-color-scheme) listener that re-injects the stylesheet on theme
+ * change; returns a disposer. */
+function watchTheme(
+  doc: Document,
+  style: HTMLStyleElement,
+  onDark: (dark: boolean) => void,
+): () => void {
+  const mq = doc.defaultView?.matchMedia?.('(prefers-color-scheme: dark)');
+  const onChange = (e: MediaQueryListEvent): void => onDark(e.matches);
+  mq?.addEventListener('change', onChange);
+  return () => mq?.removeEventListener('change', onChange);
+}
+
 export function createPill(host: HTMLElement, events?: PillEvents, opts?: PillOptions): PillApi {
   const shadow = host.attachShadow({ mode: 'open' });
   let mounted = false;
@@ -541,22 +567,16 @@ export function createPill(host: HTMLElement, events?: PillEvents, opts?: PillOp
   let liveRate: LiveRate | null = null;
   let savedSec: number | null = null;
 
-  if (opts?.locale === undefined) {
-    void resolvePillLocale(host.ownerDocument.defaultView).then((resolved) => {
-      if (destroyed || resolved === locale) return;
-      locale = resolved;
-      if (currentState !== null) render(dom, currentState, liveRate, savedSec, locale, destroyed);
-    });
-  }
+  bootstrapLocale(opts, host, (resolved) => {
+    if (destroyed || resolved === locale) return;
+    locale = resolved;
+    if (currentState !== null) render(dom, currentState, liveRate, savedSec, locale, destroyed);
+  });
 
   // Detect theme from host's document or system
   const doc = host.ownerDocument;
-  const mq = doc.defaultView?.matchMedia?.('(prefers-color-scheme: dark)');
-  let dark = mq?.matches ?? false;
-
-  function theme(): Theme {
-    return dark ? DARK : LIGHT;
-  }
+  let dark = doc.defaultView?.matchMedia?.('(prefers-color-scheme: dark)')?.matches ?? false;
+  const theme = (): Theme => (dark ? DARK : LIGHT);
 
   const dom = buildDom();
 
@@ -566,13 +586,10 @@ export function createPill(host: HTMLElement, events?: PillEvents, opts?: PillOp
   shadow.append(style, dom.pill);
 
   wireEvents(dom, host, events, () => currentState);
-
-  // Theme listener
-  const onThemeChange = (e: MediaQueryListEvent): void => {
-    dark = e.matches;
+  const disposeTheme = watchTheme(doc, style, (isDark) => {
+    dark = isDark;
     style.textContent = pillCss(theme());
-  };
-  mq?.addEventListener('change', onThemeChange);
+  });
 
   return {
     mount() {
@@ -610,7 +627,7 @@ export function createPill(host: HTMLElement, events?: PillEvents, opts?: PillOp
       if (destroyed) return;
       destroyed = true;
       mounted = false;
-      mq?.removeEventListener('change', onThemeChange);
+      disposeTheme();
       shadow.innerHTML = '';
       host.innerHTML = '';
       // The host keeps its shadow root after destroy; a second attachShadow
