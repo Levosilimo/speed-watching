@@ -31,7 +31,7 @@ import { fileURLToPath } from 'node:url';
 import { chromium, type Browser, type BrowserContext } from 'playwright';
 import { dismissConsentIfPresent } from './web-capture';
 import { withTimeout } from './vk-probe-network';
-import { readPlayerResponse, extractChapters, type PageExtract } from './chapter-coverage-lib';
+import { readPageData, extractChapters, type PageExtract } from './chapter-coverage-lib';
 
 const ROOT = fileURLToPath(new URL('.', import.meta.url));
 const CORPUS_FILE = join(ROOT, 'data', 'web-rerun', 'rerun-results.jsonl');
@@ -70,6 +70,8 @@ interface ChapterRecord {
   shapeDrift: string | null;
   /** Index in markersMap whose value.chapters was used; 0 = spec position. */
   markersIndex: number | null;
+  /** Which data root carried the chapters (playerResponse = spec root). */
+  sourceRoot: 'playerResponse' | 'initialData' | null;
   playability: string | null;
   capturedAt: string;
 }
@@ -89,6 +91,7 @@ function initRecord(video: CorpusVideo): ChapterRecord {
     shapeValid: false,
     shapeDrift: null,
     markersIndex: null,
+    sourceRoot: null,
     playability: null,
     capturedAt: new Date().toISOString(),
   };
@@ -97,7 +100,7 @@ function initRecord(video: CorpusVideo): ChapterRecord {
 function applyExtract(record: ChapterRecord, extract: PageExtract | undefined): void {
   if (extract === undefined) {
     record.classification = 'no-player-response';
-    record.reason = 'ytInitialPlayerResponse absent after 10s';
+    record.reason = 'ytInitialPlayerResponse and ytInitialData absent after 10s';
     return;
   }
   record.title = extract.title;
@@ -106,6 +109,7 @@ function applyExtract(record: ChapterRecord, extract: PageExtract | undefined): 
   record.shapeValid = extract.shapeValid;
   record.shapeDrift = extract.shapeDrift;
   record.markersIndex = extract.markersIndex;
+  record.sourceRoot = extract.sourceRoot;
   record.chapterCount = extract.chapters.length;
   record.chapterTitles = extract.chapters.map((c) => c.title);
   record.chapterStarts = extract.chapters.map((c) => c.startMillis);
@@ -160,8 +164,13 @@ async function sampleVideo(context: BrowserContext, video: CorpusVideo): Promise
   try {
     await page.goto(video.url, { waitUntil: 'domcontentloaded', timeout: 60_000 });
     await dismissConsentIfPresent(page);
-    const pr = await page.evaluate(readPlayerResponse);
-    applyExtract(record, pr === undefined ? undefined : extractChapters(pr));
+    const data = await page.evaluate(readPageData);
+    applyExtract(
+      record,
+      data.playerResponse === undefined && data.initialData === undefined
+        ? undefined
+        : extractChapters(data),
+    );
   } catch (err) {
     record.classification = 'error';
     record.reason = err instanceof Error && err.message ? err.message : String(err);
@@ -230,6 +239,7 @@ function recordLine(record: ChapterRecord): string {
   }
   return (
     `${base} chapters=${record.chapterCount ?? '?'} dur=${record.durationSec ?? '?'}s` +
+    (record.sourceRoot ? ` root=${record.sourceRoot}` : '') +
     (record.shapeDrift ? ` drift="${record.shapeDrift}"` : '')
   );
 }
