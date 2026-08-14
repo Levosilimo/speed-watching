@@ -22,7 +22,7 @@ export const RU: Record<I18nKey, string> = {
   'pill.warning.cappedBelow': 'Оценка неточна — для безопасности скорость ограничена 1,5×',
   'pill.warning.pauseDiluted': 'Речь на этой скорости звучит слишком быстро — оценка неточна',
   'pill.liveRate': 'сейчас ≈ {rate} {unit} при {mult}×',
-  'pill.savedTime': '~{amount} {unit} сэкономлено',
+  'pill.savedTime': '~{amount} {unit} сэкономлено (оценка)',
   'pill.label.recommend': '→ {mult}× ≈ {rate} {unit}',
   'pill.label.unreachable': 'комфортная зона недостижима — {mult}× ≈ {rate} {unit}',
   'pill.label.music': 'музыка — скорость не рекомендуется',

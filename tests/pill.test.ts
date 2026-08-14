@@ -532,9 +532,11 @@ describe('createPill — ru locale', () => {
     const pill = createPill(host, {}, { locale: 'ru' });
     pill.mount();
     pill.update(state());
-    pill.updateLiveRate({ rate: 248, multiplier: 1.55, unit: 'wpm' });
+    // A live rate that duplicates the label's effective rate is hidden
+    // (P2b) — push a divergent one so the localization is exercised.
+    pill.updateLiveRate({ rate: 251, multiplier: 1.6, unit: 'wpm' });
     expect(rootOf(host).querySelector('.live-rate')?.textContent).toBe(
-      'сейчас ≈ 248 слов/мин при 1,55×',
+      'сейчас ≈ 251 слов/мин при 1,6×',
     );
     pill.updateLiveRate({ rate: 380, multiplier: 1.9, unit: 'morae/min' });
     expect(rootOf(host).querySelector('.live-rate')?.textContent).toBe(
@@ -692,7 +694,7 @@ describe('createPill saved-time line', () => {
     return el;
   }
 
-  it('renders the saved line in recommend mode when saved > 0', () => {
+  it('renders the saved line in recommend mode when saved >= 30', () => {
     const host = shadowHost();
     const pill = createPill(host, {}, { locale: 'en' });
     pill.mount();
@@ -701,7 +703,20 @@ describe('createPill saved-time line', () => {
 
     const saved = savedElOf(host);
     expect(saved.hidden).toBe(false);
-    expect(saved.textContent).toBe('~2 minutes saved');
+    expect(saved.textContent).toBe('~2 minutes saved (estimate)');
+  });
+
+  it('hides the line below the 30 s floor and shows it at exactly 30', () => {
+    const host = shadowHost();
+    const pill = createPill(host, {}, { locale: 'en' });
+    pill.mount();
+    pill.update(state());
+    const saved = savedElOf(host);
+    pill.updateSavedSec(29);
+    expect(saved.hidden).toBe(true);
+    pill.updateSavedSec(30);
+    expect(saved.hidden).toBe(false);
+    expect(saved.textContent).toBe('~30 seconds saved (estimate)');
   });
 
   it('shows the line in warning mode as well', () => {
@@ -725,7 +740,7 @@ describe('createPill saved-time line', () => {
     }
   });
 
-  it('hides the line for null and for zero saved time', () => {
+  it('hides the line for null and for sub-floor saved time', () => {
     const host = shadowHost();
     const pill = createPill(host, {}, { locale: 'en' });
     pill.mount();
@@ -736,8 +751,10 @@ describe('createPill saved-time line', () => {
     pill.updateSavedSec(null);
     expect(savedElOf(host).hidden).toBe(true);
 
-    // A fresh session at 0 saved is not worth a line.
+    // A sub-floor amount is not worth a line.
     pill.updateSavedSec(0);
+    expect(savedElOf(host).hidden).toBe(true);
+    pill.updateSavedSec(20);
     expect(savedElOf(host).hidden).toBe(true);
   });
 
@@ -750,7 +767,7 @@ describe('createPill saved-time line', () => {
 
     pill.updateSavedSec(120);
     pill.updateSavedSec(120);
-    expect(saved.textContent).toBe('~2 minutes saved');
+    expect(saved.textContent).toBe('~2 minutes saved (estimate)');
     expect(saved.hidden).toBe(false);
   });
 
@@ -775,6 +792,23 @@ describe('createPill saved-time line', () => {
     pill.mount();
     pill.update(state());
     pill.updateSavedSec(120);
-    expect(savedElOf(host).textContent).toBe('~2 минуты сэкономлено');
+    expect(savedElOf(host).textContent).toBe('~2 минуты сэкономлено (оценка)');
+  });
+});
+
+describe('createPill live-line duplication (P2b)', () => {
+  it('hides the live line when it duplicates the label (same rate, same multiplier)', () => {
+    const host = shadowHost();
+    const pill = createPill(host, {}, { locale: 'en' });
+    pill.mount();
+    pill.update(state({ effectiveWpm: 248, multiplier: 1.55 }));
+    const live = rootOf(host).querySelector<HTMLSpanElement>('.live-rate')!;
+    // Auto-applied state: the live rate equals the label's effective rate.
+    pill.updateLiveRate({ rate: 248.3, multiplier: 1.55, unit: 'wpm' });
+    expect(live.hidden).toBe(true);
+    // A divergent rate is new information — the line shows.
+    pill.updateLiveRate({ rate: 251, multiplier: 1.6, unit: 'wpm' });
+    expect(live.hidden).toBe(false);
+    expect(live.textContent).toBe('now ≈ 251 wpm at 1.6x');
   });
 });

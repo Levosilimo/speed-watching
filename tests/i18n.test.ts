@@ -45,7 +45,7 @@ describe('time-saved strings (12 new keys, both locales)', () => {
     );
     expect(t('options.timeSavedStarted', 'en')).toBe('Time-saved tracking started');
     expect(t('pill.savedTime', 'en', { amount: '2', unit: 'minutes' })).toBe(
-      '~2 minutes saved',
+      '~2 minutes saved (estimate)',
     );
     expect(t('time.unit.hourOne', 'en')).toBe('hour');
     expect(t('time.unit.hourMany', 'en')).toBe('hours');
@@ -61,7 +61,7 @@ describe('time-saved strings (12 new keys, both locales)', () => {
     );
     expect(t('options.timeSavedStarted', 'ru')).toBe('Учёт сэкономленного времени начат');
     expect(t('pill.savedTime', 'ru', { amount: '2', unit: 'минуты' })).toBe(
-      '~2 минуты сэкономлено',
+      '~2 минуты сэкономлено (оценка)',
     );
     expect(t('time.unit.hourOne', 'ru')).toBe('час');
     expect(t('time.unit.hourFew', 'ru')).toBe('часа');

@@ -271,19 +271,29 @@ export function shouldRefreshLive(prev: LiveRate | null, next: LiveRate | null):
 }
 
 /** Live line visibility: recommend/warning modes only, and only while a
- * live rate is pushed. Full state updates re-evaluate it via render(). */
-function renderLive(dom: PillDom, mode: PillMode, live: LiveRate | null, locale: UiLocale): void {
-  const visible = live !== null && (mode === 'recommend' || mode === 'warning');
+ * live rate is pushed. A live rate that equals the label's effective rate
+ * at the same multiplier duplicates the label (P2b) — hidden. Full state
+ * updates re-evaluate it via render(). */
+function renderLive(dom: PillDom, state: PillState | null, live: LiveRate | null, locale: UiLocale): void {
+  let visible =
+    live !== null && state !== null && (state.mode === 'recommend' || state.mode === 'warning');
+  if (visible && state !== null && live !== null) {
+    const duplicates =
+      Math.round(live.rate) === Math.round(state.effectiveWpm) &&
+      Math.round(live.multiplier * 100) === Math.round(state.multiplier * 100);
+    visible = !duplicates;
+  }
   dom.liveEl.hidden = !visible;
-  if (visible) dom.liveEl.textContent = liveRateText(live, locale);
+  if (visible && live !== null) dom.liveEl.textContent = liveRateText(live, locale);
 }
 
-/** Saved-time line visibility: recommend/warning modes only, and only while
- * a positive amount is pushed — a fresh session at 0 saved is not worth a
- * line, and null hides it (before apply, paused, rate diverged). Full state
- * updates re-evaluate it via render(). */
+/** Saved-time line visibility: recommend/warning modes only, and only once
+ * a meaningful amount accumulated (P2c: the per-video floor is 30 s — a
+ * sub-minute gain is not worth a line) and a positive amount is pushed —
+ * null hides it (before apply, paused, rate diverged). Full state updates
+ * re-evaluate it via render(). */
 function renderSaved(dom: PillDom, mode: PillMode, saved: number | null, locale: UiLocale): void {
-  const visible = saved !== null && saved > 0 && (mode === 'recommend' || mode === 'warning');
+  const visible = saved !== null && saved >= 30 && (mode === 'recommend' || mode === 'warning');
   dom.savedEl.hidden = !visible;
   if (visible) dom.savedEl.textContent = t('pill.savedTime', locale, formatTimeSaved(saved, locale));
 }
@@ -384,7 +394,7 @@ function render(
   // none branch below (the pill surface itself is invisible there, but the
   // elements must not keep stale text).
   if (mode !== 'recommend' && mode !== 'warning') {
-    renderLive(dom, mode, null, locale);
+    renderLive(dom, state, null, locale);
     renderSaved(dom, mode, null, locale);
   }
 
@@ -396,7 +406,7 @@ function render(
 
   dom.pill.removeAttribute('aria-hidden');
   dom.pill.dataset.mode = mode;
-  renderLive(dom, mode, live, locale);
+  renderLive(dom, state, live, locale);
   renderSaved(dom, mode, saved, locale);
 
   // Label
@@ -517,7 +527,7 @@ export function createPill(host: HTMLElement, events?: PillEvents, opts?: PillOp
     updateLiveRate(live: LiveRate | null) {
       if (destroyed || !shouldRefreshLive(liveRate, live)) return;
       liveRate = live;
-      renderLive(dom, currentState?.mode ?? 'none', live, locale);
+      renderLive(dom, currentState, live, locale);
     },
 
     updateSavedSec(saved: number | null) {

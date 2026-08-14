@@ -32,7 +32,7 @@ const EN = {
   'pill.warning.cappedBelow': 'Estimate uncertain — capped at 1.5x for safety',
   'pill.warning.pauseDiluted': 'Speech runs fast at this speed — estimate uncertain',
   'pill.liveRate': 'now ≈ {rate} {unit} at {mult}x',
-  'pill.savedTime': '~{amount} {unit} saved',
+  'pill.savedTime': '~{amount} {unit} saved (estimate)',
   'pill.label.recommend': '→ {mult}x ≈ {rate} {unit}',
   'pill.label.unreachable': 'safe zone unreachable — {mult}x ≈ {rate} {unit}',
   'pill.label.music': 'music — speed not recommended',
