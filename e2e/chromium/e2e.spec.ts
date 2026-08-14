@@ -226,12 +226,14 @@ test.beforeAll(async () => {
       await page.evaluate((s) => window.__speedwatcherChapter?.applyFor(s), sec);
     },
     async setChapterConsent(enabled) {
-      // The toggle lives in the pill's (open) shadow root; wait for it to
-      // render, then drive the exact click handler the button is wired to.
+      // The toggle lives inside the pill host; wait for it to render, then
+      // drive the exact click handler the button is wired to. (In real
+      // browsers mount()'s appendChild(shadow) moves the pill's markup into
+      // the host's light DOM, so the query is NOT shadowRoot-scoped.)
       await page.waitForFunction(
         () => {
           const host = document.querySelector<HTMLElement>('.speedwatcher-pill-host');
-          const btn = host?.shadowRoot?.querySelector<HTMLButtonElement>('button.btn-chapter-toggle');
+          const btn = host?.querySelector<HTMLButtonElement>('button.btn-chapter-toggle');
           return btn !== null && btn !== undefined && !btn.hidden;
         },
         undefined,
@@ -239,7 +241,7 @@ test.beforeAll(async () => {
       );
       await page.evaluate((want) => {
         const host = document.querySelector<HTMLElement>('.speedwatcher-pill-host');
-        const btn = host?.shadowRoot?.querySelector<HTMLButtonElement>('button.btn-chapter-toggle');
+        const btn = host?.querySelector<HTMLButtonElement>('button.btn-chapter-toggle');
         if (btn === null || btn === undefined) throw new Error('chapter toggle missing');
         if ((btn.getAttribute('aria-pressed') === 'true') !== want) btn.click();
       }, enabled);
