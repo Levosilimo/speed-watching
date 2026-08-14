@@ -5,7 +5,6 @@
 
 import type { Page } from 'playwright';
 import { parseYouTubeJson3 } from '../lib/captions';
-import { normalizeLanguageCode } from '../lib/languages';
 
 export const ANDROID_CLIENT = {
   clientName: 'ANDROID',
@@ -56,8 +55,9 @@ export async function extractCaptionsInPage(input: {
   const tracks =
     playerJson.captions?.playerCaptionsTracklistRenderer?.captionTracks ?? [];
   const lang = input.lang ?? 'en';
+  // page-side code: normalization inlined, imports do not cross evaluate()
   const inLang = (t: { kind?: string; languageCode?: string }): boolean =>
-    t.languageCode !== undefined && normalizeLanguageCode(t.languageCode) === lang;
+    t.languageCode !== undefined && t.languageCode.toLowerCase().split('-')[0] === lang;
   const pick =
     tracks.find((t) => t.kind === 'asr' && inLang(t)) ??
     tracks.find((t) => t.kind !== 'asr' && inLang(t)) ??

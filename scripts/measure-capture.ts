@@ -111,8 +111,10 @@ function bodyHasTiming(body: string): boolean {
   }
 }
 
-/** After a track re-pick the first fresh response can be a degraded
- * no-timing payload; wait for the full one, nudging play once. */
+/** After a track re-pick the first fresh response is often a small preview
+ * payload (a few KB of the opening); the full transcript lands on a
+ * follow-up request. Return the largest word-timed capture of the window,
+ * early when a clearly-full (multi-hundred-KB) payload has landed. */
 async function waitForWordTimed(
   page: Page,
   captures: TimedtextCapture[],
@@ -122,18 +124,21 @@ async function waitForWordTimed(
   const deadline = Date.now() + timeoutMs;
   const nudgeAt = Date.now() + Math.min(timeoutMs / 3, 5000);
   let nudged = false;
+  let best: TimedtextCapture | null = null;
   while (Date.now() < deadline) {
-    const timed = captures
-      .slice(baseline)
-      .find((c) => c.body !== '' && bodyHasTiming(c.body));
-    if (timed !== undefined) return timed;
+    for (const c of captures.slice(baseline)) {
+      if (c.body !== '' && bodyHasTiming(c.body) && (best === null || c.bytes > best.bytes)) {
+        best = c;
+      }
+    }
+    if (best !== null && best.bytes > 50_000) return best;
     if (!nudged && Date.now() >= nudgeAt) {
       await page.keyboard.press('k').catch(() => undefined);
       nudged = true;
     }
     await new Promise((r) => setTimeout(r, 500));
   }
-  return null;
+  return best;
 }
 
 /** WEB capture: toggle captions, wait for the signed timedtext request,
@@ -159,8 +164,16 @@ async function captureTimedtext(
     menuPicked = await pickAsrTrackFromMenu(page, record.language);
   }
   if (menuPicked) {
-    const timed = await waitForWordTimed(page, captures, baseline, 15_000);
-    if (timed !== null) timedtext = timed;
+    let best = await waitForWordTimed(page, captures, baseline, 15_000);
+    if (best !== null && best.bytes < 50_000) {
+      // preview-sized: the player often serves the full transcript only on a
+      // second re-pick; keep the larger of the two windows
+      await page.waitForTimeout(1500);
+      await pickAsrTrackFromMenu(page, record.language).catch(() => undefined);
+      const retry = await waitForWordTimed(page, captures, baseline, 12_000);
+      if (retry !== null && retry.bytes > best.bytes) best = retry;
+    }
+    if (best !== null) timedtext = best;
   }
   if (timedtext === null) {
     setClass(record, 'pot-fail', 'no-timedtext-request');
