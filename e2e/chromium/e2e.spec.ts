@@ -477,7 +477,14 @@ test('auto-apply race: a stale in-flight measure never applies; the fresh measur
       captions: {
         playerCaptionsTracklistRenderer: {
           captionTracks: [
-            { baseUrl: '/api/timedtext?fixture=synthetic/ja-captions.json', languageCode: 'ja' },
+            // kind: 'asr' mirrors the fixture server's player response
+            // (KIND_BY_FIXTURE) — without it the matcher takes the manual
+            // path and the multipliers do not diverge.
+            {
+              baseUrl: '/api/timedtext?fixture=synthetic/ja-captions.json',
+              kind: 'asr',
+              languageCode: 'ja',
+            },
           ],
         },
       },
