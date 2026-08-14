@@ -47,13 +47,12 @@ gh api "repos/$REPO/rulesets" --method POST --input <(cat <<'JSON'
     {
       "type": "required_status_checks",
       "parameters": {
-        "strict_required_status_checks_policy": false,
-        "contexts": [
-          "ci",
-          "e2e-chromium",
-          "e2e-chromium-cft",
-          "e2e-userscript",
-          "e2e-firefox"
+        "required_status_checks": [
+          { "context": "ci",               "strict_required_status_checks_policy": false },
+          { "context": "e2e-chromium",     "strict_required_status_checks_policy": false },
+          { "context": "e2e-chromium-cft", "strict_required_status_checks_policy": false },
+          { "context": "e2e-userscript",   "strict_required_status_checks_policy": false },
+          { "context": "e2e-firefox",      "strict_required_status_checks_policy": false }
         ]
       }
     },
