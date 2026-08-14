@@ -23,6 +23,7 @@ export const RU: Record<I18nKey, string> = {
   'pill.warning.pauseDiluted': 'Речь на этой скорости звучит слишком быстро — оценка неточна',
   'pill.liveRate': 'сейчас ≈ {rate} {unit} при {mult}×',
   'pill.savedTime': '~{amount} {unit} сэкономлено (оценка)',
+  'pill.skipSilence': 'тишина: замедлено',
   'pill.chapter.toggle': 'Авто-подстройка по главам',
   'pill.chapter.toggleAria': 'Автоматически менять скорость на границах глав',
   'pill.chapter.active': 'Скорость по главам включена',

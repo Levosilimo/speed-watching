@@ -75,7 +75,7 @@ describe('SettingsStore', () => {
       ...defaultSettings(),
       conservative: true,
       contentType: 'music' as const,
-      sites: { 'youtube.com': { target: 240 } },
+      sites: { 'youtube.com': { target: 240, skipSilence: true } },
     };
     await store.save(settings);
     expect(await store.load()).toEqual(settings);

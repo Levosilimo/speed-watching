@@ -30,6 +30,7 @@ import {
 } from '@/lib/wpm-protocol';
 import { OverrideLog } from '@/lib/override-log';
 import { SettingsStore } from '@/lib/settings';
+import { SkipSilenceStore } from '@/lib/skip-silence';
 
 export default defineContentScript({
   // <all_urls> with all_frames: the generic matcher needs the bridge in
@@ -40,6 +41,7 @@ export default defineContentScript({
   allFrames: true,
   main() {
     const settings = new SettingsStore(browser.storage.local);
+    const skip = new SkipSilenceStore(browser.storage.local);
     const log = new OverrideLog(browser.storage.local);
     const channels = new ChannelMemory(browser.storage.local);
 
@@ -48,6 +50,7 @@ export default defineContentScript({
       createBridgeListener(
         {
           settings,
+          skip,
           log,
           channels,
           forwardDemand: (contentType) =>

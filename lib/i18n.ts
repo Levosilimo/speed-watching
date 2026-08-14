@@ -33,6 +33,7 @@ const EN = {
   'pill.warning.pauseDiluted': 'Speech runs fast at this speed — estimate uncertain',
   'pill.liveRate': 'now ≈ {rate} {unit} at {mult}x',
   'pill.savedTime': '~{amount} {unit} saved (estimate)',
+  'pill.skipSilence': 'silence: slowed',
   'pill.chapter.toggle': 'Auto-adjust per chapter',
   'pill.chapter.toggleAria': 'Automatically adjust playback speed at chapter boundaries',
   'pill.chapter.active': 'Chapter rates on',

@@ -24,7 +24,8 @@ import { CHANNEL_KEY_MAX_LENGTH, ChannelMemory, isChannelRecord } from './channe
 import { isContentType, type ContentType } from './music';
 import { OverrideLog } from './override-log';
 import { SettingsStore } from './settings';
-import { BRIDGE_CHANNEL, isBridgeEnvelope, isLogEntry, isNudgeDismiss, isNudgeRecordApply, isSettingsPayload, isTimeSavedAccrueMessage, type BridgeRequest, type BridgeResult } from './bridge-protocol';
+import { SkipSilenceStore } from './skip-silence';
+import { BRIDGE_CHANNEL, isBridgeEnvelope, isLogEntry, isNudgeDismiss, isNudgeRecordApply, isSettingsPayload, isSkipPrefs, isTimeSavedAccrueMessage, type BridgeRequest, type BridgeResult } from './bridge-protocol';
 export {
   BRIDGE_CHANNEL,
   isBridgeEnvelope,
@@ -64,6 +65,7 @@ export interface EventHost {
 
 export interface BridgeDeps {
   settings: SettingsStore;
+  skip: SkipSilenceStore;
   log: OverrideLog;
   channels: ChannelMemory;
   forwardDemand: (contentType: ContentType) => Promise<unknown>;
@@ -105,6 +107,16 @@ export async function handleBridgeRequest(
       // round-trip the stored settings through SEC-1 (foreign site
       // overrides would reject the write).
       await deps.settings.update((settings) => ({ ...settings, seenFirstRun: true }));
+      return undefined;
+    case 'skip:get':
+      return deps.skip.load();
+    case 'skip:set':
+      // Forged prefs (out-of-bound gaps, non-boolean toggles) must not reach
+      // storage.
+      if (!isSkipPrefs(request.prefs)) {
+        throw new Error('skip:set: invalid prefs');
+      }
+      await deps.skip.save(request.prefs);
       return undefined;
     case 'log:append':
       // SEC-3: forged entries (NaN multipliers, unknown content types) must
