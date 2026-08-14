@@ -93,3 +93,9 @@ permissions now would force the re-accept disable when STT lands.
 - [ ] AMO submission is separate: same version, Firefox metadata in
   `docs/amo-listing.md`, and the `data_collection_permissions` declaration
   ships in the firefox build (built-in `wxt.config.ts`).
+- [ ] AMO source.zip (mandatory for this bundled/minified build, every
+  version): the repo at the release tag plus `bun.lock` and a build note
+  — `bun install --frozen-lockfile`, then `bun run build` (Chrome) or
+  `bun run build:firefox` (Firefox). Reviewers default to npm and would
+  otherwise miss the lockfile and the bun-run scripts; the publish
+  workflow already passes `--upload-source-code`.
