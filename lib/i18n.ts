@@ -25,6 +25,7 @@ const EN = {
   'pill.warning.cappedBelow': 'Estimate uncertain — capped at 1.5x for safety',
   'pill.warning.pauseDiluted': 'Speech runs fast at this speed — estimate uncertain',
   'pill.liveRate': 'now ≈ {rate} {unit} at {mult}x',
+  'pill.savedTime': '~{amount} {unit} saved',
   'pill.label.recommend': '→ {mult}x ≈ {rate} {unit}',
   'pill.label.unreachable': 'safe zone unreachable — {mult}x ≈ {rate} {unit}',
   'pill.label.music': 'music — speed not recommended',
@@ -62,6 +63,9 @@ const EN = {
   'options.habitsLabel': 'Your habits',
   'options.habitsApplied': 'Recommendations applied',
   'options.habitsAvgMult': 'Average multiplier',
+  'options.timeSavedLabel': 'Time saved',
+  'options.timeSavedHeadline': '≈ {amount} {unit} reclaimed (estimate)',
+  'options.timeSavedStarted': 'Time-saved tracking started',
   'options.probeLabel': 'Test audio capture',
   'options.probeNote':
     'Verifies that the extension can capture audio from a video tab. The meter shows the live audio level of the captured tab while the test runs. No audio is recorded, stored, or transmitted — the meter is the only output.',
@@ -83,6 +87,17 @@ const EN = {
   'options.tier.manualCueDesc': 'Manual captions with silence correction applied. Higher confidence, clamped to 1.5× max.',
   'options.tier.estimatedDesc':
     'Heuristic estimate from content type and video metadata. Used when captions are unavailable.',
+  'time.unit.hourOne': 'hour',
+  // en plural forms: only One/Many are consulted (timeUnit), but Few must
+  // exist for the per-locale key-parity test.
+  'time.unit.hourFew': 'hours',
+  'time.unit.hourMany': 'hours',
+  'time.unit.minuteOne': 'minute',
+  'time.unit.minuteFew': 'minutes',
+  'time.unit.minuteMany': 'minutes',
+  'time.unit.secondOne': 'second',
+  'time.unit.secondFew': 'seconds',
+  'time.unit.secondMany': 'seconds',
 } as const;
 
 export type I18nKey = keyof typeof EN;
@@ -176,4 +191,68 @@ export function applyI18n(root: ParentNode, locale: UiLocale): void {
   root.querySelectorAll('[data-i18n-placeholder]').forEach((el) => {
     el.setAttribute('placeholder', t(el.getAttribute('data-i18n-placeholder') as I18nKey, locale));
   });
+}
+
+export type TimeUnit = 'hour' | 'minute' | 'second';
+
+/** The amount rounded to one significant figure in its magnitude decade
+ * (1, 2, 5, 10, 20, 50, 100…): 9.37 h reads as '9 hours', never '9.37'.
+ * toPrecision(15) drops the float noise of the ×magnitude multiply (0.6 s
+ * must stay '0.6', not '0.6000000000000001'). */
+export function roundToSigFig(value: number): number {
+  if (value <= 0) return 0;
+  const magnitude = 10 ** Math.floor(Math.log10(value));
+  return Number((Math.round(value / magnitude) * magnitude).toPrecision(15));
+}
+
+/** Plural-form keys per unit, spelled out once — template-literal keys would
+ * widen to string and lose the I18nKey literal type. */
+const TIME_UNIT_KEYS: Record<TimeUnit, { one: I18nKey; few: I18nKey; many: I18nKey }> = {
+  hour: { one: 'time.unit.hourOne', few: 'time.unit.hourFew', many: 'time.unit.hourMany' },
+  minute: {
+    one: 'time.unit.minuteOne',
+    few: 'time.unit.minuteFew',
+    many: 'time.unit.minuteMany',
+  },
+  second: {
+    one: 'time.unit.secondOne',
+    few: 'time.unit.secondFew',
+    many: 'time.unit.secondMany',
+  },
+};
+
+/** Localized unit name for n units: en singular/plural, ru one/few/many
+ * (one: n%10==1 && n%100!=11; few: n%10 in [2..4] && n%100 not in [12..14]). */
+export function timeUnit(unit: TimeUnit, n: number, locale: UiLocale): string {
+  const forms = TIME_UNIT_KEYS[unit];
+  if (locale === 'ru') {
+    return t(
+      n % 10 === 1 && n % 100 !== 11
+        ? forms.one
+        : n % 10 >= 2 && n % 10 <= 4 && !(n % 100 >= 12 && n % 100 <= 14)
+          ? forms.few
+          : forms.many,
+      'ru',
+    );
+  }
+  return t(n === 1 ? forms.one : forms.many, 'en');
+}
+
+/** The saved-time line parts: sig-fig amount (decimal comma for ru) and the
+ * localized plural unit. Type alias (not interface) so the pair satisfies
+ * t()'s Record<string, string|number> params. */
+export type SavedTimeText = {
+  amount: string;
+  unit: string;
+};
+
+export function formatTimeSaved(seconds: number, locale: UiLocale): SavedTimeText {
+  const unit: TimeUnit = seconds >= 3600 ? 'hour' : seconds >= 60 ? 'minute' : 'second';
+  const perUnit = unit === 'hour' ? 3600 : unit === 'minute' ? 60 : 1;
+  const amount = roundToSigFig(seconds / perUnit);
+  const text = String(amount);
+  return {
+    amount: locale === 'ru' ? text.replace('.', ',') : text,
+    unit: timeUnit(unit, amount, locale),
+  };
 }

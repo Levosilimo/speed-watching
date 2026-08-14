@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  formatTimeSaved,
   STRINGS,
   extractUnit,
   formatMultiplier,
@@ -7,6 +8,7 @@ import {
   t,
   tierKeyFromLabel,
   tierLabel,
+  timeUnit,
   unitLabel,
 } from '../lib/i18n';
 import { UNIT_LABELS } from '../lib/languages';
@@ -33,6 +35,60 @@ describe('i18n — completeness', () => {
     expect(t('unit.cpm', 'ru')).toBe('симв/мин');
     expect(t('unit.syl', 'ru')).toBe('слогов/мин');
     expect(t('unit.mora', 'ru')).toBe('мор/мин');
+  });
+});
+
+describe('time-saved strings (12 new keys, both locales)', () => {
+  it('holds the spec copy in English', () => {
+    expect(t('options.timeSavedHeadline', 'en', { amount: '9', unit: 'hours' })).toBe(
+      '≈ 9 hours reclaimed (estimate)',
+    );
+    expect(t('options.timeSavedStarted', 'en')).toBe('Time-saved tracking started');
+    expect(t('pill.savedTime', 'en', { amount: '2', unit: 'minutes' })).toBe(
+      '~2 minutes saved',
+    );
+    expect(t('time.unit.hourOne', 'en')).toBe('hour');
+    expect(t('time.unit.hourMany', 'en')).toBe('hours');
+    expect(t('time.unit.minuteOne', 'en')).toBe('minute');
+    expect(t('time.unit.minuteMany', 'en')).toBe('minutes');
+    expect(t('time.unit.secondOne', 'en')).toBe('second');
+    expect(t('time.unit.secondMany', 'en')).toBe('seconds');
+  });
+
+  it('holds the spec copy in Russian', () => {
+    expect(t('options.timeSavedHeadline', 'ru', { amount: '9', unit: 'часов' })).toBe(
+      '≈ 9 часов сэкономлено (оценка)',
+    );
+    expect(t('options.timeSavedStarted', 'ru')).toBe('Учёт сэкономленного времени начат');
+    expect(t('pill.savedTime', 'ru', { amount: '2', unit: 'минуты' })).toBe(
+      '~2 минуты сэкономлено',
+    );
+    expect(t('time.unit.hourOne', 'ru')).toBe('час');
+    expect(t('time.unit.hourFew', 'ru')).toBe('часа');
+    expect(t('time.unit.hourMany', 'ru')).toBe('часов');
+    expect(t('time.unit.minuteOne', 'ru')).toBe('минута');
+    expect(t('time.unit.minuteFew', 'ru')).toBe('минуты');
+    expect(t('time.unit.minuteMany', 'ru')).toBe('минут');
+    expect(t('time.unit.secondOne', 'ru')).toBe('секунда');
+    expect(t('time.unit.secondFew', 'ru')).toBe('секунды');
+    expect(t('time.unit.secondMany', 'ru')).toBe('секунд');
+  });
+
+  it('formatTimeSaved: golden values in both locales', () => {
+    expect(formatTimeSaved(33732, 'en')).toEqual({ amount: '9', unit: 'hours' });
+    expect(formatTimeSaved(90, 'en')).toEqual({ amount: '2', unit: 'minutes' });
+    expect(formatTimeSaved(0.6, 'en')).toEqual({ amount: '0.6', unit: 'seconds' });
+    expect(formatTimeSaved(33732, 'ru')).toEqual({ amount: '9', unit: 'часов' });
+    expect(formatTimeSaved(90, 'ru')).toEqual({ amount: '2', unit: 'минуты' });
+    expect(formatTimeSaved(0.6, 'ru')).toEqual({ amount: '0,6', unit: 'секунд' });
+  });
+
+  it('timeUnit plural selection per locale', () => {
+    expect(timeUnit('minute', 1, 'en')).toBe('minute');
+    expect(timeUnit('minute', 1.5, 'en')).toBe('minutes');
+    expect(timeUnit('minute', 1, 'ru')).toBe('минута');
+    expect(timeUnit('minute', 2, 'ru')).toBe('минуты');
+    expect(timeUnit('minute', 5, 'ru')).toBe('минут');
   });
 });
 
