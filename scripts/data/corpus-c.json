@@ -8,9 +8,9 @@
       "provenance": "ヨビノリ, JP (ja)"
     },
     {
-      "videoId": "cLuNryyPZ6k",
+      "videoId": "GdlzL8E8Vh4",
       "register": "explainer",
-      "title": "予備校のノリで学ぶ「大学の数学・物理」 — 反例を見つければ否定的な解決となる数学の未解決問題5選",
+      "title": "予備校のノリで学ぶ「大学の数学・物理」 — 天動説から地動説に至るまで",
       "language": "ja",
       "provenance": "ヨビノリ, JP (ja)"
     },
@@ -57,27 +57,6 @@
       "provenance": "J-POP lyric compilation, JP (ja)"
     },
     {
-      "videoId": "euUxt7n7zJs",
-      "register": "news",
-      "title": "はてなマークじゃー — 安倍晋三元総理が亡くなられた際のNHKニュース速報",
-      "language": "ja",
-      "provenance": "NHK News, JP (ja)"
-    },
-    {
-      "videoId": "v2XHJz2JsoI",
-      "register": "news",
-      "title": "ダークトゥーライトDarkToLight — 1985年8月12日 NHKニュース速報123",
-      "language": "ja",
-      "provenance": "NHK News, JP (ja)"
-    },
-    {
-      "videoId": "UyBPyBPQzIs",
-      "register": "news",
-      "title": "とーちー — JAL 着陸時火災　NHKニュース JAL516便",
-      "language": "ja",
-      "provenance": "NHK News, JP (ja)"
-    },
-    {
       "videoId": "3PuM4d-06xY",
       "register": "podcast",
       "title": "文藝春秋PLUS 公式チャンネル — [Casual Linguistics Radio x Cognitive Linguist] Are \"Linguists Obsolete\"? | Who Succeeds and Who ...",
@@ -85,9 +64,9 @@
       "provenance": "ゆる言語学ラジオ, JP (ja)"
     },
     {
-      "videoId": "A3ImCR4-9mM",
+      "videoId": "s7I16xFt3vs",
       "register": "podcast",
-      "title": "ゆる言語学ラジオ — \"Schools should teach what's correct.\" Is that true?",
+      "title": "ゆる言語学ラジオ — 直観裏切り語源クイズ #200",
       "language": "ja",
       "provenance": "ゆる言語学ラジオ, JP (ja)"
     },
@@ -293,11 +272,32 @@
       "title": "사피엔스 스튜디오 — 다정은 체력이고 배려는 지능 | 적수다",
       "language": "ko",
       "provenance": "사피엔스 스튜디오, KR (ko)"
+    },
+    {
+      "videoId": "1XqD5xsMugw",
+      "register": "news",
+      "title": "日テレNEWS — 今朝の最新ニュース4本 NNN NEWS ZIP",
+      "language": "ja",
+      "provenance": "日テレ NEWS, JP (ja)"
+    },
+    {
+      "videoId": "gLyDFhqteWk",
+      "register": "news",
+      "title": "ANNnewsCH — 朝ニュースまとめ LIVE VOD",
+      "language": "ja",
+      "provenance": "ANNnewsCH, JP (ja)"
+    },
+    {
+      "videoId": "PR85v44a8LM",
+      "register": "news",
+      "title": "ANNnewsCH — 夜ニュースまとめ LIVE VOD",
+      "language": "ja",
+      "provenance": "ANNnewsCH, JP (ja)"
     }
   ],
   "fallbacks": {
     "ja:news": [
-      "6p__GRPNB0U"
+      "Bhe74QiUHeY"
     ],
     "ja:lecture": [
       "ndOUmA2qt4I"
