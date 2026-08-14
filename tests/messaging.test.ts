@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { ChannelMemory } from '../lib/channel-memory';
 import { DemandStore } from '../lib/demand';
+import { TimeSavedStore } from '../lib/time-saved';
 import {
   BRIDGE_CHANNEL,
   BRIDGE_TIMEOUT_MS,
@@ -60,12 +61,17 @@ function fakeWindow(): {
   };
 }
 
-function serve(host: EventHost, forwardDemand: BridgeDeps['forwardDemand'] = vi.fn()): BridgeDeps {
+function serve(
+  host: EventHost,
+  forwardDemand: BridgeDeps['forwardDemand'] = vi.fn(),
+  forwardAccrue: BridgeDeps['forwardAccrue'] = vi.fn(),
+): BridgeDeps {
   const deps: BridgeDeps = {
     settings: new SettingsStore(mockStorage()),
     log: new OverrideLog(mockStorage()),
     channels: new ChannelMemory(mockStorage()),
     forwardDemand,
+    forwardAccrue,
   };
   host.addEventListener('message', createBridgeListener(deps, host as unknown as Window));
   return deps;
@@ -416,6 +422,32 @@ describe('messaging bridge', () => {
       client.request({ type: 'demand:increment', contentType: 'bogus' as ContentType }),
     ).rejects.toThrow('unknown content type');
     expect(forwardDemand).not.toHaveBeenCalled();
+  });
+
+  it('forwards timeSaved:accrue to the background single writer and resolves on its response', async () => {
+    const { host } = fakeWindow();
+    const background = new TimeSavedStore(mockStorage());
+    const forwardAccrue = vi.fn((deltaSec: number, multiplier: number) =>
+      background.accrue(deltaSec, multiplier),
+    );
+    serve(host, vi.fn(), forwardAccrue);
+    const client = createBridgeClient(host);
+    await client.request({ type: 'timeSaved:accrue', deltaSec: 60, multiplier: 2 });
+    await client.request({ type: 'timeSaved:accrue', deltaSec: 30, multiplier: 1.5 });
+    expect(forwardAccrue).toHaveBeenNthCalledWith(1, 60, 2);
+    expect(forwardAccrue).toHaveBeenNthCalledWith(2, 30, 1.5);
+    expect(await background.get()).toBe(30 + (30 * 0.5) / 1.5);
+  });
+
+  it('rejects timeSaved:accrue with an out-of-range multiplier before forwarding', async () => {
+    const { host } = fakeWindow();
+    const forwardAccrue = vi.fn();
+    serve(host, vi.fn(), forwardAccrue);
+    const client = createBridgeClient(host);
+    await expect(
+      client.request({ type: 'timeSaved:accrue', deltaSec: 60, multiplier: 99 }),
+    ).rejects.toThrow('timeSaved:accrue');
+    expect(forwardAccrue).not.toHaveBeenCalled();
   });
 
   it('times out when no response arrives', async () => {

@@ -5,12 +5,14 @@ import { isOffscreenEvent, isOptionsMessage } from '../lib/audio-probe';
 import { DemandStore } from '../lib/demand';
 import {
   isDemandIncrementMessage,
+  isTimeSavedAccrueMessage,
   SHORTCUT_APPLY,
   SHORTCUT_DISMISS,
   type ShortcutMessage,
 } from '../lib/messaging';
 import { clampWpmResponse, isWpmGetRequest, isWpmGetResponse, WPM_GET, WPM_PROTOCOL_VERSION, type WpmGetResponse } from '../lib/wpm-protocol';
 import { SettingsStore } from '../lib/settings';
+import { TimeSavedStore } from '../lib/time-saved';
 
 export default defineBackground(() => {
   const orchestrator = createCaptureOrchestrator(
@@ -24,10 +26,12 @@ export default defineBackground(() => {
     { offscreenUrl: browser.runtime.getURL('/offscreen.html') },
   );
 
-  // Single writer for demand counters (lib-11#3): every bridge frame
-  // forwards demand:increment here, so one promise chain covers all frames
-  // instead of per-frame get→set interleaves.
+  // Single writer for demand counters and the saved-time total (lib-11#3):
+  // every bridge frame forwards demand:increment and timeSaved:accrue here,
+  // so one promise chain covers all frames instead of per-frame get→set
+  // interleaves.
   const demand = new DemandStore(browser.storage.local);
+  const timeSaved = new TimeSavedStore(browser.storage.local);
   const settings = new SettingsStore(browser.storage.local);
 
   browser.runtime.onMessageExternal.addListener(
@@ -60,6 +64,10 @@ export default defineBackground(() => {
       }
       if (isDemandIncrementMessage(message)) {
         void demand.increment(message.contentType).then(sendResponse);
+        return true;
+      }
+      if (isTimeSavedAccrueMessage(message)) {
+        void timeSaved.accrue(message.deltaSec, message.multiplier).then(sendResponse);
         return true;
       }
       return false;
