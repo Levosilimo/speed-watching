@@ -106,6 +106,18 @@ WASM ships in the MVP. The manifest has no `content_security_policy` override
 (WXT dev mode injects one for HMR; the production build ships the default
 `script-src 'self'`).
 
+## Bundle-weight note: dormant STT recorder plumbing
+
+The shipped bundle carries ~6 KB of currently driver-less audio plumbing
+— `lib/audio-recorder.ts`, `lib/resampler.ts`, `lib/recorder-worklet.ts`,
+imported by `entrypoints/offscreen/main.ts` (the offscreen chunk plus the
+worklet asset). Intentional, not dead weight: it is the de-risked STT
+path — the recorder is created at offscreen load and wired into the
+capture flow, so the on-device STT feature lands without a
+bundle/permission change. The rest of the STT surface is already absent:
+`lib/model-store.ts` is referenced by no entrypoint, so the bundler
+tree-shakes it out entirely.
+
 ## Data usage
 
 - Settings and the override log live only in `chrome.storage.local` on the
