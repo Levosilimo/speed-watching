@@ -1,0 +1,58 @@
+# Dependabot: weekly bump PRs for bun deps + GitHub Actions.
+#
+# Caveat: Dependabot's automated SECURITY updates only cover ecosystems in
+# its security-updates support list (npm, pip, ...) — bun.lock is NOT one of
+# them. Security PRs for runtime deps must stay on the manual audit radar.
+
+version: 2
+updates:
+  - package-ecosystem: bun
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    versioning-strategy: increase
+    open-pull-requests-limit: 3
+    ignore:
+      # Dev-only deps pinned for the STT probe and bundle tooling: an
+      # auto-bump could silently change probe or bundle output.
+      - dependency-name: '@huggingface/transformers'
+      - dependency-name: onnxruntime-web
+      - dependency-name: adm-zip
+      - dependency-name: sharp
+    groups:
+      e2e:
+        patterns:
+          - '@playwright/test'
+          - playwright
+          - puppeteer
+          - selenium-webdriver
+          - '@types/selenium-webdriver'
+          - geckodriver
+          - happy-dom
+          - vitest-chrome
+      toolchain:
+        patterns:
+          - typescript
+          - vite
+          - vitest
+          - oxlint
+          - knip
+          - aislop
+          - '@ast-grep/cli'
+          - block-no-verify
+          - fast-check
+          - wxt
+          - '@cws-check/cli'
+      runtime:
+        patterns:
+          - vtt.js
+        update-types:
+          - semver-minor
+          - semver-patch
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 3
