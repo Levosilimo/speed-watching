@@ -19,7 +19,12 @@ declare global {
   interface Window {
     __speedwatcherE2E?: boolean;
     __speedwatcherLastMeasure?: MeasureEventDetail;
-    __speedwatcherPill?: { state: PillState | null; apply(): void; dismiss(): void };
+    __speedwatcherPill?: {
+      state: PillState | null;
+      apply(): void;
+      dismiss(): void;
+      stopAuto?(): void;
+    };
     __speedwatcherCaptionSource?: 'web' | 'android' | 'none';
     /** Absent in plain chromium — the no-storage fallback relies on that. */
     GM_setValue?: unknown;

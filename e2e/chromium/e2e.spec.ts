@@ -130,6 +130,9 @@ test.beforeAll(async () => {
     async dismissPill() {
       await page.evaluate(() => window.__speedwatcherPill?.dismiss());
     },
+    async stopAuto() {
+      await page.evaluate(() => window.__speedwatcherPill?.stopAuto?.());
+    },
     async readPlaybackRate(index = 0) {
       return page.evaluate((i) => {
         const video = document.querySelectorAll('video')[i];

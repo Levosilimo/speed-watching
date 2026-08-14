@@ -76,6 +76,8 @@ export interface E2EDriver {
   applyPill(): Promise<void>;
   /** Trigger the pill's Dismiss handler. */
   dismissPill(): Promise<void>;
+  /** Trigger the pill's Stop-auto handler. */
+  stopAuto(): Promise<void>;
   /** The page's <video> playbackRate (index picks the element on
    * multi-video pages), or null when no video element exists. */
   readPlaybackRate(index?: number): Promise<number | null>;

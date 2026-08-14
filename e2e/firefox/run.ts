@@ -133,6 +133,9 @@ async function main(): Promise<void> {
       async dismissPill() {
         await driver.executeScript('window.__speedwatcherPill && window.__speedwatcherPill.dismiss()');
       },
+      async stopAuto() {
+        await driver.executeScript('window.__speedwatcherPill && window.__speedwatcherPill.stopAuto()');
+      },
       async readPlaybackRate(index = 0) {
         const value = await driver.executeScript(
           'const v = document.querySelectorAll("video")[arguments[0]]; return v ? v.playbackRate : null',

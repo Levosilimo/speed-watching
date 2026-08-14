@@ -18,6 +18,7 @@ import { createBridgeClient, isShortcutEnvelope, SHORTCUT_APPLY } from '@/lib/me
 import { isWpmEnvelope, isWpmGetRequest, WPM_CHANNEL } from '@/lib/wpm-protocol';
 import type { ContentType } from '@/lib/music';
 import { detectMusic } from '@/lib/music';
+import { shouldAutoApply } from '@/lib/auto-apply';
 import { recommend, TARGET_WPM, type RateTier, type Recommendation } from '@/lib/recommend';
 import {
   defaultSettings,
@@ -37,7 +38,7 @@ import {
 } from '@/lib/wpm';
 import type { CaptionTrack, PlayerResponse } from '@/lib/youtube';
 import { channelKeyOf } from '@/lib/youtube';
-import { createPill, type LiveRate, type PillApi, type PillState } from '@/ui/pill';
+import { createPill, type AppliedSource, type LiveRate, type PillApi, type PillState } from '@/ui/pill';
 import { createNudgeHost } from '@/ui/nudge-host';
 import {
   RATE_EPSILON,
@@ -59,6 +60,14 @@ let pillState: PillState | null = null;
 /** The element that last fired a media event — the apply target on pages
  * with more than one video. */
 let activeVideo: HTMLVideoElement | null = null;
+
+// Auto-apply lifecycle (per video): 'pending' until the first measure, then
+// 'auto' once a candidate recommendation applied itself, 'stopped' after a
+// manual override, dismiss, or Stop-auto. A non-candidate measure leaves it
+// 'pending' so a later re-measure can still auto.
+let autoState: 'pending' | 'auto' | 'stopped' = 'pending';
+/** How the current rate got applied — rides into the pill as applied. */
+let appliedSource: AppliedSource = 'none';
 
 // Time-saved session (lib/time-saved.ts): the tracker counts wall time at
 // the applied rate; the pill shows the accumulated saved seconds of the
@@ -86,7 +95,12 @@ const NONE_STATE: PillState = {
 
 declare global {
   interface Window {
-    __speedwatcherPill?: { state: PillState | null; apply(): void; dismiss(): void };
+    __speedwatcherPill?: {
+      state: PillState | null;
+      apply(): void;
+      dismiss(): void;
+      stopAuto?(): void;
+    };
     __speedwatcherCaptionSource?: 'web' | 'android' | 'none';
     // E2E hook: settings write through the bridge (same path the options
     // page uses) — the shared specs exercise the bridge in both browsers.
@@ -113,6 +127,8 @@ export default defineContentScript({
       const message = event.data.message;
       if (message.type === SHORTCUT_APPLY) {
         if (current === null || pillState === null || (pillState.mode !== 'recommend' && pillState.mode !== 'warning')) return;
+        autoState = 'stopped';
+        appliedSource = 'user';
         applyMultiplier(current.recommendation.multiplier);
       } else if (pillState !== null && pillState.mode !== 'none') dismissCurrent();
     });
@@ -135,6 +151,7 @@ export default defineContentScript({
           applyMultiplier(current.recommendation.multiplier);
         },
         dismiss: () => dismissCurrent(),
+        stopAuto: () => stopAutoForVideo(),
       };
       window.__speedwatcherSettings = {
         set: (settings) => bridge.request({ type: 'settings:set', settings }).then(() => undefined),
@@ -154,12 +171,15 @@ function onNavigationStart(): void {
   savedTracker.detach();
   savedSec = null;
   savedMultiplier = null;
+  autoState = 'pending';
+  appliedSource = 'none';
   showPill(NONE_STATE);
   nudgeSurface.teardown();
 }
 
 function onMediaEvent(event: Event): void {
   if (event.target instanceof HTMLVideoElement) activeVideo = event.target;
+  markUserOverride();
   refreshLiveRate();
   refreshSavedSec();
 }
@@ -289,6 +309,11 @@ function renderRecommendation(
     unit: UNIT_LABELS[language?.unit ?? 'wpm'], language: language?.code ?? null,
     target: resolveUserTarget(settings, site, contentType) ?? language?.target ?? TARGET_WPM,
     recommendation };
+  if (autoState === 'pending' && shouldAutoApply(settings, recommendation, tier, contentType)) {
+    applyMultiplier(recommendation.multiplier);
+    autoState = 'auto';
+    appliedSource = 'auto';
+  }
   showPill({
     mode: recommendation.mode,
     rateWpm: naturalRate,
@@ -297,6 +322,7 @@ function renderRecommendation(
     tierLabel: recommendation.tierLabel,
     label: recommendation.label,
     reason: recommendation.reason ?? undefined,
+    applied: appliedSource,
   });
 }
 
@@ -347,8 +373,13 @@ function ensurePill(): PillApi {
   // The player was replaced (SPA navigation): rebuild on the fresh host.
   pill?.api.destroy();
   const api = createPill(host, {
-    onApply: (multiplier) => applyMultiplier(multiplier),
+    onApply: (multiplier) => {
+      autoState = 'stopped';
+      appliedSource = 'user';
+      applyMultiplier(multiplier);
+    },
     onDismiss: () => dismissCurrent(),
+    onStopAuto: () => stopAutoForVideo(),
   });
   api.mount();
   pill = { api, host };
@@ -397,6 +428,32 @@ function refreshSavedSec(): void {
   pill.api.updateSavedSec(computeSavedSec());
 }
 
+/** Disengages auto-apply for this video: the applied rate stays untouched
+ * (never fight a non-1.0 rate) and the pill drops its stop-auto state.
+ * Not logged — auto's own log entries already exist. */
+function stopAutoForVideo(): void {
+  if (current === null) return;
+  autoState = 'stopped';
+  appliedSource = 'none';
+  if (pillState !== null) showPill({ ...pillState, applied: 'none' });
+}
+
+/** Manual-override detection on ratechange: while auto applied a rate, any
+ * divergence from the clamped applied value (except a reset to exactly 1.0)
+ * is the user taking over — auto stops for this video and the pill re-labels
+ * the source as user. */
+function markUserOverride(): void {
+  if (autoState !== 'auto') return;
+  const video = activeVideo ?? document.querySelector<HTMLVideoElement>('video');
+  if (video === null || video.paused) return;
+  if (video.playbackRate === 1) return; // reset, not an override
+  if (savedMultiplier === null) return;
+  if (Math.abs(video.playbackRate - savedMultiplier) <= RATE_EPSILON) return; // our own apply
+  autoState = 'stopped';
+  appliedSource = 'user';
+  if (pillState !== null) showPill({ ...pillState, applied: 'user' });
+}
+
 function applyMultiplier(multiplier: number): void {
   if (current === null) return;
   const video = activeVideo ?? document.querySelector<HTMLVideoElement>('video');
@@ -417,6 +474,8 @@ function applyMultiplier(multiplier: number): void {
 
 function dismissCurrent(): void {
   if (current === null) return;
+  autoState = 'stopped';
+  appliedSource = 'none';
   // Detach first: the unflushed tail is credited to the store before the
   // pill hides.
   savedTracker.detach();
@@ -426,6 +485,7 @@ function dismissCurrent(): void {
   void logAction('dismiss', current.recommendation.multiplier);
 }
 
+/** Best-effort: a dead bridge must not undo the playback change. */
 /** Best-effort: a dead bridge must not undo the playback change. */
 function logAction(userAction: 'apply' | 'dismiss', multiplier: number): void {
   if (current === null) return;
