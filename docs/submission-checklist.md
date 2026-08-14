@@ -44,8 +44,7 @@ recorded in the appendix: keep + justify is the shipped path.
   `docs/store-listing.md`). Everything else stays No.
 - [ ] Certifications: confirm the data-safety certifications (disclosures
   accurate, handling matches, no sale/transfer, no secondary use).
-- [ ] Privacy policy URL: host `docs/privacy-policy.md` and paste the URL —
-  placeholder `https://levosilimo.github.io/speed-watching/privacy-policy`.
+- [ ] Privacy policy URL: `https://levosilimo.github.io/speed-watching/privacy-policy` (live on GitHub Pages).
 
 Permission justifications (one box per declared permission):
 
