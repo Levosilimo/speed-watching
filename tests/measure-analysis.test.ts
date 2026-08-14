@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { ParsedCaptions } from '../lib/captions';
+import { countHangulSyllables, countMorae } from '../lib/tokenizer';
 import { LANGUAGES } from '../lib/languages';
-import { DEVANAGARI_G3_SAMPLE } from '../scripts/measure-count-gate';
+import { DEVANAGARI_G3_SAMPLE, JA_MORA_G3_SAMPLE, KO_HANGUL_G3_SAMPLE, THAI_G3_SAMPLE, codePointTokens, combiningMarkTokens, graphemeTokens } from '../scripts/measure-count-gate';
 import {
   registerBand,
   summarizeLang,
@@ -78,6 +79,7 @@ function baseRecord(over: Partial<CorpusRecord>): CorpusRecord {
     regexCount: null,
     icuCount: null,
     countDeltaPct: null,
+    hangulDeltaPct: null,
     bandMin: null,
     bandMax: null,
     bandMid: null,
@@ -92,16 +94,22 @@ function baseRecord(over: Partial<CorpusRecord>): CorpusRecord {
   };
 }
 
-/** Two hi news records inside the current hi band (midpoint of the ±20%
- * gate window is always inside), determinism-clean — the G1/G2/G3/G4 pass
- * shape for the hi vowels-mode gate test. */
-function hiNewsPair(): CorpusRecord[] {
-  const band = registerBand('hi', 'news')!;
+/** Two news records inside the given language's band (midpoint of the
+ * ±20% gate window is always inside), determinism-clean — the G1/G2/G3/G4
+ * pass shape for the per-mode gate tests. */
+function langNewsPair(lang: string): CorpusRecord[] {
+  const band = registerBand(lang, 'news')!;
   const mid = (band.min + band.max) / 2;
   return [
-    baseRecord({ videoId: 'hi1', unifiedRate: mid, inBand: true }),
-    baseRecord({ videoId: 'hi2', unifiedRate: mid, inBand: true }),
+    baseRecord({ videoId: 'hi1', language: lang, asrLang: lang, unifiedRate: mid, inBand: true }),
+    baseRecord({ videoId: 'hi2', language: lang, asrLang: lang, unifiedRate: mid, inBand: true }),
   ];
+}
+
+/** hi records inside the current hi band — the hi vowels-mode gate test
+ * shape (kept under the hi name for the existing spec texts). */
+function hiNewsPair(): CorpusRecord[] {
+  return langNewsPair('hi');
 }
 
 describe('hi vowels-mode G3 gate', () => {
@@ -159,5 +167,121 @@ describe('words-mode G3 stays regex-icu', () => {
     expect(summary.g3.mode).toBe('regex-icu');
     expect(summary.g3.n).toBe(2);
     expect(summary.g3.pass).toBe(true);
+  });
+});
+
+describe('ja mora-mode G3 gate', () => {
+  it('runs determinism + the hand-annotated sample, not regex-icu', () => {
+    const records = langNewsPair('ja').map((r) => ({ ...r, countDeltaPct: 0 }));
+    const summary = summarizeLang(records, 'ja');
+    expect(summary.g3.mode).toBe('mora-sample');
+    expect(summary.g3.n).toBe(2 + JA_MORA_G3_SAMPLE.length);
+    expect(summary.g3.pass).toBe(true);
+    expect(summary.g3.maxDeltaPct ?? 0).toBeLessThanOrEqual(10);
+  });
+
+  it('every sample row lands inside the documented ±10% band', () => {
+    for (const row of JA_MORA_G3_SAMPLE) {
+      const got = countMorae(row.text);
+      expect((Math.abs(got - row.morae) / row.morae) * 100, row.text).toBeLessThanOrEqual(10);
+    }
+  });
+
+  it('a drifting determinism row fails the gate and blocks the verdict', () => {
+    const records = langNewsPair('ja').map((r, i) => ({
+      ...r,
+      countDeltaPct: i === 0 ? 42 : 0,
+    }));
+    const summary = summarizeLang(records, 'ja');
+    expect(summary.g3.pass).toBe(false);
+    expect(summary.g3.violations[0]).toMatch(/^determinism hi1 /);
+    expect(summary.verdict).toBe('stays-derived');
+  });
+
+  it('grants corpus-validated to ja on G1∧G2∧G3∧G4', () => {
+    const records = langNewsPair('ja').map((r) => ({ ...r, countDeltaPct: 0 }));
+    const summary = summarizeLang(records, 'ja');
+    expect(summary.g1.pass).toBe(true);
+    expect(summary.g2.pass).toBe(true);
+    expect(summary.g3.pass).toBe(true);
+    expect(summary.g4.pass).toBe(true);
+    expect(summary.verdict).toBe('corpus-validated');
+  });
+});
+
+describe('th chars-mode G3 gate', () => {
+  it('runs the unit-sanity gate, not regex-icu', () => {
+    const records = langNewsPair('th').map((r) => ({ ...r, countDeltaPct: 0 }));
+    const summary = summarizeLang(records, 'th');
+    expect(summary.g3.mode).toBe('chars-sanity');
+    expect(summary.g3.n).toBe(2 + THAI_G3_SAMPLE.length);
+    expect(summary.g3.pass).toBe(true);
+  });
+
+  it('every sample row keeps its combining marks attached', () => {
+    for (const row of THAI_G3_SAMPLE) {
+      const graphemes = graphemeTokens(row.text);
+      const expected = codePointTokens(row.text) - combiningMarkTokens(row.text);
+      expect(graphemes, row.text).toBe(expected);
+    }
+  });
+
+  it('a drifted unit-sanity row fails the gate and blocks the verdict', () => {
+    const records = langNewsPair('th').map((r, i) => ({
+      ...r,
+      countDeltaPct: i === 0 ? 25 : 0,
+    }));
+    const summary = summarizeLang(records, 'th');
+    expect(summary.g3.pass).toBe(false);
+    expect(summary.verdict).toBe('stays-derived');
+  });
+
+  it('grants corpus-validated to th on G1∧G2∧G3∧G4', () => {
+    const records = langNewsPair('th').map((r) => ({ ...r, countDeltaPct: 0 }));
+    const summary = summarizeLang(records, 'th');
+    expect(summary.verdict).toBe('corpus-validated');
+  });
+});
+
+describe('ko words+hangul G3 gate', () => {
+  it('runs regex-icu plus the hangulBlocks determinism smoke', () => {
+    const records = langNewsPair('ko').map((r) => ({
+      ...r,
+      countDeltaPct: 0.1,
+      hangulDeltaPct: 0,
+    }));
+    const summary = summarizeLang(records, 'ko');
+    expect(summary.g3.mode).toBe('regex-icu+hangul');
+    // 2 regex-icu rows + 2 hangul determinism rows + the sample
+    expect(summary.g3.n).toBe(4 + KO_HANGUL_G3_SAMPLE.length);
+    expect(summary.g3.pass).toBe(true);
+  });
+
+  it('every sample row lands the hand-counted block count', () => {
+    for (const row of KO_HANGUL_G3_SAMPLE) {
+      expect(countHangulSyllables(row.text), row.text).toBe(row.blocks);
+    }
+  });
+
+  it('a hangul determinism drift fails the gate and blocks the verdict', () => {
+    const records = langNewsPair('ko').map((r, i) => ({
+      ...r,
+      countDeltaPct: 0.1,
+      hangulDeltaPct: i === 0 ? 18 : 0,
+    }));
+    const summary = summarizeLang(records, 'ko');
+    expect(summary.g3.pass).toBe(false);
+    expect(summary.g3.violations[0]).toMatch(/^hangul determinism hi1 /);
+    expect(summary.verdict).toBe('stays-derived');
+  });
+
+  it('grants corpus-validated to ko on G1∧G2∧G3∧G4', () => {
+    const records = langNewsPair('ko').map((r) => ({
+      ...r,
+      countDeltaPct: 0.1,
+      hangulDeltaPct: 0,
+    }));
+    const summary = summarizeLang(records, 'ko');
+    expect(summary.verdict).toBe('corpus-validated');
   });
 });

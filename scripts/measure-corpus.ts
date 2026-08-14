@@ -199,7 +199,7 @@ async function main(): Promise<void> {
   }
   const manifestArg = args.find((a) => a.startsWith('--manifest='))?.slice('--manifest='.length);
   const manifestPath = join(ROOT, 'data', manifestArg ?? DEFAULT_MANIFEST);
-  const langs = langArg === 'all' ? ['ru', 'uk', 'pl', 'cs', 'sr', 'hi', 'ar', 'id', 'vi'] : langArg.split(',');
+  const langs = langArg === 'all' ? ['ru', 'uk', 'pl', 'cs', 'sr', 'hi', 'ar', 'id', 'vi', 'ja', 'th', 'ko'] : langArg.split(',');
 
   const { videos: manifestVideos, fallbacks } = loadManifest(manifestPath);
   let videos = manifestVideos.filter((v) => langs.includes(v.language));

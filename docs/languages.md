@@ -51,10 +51,10 @@ vowel letters (one vowel per syllable), hi counts Devanagari vowel nuclei.
 | pt | wpm | 165 | 167 | words | yes | 86–125 |
 | fr | wpm | 250 | 253 | words | yes | 130–190 |
 | de | wpm | 175 | 181 | words | yes | 91–133 |
-| ja | mora/min | 380 | 400 | mora | yes | 198–289 |
+| ja | mora/min | 380 | 400 | mora | yes | 395–435 (per register, below) § |
 | zh | cpm | 240 | 258 | chars | no* | 125–182 |
-| th | cpm | 282 | 290 | chars | yes | 147–214 |
-| ko | syl/min | 340 | 350 | words (+Hangul blocks) | yes | 177–258 |
+| th | cpm | 282 | 290 | chars | yes | 505–545 (per register, below) § |
+| ko | syl/min | 340 | 350 | words (+Hangul blocks) | yes | 305–345 (per register, below) § |
 | ar | syl/min | 330 | 360 | words | yes | 195–235 (per register, below) ‡ |
 | tr | syl/min | 340 | 350 | vowels | yes | 177–258 |
 | hi | syl/min | 240 | 247 | vowels | yes | 125–182 |
@@ -81,12 +81,21 @@ measures speech rate, not comprehension of the safe zone).
 targets and ceilings remain derived. hi also measured but stays
 ratio-derived (addendum-measured — see the register section below).
 
+§ ja's, th's and ko's priors are **corpus-measured** (2026-08,
+docs/phase0-east-asian-corpus.md); their targets and ceilings remain
+derived. These are the first corpus bands whose natural rates reach or
+exceed the derived targets (ja generic 395–435 straddles the 380 target,
+th 505–545 nearly doubles 282, ko 305–345 meets 340) — the estimated
+tier's range overlaps the safe zone, which is the measured finding, not
+a modeling error.
+
 Priors scale the English estimated-tier ratio (0.52–0.76 × target) to each
 language's target — the same below-target relationship as the English
-generic prior, pending per-language corpus measurement. **ru/uk/pl/cs and
-ar/id/vi/ms/tl are the exceptions**: their priors are corpus-measured, not
-ratio-scaled (below). hi is the measured-but-not-corrected exception (the
-loanword-overcount caveat in the captionless-corpus doc).
+generic prior, pending per-language corpus measurement. **ru/uk/pl/cs,
+ar/id/vi/ms/tl and ja/th/ko are the exceptions**: their priors are
+corpus-measured, not ratio-scaled (below). hi is the measured-but-not-
+corrected exception (the loanword-overcount caveat in the
+captionless-corpus doc).
 
 ## Slavic register priors
 
@@ -156,6 +165,28 @@ the measured medians sit far above the derived band, and the Devanagari
 counter overcounts code-mixed text (Hindi orthography writes inherent
 schwas in English loanwords — टिप्स counts 2, spoken 1), so no band is
 built. The hi data is committed in the corpus (addendum-measured).
+
+## East-asian register priors (ja/th/ko)
+
+ja, th and ko carry a per-register prior table (`registerPriors` in
+`lib/languages.ts`), built from the 2026-08 east-asian corpus
+(docs/phase0-east-asian-corpus.md): each band is the measured register
+median ± 20 in the language's unit, rounded to 5, labeled corpus-derived;
+G2 passing on them is by construction (the uk correction pattern — the
+pre-correction fail against the ratio-derived bands is in the corpus
+ doc). The generic band is the union mid of the register bands. These
+are the first corpus bands that reach or exceed the derived targets, so
+natural-rate content in the estimated tier overlaps the safe zone
+instead of being flagged fast; the targets and ceilings stay derived
+(ja 380/400, th 282/290, ko 340/350).
+
+| register | ja band (morae/min) | th band (cpm) | ko band (syl/min) |
+|---|---|---|---|
+| news | 335–375 | 545–585 | 265–305 |
+| lecture | 450–490 | 420–460 | 320–360 |
+| explainer | 385–425 | 590–630 | 350–390 |
+| podcast | 450–490 | 535–575 | 260–300 |
+| generic | 395–435 | 505–545 | 305–345 |
 
 ## Tokenizer modes
 
@@ -247,8 +278,9 @@ keeps working in every mode.
 ## Deferred / known limits
 
 - **Corpus measurement** — ru/uk/pl/cs (phase0-russian-corpus,
-  phase0-slavic-corpus) and ar/id/vi/ms/tl (phase0-captionless-corpus)
-  natural-rate priors are corpus-measured; every other language's targets
+  phase0-slavic-corpus), ar/id/vi/ms/tl (phase0-captionless-corpus) and
+  ja/th/ko (phase0-east-asian-corpus) natural-rate priors are
+  corpus-measured; every other language's targets
   and priors remain derived (hi measured but addendum-only, see the
   register section). The `logWpm` measurement hooks remain word-based and
   English-labeled until a harness runs per language.

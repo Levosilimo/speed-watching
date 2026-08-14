@@ -9,11 +9,16 @@ import {
   type LanguageModel,
 } from '../lib/languages';
 import { detectMusic, type ContentType } from '../lib/music';
-import { countVowelNuclei, countWordTokens, hasDevanagari, isBracketMarker } from '../lib/tokenizer';
+import {
+  countWordTokens,
+  hasDevanagari,
+  isBracketMarker,
+} from '../lib/tokenizer';
 import { cueSpanSec } from '../lib/wpm';
 import {
-  countAccuracy,
+  countingInputs,
   g3Gate,
+  G3_MODE_LABELS,
   medianOf,
   spokenText,
 } from './measure-count-gate';
@@ -65,6 +70,8 @@ export interface CorpusRecord {
   regexCount: number | null;
   icuCount: number | null;
   countDeltaPct: number | null;
+  /** ko hangulBlocks determinism smoke (countHangulSyllables twice). */
+  hangulDeltaPct: number | null;
   bandMin: number | null;
   bandMax: number | null;
   bandMid: number | null;
@@ -104,8 +111,9 @@ export interface GateSummary {
   g1: { webOk: number; anyPath: number; pass: boolean };
   g2: { registers: Record<string, RegisterGate>; pass: boolean };
   g3: {
-    /** 'regex-icu' (words-mode) or 'vowels-sample' (hi) G3 variant. */
-    mode: 'regex-icu' | 'vowels-sample';
+    /** G3 variant: 'regex-icu' (words-mode), 'vowels-sample' (hi),
+     * 'mora-sample' (ja), 'chars-sanity' (th), or 'regex-icu+hangul' (ko). */
+    mode: 'regex-icu' | 'vowels-sample' | 'mora-sample' | 'chars-sanity' | 'regex-icu+hangul';
     n: number;
     median: number | null;
     maxDeltaPct: number | null;
@@ -190,23 +198,11 @@ export function applyStats(
     record.status = 'manual-only';
     record.error = 'latin-script hi track (hi-Latn text); excluded from the hi denominator';
   }
-  if (model.tokenizerMode === 'vowels') {
-    // hi G3 input: determinism — the nuclei counter applied to the real
-    // corpus text twice must agree (regex-vs-ICU is meaningless here;
-    // Intl.Segmenter has no vowel-nuclei granularity).
-    const first = countVowelNuclei(text, video.language);
-    const second = countVowelNuclei(text, video.language);
-    record.regexCount = first;
-    record.icuCount = second;
-    record.countDeltaPct = first > 0 ? (Math.abs(first - second) / first) * 100 : 0;
-  } else {
-    const acc = countAccuracy(source, video.language);
-    if (acc !== null) {
-      record.regexCount = acc.regex;
-      record.icuCount = acc.icu;
-      record.countDeltaPct = acc.deltaPct;
-    }
-  }
+  const inputs = countingInputs(source, video.language);
+  record.regexCount = inputs.regexCount;
+  record.icuCount = inputs.icuCount;
+  record.countDeltaPct = inputs.countDeltaPct;
+  record.hangulDeltaPct = inputs.hangulDeltaPct;
   const band = registerBand(video.language, video.register);
   record.bandMin = band?.min ?? null;
   record.bandMax = band?.max ?? null;
@@ -355,7 +351,7 @@ function verdictFor(
         : 'sr availability probe: sr ASR tracks present; measured';
     return { verdict: 'stays-derived', note: srNote };
   }
-  if (['ru', 'uk', 'pl', 'cs', 'hi', 'ar', 'id', 'vi'].includes(lang)) {
+  if (['ru', 'uk', 'pl', 'cs', 'hi', 'ar', 'id', 'vi', 'ja', 'th', 'ko'].includes(lang)) {
     if (g1.pass && g2.pass && g3.pass) return { verdict: 'corpus-validated', note: null };
     if (underpowered) return { verdict: 'underpowered', note: 'a register has <2 measured videos; no verdict' };
     return {
@@ -416,7 +412,7 @@ export function printLangSummary(summary: GateSummary): void {
     );
   }
   console.log(`G2 verdict: ${summary.g2.pass ? 'PASS' : 'FAIL'}`);
-  const g3Label = summary.g3.mode === 'vowels-sample' ? 'G3 vowels sample+determinism' : 'G3 count accuracy';
+  const g3Label = G3_MODE_LABELS[summary.g3.mode];
   console.log(
     `${g3Label}: n=${summary.g3.n} median=${summary.g3.median === null ? 'n/a' : `${summary.g3.median.toFixed(1)}%`} ` +
       `max=${summary.g3.maxDeltaPct === null ? 'n/a' : `${summary.g3.maxDeltaPct.toFixed(1)}%`} ` +

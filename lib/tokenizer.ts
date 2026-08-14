@@ -41,8 +41,9 @@ export function hasDevanagari(text: string): boolean {
   return /[\u0900-\u097F]/.test(text);
 }
 
-/** Whitespace, punctuation, or symbol graphemes — never speech. */
-const NON_SPEECH_GRAPHENE_RE = /^[\s\p{P}\p{S}]$/u;
+/** Whitespace, punctuation, or symbol graphemes — never speech. Combining
+ * marks (\p{M}) are not in the class, so they stay in the count. */
+export const NON_SPEECH_GRAPHENE_RE = /^[\s\p{P}\p{S}]$/u;
 
 let graphemeSegmenter: Intl.Segmenter | undefined;
 function segmenter(): Intl.Segmenter | undefined {

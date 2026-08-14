@@ -1,0 +1,310 @@
+{
+  "ja": {
+    "news": [
+      {
+        "query": "NHKニュース 速報",
+        "provenance": "NHK News, JP (ja)"
+      },
+      {
+        "query": "TBS NEWS DIG ニュース",
+        "provenance": "TBS NEWS DIG, JP (ja)"
+      },
+      {
+        "query": "日テレNEWS ニュース",
+        "provenance": "日テレ NEWS, JP (ja)"
+      },
+      {
+        "query": "ANNニュース 速報",
+        "provenance": "ANNnewsCH, JP (ja)"
+      }
+    ],
+    "lecture": [
+      {
+        "query": "東京大学 講義",
+        "provenance": "university lecture, JP (ja)"
+      },
+      {
+        "query": "NHK 高校講座",
+        "provenance": "NHK高校講座, JP (ja)"
+      },
+      {
+        "query": "大学 講義 日本語",
+        "provenance": "university lecture, JP (ja)"
+      },
+      {
+        "query": "予備校 講義 無料",
+        "provenance": "prep-school lecture, JP (ja)"
+      }
+    ],
+    "explainer": [
+      {
+        "query": "予備校のノリで学ぶ 数学 物理",
+        "provenance": "ヨビノリ, JP (ja)"
+      },
+      {
+        "query": "中田敦彦のYouTube大学",
+        "provenance": "中田敦彦のYouTube大学, JP (ja)"
+      },
+      {
+        "query": "QuizKnock クイズ",
+        "provenance": "QuizKnock, JP (ja)"
+      },
+      {
+        "query": "科学 解説 チャンネル 日本語",
+        "provenance": "science explainer, JP (ja)"
+      }
+    ],
+    "podcast": [
+      {
+        "query": "ゆる言語学ラジオ",
+        "provenance": "ゆる言語学ラジオ, JP (ja)"
+      },
+      {
+        "query": "ポッドキャスト 対談 日本語",
+        "provenance": "talk podcast, JP (ja)"
+      },
+      {
+        "query": "オードリー オールナイトニッポン",
+        "provenance": "ANN talk radio, JP (ja)"
+      },
+      {
+        "query": "トーク ラジオ 日本語",
+        "provenance": "talk radio, JP (ja)"
+      }
+    ],
+    "music": [
+      {
+        "query": "歌詞付き 邦楽 メドレー",
+        "provenance": "J-POP lyric compilation, JP (ja)"
+      },
+      {
+        "query": "J-POP 歌詞 付き フル",
+        "provenance": "J-POP lyric, JP (ja)"
+      },
+      {
+        "query": "アニソン 歌詞 メドレー",
+        "provenance": "anisong lyric compilation, JP (ja)"
+      },
+      {
+        "query": "演歌 歌詞 付き",
+        "provenance": "enka lyric, JP (ja)"
+      }
+    ]
+  },
+  "th": {
+    "news": [
+      {
+        "query": "ข่าว ไทยรัฐ",
+        "provenance": "ไทยรัฐออนไลน์, TH (th)"
+      },
+      {
+        "query": "ข่าว Thai PBS",
+        "provenance": "Thai PBS, TH (th)"
+      },
+      {
+        "query": "ข่าว ช่อง 8",
+        "provenance": "ช่อง 8, TH (th)"
+      },
+      {
+        "query": "ข่าว TNN",
+        "provenance": "TNN, TH (th)"
+      },
+      {
+        "query": "ข่าวค่ำ TNN ช่อง16",
+        "provenance": "TNN, TH (th)"
+      },
+      {
+        "query": "MCOT ข่าว",
+        "provenance": "MCOT, TH (th)"
+      },
+      {
+        "query": "ข่าว Nation TV",
+        "provenance": "Nation TV, TH (th)"
+      },
+      {
+        "query": "สรุปข่าวเด่น ประจำวัน",
+        "provenance": "news roundup, TH (th)"
+      }
+    ],
+    "lecture": [
+      {
+        "query": "บรรยาย มหาวิทยาลัย ภาษาไทย",
+        "provenance": "university lecture, TH (th)"
+      },
+      {
+        "query": "จุฬาลงกรณ์มหาวิทยาลัย บรรยาย",
+        "provenance": "Chulalongkorn lecture, TH (th)"
+      },
+      {
+        "query": "ม.เกษตรศาสตร์ บรรยาย",
+        "provenance": "Kasetsart lecture, TH (th)"
+      },
+      {
+        "query": "วิชา เรียน ฟรี ภาษาไทย",
+        "provenance": "free course, TH (th)"
+      }
+    ],
+    "explainer": [
+      {
+        "query": "วิทยาศาสตร์ อธิบาย ภาษาไทย",
+        "provenance": "science explainer, TH (th)"
+      },
+      {
+        "query": "สารคดี ไทย ความรู้",
+        "provenance": "knowledge documentary, TH (th)"
+      },
+      {
+        "query": "อนิเมชั่น การ์ตูน ความรู้ ไทย",
+        "provenance": "edutainment, TH (th)"
+      },
+      {
+        "query": "ช่อง ความรู้ ภาษาไทย",
+        "provenance": "knowledge channel, TH (th)"
+      }
+    ],
+    "podcast": [
+      {
+        "query": "พอดแคสต์ ภาษาไทย",
+        "provenance": "podcast, TH (th)"
+      },
+      {
+        "query": "รายการ พูดคุย สาระ",
+        "provenance": "talk show, TH (th)"
+      },
+      {
+        "query": "podcast ไทย สัมภาษณ์",
+        "provenance": "interview podcast, TH (th)"
+      },
+      {
+        "query": "คุย เรื่อง สาระ ภาษาไทย",
+        "provenance": "talk show, TH (th)"
+      }
+    ],
+    "music": [
+      {
+        "query": "เพลงไทย เนื้อเพลง ฮิต",
+        "provenance": "Thai lyric compilation, TH (th)"
+      },
+      {
+        "query": "รวมเพลง ไทย เนื้อเพลง",
+        "provenance": "Thai lyric compilation, TH (th)"
+      },
+      {
+        "query": "เพลง ลูกทุ่ง เนื้อเพลง",
+        "provenance": "lukthung lyric, TH (th)"
+      },
+      {
+        "query": "เพลง สากล เนื้อเพลง ไทย",
+        "provenance": "Thai lyric, TH (th)"
+      }
+    ]
+  },
+  "ko": {
+    "news": [
+      {
+        "query": "KBS 뉴스",
+        "provenance": "KBS News, KR (ko)"
+      },
+      {
+        "query": "MBC 뉴스데스크",
+        "provenance": "MBC News, KR (ko)"
+      },
+      {
+        "query": "YTN 뉴스",
+        "provenance": "YTN, KR (ko)"
+      },
+      {
+        "query": "연합뉴스 속보",
+        "provenance": "Yonhap News, KR (ko)"
+      }
+    ],
+    "lecture": [
+      {
+        "query": "서울대학교 강의",
+        "provenance": "SNU lecture, KR (ko)"
+      },
+      {
+        "query": "세바시 15분 강연",
+        "provenance": "세바시, KR (ko)"
+      },
+      {
+        "query": "대학 강의 한국어",
+        "provenance": "university lecture, KR (ko)"
+      },
+      {
+        "query": "KMOOC 강의",
+        "provenance": "K-MOOC, KR (ko)"
+      }
+    ],
+    "explainer": [
+      {
+        "query": "과학드림 과학",
+        "provenance": "과학드림, KR (ko)"
+      },
+      {
+        "query": "1분과학",
+        "provenance": "1분과학, KR (ko)"
+      },
+      {
+        "query": "안될과학",
+        "provenance": "안될과학, KR (ko)"
+      },
+      {
+        "query": "과학 유튜브 설명",
+        "provenance": "science explainer, KR (ko)"
+      }
+    ],
+    "podcast": [
+      {
+        "query": "팟캐스트 한국어",
+        "provenance": "podcast, KR (ko)"
+      },
+      {
+        "query": "토크쇼 한국어 대화",
+        "provenance": "talk show, KR (ko)"
+      },
+      {
+        "query": "지대넓얕 팟캐스트",
+        "provenance": "지대넓얕 podcast, KR (ko)"
+      },
+      {
+        "query": "인터뷰 팟캐스트 한국",
+        "provenance": "interview podcast, KR (ko)"
+      },
+      {
+        "query": "사피엔스 스튜디오",
+        "provenance": "사피엔스 스튜디오, KR (ko)"
+      },
+      {
+        "query": "대화 인터뷰 한국어",
+        "provenance": "interview talk, KR (ko)"
+      },
+      {
+        "query": "요즘 것들의 사생활",
+        "provenance": "talk show, KR (ko)"
+      },
+      {
+        "query": "한국어 토크 인터뷰",
+        "provenance": "KR talk interview"
+      }
+    ],
+    "music": [
+      {
+        "query": "노래 가사 포함 모음",
+        "provenance": "Korean lyric compilation, KR (ko)"
+      },
+      {
+        "query": "K-POP 노래 가사 자막",
+        "provenance": "K-POP lyric, KR (ko)"
+      },
+      {
+        "query": "발라드 가사 포함",
+        "provenance": "ballad lyric, KR (ko)"
+      },
+      {
+        "query": "트로트 가사 포함",
+        "provenance": "trot lyric, KR (ko)"
+      }
+    ]
+  }
+}

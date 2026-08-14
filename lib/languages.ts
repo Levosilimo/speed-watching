@@ -64,7 +64,8 @@ export interface LanguageModel {
   /** Evidence tier of the priors: 'corpus' = measured natural-rate corpus,
    * absent = literature-sourced. ru (2026-08 phase0-russian-corpus),
    * uk/pl/cs (2026-08 phase0-slavic-corpus), and ar/id/vi/ms/tl (2026-08
-   * phase0-captionless-corpus) carry 'corpus'; every other language stays
+   * phase0-captionless-corpus), and ja/th/ko (2026-08
+   * phase0-east-asian-corpus) carry 'corpus'; every other language stays
    * literature (hi measured but addendum-only — see the header note). */
   priorsSource?: 'literature' | 'corpus';
   /** Per-register estimated-tier ranges, in `unit` (detectContentType's
@@ -84,10 +85,59 @@ export const LANGUAGES: Record<string, LanguageModel> = {
   fr: { code: 'fr', unit: 'wpm', target: 250, ceiling: 253, tokenizerMode: 'words', derived: true, priors: { min: 130, max: 190 } },
   de: { code: 'de', unit: 'wpm', target: 175, ceiling: 181, tokenizerMode: 'words', derived: true, priors: { min: 91, max: 133 } },
   it: { code: 'it', unit: 'wpm', target: 180, ceiling: 184, tokenizerMode: 'words', derived: true, priors: { min: 94, max: 137 } },
-  ja: { code: 'ja', unit: 'mora', target: 380, ceiling: 400, tokenizerMode: 'mora', derived: true, priors: { min: 198, max: 289 } },
+  ja: {
+    code: 'ja',
+    unit: 'mora',
+    target: 380,
+    ceiling: 400,
+    tokenizerMode: 'mora',
+    derived: true,
+    priorsSource: 'corpus',
+    priors: { min: 395, max: 435 },
+    registerPriors: {
+      news: { min: 335, max: 375 },
+      lecture: { min: 450, max: 490 },
+      explainer: { min: 385, max: 425 },
+      podcast: { min: 450, max: 490 },
+      generic: { min: 395, max: 435 },
+    },
+  },
   zh: { code: 'zh', unit: 'cpm', target: 240, ceiling: 258, tokenizerMode: 'chars', derived: false, priors: { min: 125, max: 182 } },
-  th: { code: 'th', unit: 'cpm', target: 282, ceiling: 290, tokenizerMode: 'chars', derived: true, priors: { min: 147, max: 214 } },
-  ko: { code: 'ko', unit: 'syl', target: 340, ceiling: 350, tokenizerMode: 'words', derived: true, priors: { min: 177, max: 258 }, hangulBlocks: true },
+  th: {
+    code: 'th',
+    unit: 'cpm',
+    target: 282,
+    ceiling: 290,
+    tokenizerMode: 'chars',
+    derived: true,
+    priorsSource: 'corpus',
+    priors: { min: 505, max: 545 },
+    registerPriors: {
+      news: { min: 545, max: 585 },
+      lecture: { min: 420, max: 460 },
+      explainer: { min: 590, max: 630 },
+      podcast: { min: 535, max: 575 },
+      generic: { min: 505, max: 545 },
+    },
+  },
+  ko: {
+    code: 'ko',
+    unit: 'syl',
+    target: 340,
+    ceiling: 350,
+    tokenizerMode: 'words',
+    derived: true,
+    priorsSource: 'corpus',
+    priors: { min: 305, max: 345 },
+    registerPriors: {
+      news: { min: 265, max: 305 },
+      lecture: { min: 320, max: 360 },
+      explainer: { min: 350, max: 390 },
+      podcast: { min: 260, max: 300 },
+      generic: { min: 305, max: 345 },
+    },
+    hangulBlocks: true,
+  },
   ar: {
     code: 'ar',
     unit: 'syl',

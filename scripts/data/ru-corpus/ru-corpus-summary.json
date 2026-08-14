@@ -753,5 +753,303 @@
     },
     "verdict": "corpus-validated",
     "note": null
+  },
+  {
+    "language": "ja",
+    "records": 14,
+    "classification": {
+      "web-ok": 14
+    },
+    "asrBearing": 14,
+    "g1": {
+      "webOk": 14,
+      "anyPath": 14,
+      "pass": true
+    },
+    "g2": {
+      "registers": {
+        "explainer": {
+          "n": 3,
+          "median": 405.71256202809565,
+          "bandMin": 194.8,
+          "bandMax": 292.2,
+          "bandMid": 243.5,
+          "inBandFraction": 0,
+          "status": "fail"
+        },
+        "lecture": {
+          "n": 3,
+          "median": 470.73813474239086,
+          "bandMin": 194.8,
+          "bandMax": 292.2,
+          "bandMid": 243.5,
+          "inBandFraction": 0,
+          "status": "fail"
+        },
+        "music": {
+          "n": 2,
+          "median": 102.28165927115322,
+          "bandMin": null,
+          "bandMax": null,
+          "bandMid": null,
+          "inBandFraction": 0,
+          "status": "no-band"
+        },
+        "podcast": {
+          "n": 3,
+          "median": 470.58389968412,
+          "bandMin": 194.8,
+          "bandMax": 292.2,
+          "bandMid": 243.5,
+          "inBandFraction": 0,
+          "status": "fail"
+        },
+        "news": {
+          "n": 3,
+          "median": 355.5820148530836,
+          "bandMin": 194.8,
+          "bandMax": 292.2,
+          "bandMid": 243.5,
+          "inBandFraction": 0.3333333333333333,
+          "status": "fail"
+        }
+      },
+      "pass": false
+    },
+    "g3": {
+      "mode": "mora-sample",
+      "n": 20,
+      "median": 0,
+      "maxDeltaPct": 8.461538461538472,
+      "violations": [],
+      "pass": true
+    },
+    "g4": {
+      "rows": 14,
+      "falseRows": [],
+      "pass": true
+    },
+    "g5": {
+      "n": 12,
+      "median": -30.56088250507865
+    },
+    "confusion": {
+      "explainer": {
+        "generic": 3
+      },
+      "lecture": {
+        "generic": 3
+      },
+      "music": {
+        "generic": 1,
+        "music": 1
+      },
+      "podcast": {
+        "generic": 3
+      },
+      "news": {
+        "generic": 3
+      }
+    },
+    "verdict": "stays-derived",
+    "note": null
+  },
+  {
+    "language": "th",
+    "records": 14,
+    "classification": {
+      "web-ok": 14
+    },
+    "asrBearing": 14,
+    "g1": {
+      "webOk": 14,
+      "anyPath": 14,
+      "pass": true
+    },
+    "g2": {
+      "registers": {
+        "explainer": {
+          "n": 3,
+          "median": 609.1246309396779,
+          "bandMin": 144.4,
+          "bandMax": 216.6,
+          "bandMid": 180.5,
+          "inBandFraction": 0,
+          "status": "fail"
+        },
+        "lecture": {
+          "n": 3,
+          "median": 442.4052873834533,
+          "bandMin": 144.4,
+          "bandMax": 216.6,
+          "bandMid": 180.5,
+          "inBandFraction": 0,
+          "status": "fail"
+        },
+        "music": {
+          "n": 2,
+          "median": 188.55083338640148,
+          "bandMin": null,
+          "bandMax": null,
+          "bandMid": null,
+          "inBandFraction": 0,
+          "status": "no-band"
+        },
+        "news": {
+          "n": 3,
+          "median": 565.77938392244,
+          "bandMin": 144.4,
+          "bandMax": 216.6,
+          "bandMid": 180.5,
+          "inBandFraction": 0,
+          "status": "fail"
+        },
+        "podcast": {
+          "n": 3,
+          "median": 553.8105901284813,
+          "bandMin": 144.4,
+          "bandMax": 216.6,
+          "bandMid": 180.5,
+          "inBandFraction": 0,
+          "status": "fail"
+        }
+      },
+      "pass": false
+    },
+    "g3": {
+      "mode": "chars-sanity",
+      "n": 17,
+      "median": 0.6650041562759768,
+      "maxDeltaPct": 0.9975784920421384,
+      "violations": [],
+      "pass": true
+    },
+    "g4": {
+      "rows": 14,
+      "falseRows": [],
+      "pass": true
+    },
+    "g5": {
+      "n": 12,
+      "median": -18.172750065216945
+    },
+    "confusion": {
+      "explainer": {
+        "generic": 3
+      },
+      "lecture": {
+        "generic": 3
+      },
+      "music": {
+        "generic": 2
+      },
+      "news": {
+        "generic": 3
+      },
+      "podcast": {
+        "generic": 3
+      }
+    },
+    "verdict": "stays-derived",
+    "note": null
+  },
+  {
+    "language": "ko",
+    "records": 14,
+    "classification": {
+      "web-ok": 14
+    },
+    "asrBearing": 14,
+    "g1": {
+      "webOk": 14,
+      "anyPath": 14,
+      "pass": true
+    },
+    "g2": {
+      "registers": {
+        "explainer": {
+          "n": 3,
+          "median": 367.72463120250336,
+          "bandMin": 174,
+          "bandMax": 261,
+          "bandMid": 217.5,
+          "inBandFraction": 0,
+          "status": "fail"
+        },
+        "lecture": {
+          "n": 3,
+          "median": 340.77198711842885,
+          "bandMin": 174,
+          "bandMax": 261,
+          "bandMid": 217.5,
+          "inBandFraction": 0,
+          "status": "fail"
+        },
+        "music": {
+          "n": 2,
+          "median": 64.02380301049264,
+          "bandMin": null,
+          "bandMax": null,
+          "bandMid": null,
+          "inBandFraction": 0,
+          "status": "no-band"
+        },
+        "news": {
+          "n": 3,
+          "median": 285.9810517059108,
+          "bandMin": 174,
+          "bandMax": 261,
+          "bandMid": 217.5,
+          "inBandFraction": 0,
+          "status": "fail"
+        },
+        "podcast": {
+          "n": 3,
+          "median": 280.7610634502675,
+          "bandMin": 174,
+          "bandMax": 261,
+          "bandMid": 217.5,
+          "inBandFraction": 0.3333333333333333,
+          "status": "fail"
+        }
+      },
+      "pass": false
+    },
+    "g3": {
+      "mode": "regex-icu+hangul",
+      "n": 29,
+      "median": 0,
+      "maxDeltaPct": 3.493821900298253,
+      "violations": [],
+      "pass": true
+    },
+    "g4": {
+      "rows": 14,
+      "falseRows": [],
+      "pass": true
+    },
+    "g5": {
+      "n": 12,
+      "median": -70.31079270668344
+    },
+    "confusion": {
+      "explainer": {
+        "generic": 3
+      },
+      "lecture": {
+        "generic": 3
+      },
+      "music": {
+        "music": 2
+      },
+      "news": {
+        "generic": 3
+      },
+      "podcast": {
+        "generic": 3
+      }
+    },
+    "verdict": "stays-derived",
+    "note": null
   }
 ]
