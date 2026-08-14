@@ -82,7 +82,15 @@ describe('language table', () => {
   it('gives every priors range within its own target band', () => {
     for (const [code, model] of Object.entries(LANGUAGES)) {
       expect(model.priors.min, code).toBeLessThan(model.priors.max);
-      expect(model.priors.max, code).toBeLessThan(model.target);
+      // Ratio-derived priors stay below the target; corpus-measured bands
+      // are measurements and can reach or exceed it (uk talk rides the
+      // ceiling; ja/th natural rates sit at/above the derived targets —
+      // the estimated tier's range then overlaps the safe zone, which is
+      // the measured finding, not a modeling error).
+      if (model.priorsSource !== 'corpus') {
+        expect(model.priors.min, code).toBeLessThan(model.target);
+        expect(model.priors.max, code).toBeLessThan(model.target);
+      }
     }
   });
 
@@ -124,7 +132,7 @@ describe('language table', () => {
   });
 
   it('keeps the register priors off every other language', () => {
-    const withRegisters = ['ru', 'uk', 'ar', 'id', 'vi', 'ms', 'tl'];
+    const withRegisters = ['ru', 'uk', 'ar', 'id', 'vi', 'ms', 'tl', 'ja', 'th', 'ko'];
     for (const [code, model] of Object.entries(LANGUAGES)) {
       if (withRegisters.includes(code)) continue;
       expect(model.registerPriors, code).toBeUndefined();
@@ -171,6 +179,52 @@ describe('language table', () => {
         expect(band!.min, `${code} ${type}`).toBeGreaterThan(0);
         expect(band!.max, `${code} ${type}`).toBeLessThan(model.target);
       }
+    }
+  });
+
+  it('anchors ja/th/ko register priors to the east-asian corpus', () => {
+    // Built bands = measured median ± 20 in the language's unit (2026-08
+    // phase0-east-asian-corpus), labeled corpus-derived; the generic band
+    // is the union mid. These are the first bands that reach/exceed the
+    // derived targets — the priors.max < target invariant is relaxed for
+    // corpus-measured languages (see the within-target-band spec).
+    const ja = LANGUAGES['ja']!;
+    expect(ja.priorsSource).toBe('corpus');
+    expect(ja.unit).toBe('mora');
+    expect(ja.priors).toEqual({ min: 395, max: 435 });
+    expect(ja.registerPriors).toEqual({
+      news: { min: 335, max: 375 },
+      lecture: { min: 450, max: 490 },
+      explainer: { min: 385, max: 425 },
+      podcast: { min: 450, max: 490 },
+      generic: { min: 395, max: 435 },
+    });
+    const th = LANGUAGES['th']!;
+    expect(th.priorsSource).toBe('corpus');
+    expect(th.unit).toBe('cpm');
+    expect(th.priors).toEqual({ min: 505, max: 545 });
+    expect(th.registerPriors).toEqual({
+      news: { min: 545, max: 585 },
+      lecture: { min: 420, max: 460 },
+      explainer: { min: 590, max: 630 },
+      podcast: { min: 535, max: 575 },
+      generic: { min: 505, max: 545 },
+    });
+    const ko = LANGUAGES['ko']!;
+    expect(ko.priorsSource).toBe('corpus');
+    expect(ko.unit).toBe('syl');
+    expect(ko.priors).toEqual({ min: 305, max: 345 });
+    expect(ko.registerPriors).toEqual({
+      news: { min: 265, max: 305 },
+      lecture: { min: 320, max: 360 },
+      explainer: { min: 350, max: 390 },
+      podcast: { min: 260, max: 300 },
+      generic: { min: 305, max: 345 },
+    });
+    for (const code of ['ja', 'th', 'ko']) {
+      const model = LANGUAGES[code]!;
+      expect(model.priors, code).toEqual(model.registerPriors?.generic);
+      expect(model.derived, code).toBe(true);
     }
   });
 

@@ -32,8 +32,9 @@ describe('priorMidpoint', () => {
 
 describe('priorRange — language-aware', () => {
   it('uses the language priors for known non-English tracks', () => {
-    expect(priorRange('lecture', LANGUAGES['ja'])).toEqual(LANGUAGES['ja']?.priors);
+    expect(priorRange('lecture', LANGUAGES['fr'])).toEqual(LANGUAGES['fr']?.priors);
     expect(priorRange('generic', LANGUAGES['de'])).toEqual(LANGUAGES['de']?.priors);
+    expect(priorRange('generic', LANGUAGES['ja'])).toEqual(LANGUAGES['ja']?.priors);
   });
 
   it('resolves the ru register bands per content type', () => {
