@@ -111,11 +111,17 @@ interface PillDom {
   chapterToggleBtn: HTMLButtonElement;
 }
 
-function buildDom(): PillDom {
-  const pill = document.createElement('div');
-  pill.className = 'pill';
-  pill.dataset.mode = 'hidden';
-
+/** The live-region line elements; buildDom appends the container first. */
+function buildMainText(): {
+  mainText: HTMLDivElement;
+  labelEl: HTMLSpanElement;
+  tierEl: HTMLSpanElement;
+  liveEl: HTMLSpanElement;
+  savedEl: HTMLSpanElement;
+  warningNote: HTMLDivElement;
+  firstRunEl: HTMLDivElement;
+  chapterStatusEl: HTMLSpanElement;
+} {
   const mainText = document.createElement('div');
   mainText.className = 'main-text';
   // Live region covers only the text: status regions announce atomically
@@ -150,6 +156,17 @@ function buildDom(): PillDom {
 
   mainText.append(labelEl, tierEl, liveEl, savedEl, warningNote, firstRunEl, chapterStatusEl);
 
+  return { mainText, labelEl, tierEl, liveEl, savedEl, warningNote, firstRunEl, chapterStatusEl };
+}
+
+/** The action buttons; buildDom appends the container second. */
+function buildActions(): {
+  actions: HTMLDivElement;
+  applyBtn: HTMLButtonElement;
+  dismissBtn: HTMLButtonElement;
+  stopAutoBtn: HTMLButtonElement;
+  chapterToggleBtn: HTMLButtonElement;
+} {
   const actions = document.createElement('div');
   actions.className = 'actions';
 
@@ -177,22 +194,20 @@ function buildDom(): PillDom {
   chapterToggleBtn.hidden = true;
 
   actions.append(applyBtn, dismissBtn, stopAutoBtn, chapterToggleBtn);
-  pill.append(mainText, actions);
 
-  return {
-    pill,
-    labelEl,
-    tierEl,
-    liveEl,
-    savedEl,
-    warningNote,
-    firstRunEl,
-    chapterStatusEl,
-    applyBtn,
-    dismissBtn,
-    stopAutoBtn,
-    chapterToggleBtn,
-  };
+  return { actions, applyBtn, dismissBtn, stopAutoBtn, chapterToggleBtn };
+}
+
+function buildDom(): PillDom {
+  const pill = document.createElement('div');
+  pill.className = 'pill';
+  pill.dataset.mode = 'hidden';
+
+  const mainText = buildMainText();
+  const actions = buildActions();
+  pill.append(mainText.mainText, actions.actions);
+
+  return { pill, ...mainText, ...actions };
 }
 
 /** The player area that hosted the pill — #movie_player on YouTube, else the
