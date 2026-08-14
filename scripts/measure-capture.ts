@@ -73,6 +73,7 @@ export function initRecord(video: CorpusVideo): CorpusRecord {
     regexCount: null,
     icuCount: null,
     countDeltaPct: null,
+    hangulDeltaPct: null,
     bandMin: null,
     bandMax: null,
     bandMid: null,

@@ -16,7 +16,6 @@ import { ANDROID_CLIENT } from './captions-android';
 
 const ROOT = fileURLToPath(new URL('.', import.meta.url));
 const DEFAULT_CANDIDATES = 'corpus-b-candidates.json';
-const OUT_MANIFEST = join(ROOT, 'data', 'corpus-b.json');
 
 interface ProbeQuery {
   query: string;
@@ -187,7 +186,9 @@ async function main(): Promise<void> {
     return;
   }
   const candidatesArg = args.find((a) => a.startsWith('--candidates='))?.slice('--candidates='.length);
+  const outArg = args.find((a) => a.startsWith('--out='))?.slice('--out='.length);
   const candidatesPath = join(ROOT, 'data', candidatesArg ?? DEFAULT_CANDIDATES);
+  const outPath = join(ROOT, 'data', outArg ?? 'corpus-b.json');
   const candidates = JSON.parse(readFileSync(candidatesPath, 'utf8')) as CandidatesFile;
 
   const videos: Array<Record<string, string>> = [];
@@ -207,8 +208,8 @@ async function main(): Promise<void> {
       if (pool.length > 0) fallbacks[`${lang}:${register}`] = pool;
     }
   }
-  writeFileSync(OUT_MANIFEST, JSON.stringify({ videos, fallbacks }, null, 2) + '\n', 'utf8');
-  console.log(`manifest -> ${OUT_MANIFEST} (${videos.length} videos)`);
+  writeFileSync(outPath, JSON.stringify({ videos, fallbacks }, null, 2) + '\n', 'utf8');
+  console.log(`manifest -> ${outPath} (${videos.length} videos)`);
 }
 
 main().catch((err) => {
