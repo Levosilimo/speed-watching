@@ -15,52 +15,31 @@
 // Same world/wiring pattern as content.ts: MAIN world, chrome-backed
 // settings via the window-event bridge (lib/messaging.ts), and the
 // __speedwatcherPill test hook the shared e2e specs assert on (E2E builds
-// only — SEC-2, same gate as content.ts).
-// The file carries the auto-apply lifecycle and the saved-time accrual
-// plumbing on top of the measurement pipeline, which keeps it past the
-// 440-line reviewability budget; the suppression mirrors content.ts's — a
-// reviewed exception, not license to grow further.
-// aislop-ignore-file file-too-large
+// only — SEC-2, same gate as content.ts). The per-video rate controller
+// lives in lib/rate-controller.ts; this file keeps the measurement
+// pipeline, the skip-silence actuator wiring, and the video-observer wiring.
 
 import { defineContentScript } from 'wxt/utils/define-content-script';
-import type { Segment } from '@/lib/captions';
 import { harvestCaptions, type VttHost } from '@/lib/captions-harvest';
 import { priorMidpoint } from '@/lib/heuristics';
-import { resolveLanguage, type LanguageModel, type RateRange } from '@/lib/languages';
-import { SerializedRunner } from '@/lib/measure-guard';
+import { resolveLanguage } from '@/lib/languages';
 import { RateReapplier, selectVideo } from '@/lib/matcher';
 import { createBridgeClient } from '@/lib/messaging';
-import type { ContentType } from '@/lib/music';
 import { detectMusic } from '@/lib/music';
-import { recommend, SAFE_ZONE_CEILING_WPM, TARGET_WPM, type RateTier, type Recommendation } from '@/lib/recommend';
-import { shouldAutoApply } from '@/lib/auto-apply';
+import type { RateTier } from '@/lib/recommend';
 import {
-  buildGapIndex,
-  defaultSkipSilence,
-  normalizeSkipSilence,
   pauseRateFor,
-  resolveSkipSilence,
-  shouldSkip,
+  planSkipSilence,
   SkipSilenceActuator,
   type GapSpan,
   type SkipSilencePrefs,
 } from '@/lib/skip-silence';
-import {
-  defaultSettings,
-  resolveContentType,
-  resolvePlatformMax,
-  resolveUserTarget,
-  type Settings,
-} from '@/lib/settings';
+import { resolveContentType } from '@/lib/settings';
+import { RATE_EPSILON } from '@/lib/time-saved';
 import { asrTierInputs, filteredTokensOverTrimmedSpan, manualCueRate } from '@/lib/wpm';
-import { createPill, type AppliedSource, type LiveRate, type PillApi, type PillState } from '@/ui/pill';
 import { createNudgeHost } from '@/ui/nudge-host';
-import {
-  RATE_EPSILON,
-  savedSeconds,
-  TimeSavedTracker,
-  type SavedTick,
-} from '@/lib/time-saved';
+import { createRateController } from '@/lib/rate-controller';
+import type { PillTestHook, RateCurrent } from '@/lib/rate-controller-types';
 
 const RESOURCE_WAIT_MS = 2000;
 const RESOURCE_POLL_MS = 250;
@@ -68,80 +47,51 @@ const RESOURCE_POLL_MS = 250;
 const OBSERVER_DEBOUNCE_MS = 300;
 
 const bridge = createBridgeClient(window);
-const nudgeSurface = createNudgeHost(bridge);
-
-/** Current video's recommendation context; null until the first measure. */
-let current: {
-  site: string;
-  contentType: ContentType;
-  naturalRate: number;
-  platformMax: number;
-  tier: RateTier;
-  /** Rate-unit display label; the track language resolves it when the
-   * track declares one (Dzen's ru → wpm), else the wpm default. */
-  unit: string;
-  recommendation: Recommendation;
-  /** The track language's safe zone — the pill warning and nudge copy key
-   * on it (P0); en defaults when the track language is unmapped. */
-  range: RateRange;
-} | null = null;
-
-let pill: { api: PillApi; host: HTMLElement } | null = null;
-let activeVideo: HTMLVideoElement | null = null;
-/** Last rendered pill state — stop-auto and override detection re-render it. */
-let pillState: PillState | null = null;
-
-// Auto-apply lifecycle (per video): mirror of entrypoints/content.ts —
-// 'pending' until the first measure, 'auto' after a self-apply, 'stopped'
-// after manual override, dismiss, or Stop-auto.
-let autoState: 'pending' | 'auto' | 'stopped' = 'pending';
-/** How the current rate got applied — rides into the pill as applied. */
-let appliedSource: AppliedSource = 'none';
-/** The playback rate that was playing before auto applied it (P1a): the
- * Stop-auto/dismiss undo restores this, not a blind 1×. null while auto
- * never applied this video, and after the user takes over manually. */
-let preAutoRate: number | null = null;
-/** Video-swap epoch: bumped by every video reset so an in-flight measure
- * cannot render — or auto-apply — for the video it measured after the swap
- * (mirror of content.ts's navigation epoch). */
-let epoch = 0;
-let observerTimer: ReturnType<typeof setTimeout> | null = null;
-let hasSeenVideo = false;
 const reapplier = new RateReapplier();
-const measureRunner = new SerializedRunner();
 
-// Time-saved session (lib/time-saved.ts): mirror of entrypoints/content.ts —
-// the tracker counts wall time at the applied rate, the pill shows the
-// current video's accumulated saved seconds, and the flushes ride the
-// bridge to the background store.
-const savedTracker = new TimeSavedTracker();
-/** Saved seconds accumulated for the current video; null before apply. */
-let savedSec: number | null = null;
-/** The multiplier the session is gated on; null while no session runs. */
-let savedMultiplier: number | null = null;
-
-// Skip-silence session (lib/skip-silence.ts): mirror of entrypoints/content.ts
-// — the actuator dips the rate inside caption gaps; the reapplier holds the
+// Skip-silence session (lib/skip-silence.ts): mirror of content.ts — the
+// actuator dips the rate inside caption gaps; the reapplier holds the
 // base-vs-pause pair so its loop re-asserts the OUT-OF-GAP rate on resets.
 const skipActuator = new SkipSilenceActuator();
 /** The current video's gap plan; null when the toggle is off or the
  * timeline has no gap >= minGapSec. */
 let skipPlan: { index: GapSpan[]; prefs: SkipSilencePrefs } | null = null;
 
-const NONE_STATE: PillState = {
-  mode: 'none',
-  rateWpm: 0,
-  multiplier: 1,
-  effectiveWpm: 0,
-  label: '',
-};
-
-interface PillTestHook {
-  state: PillState | null;
-  apply(): void;
-  dismiss(): void;
-  stopAuto?(): void;
-}
+const controller = createRateController<RateCurrent>({
+  bridge,
+  nudgeSurface: createNudgeHost(bridge),
+  hostAnchor: () => document.body,
+  // The re-assert loop: Vimeo resets playbackRate on pause/play and re-init.
+  applyRate: (video, rate, platformMax) => {
+    reapplier.start(video, rate, platformMax);
+  },
+  stopRateApplies: () => reapplier.stop(),
+  makeCurrent: (parts) => ({
+    site: parts.site,
+    contentType: parts.contentType,
+    naturalRate: parts.naturalRate,
+    platformMax: parts.platformMax,
+    tier: parts.tier,
+    unit: parts.unit,
+    recommendation: parts.recommendation,
+    range: parts.range,
+  }),
+  videoIdOf: () => location.href,
+  // Skip-silence wiring: the actuator's dip is written through the
+  // reapplier's pair, so the re-assert loop restores the out-of-gap rate.
+  skip: {
+    attach: (video, applied) => attachSkip(video, applied),
+    detach: () => skipActuator.detach(),
+    isOwnDip: (rate) =>
+      skipActuator.active && Math.abs(rate - reapplier.currentRateFor(skipActuator.inGapNow)) <= RATE_EPSILON,
+  },
+  // A new element means the user switched videos: end the old session and
+  // re-measure (the observer's handleVideoMutations does the same).
+  onVideoSwap: (endSession) => {
+    endSession();
+    void measure();
+  },
+});
 
 declare global {
   interface Window {
@@ -150,6 +100,9 @@ declare global {
     __vimeo_player_config__?: { player?: { config_url?: string } };
   }
 }
+
+let observerTimer: ReturnType<typeof setTimeout> | null = null;
+let hasSeenVideo = false;
 
 export default defineContentScript({
   matches: ['<all_urls>'],
@@ -161,29 +114,16 @@ export default defineContentScript({
     if (location.hostname.endsWith('youtube.com') && location.pathname.startsWith('/watch')) {
       return;
     }
-    document.addEventListener('play', onMediaEvent, true);
-    document.addEventListener('playing', onMediaEvent, true);
-    document.addEventListener('timeupdate', onMediaEvent, true);
+    document.addEventListener('play', controller.onMediaEvent, true);
+    document.addEventListener('playing', controller.onMediaEvent, true);
+    document.addEventListener('timeupdate', controller.onMediaEvent, true);
     // Live-rate line: ratechange and pause also drive the throttled refresh
     // (mirror of entrypoints/content.ts).
-    document.addEventListener('ratechange', onMediaEvent, true);
-    document.addEventListener('pause', onMediaEvent, true);
+    document.addEventListener('ratechange', controller.onMediaEvent, true);
+    document.addEventListener('pause', controller.onMediaEvent, true);
     // E2E-only hook (SEC-2): the store bundle must not expose page-callable
     // playback controls — see entrypoints/content.ts for the gate.
-    if (__E2E__) {
-      window.__speedwatcherPill = {
-        state: null,
-        apply: () => {
-          if (current === null) return;
-          if (current.recommendation.mode === 'music' || current.recommendation.mode === 'unreachable') {
-            return;
-          }
-          applyMultiplier(current.recommendation.multiplier);
-        },
-        dismiss: () => dismissCurrent(),
-        stopAuto: () => stopAutoForVideo(),
-      };
-    }
+    if (__E2E__) window.__speedwatcherPill = controller.pillHook;
     // Player elements appear and disappear dynamically (embeds mount late,
     // SPA navigation swaps them): re-measure when the active element changes.
     // The callback runs on every DOM mutation on every page, so it skips the
@@ -200,70 +140,32 @@ export default defineContentScript({
 
 function handleVideoMutations(): void {
   hasSeenVideo = true;
-  const active = selectVideo([...document.querySelectorAll('video')], activeVideo);
+  const active = selectVideo([...document.querySelectorAll('video')], controller.activeVideo);
   if (active === null) {
-    if (pill !== null) {
-      pill.api.update(NONE_STATE);
-      pill.api.destroy();
-      pill = null;
-    }
-    reapplier.stop();
-    current = null;
-    resetSession();
+    controller.onVideoRemoved();
     return;
   }
-  if (active !== activeVideo) {
-    activeVideo = active;
-    resetSession();
+  if (active !== controller.activeVideo) {
+    controller.adoptVideo(active);
     void measure();
   }
-}
-
-/** Video swap or removal: end the old video's session — tracker, lifecycle
- * state, and the nudge surface — and bump the epoch so an in-flight measure
- * goes stale (mirror of content.ts's onNavigationStart). */
-function resetSession(): void {
-  savedTracker.detach();
-  savedSec = null;
-  savedMultiplier = null;
-  skipActuator.detach();
-  skipPlan = null;
-  epoch += 1;
-  autoState = 'pending';
-  appliedSource = 'none';
-  preAutoRate = null;
-  nudgeSurface.teardown();
-}
-
-function onMediaEvent(event: Event): void {
-  // Multi-video pages: the last element to fire a media event is the one
-  // the user is watching; a swap re-measures and ends the old session.
-  if (event.target instanceof HTMLVideoElement && event.target !== activeVideo) {
-    activeVideo = event.target;
-    resetSession();
-    void measure();
-  }
-  markUserOverride();
-  refreshLiveRate();
-  refreshSavedSec();
 }
 
 function measure(): void {
-  measureRunner.run(measureOnce);
+  controller.runMeasure((startedAt) => measureOnce(startedAt));
 }
 
-async function measureOnce(): Promise<void> {
-  const startedAt = epoch;
+async function measureOnce(startedAt: number): Promise<void> {
   skipPlan = null;
-  const video = activeVideo ?? document.querySelector<HTMLVideoElement>('video');
+  const video = controller.activeVideo ?? document.querySelector<HTMLVideoElement>('video');
   if (video === null) return;
   // Live streams have no finite rate target; suppress the pill like the
   // youtube path does.
   if (video.duration === Infinity) {
-    showPill(NONE_STATE);
+    controller.showNone();
     return;
   }
-  const settings = await loadSettings();
+  const settings = await controller.loadSettings();
   const site = location.hostname.replace(/^www\./, '');
   const vimeo = window.__vimeo_player_config__;
   // Track-src probe inputs: the src attributes of every video > track[src]
@@ -303,16 +205,34 @@ async function measureOnce(): Promise<void> {
       const { tier, wordInputs } = asrTierInputs(asr ? 'asr' : 'manual', harvest.words, harvest.cues);
       if (__E2E__) window.__speedwatcherCaptionTier = tier;
       // Skip-silence plan: the toggle and this video's gap index (see
-      // planSkipSilence); null when the toggle is off or no gap clears
-      // minGapSec.
-      skipPlan = await planSkipSilence(harvest.words, harvest.cues, settings, site);
-      renderRecommendation(naturalRate, tier, contentType, settings, site, wordInputs, language, startedAt);
+      // planSkipSilence); null when the toggle is off or no gap clears minGapSec.
+      skipPlan = await planSkipSilence(harvest.words, harvest.cues, settings, site, bridge);
+      controller.renderRecommendation(location.href, naturalRate, tier, contentType, settings, site, wordInputs, language, startedAt);
       return;
     }
   }
   if (__E2E__) window.__speedwatcherCaptionTier = 'estimated';
   const contentType = resolveContentType(settings, site, 'generic');
-  renderRecommendation(priorMidpoint(contentType), 'estimated', contentType, settings, site, undefined, undefined, startedAt);
+  controller.renderRecommendation(location.href, priorMidpoint(contentType), 'estimated', contentType, settings, site, undefined, undefined, startedAt);
+}
+
+/** Arms skip-silence on an apply: the reapplier's pair (base = the applied
+ * rate, pause = the dip target) and the actuator's timeupdate listener.
+ * DRM content (mediaKeys) and dip targets that equal the applied rate
+ * never attach. */
+function attachSkip(video: HTMLVideoElement, applied: number): void {
+  if (skipPlan === null) return;
+  // Chrome reports mediaKeys as undefined until EME is used, so the DRM
+  // gate is a truthy check, not a null check.
+  if (video.mediaKeys) return;
+  const pause = pauseRateFor(applied, skipPlan.prefs);
+  if (pause >= applied) return;
+  reapplier.setRates(applied, pause);
+  skipActuator.attach(video, skipPlan.index, skipPlan.prefs, applied, (inGap) => {
+    // Re-render the slowed-silence indicator only on gap transitions.
+    const state = controller.pillState;
+    if (state !== null) controller.showPill({ ...state, skipSlowed: inGap });
+  });
 }
 
 /** Resource-timeline URLs naming caption sources, waiting briefly for the
@@ -331,314 +251,4 @@ async function captionResourceUrls(): Promise<string[]> {
 
 function vttHost(): VttHost {
   return { VTTCue: globalThis.VTTCue, document: window.document };
-}
-
-function renderRecommendation(
-  naturalRate: number,
-  tier: RateTier,
-  contentType: ContentType,
-  settings: Settings,
-  site: string,
-  wordInputs?: { articulatoryWpm: number; timingCoverageOk: boolean } | null,
-  language?: LanguageModel,
-  startedAt?: number,
-): void {
-  // The video swapped while this measure was in flight (video epoch): the
-  // recommendation belongs to the old video — render nothing.
-  if (startedAt !== undefined && epoch !== startedAt) return;
-  const platformMax = resolvePlatformMax(settings, site);
-  const range: RateRange = {
-    lo: language?.target ?? TARGET_WPM,
-    hi: language?.ceiling ?? SAFE_ZONE_CEILING_WPM,
-    unit: language?.unit ?? 'wpm',
-  };
-  const recommendation = recommend({
-    naturalRate,
-    tier,
-    contentType,
-    platformMax,
-    userTarget: resolveUserTarget(settings, site, contentType),
-    language,
-    ...wordInputs,
-  });
-  current = { site, contentType, naturalRate, platformMax, tier, unit: language?.unit ?? 'wpm', recommendation, range };
-  if (autoState === 'pending' && shouldAutoApply(settings, recommendation, tier, contentType)) {
-    // The undo anchor: the rate the user was at before auto took over.
-    preAutoRate =
-      (activeVideo ?? document.querySelector<HTMLVideoElement>('video'))?.playbackRate ?? null;
-    applyMultiplier(recommendation.multiplier);
-    autoState = 'auto';
-    appliedSource = 'auto';
-  }
-  // P1c: the one-time first-run explainer rides the first recommend-mode
-  // render of a MEASURED tier (the copy promises a measurement; estimated
-  // priors are not one). The flag persists via the bridge — best-effort, a
-  // dead bridge only re-shows it on the next video.
-  const firstRun =
-    settings.seenFirstRun !== true && tier !== 'estimated' && recommendation.mode === 'recommend';
-  if (firstRun) {
-    void bridge.request({ type: 'settings:seenFirstRun' }).catch(() => undefined);
-  }
-  showPill({
-    mode: recommendation.mode,
-    rateWpm: naturalRate,
-    multiplier: recommendation.multiplier,
-    effectiveWpm: recommendation.effectiveWpm,
-    tierLabel: recommendation.tierLabel,
-    label: recommendation.label,
-    reason: recommendation.reason ?? undefined,
-    range,
-    applied: appliedSource,
-    undoRate: appliedSource === 'auto' ? preAutoRate ?? 1 : undefined,
-    firstRun,
-  });
-}
-
-async function loadSettings(): Promise<Settings> {
-  try {
-    return await bridge.request({ type: 'settings:get' });
-  } catch {
-    // Bridge dead or timed out: recommend against the lib defaults.
-    return defaultSettings();
-  }
-}
-
-/** The skip-silence prefs; a dead bridge falls back to the default (off)
- * and a malformed answer normalizes the same way the store would. */
-async function loadSkipPrefs(): Promise<SkipSilencePrefs> {
-  try {
-    return normalizeSkipSilence(await bridge.request({ type: 'skip:get' }));
-  } catch {
-    return defaultSkipSilence();
-  }
-}
-
-/** The skip-silence plan for this video, or null when the toggle is off or
- * no gap clears minGapSec. The word series when the payload carries word
- * timing (>= 2 timed words), else the cue series — the speechDurationSec
- * convention. The site override's skipSilence flag wins over the toggle. */
-async function planSkipSilence(
-  words: readonly Segment[],
-  cues: readonly Segment[],
-  settings: Settings,
-  site: string,
-): Promise<{ index: GapSpan[]; prefs: SkipSilencePrefs } | null> {
-  const skipPrefs = resolveSkipSilence(await loadSkipPrefs(), settings.sites[site]);
-  const series = words.length >= 2 ? words : cues;
-  return shouldSkip(series, skipPrefs)
-    ? { index: buildGapIndex(series, skipPrefs.minGapSec), prefs: skipPrefs }
-    : null;
-}
-
-// ── Pill ──────────────────────────────────────────────────────────────────
-
-/** Mount point for the pill; the pill positions itself (fixed, bottom-right). */
-function pillHost(): HTMLElement {
-  const existing = document.querySelector<HTMLElement>('.speedwatcher-pill-host');
-  if (existing !== null) return existing;
-  const wrapper = document.createElement('div');
-  wrapper.className = 'speedwatcher-pill-host';
-  document.body.appendChild(wrapper);
-  return wrapper;
-}
-
-function ensurePill(): PillApi {
-  const host = pillHost();
-  if (pill !== null && pill.host === host && host.isConnected) return pill.api;
-  // The player was replaced (SPA navigation): rebuild on the fresh host.
-  pill?.api.destroy();
-    const api = createPill(host, {
-    onApply: (multiplier) => {
-      autoState = 'stopped';
-      appliedSource = 'user';
-      preAutoRate = null;
-      applyMultiplier(multiplier);
-    },
-    onDismiss: () => dismissCurrent(),
-    onStopAuto: () => stopAutoForVideo(),
-  });
-  api.mount();
-  pill = { api, host };
-  return pill.api;
-}
-
-function showPill(state: PillState): void {
-  pillState = state;
-  ensurePill().update(state);
-  if (__E2E__ && window.__speedwatcherPill !== undefined) window.__speedwatcherPill.state = state;
-}
-
-// ── Live effective rate (secondary pill line) ─────────────────────────────
-
-/** Same rule as content.ts: recommend/warning modes on a measured tier
- * while playing at a non-1 rate; the estimated tier's prior is never shown. */
-function computeLiveRate(): LiveRate | null {
-  if (current === null) return null;
-  const mode = current.recommendation.mode;
-  if (mode !== 'recommend' && mode !== 'warning') return null;
-  if (current.tier === 'estimated') return null;
-  const video = activeVideo ?? document.querySelector<HTMLVideoElement>('video');
-  if (video === null || video.paused || video.playbackRate === 1) return null;
-  return { rate: current.naturalRate * video.playbackRate, multiplier: video.playbackRate, unit: current.unit };
-}
-
-function refreshLiveRate(): void {
-  // Never create the pill from a tick — that would mount an empty one pre-measure.
-  if (pill === null) return;
-  pill.api.updateLiveRate(computeLiveRate());
-}
-
-/** The saved time on the current video: the session's accumulated flushes,
- * null before apply, while paused, or while the rate diverged from the
- * applied multiplier (the tracker's accrual gates, mirrored for display). */
-function computeSavedSec(): number | null {
-  if (current === null || savedSec === null || savedMultiplier === null) return null;
-  const video = activeVideo ?? document.querySelector<HTMLVideoElement>('video');
-  if (video === null || video.paused) return null;
-  if (Math.abs(video.playbackRate - savedMultiplier) > RATE_EPSILON) return null;
-  return savedSec;
-}
-
-function refreshSavedSec(): void {
-  // Never create the pill from a tick — that would mount an empty one pre-measure.
-  if (pill === null) return;
-  pill.api.updateSavedSec(computeSavedSec());
-}
-
-/** Disengages auto-apply for this video: the auto-applied rate is undone
- * back to the pre-auto rate (P1a — the in-pill escape hatch; a manual
- * override already means the user took over), the re-assert loop is
- * detached, and the pill drops its stop-auto state. Not logged. */
-function stopAutoForVideo(): void {
-  if (current === null) return;
-  const wasAuto = appliedSource === 'auto';
-  autoState = 'stopped';
-  appliedSource = 'none';
-  // Detach the loop and the skip actuator BEFORE restoring: the reapplier's
-  // ratechange listener would otherwise treat the restored 1.0 as a reset
-  // and re-assert it, and the actuator would re-dip it inside gaps.
-  reapplier.stop();
-  skipActuator.detach();
-  if (wasAuto && preAutoRate !== null) restorePreAutoRate();
-  preAutoRate = null;
-  if (pillState !== null) showPill({ ...pillState, applied: 'none', undoRate: undefined });
-}
-
-/** Restores the pre-auto playback rate on the current video. */
-function restorePreAutoRate(): void {
-  const video = activeVideo ?? document.querySelector<HTMLVideoElement>('video');
-  if (video === null) return;
-  video.playbackRate = preAutoRate ?? 1;
-}
-
-/** Manual-override detection on ratechange: mirror of entrypoints/content.ts
- * — divergence from the applied value (except a reset to exactly 1.0, which
- * the reapplier treats as its re-assert trigger) is the user taking over. */
-function markUserOverride(): void {
-  if (autoState !== 'auto') return;
-  const video = activeVideo ?? document.querySelector<HTMLVideoElement>('video');
-  if (video === null || video.paused) return;
-  if (video.playbackRate === 1) return; // reset, not an override
-  if (savedMultiplier === null) return;
-  if (Math.abs(video.playbackRate - savedMultiplier) <= RATE_EPSILON) return; // our own apply
-  // Our own skip-silence dip is not an override either — the reapplier's
-  // pair holds the pause target the actuator writes inside gaps.
-  if (skipActuator.active && Math.abs(video.playbackRate - reapplier.currentRateFor(skipActuator.inGapNow)) <= RATE_EPSILON) return;
-  autoState = 'stopped';
-  appliedSource = 'user';
-  preAutoRate = null; // the user took over — no undo anchor left
-  // The user took over: detach the re-assert loop and the skip actuator, or
-  // a later reset to exactly 1.0 (the sentinel's re-assert trigger) would
-  // fight back to the old auto rate (mirror of stopAutoForVideo).
-  reapplier.stop();
-  skipActuator.detach();
-  if (pillState !== null) showPill({ ...pillState, applied: 'user', undoRate: undefined });
-}
-
-function applyMultiplier(multiplier: number): void {
-  if (current === null) return;
-  const video = activeVideo ?? document.querySelector<HTMLVideoElement>('video');
-  if (video === null) return;
-  // start() applies the multiplier and re-asserts it (ratechange/play/pause
-  // listeners + the re-check interval) until dismiss; the clamped value is
-  // the tracker's accrual gate.
-  const applied = Math.min(multiplier, current.platformMax);
-  reapplier.start(video, applied, current.platformMax);
-  savedSec = 0;
-  savedMultiplier = applied;
-  savedTracker.attach(video, applied, flushSavedTick);
-  attachSkip(video, applied);
-  // Show the live line immediately; steady-state ticks are throttled in the pill.
-  refreshLiveRate();
-  refreshSavedSec();
-  void logAction('apply', multiplier);
-  // Mirror of content.ts: generic high-speed applies are speech-eligible too
-  // (E6) — the nudge counts them with this video's language range.
-  nudgeSurface.reportApply(multiplier, current.range);
-}
-
-/** Arms skip-silence on an apply: the reapplier's pair (base = the applied
- * rate, pause = the dip target) and the actuator's timeupdate listener.
- * DRM content (mediaKeys) and dip targets that equal the applied rate
- * never attach. */
-function attachSkip(video: HTMLVideoElement, applied: number): void {
-  if (skipPlan === null) return;
-  // Chrome reports mediaKeys as undefined until EME is used, so the DRM
-  // gate is a truthy check, not a null check.
-  if (video.mediaKeys) return;
-  const pause = pauseRateFor(applied, skipPlan.prefs);
-  if (pause >= applied) return;
-  reapplier.setRates(applied, pause);
-  skipActuator.attach(video, skipPlan.index, skipPlan.prefs, applied, (inGap) => {
-    // The saved-line area swaps to the slowed-silence indicator for the
-    // duration of the gap; re-render only on transitions.
-    if (pillState !== null) showPill({ ...pillState, skipSlowed: inGap });
-  });
-}
-
-function dismissCurrent(): void {
-  if (current === null) return;
-  const wasAuto = appliedSource === 'auto';
-  autoState = 'stopped';
-  appliedSource = 'none';
-  // Detach first: the unflushed tail is credited to the store before the
-  // pill hides.
-  savedTracker.detach();
-  savedSec = null;
-  savedMultiplier = null;
-  reapplier.stop();
-  skipActuator.detach();
-  skipPlan = null;
-  if (wasAuto && preAutoRate !== null) restorePreAutoRate();
-  preAutoRate = null;
-  showPill(NONE_STATE);
-  void logAction('dismiss', current.recommendation.multiplier);
-}
-
-/** Best-effort: a dead bridge must not undo the playback change. */
-function logAction(userAction: 'apply' | 'dismiss', multiplier: number): void {
-  if (current === null) return;
-  void bridge
-    .request({
-      type: 'log:append',
-      entry: {
-        videoId: location.href,
-        site: current.site,
-        contentType: current.contentType,
-        naturalRate: current.naturalRate,
-        multiplier,
-        mode: current.recommendation.mode,
-        userAction,
-      },
-    })
-    .catch(() => undefined);
-}
-
-/** Tracker flush → the background store (fire-and-forget like logAction);
- * the same delta also advances the pill's per-video accumulator. */
-function flushSavedTick(tick: SavedTick): void {
-  if (savedSec !== null) savedSec += savedSeconds(tick.deltaSec, tick.multiplier);
-  void bridge
-    .request({ type: 'timeSaved:accrue', deltaSec: tick.deltaSec, multiplier: tick.multiplier })
-    .catch(() => undefined);
 }

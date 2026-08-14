@@ -30,7 +30,8 @@
 // The store owns 'sw.skipSilence' (one key per module; see lib/settings.ts).
 
 import type { Segment } from './captions';
-import type { StorageLike } from './settings';
+import type { BridgeClient } from './messaging';
+import type { Settings, StorageLike } from './settings';
 import { RATE_EPSILON } from './time-saved';
 
 export const SKIP_SILENCE_STORAGE_KEY = 'sw.skipSilence';
@@ -92,6 +93,34 @@ export function resolveSkipSilence(
 ): SkipSilencePrefs {
   if (siteOverride?.skipSilence === undefined) return prefs;
   return { ...prefs, enabled: siteOverride.skipSilence };
+}
+
+/** The skip-silence prefs; a dead bridge falls back to the default (off)
+ * and a malformed answer normalizes the same way the store would. */
+export async function loadSkipPrefs(bridge: BridgeClient): Promise<SkipSilencePrefs> {
+  try {
+    return normalizeSkipSilence(await bridge.request({ type: 'skip:get' }));
+  } catch {
+    return defaultSkipSilence();
+  }
+}
+
+/** The skip-silence plan for this video, or null when the toggle is off or
+ * no gap clears minGapSec. The word series when the payload carries word
+ * timing (>= 2 timed words), else the cue series — the speechDurationSec
+ * convention. The site override's skipSilence flag wins over the toggle. */
+export async function planSkipSilence(
+  words: readonly Segment[],
+  cues: readonly Segment[],
+  settings: Settings,
+  site: string,
+  bridge: BridgeClient,
+): Promise<{ index: GapSpan[]; prefs: SkipSilencePrefs } | null> {
+  const skipPrefs = resolveSkipSilence(await loadSkipPrefs(bridge), settings.sites[site]);
+  const series = words.length >= 2 ? words : cues;
+  return shouldSkip(series, skipPrefs)
+    ? { index: buildGapIndex(series, skipPrefs.minGapSec), prefs: skipPrefs }
+    : null;
 }
 
 /** One silent span [start, end) between consecutive cue/word starts. */
