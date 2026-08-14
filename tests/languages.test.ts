@@ -228,6 +228,20 @@ describe('language table', () => {
     }
   });
 
+  it('carries the measured pause share on the corpus languages only', () => {
+    // From each corpus's pauseBiasPct median, s = −b/(1−b) (2026-08 docs).
+    const shares: Record<string, number> = {
+      ru: 0.36, uk: 0.32, pl: 0.38, cs: 0.35, ko: 0.41, ar: 0.51, id: 0.34, vi: 0.17, ja: 0.23, th: 0.15,
+    };
+    for (const [code, share] of Object.entries(shares)) {
+      expect(LANGUAGES[code]?.pauseShare, code).toBeCloseTo(share, 2);
+    }
+    for (const [code, model] of Object.entries(LANGUAGES)) {
+      if (code in shares) continue;
+      expect(model.pauseShare, code).toBeUndefined();
+    }
+  });
+
   it('copies id measured priors to ms/tl', () => {
     for (const code of ['ms', 'tl']) {
       const model = LANGUAGES[code]!;

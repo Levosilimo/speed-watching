@@ -270,8 +270,14 @@ keeps working in every mode.
   lives in `chrome.storage.local` under `sw.channelRates`; the generic
   path (`generic.content.ts`) never touches it.
 - The pause-diluted articulatory ceiling scales with the language ceiling
-  (`ceiling / (1 − P_STIMULUS)`); the pill's rate label carries the unit
-  (`≈ 240 cpm`, `≈ 340 syl/min`, `≈ 380 morae/min`).
+  and the language's pause share (`ceiling / (1 − pauseShare)`, default
+  0.3; the corpus languages carry their measured medians — ar 0.51,
+  ko 0.41, pl 0.38, ru 0.36, cs 0.35, id 0.34, uk 0.32, ja 0.23, vi 0.17,
+  th 0.15, from each corpus's pauseBiasPct median, s = −b/(1−b)).
+  Low-pause th/vi/ja therefore warn at a tighter articulatory threshold
+  than the fixed 0.3 (the under-warn direction), high-pause ar at a
+  looser one; the pill's rate label carries the unit (`≈ 240 cpm`,
+  `≈ 340 syl/min`, `≈ 470 morae/min`).
 
 ## Interface localization
 

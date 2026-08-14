@@ -94,6 +94,12 @@ export interface LanguageModel {
   syllablesPerWord?: number;
   /** ko: count Hangul syllable blocks instead of applying the factor. */
   hangulBlocks?: boolean;
+  /**
+   * Measured pause share of span (corpus pauseBiasPct median converted as
+   * s = −b/(1−b)); absent → the 0.3 default (P_STIMULUS). Drives the
+   * articulatory-ceiling mapping: ceiling / (1 − pauseShare).
+   */
+  pauseShare?: number;
 }
 
 export const LANGUAGES: Record<string, LanguageModel> = {
@@ -111,6 +117,7 @@ export const LANGUAGES: Record<string, LanguageModel> = {
     tokenizerMode: 'mora',
     derived: true,
     priorsSource: 'corpus',
+    pauseShare: 0.23,
     priors: { min: 395, max: 435 },
     registerPriors: {
       news: { min: 335, max: 375 },
@@ -129,6 +136,7 @@ export const LANGUAGES: Record<string, LanguageModel> = {
     tokenizerMode: 'chars',
     derived: true,
     priorsSource: 'corpus',
+    pauseShare: 0.15,
     priors: { min: 505, max: 545 },
     registerPriors: {
       news: { min: 545, max: 585 },
@@ -146,6 +154,7 @@ export const LANGUAGES: Record<string, LanguageModel> = {
     tokenizerMode: 'words',
     derived: true,
     priorsSource: 'corpus',
+    pauseShare: 0.41,
     priors: { min: 305, max: 345 },
     registerPriors: {
       news: { min: 265, max: 305 },
@@ -164,6 +173,7 @@ export const LANGUAGES: Record<string, LanguageModel> = {
     tokenizerMode: 'words',
     derived: true,
     priorsSource: 'corpus',
+    pauseShare: 0.51,
     priors: { min: 195, max: 235 },
     registerPriors: {
       news: { min: 195, max: 235 },
@@ -184,6 +194,7 @@ export const LANGUAGES: Record<string, LanguageModel> = {
     tokenizerMode: 'words',
     derived: true,
     priorsSource: 'corpus',
+    pauseShare: 0.17,
     priors: { min: 185, max: 225 },
     registerPriors: {
       news: { min: 205, max: 245 },
@@ -201,6 +212,7 @@ export const LANGUAGES: Record<string, LanguageModel> = {
     tokenizerMode: 'words',
     derived: true,
     priorsSource: 'corpus',
+    pauseShare: 0.34,
     priors: { min: 200, max: 240 },
     registerPriors: {
       news: { min: 185, max: 225 },
@@ -268,6 +280,7 @@ export const LANGUAGES: Record<string, LanguageModel> = {
     tokenizerMode: 'words',
     derived: true,
     priorsSource: 'corpus',
+    pauseShare: 0.36,
     priors: { min: 105, max: 145 },
     registerPriors: {
       news: { min: 120, max: 150 },
@@ -286,6 +299,7 @@ export const LANGUAGES: Record<string, LanguageModel> = {
     tokenizerMode: 'words',
     derived: true,
     priorsSource: 'corpus',
+    pauseShare: 0.32,
     priors: { min: 120, max: 160 },
     registerPriors: {
       news: { min: 120, max: 150 },
@@ -296,8 +310,8 @@ export const LANGUAGES: Record<string, LanguageModel> = {
       generic: { min: 120, max: 160 },
     },
   },
-  pl: { code: 'pl', unit: 'wpm', target: 185, ceiling: 200, tokenizerMode: 'words', derived: true, priorsSource: 'corpus', priors: { min: 96, max: 141 } },
-  cs: { code: 'cs', unit: 'wpm', target: 185, ceiling: 200, tokenizerMode: 'words', derived: true, priorsSource: 'corpus', priors: { min: 96, max: 141 } },
+  pl: { code: 'pl', unit: 'wpm', target: 185, ceiling: 200, tokenizerMode: 'words', derived: true, priorsSource: 'corpus', pauseShare: 0.38, priors: { min: 96, max: 141 } },
+  cs: { code: 'cs', unit: 'wpm', target: 185, ceiling: 200, tokenizerMode: 'words', derived: true, priorsSource: 'corpus', pauseShare: 0.35, priors: { min: 96, max: 141 } },
   sr: { code: 'sr', unit: 'wpm', target: 185, ceiling: 200, tokenizerMode: 'words', derived: true, priors: { min: 96, max: 141 } },
 };
 

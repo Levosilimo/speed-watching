@@ -277,6 +277,46 @@ describe('recommend — pause-diluted articulatory warning (asr-word tier)', () 
     // 0.5 × 800 = 400 > 393 (pause-diluted)
     expect(r.reason).toBe('pause-diluted');
   });
+
+  it('applies the measured per-language pause shares: th/vi/ja warn tighter than the 0.3 default', () => {
+    // Each case picks an articulatoryWpm inside (ceiling/(1−share),
+    // ceiling/0.7) — it trips the measured-share threshold but not the
+    // old fixed-0.3 one (the under-warn bug this fixes).
+    const cases: Array<{ code: string; naturalRate: number; articulatoryWpm: number }> = [
+      { code: 'th', naturalRate: 200, articulatoryWpm: 260 }, // 1.4 × 260 = 364 ∈ (290/0.85, 290/0.7)
+      { code: 'vi', naturalRate: 200, articulatoryWpm: 260 }, // 1.4 × 260 = 364 ∈ (290/0.83, 290/0.7)
+      { code: 'ja', naturalRate: 250, articulatoryWpm: 355 }, // 1.9 × 355 = 674.5 ∈ (495/0.77, 495/0.7)
+    ];
+    for (const { code, naturalRate, articulatoryWpm } of cases) {
+      const r = recommend({
+        naturalRate,
+        tier: 'asr-word',
+        contentType: 'talk',
+        platformMax: 2,
+        language: LANGUAGES[code]!,
+        articulatoryWpm,
+        timingCoverageOk: true,
+      });
+      expect(r.mode, code).toBe('warning');
+      expect(r.reason, code).toBe('pause-diluted');
+    }
+  });
+
+  it('relaxes the threshold for high-pause ar (0.51) where the 0.3 default over-warned', () => {
+    const r = recommend({
+      naturalRate: 200,
+      tier: 'asr-word',
+      contentType: 'talk',
+      platformMax: 2,
+      language: LANGUAGES['ar']!,
+      articulatoryWpm: 320,
+      timingCoverageOk: true,
+    });
+    // 1.65 × 320 = 528: over the old 360/0.7 ≈ 514.3 threshold (would
+    // have warned), under ar's measured 360/0.49 ≈ 734.7 → recommend.
+    expect(r.mode).toBe('recommend');
+    expect(r.reason).toBeNull();
+  });
 });
 
 describe('recommend — unreachable and music', () => {
@@ -399,9 +439,9 @@ describe('recommend — language-aware targets', () => {
       articulatoryWpm: 300,
       timingCoverageOk: true,
     });
-    // 1.05 × 300 = 315 > 185 × 1.05 (lecture) / 0.7 ≈ 277.5; effective
-    // 168 ≤ 185 × 1.05 = 194.25, so the pause-diluted warning fires, not
-    // above-zone.
+    // 1.05 × 300 = 315 > 189 / (1 − 0.36) ≈ 295.3 (ru's measured pause
+    // share); effective 168 ≤ 185 × 1.05 = 194.25, so the pause-diluted
+    // warning fires, not above-zone.
     expect(r.reason).toBe('pause-diluted');
     expect(r.mode).toBe('warning');
   });
