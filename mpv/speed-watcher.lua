@@ -5,6 +5,7 @@
 -- mpv/README.md for install and options.
 
 local mp = require("mp")
+local mp_options = require("mp.options")
 local options = {
   target = nil,
   language = "en",
@@ -13,7 +14,7 @@ local options = {
   reset_sentinel = true,
   osd_ms = 4000,
 }
-mp.options.read_options(options, "speed_watcher")
+mp_options.read_options(options, "speed_watcher")
 
 local script_dir = debug.getinfo(1, "S").source:match("^@(.*)/[^/]*$")
 package.path = package.path .. ";" .. script_dir .. "/?.lua"
