@@ -1,8 +1,9 @@
 <!doctype html>
-<!-- E2E stub of the YouTube watch page: minimal structural mimic (a video
-     element, a player response) plus the measurement-event listener the
-     content script's E2E hook dispatches. The player response JSON is
-     injected by e2e/server.ts. -->
+<!-- E2E stub of the YouTube watch page: minimal structural mimic (a
+     div#movie_player.html5-video-player wrapping the video — real YouTube's
+     shape — plus a player response) and the measurement-event listener the
+     content script's E2E hook dispatches. The player response JSON and the
+     stray-badge variant are injected by e2e/server.ts. -->
 <html lang="en">
   <head>
     <meta charset="utf-8" />
@@ -10,9 +11,14 @@
   </head>
   <body>
     <div id="player">
-      <video id="movie_player"></video>
-      __EXTRA_VIDEO__
+      <div id="movie_player" class="html5-video-player">
+        <video></video>
+        __EXTRA_VIDEO__
+      </div>
     </div>
+    <!-- straybadge=1 variant: a live badge OUTSIDE the player (the false-
+         positive fixture for the scoped-badge regression lane). -->
+    __STRAY_BADGE__
     <script>
       window.ytInitialPlayerResponse = __PLAYER_RESPONSE_JSON__;
       window.ytInitialData = __INITIAL_DATA_JSON__;

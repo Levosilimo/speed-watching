@@ -27,6 +27,11 @@ export interface PlayerResponse {
     author?: string;
     /** Real video duration in seconds (string in the player response). */
     lengthSeconds?: string;
+    /** Authoritative live markers: present only on real live streams,
+     * absent on VODs. Preferred over the DOM badge fallback (which is
+     * scoped to the active player and visible-only). */
+    isLiveContent?: boolean;
+    isLiveBroadcast?: boolean;
   };
 }
 

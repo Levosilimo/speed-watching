@@ -198,10 +198,13 @@ function measure(): void {
   controller.runMeasure((startedAt) => measureOnce(startedAt));
 }
 
-function isLive(): boolean {
+function isLive(response?: PlayerResponse): boolean {
+  if (response?.videoDetails?.isLiveContent === true) return true;
+  if (response?.videoDetails?.isLiveBroadcast === true) return true;
   const video = controller.activeVideo ?? document.querySelector<HTMLVideoElement>('video');
   if (video?.duration === Infinity) return true;
-  return document.querySelector('.ytp-live-badge') !== null;
+  const badge = video?.closest('.html5-video-player')?.querySelector<HTMLElement>('.ytp-live-badge');
+  return badge != null && badge.offsetParent !== null;
 }
 
 /** Track resolution + web/android fetch + json3 parse. On failure carries
@@ -268,7 +271,7 @@ async function measureOnce(startedAt: number): Promise<void> {
     if (__E2E__) console.info('[speed-watcher] wpm: player response never appeared');
     return;
   }
-  if (isLive()) {
+  if (isLive(response)) {
     if (__E2E__) console.info('[speed-watcher] wpm: live stream — pill suppressed');
     controller.showNone();
     return;

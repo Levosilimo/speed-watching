@@ -74,8 +74,10 @@ const VTT_HOST: VttHost = {
 };
 
 export interface E2EDriver {
-  /** Navigate to the fixture watch page at a *.youtube.com origin. */
-  navigateToWatch(fixture: string): Promise<void>;
+  /** Navigate to the fixture watch page at a *.youtube.com origin; extra
+   * appends raw query params (live=1, straybadge=1) for the fixture-server
+   * variants. */
+  navigateToWatch(fixture: string, extra?: string): Promise<void>;
   /** Page-captured speedwatcher:measure payload, or undefined before it fires. */
   readMeasurement(): Promise<Measurement | undefined>;
   /** Current pill state (polls until the first update renders). */
@@ -1027,5 +1029,65 @@ export async function runSkipSpecs(driver: E2EDriver): Promise<void> {
     await driver.navigateToWatch(fixture);
     expectState(await driver.readPillState(), fixture);
     await driver.writeSkipPrefs(defaultSkipSilence());
+  }
+}
+
+/**
+ * Live-suppression e2e — the regression lane for the scoped-badge fix:
+ * (a) a stray page-level .ytp-live-badge OUTSIDE the player must not
+ * suppress the pill on a normal VOD (the pre-fix document-wide query did —
+ * this is the fail-without-fix assertion), (b) the player response's
+ * authoritative isLiveContent flag suppresses it, and (c) the badge inside
+ * the active player still suppresses it. The classic in-player lane (c) is
+ * also pinned inside runSkipSpecs; (a) and (b) have no other coverage.
+ */
+export async function runLiveSuppressionSpecs(driver: E2EDriver): Promise<void> {
+  // (a) Stray badge outside the player + a normal VOD response: the pill
+  // must render (mode = the fixture's recommendation).
+  {
+    const fixture = 'real/manual-cue.json';
+    await driver.navigateToWatch(fixture, 'straybadge=1');
+    const state = expectState(await driver.readPillState(), fixture);
+    const { rec } = expectedRecommendation(fixture);
+    if (state.mode !== rec.mode) {
+      throw new Error(
+        `${fixture}: pill mode ${state.mode}, expected ${rec.mode} (a stray page-level badge must not suppress)`,
+      );
+    }
+  }
+
+  // (b) isLiveContent in the player response: the pill stays suppressed
+  // (mode none) even with no badge anywhere in the DOM.
+  {
+    const fixture = 'real/manual-cue.json';
+    await driver.navigateToWatch(fixture, 'live=1');
+    let live: PillState | null = null;
+    for (let i = 0; i < 20 && (live === null || live.mode !== 'none'); i++) {
+      live = await driver.readPillState();
+      if (live === null || live.mode !== 'none') await driver.sleep(250);
+    }
+    if (live === null || live.mode !== 'none') {
+      throw new Error(
+        `live: pill mode ${live?.mode}, expected none (isLiveContent suppresses)`,
+      );
+    }
+  }
+
+  // (c) Badge inside the active player (the classic setLiveStream lane):
+  // still suppressed.
+  {
+    const fixture = 'real/manual-cue.json';
+    await driver.navigateToWatch(fixture);
+    await driver.setLiveStream();
+    let live: PillState | null = null;
+    for (let i = 0; i < 20 && (live === null || live.mode !== 'none'); i++) {
+      live = await driver.readPillState();
+      if (live === null || live.mode !== 'none') await driver.sleep(250);
+    }
+    if (live === null || live.mode !== 'none') {
+      throw new Error(
+        `live: pill mode ${live?.mode}, expected none after the in-player live badge`,
+      );
+    }
   }
 }

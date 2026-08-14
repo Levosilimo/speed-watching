@@ -21,6 +21,7 @@ import {
   runBridgeSpecs,
   runChapterSpecs,
   runGenericSpecs,
+  runLiveSuppressionSpecs,
   runMeasurementSpecs,
   runMultiVideoSpecs,
   runPillSpecs,
@@ -34,8 +35,8 @@ import { defaultSettings, type Settings } from '../../lib/settings';
 
 const extensionPath = resolve('.output/chrome-mv3-e2e');
 const fixtureBase = `http://127.0.0.1:${FIXTURE_PORT}`;
-const watchUrl = (fixture: string): string =>
-  `http://www.youtube.com/watch?v=e2e-fixture&fixture=${fixture}`;
+const watchUrl = (fixture: string, extra?: string): string =>
+  `http://www.youtube.com/watch?v=e2e-fixture&fixture=${fixture}${extra === undefined ? '' : `&${extra}`}`;
 
 let context: BrowserContext;
 let serviceWorker: Worker;
@@ -92,8 +93,10 @@ test.beforeAll(async () => {
     }
     const fixture = url.searchParams.get('fixture');
     const multi = url.searchParams.get('multi');
+    const live = url.searchParams.get('live');
+    const straybadge = url.searchParams.get('straybadge');
     const response = await fetch(
-      `${fixtureBase}/watch?fixture=${fixture}&multi=${multi ?? ''}`,
+      `${fixtureBase}/watch?fixture=${fixture}&multi=${multi ?? ''}&live=${live ?? ''}&straybadge=${straybadge ?? ''}`,
     );
     await route.fulfill({
       status: response.status,
@@ -106,10 +109,10 @@ test.beforeAll(async () => {
     (await context.waitForEvent('serviceworker', { timeout: 30_000 }));
   page = context.pages()[0] ?? (await context.newPage());
   driver = {
-    async navigateToWatch(fixture) {
+    async navigateToWatch(fixture, extra) {
       consoleLines.length = 0;
       page.on('console', (message) => consoleLines.push(message.text()));
-      await page.goto(watchUrl(fixture));
+      await page.goto(watchUrl(fixture, extra));
     },
     async readMeasurement() {
       await page.waitForFunction(
@@ -316,24 +319,10 @@ test('pill renders, applies, dismisses; music/unreachable suppress Apply; WEB-bl
 });
 
 test('pill really paints: shadow root populated, non-zero geometry, in the layout tree', async () => {
-  // The fixture gives #movie_player to the <video> itself; Chromium computes
-  // no layout for children of a video, so the page is restructured to mirror
-  // real YouTube (a div#movie_player wrapping the video) and the measure is
-  // re-run on the new anchor — the same restructure the capture tool does.
+  // The fixture mirrors real YouTube (a div#movie_player wrapping the
+  // <video>), so the pill's anchor has real layout from the start.
   await driver.navigateToWatch('real/manual-cue.json');
   await driver.readPillState();
-  await page.evaluate(() => {
-    document.querySelector('.speedwatcher-pill-host')?.remove();
-    const video = document.querySelector('video#movie_player');
-    if (video === null) throw new Error('fixture video missing');
-    const player = document.createElement('div');
-    player.id = 'movie_player';
-    video.id = '';
-    video.replaceWith(player);
-    player.appendChild(video);
-    document.dispatchEvent(new Event('yt-navigate-start'));
-    document.dispatchEvent(new Event('yt-navigate-finish'));
-  });
   await page.waitForFunction(
     () => window.__speedwatcherPill?.state?.mode === 'recommend',
     undefined,
@@ -496,6 +485,10 @@ test('multi-video page: Apply targets the video that actually plays', async () =
 
 test('chaptered fixture: consent toggle arms the per-chapter scheduler', async () => {
   await runChapterSpecs(driver);
+});
+
+test('live suppression: stray page-level badge must not suppress; playerResponse flags and in-player badges do', async () => {
+  await runLiveSuppressionSpecs(driver);
 });
 
 test('skip-silence: the toggle dips the rate inside caption gaps; off/music/live never dip', async () => {

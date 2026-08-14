@@ -66,6 +66,9 @@ export function createFixtureServer(port = FIXTURE_PORT): Promise<FixtureServer>
     const url = new URL(req.url ?? '/', `http://127.0.0.1:${actualPort}`);
     const path = url.pathname;
     const fixture = url.searchParams.get('fixture');
+    // Variant flags: live=1 marks the player response as a live broadcast
+    // (videoDetails.isLiveContent), straybadge=1 injects a .ytp-live-badge
+    // OUTSIDE the player (the false-positive regression fixture).
 
     res.setHeader('Access-Control-Allow-Origin', '*');
 
@@ -150,8 +153,15 @@ export function createFixtureServer(port = FIXTURE_PORT): Promise<FixtureServer>
       return;
     }
     const trackKind = KIND_BY_FIXTURE[fixture];
+    const live = url.searchParams.get('live') === '1';
     const playerResponse = {
-      videoDetails: { videoId: 'e2e-fixture', title: `E2E fixture: ${fixture}` },
+      videoDetails: {
+        videoId: 'e2e-fixture',
+        title: `E2E fixture: ${fixture}`,
+        // The authoritative live marker the content script prefers over any
+        // DOM badge (live=1 variant).
+        ...(live ? { isLiveContent: true } : {}),
+      },
       // No-track variant: omits captions so the content script falls back to
       // the 'estimated' heuristic tier.
       ...(NO_TRACK_FIXTURES.includes(fixture)
@@ -185,7 +195,11 @@ export function createFixtureServer(port = FIXTURE_PORT): Promise<FixtureServer>
       )
       // multi=1 serves a second <video>: the multi-video e2e asserts that
       // active-element selection follows the video that actually plays.
-      .replace('__EXTRA_VIDEO__', url.searchParams.get('multi') === '1' ? '<video id="movie_player_2"></video>' : '');
+      .replace('__EXTRA_VIDEO__', url.searchParams.get('multi') === '1' ? '<video id="movie_player_2"></video>' : '')
+      .replace(
+        '__STRAY_BADGE__',
+        url.searchParams.get('straybadge') === '1' ? '<div class="ytp-live-badge"></div>' : '',
+      );
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.end(page);
   });

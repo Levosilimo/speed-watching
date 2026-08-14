@@ -28,6 +28,7 @@ import type { RateTier } from '../../lib/recommend';
 import {
   runBridgeSpecs,
   runGenericSpecs,
+  runLiveSuppressionSpecs,
   runMeasurementSpecs,
   runMultiVideoSpecs,
   runPillSpecs,
@@ -112,8 +113,10 @@ async function main(): Promise<void> {
   try {
     await driver.installAddon(extensionPath, true);
     const e2e: E2EDriver = {
-      async navigateToWatch(fixture) {
-        await driver.get(`http://www.youtube.com/watch?v=e2e-fixture&fixture=${fixture}`);
+      async navigateToWatch(fixture, extra) {
+        await driver.get(
+          `http://www.youtube.com/watch?v=e2e-fixture&fixture=${fixture}${extra === undefined ? '' : `&${extra}`}`,
+        );
       },
       async readMeasurement() {
         const deadline = Date.now() + 15_000;
@@ -305,6 +308,7 @@ async function main(): Promise<void> {
     await runBridgeSpecs(e2e);
     await runGenericSpecs(e2e);
     await runMultiVideoSpecs(e2e);
+    await runLiveSuppressionSpecs(e2e);
     if (server.androidPosts() === 0) {
       // The web-blocked fixture must have sent the ANDROID innertube POST
       // (same-origin, so the PAC proxy delivers it to this server).
