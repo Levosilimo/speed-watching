@@ -22,6 +22,7 @@
     "e2e:chromium": "playwright test -c playwright.config.chromium.ts",
     "e2e:cft": "playwright test -c playwright.config.chromium.cft.ts",
     "e2e:firefox": "bun run e2e/firefox/run.ts",
+    "e2e:userscript": "playwright test -c playwright.config.userscript.ts",
     "e2e": "bun run e2e:chromium && bun run e2e:firefox",
     "postinstall": "wxt prepare"
   },
