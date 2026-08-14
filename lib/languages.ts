@@ -11,9 +11,27 @@
 //     compounding undercounts token runs ~25–30 % → 0.7 × English → 175.
 //   - char-unit (cpm): zh 240–258 cpm, where the 258 ceiling
 //     (Lee & Chan, 4.3 char/s) is the only comprehension-measured ceiling
-//     in the set; th ~282 cpm derived.
-//   - mora-unit (morae/min): ja 380–400 in the same band as the old
-//     char estimate, measured by the mora estimator — each kana = 1 mora,
+//     in the set; th ~282 cpm derived. th cpm is NOT commensurable with
+//     zh cpm: Thai packs vowels/tone marks around the consonant (~1.3+
+//     graphemes per syllable — สวัสดี = 6 code points / 4 graphemes / 3
+//     syllables), so the 282 target is a zh-ceiling scale, not a
+//     zh-comparable measurement, and the corpus's 420–630 cpm band is a
+//     measured PRESENTATION rate with unresolved orthographic
+//     interpretation — NOT a comprehension safe zone. The
+//     grapheme-per-syllable ratio is an open measurement; zh stands
+//     (Lee & Chan 2005, ~99% comprehension at 4.3 char/s).
+//   - mora-unit (morae/min): ja 470–495, re-derived 2026-08 from the
+//     model's own frame (the old 380–400 priced a mora at English-syllable
+//     information — 6.33/6.67 morae/s × 6.3 bits/mora ≈ 40–42 bits/s,
+//     over the ~39.4 bits/s ceiling — while Coupé places ja at high
+//     syllabic rate / low info per syllable and CSJ natives run 8.01
+//     morae/s avg, Maekawa 2003, band 7.6–8.4). The east-asian corpus's
+//     lecture/podcast 450–490 morae/min (7.5–8.2/s) sits exactly at the
+//     info-rate-consistent position, so the old 0.81× recommendation on
+//     native ja lectures was over-conservative; re-derived at ~5.0
+//     bits/mora: 39.4 ÷ 5.0 ≈ 7.9 morae/s ≈ 472/min → 470 target, 495
+//     ceiling brackets CSJ 8.01 morae/s (480.6/min) and the measured band
+//     top (490). Measured by the mora estimator — each kana = 1 mora,
 //     kanji × ~1.85 (on-yomi-dominant average; ±5–8% of a true analyzer).
 //   - syllable-unit (syl/min): measured speech syllabic rates — ko/tr
 //     330–350, ar 300–360 (low confidence), hi 240 (6.55 syl/s class),
@@ -76,6 +94,12 @@ export interface LanguageModel {
   syllablesPerWord?: number;
   /** ko: count Hangul syllable blocks instead of applying the factor. */
   hangulBlocks?: boolean;
+  /**
+   * Measured pause share of span (corpus pauseBiasPct median converted as
+   * s = −b/(1−b)); absent → the 0.3 default (P_STIMULUS). Drives the
+   * articulatory-ceiling mapping: ceiling / (1 − pauseShare).
+   */
+  pauseShare?: number;
 }
 
 export const LANGUAGES: Record<string, LanguageModel> = {
@@ -88,11 +112,12 @@ export const LANGUAGES: Record<string, LanguageModel> = {
   ja: {
     code: 'ja',
     unit: 'mora',
-    target: 380,
-    ceiling: 400,
+    target: 470,
+    ceiling: 495,
     tokenizerMode: 'mora',
     derived: true,
     priorsSource: 'corpus',
+    pauseShare: 0.23,
     priors: { min: 395, max: 435 },
     registerPriors: {
       news: { min: 335, max: 375 },
@@ -111,6 +136,7 @@ export const LANGUAGES: Record<string, LanguageModel> = {
     tokenizerMode: 'chars',
     derived: true,
     priorsSource: 'corpus',
+    pauseShare: 0.15,
     priors: { min: 505, max: 545 },
     registerPriors: {
       news: { min: 545, max: 585 },
@@ -128,6 +154,7 @@ export const LANGUAGES: Record<string, LanguageModel> = {
     tokenizerMode: 'words',
     derived: true,
     priorsSource: 'corpus',
+    pauseShare: 0.41,
     priors: { min: 305, max: 345 },
     registerPriors: {
       news: { min: 265, max: 305 },
@@ -146,6 +173,7 @@ export const LANGUAGES: Record<string, LanguageModel> = {
     tokenizerMode: 'words',
     derived: true,
     priorsSource: 'corpus',
+    pauseShare: 0.51,
     priors: { min: 195, max: 235 },
     registerPriors: {
       news: { min: 195, max: 235 },
@@ -166,6 +194,7 @@ export const LANGUAGES: Record<string, LanguageModel> = {
     tokenizerMode: 'words',
     derived: true,
     priorsSource: 'corpus',
+    pauseShare: 0.17,
     priors: { min: 185, max: 225 },
     registerPriors: {
       news: { min: 205, max: 245 },
@@ -183,6 +212,7 @@ export const LANGUAGES: Record<string, LanguageModel> = {
     tokenizerMode: 'words',
     derived: true,
     priorsSource: 'corpus',
+    pauseShare: 0.34,
     priors: { min: 200, max: 240 },
     registerPriors: {
       news: { min: 185, max: 225 },
@@ -250,6 +280,7 @@ export const LANGUAGES: Record<string, LanguageModel> = {
     tokenizerMode: 'words',
     derived: true,
     priorsSource: 'corpus',
+    pauseShare: 0.36,
     priors: { min: 105, max: 145 },
     registerPriors: {
       news: { min: 120, max: 150 },
@@ -268,6 +299,7 @@ export const LANGUAGES: Record<string, LanguageModel> = {
     tokenizerMode: 'words',
     derived: true,
     priorsSource: 'corpus',
+    pauseShare: 0.32,
     priors: { min: 120, max: 160 },
     registerPriors: {
       news: { min: 120, max: 150 },
@@ -278,8 +310,8 @@ export const LANGUAGES: Record<string, LanguageModel> = {
       generic: { min: 120, max: 160 },
     },
   },
-  pl: { code: 'pl', unit: 'wpm', target: 185, ceiling: 200, tokenizerMode: 'words', derived: true, priorsSource: 'corpus', priors: { min: 96, max: 141 } },
-  cs: { code: 'cs', unit: 'wpm', target: 185, ceiling: 200, tokenizerMode: 'words', derived: true, priorsSource: 'corpus', priors: { min: 96, max: 141 } },
+  pl: { code: 'pl', unit: 'wpm', target: 185, ceiling: 200, tokenizerMode: 'words', derived: true, priorsSource: 'corpus', pauseShare: 0.38, priors: { min: 96, max: 141 } },
+  cs: { code: 'cs', unit: 'wpm', target: 185, ceiling: 200, tokenizerMode: 'words', derived: true, priorsSource: 'corpus', pauseShare: 0.35, priors: { min: 96, max: 141 } },
   sr: { code: 'sr', unit: 'wpm', target: 185, ceiling: 200, tokenizerMode: 'words', derived: true, priors: { min: 96, max: 141 } },
 };
 

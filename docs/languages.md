@@ -9,7 +9,11 @@ info-rate frame — none are comprehension-measured except zh's ceiling.
 
 The English 250 wpm target / 275 wpm ceiling anchor the ~39 bits/s
 information-rate ceiling (Coupé et al. 2019: 250 wpm × 1.5 syl/word ×
-6.3 bits/syll ≈ 39.4 bits/s). A non-English target scales that ceiling by the
+6.3 bits/syll ≈ 39.4 bits/s). The 275 ceiling is a heuristic pick from
+the comprehension-at-speed band (Chen et al. 2024), not a crisp
+measured threshold — Tharumalingam & Risko 2025 (meta-analysis) find
+speed increases can impair test performance. A non-English target
+scales that ceiling by the
 language's syllabic rate and word structure:
 
 - **word-unit (wpm)** — English wpm scaled by syllables per word vs
@@ -19,14 +23,32 @@ language's syllabic rate and word structure:
   undercounts token runs ~25–30 % → 0.7 × English → 175.
 - **char-unit (cpm)** — zh 240–258 cpm, where the 258 ceiling
   (Lee & Chan, 4.3 char/s) is the **only comprehension-measured ceiling in
-  the set**; th ~282 cpm derived.
-- **mora-unit (morae/min)** — ja 380 target / 400 ceiling, in the same
-  band as the old char estimate but measured by the mora estimator: each
-  kana code point = 1 mora (incl. ー and っ), each kanji ≈ 1.85 morae
-  (on-yomi-dominant average). The estimator lands within ±5–8% of a true
-  analyzer — inside the ±10% band that chars-mode misses (kanji carry
-  ~1.8–2.0 morae per character, so grapheme counts understate morae
-  ~25–35% and would over-recommend the multiplier).
+  the set**; th ~282 cpm derived. **th cpm is not commensurable with zh
+  cpm**: Thai packs vowels and tone marks around the consonant
+  (สวัสดี = 6 code points → 4 graphemes over 3 syllables, ~1.3+
+  graphemes/syllable), so the th number is a zh-ceiling scale, not a
+  zh-comparable measurement, and the corpus's 420–630 cpm band is a
+  measured presentation rate with unresolved orthographic
+  interpretation — not a comprehension safe zone. The
+  grapheme-per-syllable ratio is an open measurement; zh's 240/258
+  stands.
+- **mora-unit (morae/min)** — ja 470 target / 495 ceiling, re-derived
+  2026-08 from the model's own frame. The old 380/400 priced a mora at
+  English-syllable information (6.33/6.67 morae/s × 6.3 bits/mora ≈ 40–42
+  bits/s — over the ~39.4 bits/s ceiling), but Coupé places Japanese at
+  the high-syllabic-rate / low-info-per-syllable corner and CSJ natives
+  run 7.6–8.4 morae/s (Maekawa 2003: 8.01 avg ≈ 480.6 morae/min). The
+  east-asian corpus's lecture/podcast band (450–490 morae/min =
+  7.5–8.2/s) sits exactly at the info-rate-consistent position, so the
+  old 0.81× recommendation on native ja lectures was over-conservative.
+  Re-derived at ~5.0 bits/mora (39.4 ÷ 5.0 ≈ 7.9 morae/s ≈ 472/min →
+  470); the 495 ceiling brackets CSJ 8.01 morae/s (480.6/min) and the
+  measured band top (490). The mora estimator counts each kana code point
+  as 1 mora (incl. ー and っ) and each kanji ≈ 1.85 morae
+  (on-yomi-dominant average), within ±5–8% of a true analyzer — inside
+  the ±10% band that chars-mode misses (kanji carry ~1.8–2.0 morae per
+  character, so grapheme counts understate morae ~25–35% and would
+  over-recommend the multiplier).
 - **syllable-unit (syl/min)** — measured speech syllabic rates: ko/tr
   330–350, ar 300–360 (low confidence), hi 240 (6.55 syl/s class), id/ms
   ~400 (≈ 267 wpm at 1.5 syl/word — the English band with a small lift),
@@ -51,7 +73,7 @@ vowel letters (one vowel per syllable), hi counts Devanagari vowel nuclei.
 | pt | wpm | 165 | 167 | words | yes | 86–125 |
 | fr | wpm | 250 | 253 | words | yes | 130–190 |
 | de | wpm | 175 | 181 | words | yes | 91–133 |
-| ja | mora/min | 380 | 400 | mora | yes | 395–435 (per register, below) § |
+| ja | mora/min | 470 | 495 | mora | yes | 395–435 (per register, below) § |
 | zh | cpm | 240 | 258 | chars | no* | 125–182 |
 | th | cpm | 282 | 290 | chars | yes | 505–545 (per register, below) § |
 | ko | syl/min | 340 | 350 | words (+Hangul blocks) | yes | 305–345 (per register, below) § |
@@ -84,10 +106,11 @@ ratio-derived (addendum-measured — see the register section below).
 § ja's, th's and ko's priors are **corpus-measured** (2026-08,
 docs/phase0-east-asian-corpus.md); their targets and ceilings remain
 derived. These are the first corpus bands whose natural rates reach or
-exceed the derived targets (ja generic 395–435 straddles the 380 target,
-th 505–545 nearly doubles 282, ko 305–345 meets 340) — the estimated
-tier's range overlaps the safe zone, which is the measured finding, not
-a modeling error.
+exceed the derived targets (ja lecture/podcast 450–490 straddles the
+re-derived 470 target, th 505–545 runs ~1.8× its 282 — see the th cpm
+caveat below — ko 305–345 meets 340) — the estimated tier's range
+overlaps the safe zone, which is the measured finding, not a modeling
+error.
 
 Priors scale the English estimated-tier ratio (0.52–0.76 × target) to each
 language's target — the same below-target relationship as the English
@@ -178,7 +201,7 @@ pre-correction fail against the ratio-derived bands is in the corpus
 are the first corpus bands that reach or exceed the derived targets, so
 natural-rate content in the estimated tier overlaps the safe zone
 instead of being flagged fast; the targets and ceilings stay derived
-(ja 380/400, th 282/290, ko 340/350).
+(ja 470/495, th 282/290, ko 340/350).
 
 | register | ja band (morae/min) | th band (cpm) | ko band (syl/min) |
 |---|---|---|---|
@@ -187,6 +210,14 @@ instead of being flagged fast; the targets and ceilings stay derived
 | explainer | 385–425 | 590–630 | 350–390 |
 | podcast | 450–490 | 535–575 | 260–300 |
 | generic | 395–435 | 505–545 | 305–345 |
+
+th's cpm numbers carry an unresolved orthographic interpretation: Thai
+packing (vowels/tone marks around the consonant, ~1.3+ graphemes per
+syllable) makes th cpm incommensurable with zh cpm — the 282/290 target
+is a zh-ceiling scale, and the measured 420–630 cpm band is a
+**presentation** rate, not a comprehension safe zone. The
+grapheme-per-syllable ratio is an open measurement; zh's 240/258 is
+untouched (Lee & Chan 2005, ~99% comprehension at 4.3 char/s).
 
 ## Tokenizer modes
 
@@ -224,7 +255,7 @@ keeps working in every mode.
 ## The gate
 
 - Videos default to the language model's own target — en 250 wpm
-  (measured), every other language its **derived estimate** (ja 380
+  (measured), every other language its **derived estimate** (ja 470
   morae/min, de 175 wpm, …). An explicit target set on the options slider
   overrides it, applied as a raw number in the language's unit.
 - Non-English word-tier content is measured with the language-appropriate
@@ -243,8 +274,14 @@ keeps working in every mode.
   lives in `chrome.storage.local` under `sw.channelRates`; the generic
   path (`generic.content.ts`) never touches it.
 - The pause-diluted articulatory ceiling scales with the language ceiling
-  (`ceiling / (1 − P_STIMULUS)`); the pill's rate label carries the unit
-  (`≈ 240 cpm`, `≈ 340 syl/min`, `≈ 380 morae/min`).
+  and the language's pause share (`ceiling / (1 − pauseShare)`, default
+  0.3; the corpus languages carry their measured medians — ar 0.51,
+  ko 0.41, pl 0.38, ru 0.36, cs 0.35, id 0.34, uk 0.32, ja 0.23, vi 0.17,
+  th 0.15, from each corpus's pauseBiasPct median, s = −b/(1−b)).
+  Low-pause th/vi/ja therefore warn at a tighter articulatory threshold
+  than the fixed 0.3 (the under-warn direction), high-pause ar at a
+  looser one; the pill's rate label carries the unit (`≈ 240 cpm`,
+  `≈ 340 syl/min`, `≈ 470 morae/min`).
 
 ## Interface localization
 
@@ -270,10 +307,18 @@ keeps working in every mode.
 - `MULTIMEDIA_CEILING_FACTOR` (1.05, lecture/explainer) and
   `PODCAST_CEILING_FACTOR` (0.95, podcast) modulate the **warning
   ceilings** — above-zone and pause-diluted articulatory — by content
-  type, per Chen et al. 2024: slide-heavy visuals offload comprehension
-  processing at speed, audio-only podcasts get no such offload. The
-  factors never touch the target or the multiplier bounds; every other
-  content type rides at 1.0.
+  type. The **direction** is Chen et al. 2024's comprehension-at-speed
+  finding (Educ Psychol Rev 36:79, doi 10.1007/s10648-024-09917-7 — the
+  same study the 275 cliff derives from, first author Chen, senior
+  author Murphy): slide-heavy visuals offload comprehension processing
+  at speed, audio-only podcasts get no such offload. The ±5%
+  **magnitudes are a model choice**, not sourced from the paper.
+  Countervailing evidence: Tharumalingam & Risko 2025 (Educ Psychol
+  Rev, doi 10.1007/s10648-025-10003-9, meta-analysis) find increasing
+  speed can impair test performance — the 275 cliff is a heuristic, not
+  a crisp measured threshold, which is why the modulation only moves
+  the warning ceilings, never the target or the multiplier bounds; every
+  other content type rides at 1.0.
 
 ## Deferred / known limits
 

@@ -172,6 +172,17 @@ bounded within the G3-validated band and far smaller than the correction
 gap, so the ja correction direction is reliable (unlike hi, whose
 loanword-schwa overcount was unquantified and potentially 2x).
 
+**ja target/ceiling re-derived after this batch** (docs/languages.md):
+the old 380/400 priced a mora at English-syllable information (6.33/6.67
+morae/s × 6.3 bits/mora ≈ 40–42 bits/s — over the ~39.4 bits/s ceiling),
+while Coupé places Japanese at high syllabic rate / low info per
+syllable and CSJ natives run 8.01 morae/s on average (Maekawa 2003,
+7.6–8.4 band) — 480.6 morae/min. The measured 450–490 morae/min
+lecture/podcast band is the info-rate-consistent position, so ja's
+target/ceiling moved to 470/495 (7.83/8.25 morae/s), bracketing CSJ and
+the measured band top; the old 380 target would have recommended 0.81×
+on native ja lectures.
+
 ## Built bands (corpus-derived)
 
 G2 validates the current (derived) band first; every language fails it,
@@ -190,12 +201,21 @@ committed ru-corpus-summary.json blocks.
 | ko (syl/min) | 265–305 | 320–360 | 350–390 | 260–300 | 305–345 |
 
 These are the first corpus bands whose natural rates **reach or exceed
-the derived targets**: ja's generic 395–435 straddles the 380 target,
-th's 505–545 nearly doubles its 282, ko's 305–345 meets its 340. The
+the derived targets**: ja's lecture/podcast 450–490 straddles the
+re-derived 470 target, th's 505–545 nearly doubles its 282, ko's
+305–345 meets its 340. The
 estimated tier's prior range therefore overlaps the safe zone — natural
 Japanese, Thai and Korean content is genuinely fast by the model's
 frame, and the extension recommends ≈0.6–1.0× on it instead of
 flagging it fast.
+
+th's 420–630 cpm band must be read as a **presentation** rate: Thai
+graphemes pack vowels and tone marks around the consonant (~1.3+
+graphemes per syllable — สวัสดี = 6 code points / 3 syllables), so th
+cpm is not commensurable with zh cpm, the 282/290 target is a
+zh-ceiling scale rather than a measurement, and the band is not a
+comprehension safe zone. The grapheme-per-syllable ratio is an open
+measurement; zh's 240/258 stands (Lee & Chan 2005).
 
 ## Verdict
 
@@ -208,7 +228,10 @@ flagging it fast.
   bands replace 177–258.
 - **Targets and ceilings stay `derived: true` for all three** — a rate
   corpus measures speech rate, not comprehension of the safe zone; the
-  ru boundary holds. ja 380/400, th 282/290, ko 340/350 unchanged.
+  ru boundary holds. ja re-derived to 470/495 (2026-08 — the correction
+  note above), th 282/290 and ko 340/350 unchanged; th's band remains a
+  presentation rate with unresolved orthographic interpretation (see
+  the built-bands note), not a comprehension safe zone.
   The `priors.max < target` invariant is relaxed for corpus-measured
   languages (uk talk precedent); ratio-derived languages keep it.
 

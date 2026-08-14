@@ -7,18 +7,30 @@ export type RecommendationMode = 'recommend' | 'warning' | 'unreachable' | 'musi
 export type RateTier = 'asr-word' | 'asr-cue' | 'manual-cue' | 'estimated';
 
 export const TARGET_WPM = 250;
-/** Comprehension cliff (Murphy et al.): above this, warning mode. */
+/**
+ * Presentation-rate ceiling above which the recommendation warns. From
+ * Chen et al. 2024 (Educ Psychol Rev 36:79, doi 10.1007/s10648-024-09917-7
+ * — first author Chen, senior author Murphy; earlier notes cite it as
+ * "Murphy et al."): comprehension holds near 250–275 wpm at speed. 275
+ * is a heuristic pick from that band, not a crisp measured threshold —
+ * Tharumalingam & Risko 2025 (Educ Psychol Rev, doi
+ * 10.1007/s10648-025-10003-9) meta-analysis finds speed increases can
+ * impair test performance.
+ */
 export const SAFE_ZONE_CEILING_WPM = 275;
 export const ROUNDING_STEP = 0.05;
 export const MANUAL_CUE_CLAMP = 1.5;
 export const SLOW_DOWN_FLOOR = 0.5;
 
 /**
- * Multimedia-ceiling modulation (Chen et al. 2024, comprehension at speed
- * with visual support): slide-heavy visuals (lecture/explainer) offload
- * processing, so their safe-zone ceiling rides 5% up; audio-only podcasts
- * get no such offload and ride 5% down. Applied to the warning ceilings
- * only — never to the target or the multiplier bounds.
+ * Multimedia-ceiling modulation: lecture/explainer slide-heavy visuals
+ * offload processing at speed, audio-only podcasts get no such offload —
+ * the direction is Chen et al. 2024's comprehension-at-speed finding
+ * (same study as SAFE_ZONE_CEILING_WPM's). The ±5% magnitudes are a
+ * model choice, not sourced from the paper; the countervailing evidence
+ * (Tharumalingam & Risko 2025: speed increases can impair test
+ * performance) is why the modulation only moves the warning ceilings —
+ * never the target or the multiplier bounds.
  */
 export const MULTIMEDIA_CEILING_FACTOR = 1.05;
 export const PODCAST_CEILING_FACTOR = 0.95;
@@ -30,19 +42,30 @@ const CONTENT_TYPE_CEILING_FACTOR: Partial<Record<ContentType, number>> = {
 };
 
 /**
- * Assumed pause share of the stimulus on word-timed tracks. Measured
- * pause:speech median is 44.8% (≈31% pause share of span; range ~9–50%,
- * 11/17 speech videos above 25%) — lower bounds, since sub-second
- * micro-pauses stay inside the inter-start spans. 0.3 is the round
- * working assumption the safe-zone mapping below is built on.
+ * Default pause share of the stimulus on word-timed tracks, for languages
+ * without a measured share. Measured pause:speech median is 44.8% (≈31%
+ * pause share of span; range ~9–50%, 11/17 speech videos above 25%) —
+ * lower bounds, since sub-second micro-pauses stay inside the inter-start
+ * spans. The corpus languages carry their measured medians instead
+ * (LanguageModel.pauseShare: ar 0.51, ko 0.41, pl 0.38, ru 0.36, cs 0.35,
+ * id 0.34, uk 0.32, ja 0.23, vi 0.17, th 0.15 — from each corpus's
+ * pauseBiasPct median, s = −b/(1−b)). Low-pause ja/vi/th run articulatory
+ * ≈ presentation, so the fixed 0.3 leaves their warning threshold too
+ * high — the under-warn direction; ar at 0.51 over-warns on the 0.3
+ * default, the safe direction. The per-video ceiling/(1−share) upgrade
+ * (measuring the video's own pause share from word timing) is the
+ * documented future path.
  */
 export const P_STIMULUS = 0.3;
 
 /**
- * Articulatory ceiling: the ~275 wpm presentation limit mapped onto the
- * pause-excluded speech rate (275 / (1 − 0.3) ≈ 393 wpm). Above it the
- * speech itself runs faster than the comprehension limit even when the
- * presentation rate stays in the safe zone.
+ * Articulatory ceiling under the default 0.3 pause share: the ~275 wpm
+ * presentation limit mapped onto the pause-excluded speech rate
+ * (275 / (1 − 0.3) ≈ 393 wpm). Above it the speech itself runs faster
+ * than the comprehension limit even when the presentation rate stays in
+ * the safe zone. recommend() replaces 0.3 with the language's measured
+ * pauseShare when present — th's 0.15 tightens the threshold to
+ * ceiling/0.85, ar's 0.51 relaxes it to ceiling/0.49.
  */
 export const ARTICULATORY_CEILING_WPM = SAFE_ZONE_CEILING_WPM / (1 - P_STIMULUS);
 
@@ -117,11 +140,12 @@ export function recommend(input: RecommendInput): Recommendation {
   // The comprehension ceiling is content-type modulated: slide-heavy
   // lectures/explainers offload processing (factor up), podcasts don't
   // (factor down). The pause-diluted articulatory ceiling scales with the
-  // same modulated ceiling — ceiling / (1 − P_STIMULUS).
+  // same modulated ceiling and the language's pause share (measured per
+  // language, 0.3 default): ceiling / (1 − pauseShare).
   const ceiling =
     (language?.ceiling ?? SAFE_ZONE_CEILING_WPM) *
     (CONTENT_TYPE_CEILING_FACTOR[contentType] ?? 1);
-  const articulatoryCeiling = ceiling / (1 - P_STIMULUS);
+  const articulatoryCeiling = ceiling / (1 - (language?.pauseShare ?? P_STIMULUS));
   const tierLabel = TIER_LABELS[tier];
 
   if (contentType === 'music') {

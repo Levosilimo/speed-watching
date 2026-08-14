@@ -257,7 +257,7 @@ async function measureOnce(): Promise<void> {
       ? filteredTokensOverTrimmedSpan(harvest.cues, language)
       : manualCueRate(harvest.cues, language);
     if (naturalRate !== null) {
-      const detected = detectMusic(harvest.cues, naturalRate) ? 'music' : 'generic';
+      const detected = detectMusic(harvest.cues, naturalRate, language?.unit ?? 'wpm') ? 'music' : 'generic';
       // The user/site content-type preference outranks the detected default
       // (mirror of content.ts): auto-apply gates on this resolved type.
       const contentType = resolveContentType(settings, site, detected);
