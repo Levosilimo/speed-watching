@@ -164,6 +164,8 @@ export async function readPlayerInfo(page: Page): Promise<{
   asrLang: string | null;
   /** playabilityStatus.status from the player response; null when absent. */
   playabilityStatus: string | null;
+  /** Real video duration (videoDetails.lengthSeconds); null when absent. */
+  lengthSeconds: number | null;
 }> {
   return page.evaluate(() => {
     const pr: PlayerResponse | undefined = window.ytInitialPlayerResponse;
@@ -178,6 +180,10 @@ export async function readPlayerInfo(page: Page): Promise<{
       asrLangs: asr.map((t) => t.languageCode ?? '?'),
       asrLang: asr[0]?.languageCode ?? null,
       playabilityStatus: pr?.playabilityStatus?.status ?? null,
+      lengthSeconds: (() => {
+        const n = Number(pr?.videoDetails?.lengthSeconds);
+        return Number.isFinite(n) && n > 0 ? n : null;
+      })(),
     };
   });
 }

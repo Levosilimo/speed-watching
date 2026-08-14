@@ -84,6 +84,7 @@ export function initRecord(video: CorpusVideo): CorpusRecord {
     durationSec: null,
     provenance: video.provenance ?? null,
     captureDate: new Date().toISOString().slice(0, 10),
+    fullTimeline: null,
   };
 }
 
@@ -277,6 +278,10 @@ async function attemptVideo(
       androidJson = json;
     }, video.language);
     applyStats(record, webJson, androidJson, video);
+    // durationSec = the player's real video length; applyStats leaves the
+    // caption span there, and the whole-video savings denominator (gap-yield
+    // re-measurement) needs the honest duration.
+    record.durationSec = info.lengthSeconds ?? record.durationSec;
   } catch (err) {
     setClass(record, 'pot-fail', err instanceof Error && err.message ? err.message : String(err));
     const hint = await pageErrorHint(page);

@@ -1,0 +1,12 @@
+[
+  { "videoId": "-rg9mV6DBl4", "register": "lecture", "title": "ПостНаука — физика элементарных частиц", "language": "ru" },
+  { "videoId": "KUKjD4BB6_8", "register": "podcast", "title": "Зверева — подкаст", "language": "ru" },
+  { "videoId": "U58X5TpyspE", "register": "news", "title": "РБК — новости", "language": "ru" },
+  { "videoId": "jeF_L_Qxdl4", "register": "lecture", "title": "Грицак — Історія України", "language": "uk" },
+  { "videoId": "NEDLxqo1ATs", "register": "talk", "title": "Холоденко інтерв'ю", "language": "uk" },
+  { "videoId": "eLi9wpqzT70", "register": "news", "title": "Wiadomości wPolsce24", "language": "pl" },
+  { "videoId": "oi55ii6B9sA", "register": "podcast", "title": "Radio Naukowe — Droga Mleczna", "language": "pl" },
+  { "videoId": "r-5Y1w7y6TU", "register": "lecture", "title": "Zembrzuski — Spinoza", "language": "pl" },
+  { "videoId": "S32kCeB0B-k", "register": "news", "title": "CNN Prima NEWS — Babiš", "language": "cs" },
+  { "videoId": "e9xnLc6UOfQ", "register": "lecture", "title": "CVUTFEL — Kulhánek OTR", "language": "cs" }
+]

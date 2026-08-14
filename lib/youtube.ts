@@ -25,6 +25,8 @@ export interface PlayerResponse {
     /** Display name; the channel-memory fallback key when channelId is
      * missing (names are not unique, so the memory namespaces them). */
     author?: string;
+    /** Real video duration in seconds (string in the player response). */
+    lengthSeconds?: string;
   };
 }
 

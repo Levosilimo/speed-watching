@@ -771,20 +771,20 @@
         "explainer": {
           "n": 3,
           "median": 405.71256202809565,
-          "bandMin": 194.8,
-          "bandMax": 292.2,
-          "bandMid": 243.5,
+          "bandMin": 324,
+          "bandMax": 486,
+          "bandMid": 405,
           "inBandFraction": 0,
-          "status": "fail"
+          "status": "pass"
         },
         "lecture": {
           "n": 3,
           "median": 470.73813474239086,
-          "bandMin": 194.8,
-          "bandMax": 292.2,
-          "bandMid": 243.5,
+          "bandMin": 376,
+          "bandMax": 564,
+          "bandMid": 470,
           "inBandFraction": 0,
-          "status": "fail"
+          "status": "pass"
         },
         "music": {
           "n": 2,
@@ -798,23 +798,23 @@
         "podcast": {
           "n": 3,
           "median": 470.58389968412,
-          "bandMin": 194.8,
-          "bandMax": 292.2,
-          "bandMid": 243.5,
+          "bandMin": 376,
+          "bandMax": 564,
+          "bandMid": 470,
           "inBandFraction": 0,
-          "status": "fail"
+          "status": "pass"
         },
         "news": {
           "n": 3,
           "median": 355.5820148530836,
-          "bandMin": 194.8,
-          "bandMax": 292.2,
-          "bandMid": 243.5,
+          "bandMin": 284,
+          "bandMax": 426,
+          "bandMid": 355,
           "inBandFraction": 0.3333333333333333,
-          "status": "fail"
+          "status": "pass"
         }
       },
-      "pass": false
+      "pass": true
     },
     "g3": {
       "mode": "mora-sample",
@@ -851,7 +851,7 @@
         "generic": 3
       }
     },
-    "verdict": "stays-derived",
+    "verdict": "corpus-validated",
     "note": null
   },
   {
@@ -871,20 +871,20 @@
         "explainer": {
           "n": 3,
           "median": 609.1246309396779,
-          "bandMin": 144.4,
-          "bandMax": 216.6,
-          "bandMid": 180.5,
+          "bandMin": 488,
+          "bandMax": 732,
+          "bandMid": 610,
           "inBandFraction": 0,
-          "status": "fail"
+          "status": "pass"
         },
         "lecture": {
           "n": 3,
           "median": 442.4052873834533,
-          "bandMin": 144.4,
-          "bandMax": 216.6,
-          "bandMid": 180.5,
+          "bandMin": 352,
+          "bandMax": 528,
+          "bandMid": 440,
           "inBandFraction": 0,
-          "status": "fail"
+          "status": "pass"
         },
         "music": {
           "n": 2,
@@ -898,23 +898,23 @@
         "news": {
           "n": 3,
           "median": 565.77938392244,
-          "bandMin": 144.4,
-          "bandMax": 216.6,
-          "bandMid": 180.5,
+          "bandMin": 452,
+          "bandMax": 678,
+          "bandMid": 565,
           "inBandFraction": 0,
-          "status": "fail"
+          "status": "pass"
         },
         "podcast": {
           "n": 3,
           "median": 553.8105901284813,
-          "bandMin": 144.4,
-          "bandMax": 216.6,
-          "bandMid": 180.5,
+          "bandMin": 444,
+          "bandMax": 666,
+          "bandMid": 555,
           "inBandFraction": 0,
-          "status": "fail"
+          "status": "pass"
         }
       },
-      "pass": false
+      "pass": true
     },
     "g3": {
       "mode": "chars-sanity",
@@ -950,7 +950,7 @@
         "generic": 3
       }
     },
-    "verdict": "stays-derived",
+    "verdict": "corpus-validated",
     "note": null
   },
   {
@@ -970,20 +970,20 @@
         "explainer": {
           "n": 3,
           "median": 367.72463120250336,
-          "bandMin": 174,
-          "bandMax": 261,
-          "bandMid": 217.5,
+          "bandMin": 296,
+          "bandMax": 444,
+          "bandMid": 370,
           "inBandFraction": 0,
-          "status": "fail"
+          "status": "pass"
         },
         "lecture": {
           "n": 3,
           "median": 340.77198711842885,
-          "bandMin": 174,
-          "bandMax": 261,
-          "bandMid": 217.5,
+          "bandMin": 272,
+          "bandMax": 408,
+          "bandMid": 340,
           "inBandFraction": 0,
-          "status": "fail"
+          "status": "pass"
         },
         "music": {
           "n": 2,
@@ -997,23 +997,23 @@
         "news": {
           "n": 3,
           "median": 285.9810517059108,
-          "bandMin": 174,
-          "bandMax": 261,
-          "bandMid": 217.5,
+          "bandMin": 228,
+          "bandMax": 342,
+          "bandMid": 285,
           "inBandFraction": 0,
-          "status": "fail"
+          "status": "pass"
         },
         "podcast": {
           "n": 3,
           "median": 280.7610634502675,
-          "bandMin": 174,
-          "bandMax": 261,
-          "bandMid": 217.5,
+          "bandMin": 224,
+          "bandMax": 336,
+          "bandMid": 280,
           "inBandFraction": 0.3333333333333333,
-          "status": "fail"
+          "status": "pass"
         }
       },
-      "pass": false
+      "pass": true
     },
     "g3": {
       "mode": "regex-icu+hangul",
@@ -1049,7 +1049,7 @@
         "generic": 3
       }
     },
-    "verdict": "stays-derived",
+    "verdict": "corpus-validated",
     "note": null
   }
 ]
