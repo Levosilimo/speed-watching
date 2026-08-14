@@ -34,43 +34,43 @@
 
       body {
         font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-        font-size: 13px;
-        line-height: 1.4;
+        font-size: 11px;
+        line-height: 1.3;
         color: var(--sw-text);
         background: var(--sw-bg);
         max-width: 600px;
         margin: 0 auto;
-        padding: 14px 20px 6px;
+        padding: 5px 20px 4px;
         -webkit-font-smoothing: antialiased;
       }
 
-      .header { margin-bottom: 10px; }
-      .header h1 { font-size: 18px; font-weight: 600; letter-spacing: -0.01em; margin-bottom: 1px; }
-      .header p { font-size: 12px; color: var(--sw-text-secondary); }
+      .header { margin-bottom: 4px; }
+      .header h1 { font-size: 16px; font-weight: 600; letter-spacing: -0.01em; margin-bottom: 1px; }
+      .header p { font-size: 11px; color: var(--sw-text-secondary); }
 
-      .section { margin-bottom: 8px; }
+      .section { margin-bottom: 3px; }
       .section-label {
-        font-size: 10px; font-weight: 600; text-transform: uppercase;
-        letter-spacing: 0.06em; color: var(--sw-text-muted); margin-bottom: 4px;
+        font-size: 9px; font-weight: 600; text-transform: uppercase;
+        letter-spacing: 0.06em; color: var(--sw-text-muted); margin-bottom: 1px;
       }
       .section-card {
         background: var(--sw-bg-subtle); border: 1px solid var(--sw-border-subtle);
-        border-radius: var(--sw-r-lg); padding: 10px 12px;
+        border-radius: var(--sw-r-lg); padding: 5px 11px;
       }
       .section-note {
-        font-size: 11px; line-height: 1.3; color: var(--sw-text-secondary); margin-bottom: 6px;
+        font-size: 10px; line-height: 1.28; color: var(--sw-text-secondary); margin-bottom: 3px;
       }
 
       /* ── WPM Slider ──────────────────────────────────────────────── */
 
-      .wpm-display { display: flex; align-items: baseline; gap: 5px; margin-bottom: 4px; }
+      .wpm-display { display: flex; align-items: baseline; gap: 5px; margin-bottom: 1px; }
       .wpm-value {
-        font-size: 20px; font-weight: 700; letter-spacing: -0.02em;
+        font-size: 17px; font-weight: 700; letter-spacing: -0.02em;
         color: var(--sw-primary); font-variant-numeric: tabular-nums;
       }
-      .wpm-unit { font-size: 12px; color: var(--sw-text-secondary); }
+      .wpm-unit { font-size: 11px; color: var(--sw-text-secondary); }
 
-      .slider-track { position: relative; width: 100%; height: 24px; display: flex; align-items: center; }
+      .slider-track { position: relative; width: 100%; height: 19px; display: flex; align-items: center; }
       .slider-input {
         -webkit-appearance: none; appearance: none; width: 100%; height: 4px;
         background: #868e96; border-radius: 2px; outline: none; position: relative; z-index: 2;
@@ -87,9 +87,28 @@
         left: 50%; width: 8.33%;
       }
       .safe-zone-label {
-        display: flex; justify-content: space-between; margin-top: 0;
-        font-size: 10px; color: var(--sw-text-muted);
+        display: flex; justify-content: space-between;
+        font-size: 9.5px; color: var(--sw-text-muted);
       }
+
+      /* ── Auto-apply ──────────────────────────────────────────────── */
+
+      .toggle-row {
+        display: flex; align-items: center; gap: 8px;
+        font-size: 12.5px; color: var(--sw-text); cursor: pointer; margin-bottom: 1px;
+      }
+      .toggle-row input { accent-color: var(--sw-primary); }
+      .auto-type-group {
+        display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px;
+      }
+      .auto-type-label {
+        flex-basis: 100%; font-size: 10.5px; color: var(--sw-text-secondary);
+      }
+      .auto-type-item {
+        display: flex; align-items: center; gap: 5px;
+        font-size: 11.5px; color: var(--sw-text); cursor: pointer;
+      }
+      .auto-type-item input { accent-color: var(--sw-primary); }
 
       /* ── Content Type Presets ────────────────────────────────────── */
 
@@ -98,7 +117,7 @@
         border-radius: var(--sw-r-md); padding: 2px;
       }
       .preset-btn {
-        flex: 1; padding: 4px 0; font-family: inherit; font-size: 11px; font-weight: 500;
+        flex: 1; padding: 3px 0; font-family: inherit; font-size: 10.5px; font-weight: 500;
         color: var(--sw-text-secondary); background: transparent; border: none;
         border-radius: var(--sw-r-sm); cursor: pointer;
       }
@@ -106,45 +125,53 @@
         background: var(--sw-bg); color: var(--sw-text); box-shadow: var(--sw-shadow);
       }
 
+      /* ── Interface Language ──────────────────────────────────────── */
+
+      .language-select {
+        padding: 5px 10px; font-family: inherit; font-size: 12px;
+        background: var(--sw-bg); border: 1px solid var(--sw-border);
+        border-radius: var(--sw-r-md); color: var(--sw-text);
+      }
+
       /* ── Per-site Overrides ──────────────────────────────────────── */
 
-      .override-list { list-style: none; margin-bottom: 5px; }
+      .override-list { list-style: none; margin-bottom: 2px; }
       .override-item {
         display: flex; align-items: center; justify-content: space-between;
-        padding: 4px 0; border-bottom: 1px solid var(--sw-border-subtle); font-size: 12px;
+        padding: 2px 0; border-bottom: 1px solid var(--sw-border-subtle); font-size: 11.5px;
       }
       .override-item:last-child { border-bottom: none; }
       .override-hostname { font-weight: 500; }
-      .override-type { font-size: 11px; color: var(--sw-text-secondary); margin-left: 6px; }
+      .override-type { font-size: 10px; color: var(--sw-text-secondary); margin-left: 6px; }
       .override-remove {
-        font-size: 11px; color: var(--sw-danger); background: none; border: none;
+        font-size: 10.5px; color: var(--sw-danger); background: none; border: none;
         cursor: pointer; padding: 2px 5px; border-radius: var(--sw-r-sm); font-family: inherit;
       }
       .override-remove:hover { background: var(--sw-danger-subtle); }
       .add-override { display: flex; gap: 6px; }
       .add-override input {
-        flex: 1; padding: 4px 8px; font-family: inherit; font-size: 12px;
+        flex: 1; padding: 4px 8px; font-family: inherit; font-size: 11.5px;
         background: var(--sw-bg); border: 1px solid var(--sw-border);
         border-radius: var(--sw-r-md); color: var(--sw-text); outline: none;
       }
       .add-override button {
-        padding: 4px 10px; font-family: inherit; font-size: 12px; font-weight: 500;
+        padding: 4px 10px; font-family: inherit; font-size: 11.5px; font-weight: 500;
         background: var(--sw-primary); color: var(--sw-bg); border: none;
         border-radius: var(--sw-r-md); cursor: pointer;
       }
 
       /* ── Habits Report ───────────────────────────────────────────── */
 
-      .habits-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+      .habits-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
       .habit-stat { display: flex; flex-direction: column; gap: 0; }
       .habit-stat .stat-value {
-        font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--sw-text);
+        font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--sw-text);
       }
-      .habit-stat .stat-label { font-size: 10px; color: var(--sw-text-secondary); }
-      .habit-list { margin-top: 4px; list-style: none; }
+      .habit-stat .stat-label { font-size: 9px; color: var(--sw-text-secondary); }
+      .habit-list { margin-top: 2px; list-style: none; }
       .habit-list li {
-        display: flex; justify-content: space-between; padding: 2px 0;
-        font-size: 11px; color: var(--sw-text-secondary);
+        display: flex; justify-content: space-between; padding: 1px 0;
+        font-size: 10.5px; color: var(--sw-text-secondary);
         border-bottom: 1px solid var(--sw-border-subtle);
       }
       .habit-list li:last-child { border-bottom: none; }
@@ -152,13 +179,13 @@
       /* ── Audio Capture Test ──────────────────────────────────────── */
 
       #toggle {
-        padding: 5px 10px; font-family: inherit; font-size: 12px; font-weight: 500;
+        padding: 4px 9px; font-family: inherit; font-size: 11.5px; font-weight: 500;
         background: var(--sw-primary); color: var(--sw-bg); border: none;
         border-radius: var(--sw-r-md); cursor: pointer;
       }
-      #status { margin: 4px 0; font-weight: 600; font-size: 12px; }
+      #status { margin: 1px 0; font-weight: 600; font-size: 11px; }
       #meter {
-        width: 100%; height: 6px; background: var(--sw-bg-muted);
+        width: 100%; height: 4px; background: var(--sw-bg-muted);
         border-radius: 3px; overflow: hidden;
       }
       #meter-fill {
@@ -166,17 +193,22 @@
         border-radius: 3px;
       }
 
+      /* ── Integration ─────────────────────────────────────────────── */
+
+      .integration-toggle { font-size: 12.5px; color: var(--sw-text); display: flex; align-items: center; gap: 8px; }
+      .integration-toggle input { accent-color: var(--sw-primary); }
+
       /* ── Tier Info ───────────────────────────────────────────────── */
 
       .tier-list { list-style: none; }
-      .tier-item { display: flex; align-items: flex-start; gap: 8px; padding: 3px 0; }
+      .tier-item { display: flex; align-items: flex-start; gap: 8px; padding: 2px 0; }
       .tier-item + .tier-item { border-top: 1px solid var(--sw-border-subtle); }
       .tier-badge {
-        font-size: 10px; font-weight: 600; padding: 1px 6px;
+        font-size: 9px; font-weight: 600; padding: 1px 6px;
         border-radius: var(--sw-r-pill); background: var(--sw-primary-subtle);
         color: var(--sw-primary); white-space: nowrap; flex-shrink: 0;
       }
-      .tier-desc { font-size: 11px; color: var(--sw-text-secondary); line-height: 1.25; }
+      .tier-desc { font-size: 10px; color: var(--sw-text-secondary); line-height: 1.25; }
     </style>
   </head>
   <body>
@@ -185,6 +217,7 @@
       <p>WPM-based playback speed recommendations</p>
     </div>
 
+    <!-- Target speech rate -->
     <div class="section">
       <h2 class="section-label" id="target-rate-label">Target speech rate</h2>
       <div class="section-card">
@@ -198,25 +231,83 @@
         </div>
         <div class="safe-zone-label">
           <span>Slow</span>
-          <span>Comfortable range (250–275)</span>
+          <span>English comfort range (250–275)</span>
           <span>Fast</span>
+        </div>
+        <p class="section-note">
+          A manual target value applies in the video's language unit
+        </p>
+        <p class="section-note" style="margin-bottom: 0">
+          Why 250? Comprehension stays comfortable through ~275 wpm; 250
+          matches the reading rate with a ~9% buffer. Other languages use
+          their derived ranges.
+        </p>
+      </div>
+    </div>
+
+    <!-- Auto-apply speed -->
+    <div class="section" id="auto-apply-section">
+      <h2 class="section-label" id="auto-label">Auto-apply speed</h2>
+      <div class="section-card">
+        <p class="section-note">
+          When on, the recommended speed applies automatically to each new
+          video — confident caption-based recommendations only. Music and
+          estimated guesses never do. A manual change or "Stop auto"
+          overrides it for that video.
+        </p>
+        <label class="toggle-row">
+          <input type="checkbox" id="auto-toggle" checked>
+          <span>Apply the recommended speed automatically</span>
+        </label>
+        <div class="auto-type-group" role="group" aria-labelledby="auto-type-label">
+          <span class="auto-type-label" id="auto-type-label">Apply to these content types</span>
+          <label class="auto-type-item">
+            <input type="checkbox" data-type="talk" checked>
+            <span>Talk</span>
+          </label>
+          <label class="auto-type-item">
+            <input type="checkbox" data-type="lecture" checked>
+            <span>Lecture</span>
+          </label>
+          <label class="auto-type-item">
+            <input type="checkbox" data-type="explainer" checked>
+            <span>Explainer</span>
+          </label>
+          <label class="auto-type-item">
+            <input type="checkbox" data-type="podcast" checked>
+            <span>Podcast</span>
+          </label>
         </div>
       </div>
     </div>
 
+    <!-- Content type -->
     <div class="section">
       <h2 class="section-label">Content type</h2>
       <div class="section-card">
         <div class="presets" role="group" aria-label="Content type presets">
           <button class="preset-btn" data-type="lecture" aria-pressed="false">Lecture</button>
           <button class="preset-btn" data-type="talk" aria-pressed="false">Talk</button>
-          <button class="preset-btn" data-type="podcast" aria-pressed="true">Podcast</button>
+          <button class="preset-btn" data-type="podcast" aria-pressed="false">Podcast</button>
           <button class="preset-btn" data-type="music" aria-pressed="false">Music</button>
-          <button class="preset-btn" data-type="generic" aria-pressed="false">Generic</button>
+          <button class="preset-btn" data-type="generic" aria-pressed="true">Generic</button>
         </div>
       </div>
     </div>
 
+    <!-- Interface language -->
+    <div class="section">
+      <h2 class="section-label">Interface language</h2>
+      <div class="section-card">
+        <select id="ui-language" class="language-select" aria-label="Interface language">
+          <option value="auto" selected>Auto</option>
+          <option value="ru">Русский</option>
+          <option value="en">English</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Per-site overrides -->
     <div class="section">
       <h2 class="section-label">Per-site overrides</h2>
       <div class="section-card">
@@ -237,6 +328,7 @@
       </div>
     </div>
 
+    <!-- Your habits -->
     <div class="section">
       <h2 class="section-label">Your habits</h2>
       <div class="section-card">
@@ -249,22 +341,22 @@
             <span class="stat-value" id="habit-avg-mult">1.32×</span>
             <span class="stat-label">Average multiplier</span>
           </div>
+          <div class="habit-stat">
+            <span class="stat-value" id="habit-saved">2h 14m</span>
+            <span class="stat-label">Time saved</span>
+          </div>
         </div>
-        <ul class="habit-list" id="habit-list">
-          <li><span>podcast</span><span>28×</span></li>
-          <li><span>lecture</span><span>12×</span></li>
-          <li><span>talk</span><span>7×</span></li>
-        </ul>
+
       </div>
     </div>
 
+    <!-- Test audio capture -->
     <div class="section" id="probe-section">
       <h2 class="section-label" id="probe-section-label">Test audio capture</h2>
       <div class="section-card">
         <p class="section-note">
-          Verifies that the extension can capture audio from a video tab. The meter
-          shows the live audio level of the captured tab while the test runs. No audio
-          is recorded, stored, or transmitted.
+          Confirms your browser lets us read a video tab's audio — needed
+          before on-device speech-to-text can ship.
         </p>
         <button type="button" id="toggle">Test audio capture</button>
         <div id="status" role="status">Idle</div>
@@ -272,21 +364,37 @@
       </div>
     </div>
 
+    <!-- Integration -->
+    <div class="section" id="external-api-section">
+      <h2 class="section-label" id="external-api-label">Integration</h2>
+      <div class="section-card">
+        <p class="section-note">
+          Allow partner extensions you install to query the current video's
+          measured speech rate. Off by default.
+        </p>
+        <label class="integration-toggle">
+          <input type="checkbox" id="external-api-toggle">
+          <span>Allow measurement requests from partner extensions</span>
+        </label>
+      </div>
+    </div>
+
+    <!-- Tier labels -->
     <div class="section">
       <h2 class="section-label">Tier labels</h2>
       <div class="section-card">
         <ul class="tier-list">
           <li class="tier-item">
             <span class="tier-badge">from captions</span>
-            <span class="tier-desc">Word-timed ASR captions. The most common tier — ~94% of sampled videos with speech captions in our measurements.</span>
+            <span class="tier-desc">Word-timed ASR captions — ~94% of sampled speech-caption videos.</span>
           </li>
           <li class="tier-item">
             <span class="tier-badge">from captions (corrected)</span>
-            <span class="tier-desc">Manual captions with silence correction applied. Higher confidence, clamped to 1.5× max.</span>
+            <span class="tier-desc">Manual captions with silence correction — higher confidence, clamped to 1.5× max.</span>
           </li>
           <li class="tier-item">
             <span class="tier-badge">estimated</span>
-            <span class="tier-desc">Heuristic estimate from content type and video metadata. Used when captions are unavailable.</span>
+            <span class="tier-desc">Heuristic estimate from content type and metadata when captions are unavailable.</span>
           </li>
         </ul>
       </div>

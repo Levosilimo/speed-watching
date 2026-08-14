@@ -8,7 +8,9 @@
 - Add per-channel rate memory that seeds captionless videos' estimates
 - Add UI localization (ru) across the pill, nudge, and options pages
 - Add the corpus-validated per-language rate model (ru, uk, pl, cs, ar, id, vi, ms, tl, ja, th, ko)
+- Re-derive the ja target/ceiling to 470/495 morae per minute, cap music recommendations in the video's language unit, and apply per-language pause share to the articulatory ceiling
 - Port the extension to Firefox (AMO build) with two-browser e2e harnesses
+- Port the speed math to an mpv Lua script and the YouTube flow to a userscript, with unit tests and CI gating
 - Fix the generic re-assert loop fighting a post-override reset to 1×
 - Fix a stale in-flight measure auto-applying the previous video's rate
 - Key the safe-zone copy to the track language's derived range instead of the English 250–275
