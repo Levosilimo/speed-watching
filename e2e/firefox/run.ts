@@ -273,14 +273,13 @@ async function main(): Promise<void> {
         );
       },
       async setChapterConsent(enabled) {
-        // The toggle lives inside the pill host (mount()'s appendChild(shadow)
-        // moves the pill's markup into the host's light DOM in real browsers,
-        // so the query is not shadowRoot-scoped).
+        // The toggle lives inside the pill's open shadow root; wait for it
+        // to render, then drive the exact click handler it is wired to.
         const deadline = Date.now() + 15_000;
         while (Date.now() < deadline) {
           const visible = await driver.executeScript(
             'const host = document.querySelector(".speedwatcher-pill-host");' +
-              'const btn = host && host.querySelector("button.btn-chapter-toggle");' +
+              'const btn = host && host.shadowRoot && host.shadowRoot.querySelector("button.btn-chapter-toggle");' +
               'return btn ? !btn.hidden : false',
           );
           if (visible === true) break;
@@ -288,7 +287,7 @@ async function main(): Promise<void> {
         }
         await driver.executeScript(
           'const host = document.querySelector(".speedwatcher-pill-host");' +
-            'const btn = host && host.querySelector("button.btn-chapter-toggle");' +
+            'const btn = host && host.shadowRoot && host.shadowRoot.querySelector("button.btn-chapter-toggle");' +
             'if (btn && ((btn.getAttribute("aria-pressed") === "true") !== arguments[0])) btn.click();',
           enabled,
         );

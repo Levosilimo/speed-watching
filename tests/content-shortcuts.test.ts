@@ -64,20 +64,26 @@ function pillHost(): HTMLElement | null {
   return document.querySelector('.speedwatcher-pill-host');
 }
 
+/** The pill's DOM lives in the host's open shadow root (real browsers never
+ * render a shadow host's light-DOM children). */
+function pillRoot(): ShadowRoot | null {
+  return pillHost()?.shadowRoot ?? null;
+}
+
 function pillMode(): string | null {
-  return pillHost()?.querySelector('.pill')?.getAttribute('data-mode') ?? null;
+  return pillRoot()?.querySelector('.pill')?.getAttribute('data-mode') ?? null;
 }
 
 function liveLine(): HTMLElement | null {
-  return pillHost()?.querySelector('.live-rate') ?? null;
+  return pillRoot()?.querySelector('.live-rate') ?? null;
 }
 
 function pillLabel(): string | null {
-  return pillHost()?.querySelector('.label')?.textContent ?? null;
+  return pillRoot()?.querySelector('.label')?.textContent ?? null;
 }
 
 function pillTier(): string | null {
-  return pillHost()?.querySelector('.tier')?.textContent ?? null;
+  return pillRoot()?.querySelector('.tier')?.textContent ?? null;
 }
 
 /** Channel-memory records the in-process bridge serves back on channel:get

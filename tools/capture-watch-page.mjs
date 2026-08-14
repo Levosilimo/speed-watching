@@ -81,20 +81,17 @@ async function routeWatchRequests(context) {
   });
 }
 
-/** Wait for the recommend-mode pill and re-render it so it actually paints.
+/** Wait for the recommend-mode pill and give its host the capture layout.
  *
  * On the fixture page #movie_player is the <video> element itself (on real
  * YouTube it is a div wrapping the video), and Chromium computes no styles
  * for children of a <video> — a pill host inside it never paints. So the
  * page is restructured to mirror YouTube and the measure is re-run on the
- * new anchor. Then the pill's mount quirk is undone: mount() does
- * host.appendChild(shadow), which in current Chromium moves the shadow's
- * children into the host's light DOM but leaves the (now empty) shadow root
- * attached — and light-DOM children of a shadow host are never rendered.
- * Swapping in a shadow-free wrapper makes the pill paint; the pill's
- * elements keep their handlers. The wrapper becomes a flex box so the pill
- * (inline-flex in a 0×0 box overflows right, past the viewport) sits fully
- * inside the player.
+ * new anchor. The re-created host is then re-styled into a bottom-right
+ * flex box: its production inline styles (absolute, 0×0, top-right) beat
+ * the shadow stylesheet's :host rule, so without the re-style the pill
+ * would paint from the player's top-right corner, overflowing the viewport.
+ * The shadow root stays attached — the pill renders inside it normally.
  */
 async function remountPill(page) {
   await page.waitForFunction(
@@ -123,14 +120,10 @@ async function remountPill(page) {
   await page.evaluate(() => {
     const host = document.querySelector('.speedwatcher-pill-host');
     if (host === null) return;
-    const fresh = document.createElement('div');
-    fresh.className = host.className;
-    fresh.style.cssText =
+    host.style.cssText =
       'position:absolute;right:0;bottom:18px;width:320px;height:64px;' +
       'display:flex;justify-content:flex-end;align-items:flex-end;' +
       'pointer-events:none;';
-    while (host.firstChild) fresh.appendChild(host.firstChild);
-    host.replaceWith(fresh);
   });
 }
 
@@ -166,9 +159,6 @@ async function main() {
           background: #000;
         }
         #movie_player video { width: 100%; height: 100%; display: block; }
-        /* The :host rule that carried color/font dies with the shadow-root
-           quirk above; restore the dark-theme text so the capture reads. */
-        .pill, .pill button { color: #e8eaed; font-family: system-ui, sans-serif; }
       `,
     });
     await page.waitForTimeout(300);

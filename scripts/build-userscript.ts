@@ -12,16 +12,24 @@ import { fileURLToPath } from 'node:url';
 const root = fileURLToPath(new URL('..', import.meta.url));
 const outPath = join(root, 'userscript', 'dist', 'speed-watcher.user.js');
 
+// @version tracks package.json so a release bump propagates into the
+// userscript header; @updateURL/@downloadURL point at the GitHub release
+// asset the publish workflow attaches under the same filename.
+const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')) as { version: string };
+const RELEASE_URL = 'https://github.com/levosilimo/speed-watching/releases/latest/download/speed-watcher.user.js';
+
 const METADATA = `// ==UserScript==
 // @name         Speed Watcher
 // @namespace    speed-watcher
-// @version      0.0.3
+// @version      ${pkg.version}
 // @description  Sets YouTube playback speed so effective speech rate lands in the ~250-275 wpm safe zone
 // @license      MIT
 // @match        *://*.youtube.com/*
 // @grant        GM_setValue
 // @grant        GM_getValue
 // @run-at       document-start
+// @updateURL    ${RELEASE_URL}
+// @downloadURL  ${RELEASE_URL}
 // ==/UserScript==
 
 `;
