@@ -136,3 +136,33 @@ describe('ChapterScheduler', () => {
     expect(scheduler.active).toBe(false);
   });
 });
+
+describe('ChapterScheduler activeIndex', () => {
+  let video: FakeVideo;
+  let scheduler: ChapterScheduler;
+  let apply: ReturnType<typeof vi.fn<(multiplier: number) => number>>;
+
+  beforeEach(() => {
+    video = new FakeVideo();
+    scheduler = new ChapterScheduler();
+    apply = vi.fn((multiplier: number) => multiplier);
+  });
+
+  afterEach(() => {
+    scheduler.stop();
+  });
+
+  it('tracks the enforced segment; -1 before the first tick and after stop', () => {
+    expect(scheduler.activeIndex).toBe(-1);
+    scheduler.start(video, rates, apply);
+    expect(scheduler.activeIndex).toBe(-1);
+    video.currentTime = 40;
+    video.fire('timeupdate');
+    expect(scheduler.activeIndex).toBe(1);
+    video.currentTime = 70;
+    video.fire('timeupdate');
+    expect(scheduler.activeIndex).toBe(2);
+    scheduler.stop();
+    expect(scheduler.activeIndex).toBe(-1);
+  });
+});

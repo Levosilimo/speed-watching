@@ -44,12 +44,17 @@ export class ChapterScheduler {
   private video: VideoLike | null = null;
   private rates: RateSegment[] = [];
   private apply: ((multiplier: number) => number) | null = null;
-  private activeIndex = -1;
+  private index = -1;
   private applied: number | null = null;
   private yielded = false;
 
   get active(): boolean {
     return this.video !== null;
+  }
+
+  /** Index of the segment being enforced; -1 before the first tick. */
+  get activeIndex(): number {
+    return this.index;
   }
 
   /** The multiplier currently being enforced, or null when inactive. */
@@ -90,7 +95,7 @@ export class ChapterScheduler {
     this.video = null;
     this.rates = [];
     this.apply = null;
-    this.activeIndex = -1;
+    this.index = -1;
     this.applied = null;
     this.yielded = false;
   }
@@ -99,10 +104,10 @@ export class ChapterScheduler {
     const video = this.video;
     if (video === null) return;
     const index = segmentIndexAt(this.rates, video.currentTime);
-    if (index === -1 || index === this.activeIndex) return;
+    if (index === -1 || index === this.index) return;
     const apply = this.apply;
     if (apply === null) return;
-    this.activeIndex = index;
+    this.index = index;
     this.yielded = false;
     this.applied = apply(this.rates[index]!.multiplier);
   };
