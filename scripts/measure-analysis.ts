@@ -348,26 +348,18 @@ function verdictFor(
   if (lang === 'sr') {
     // sr is not on YouTube's ASR language list; the probe runs anyway and
     // records the structural fail (no-track/manual-only) as evidence.
-    return {
-      verdict: 'stays-derived',
-      note:
-        asrBearing === 0
-          ? 'sr availability probe: no sr ASR tracks (not on YouTube\'s ASR language list); structural fail recorded'
-          : 'sr availability probe: sr ASR tracks present; measured',
-    };
+    const srNote =
+      asrBearing === 0
+        ? 'sr availability probe: no sr ASR tracks (not on YouTube\'s ASR language list); structural fail recorded'
+        : 'sr availability probe: sr ASR tracks present; measured';
+    return { verdict: 'stays-derived', note: srNote };
   }
-  const validatedLangs = ['ru', 'uk', 'pl', 'cs'];
-  if (validatedLangs.includes(lang)) {
+  if (['ru', 'uk', 'pl', 'cs'].includes(lang)) {
     if (g1.pass && g2.pass && g3.pass) return { verdict: 'corpus-validated', note: null };
-    if (underpowered) {
-      return { verdict: 'underpowered', note: 'a register has <2 measured videos; no verdict' };
-    }
+    if (underpowered) return { verdict: 'underpowered', note: 'a register has <2 measured videos; no verdict' };
     return {
       verdict: 'stays-derived',
-      note:
-        lang === 'uk'
-          ? 'uk ASR only; ru-broadcasting uk-topic channels classify wrong-lang'
-          : null,
+      note: lang === 'uk' ? 'uk ASR only; ru-broadcasting uk-topic channels classify wrong-lang' : null,
     };
   }
   return { verdict: underpowered ? 'underpowered' : 'addendum-measured', note: null };
