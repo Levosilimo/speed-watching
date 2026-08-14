@@ -92,10 +92,10 @@ segs).
 | ja | lecture | CwL1yfCHjrY | 22386 | 2271 | 493.0 | t/t | no |
 | ja | lecture | BBIKHgl0jpc | 11816 | 1152 | 470.7 | t/t | yes |
 | ja | explainer | 9XEX4mZFOhA | 79579 | 8127 | 393.8 | t/t | yes |
-| ja | explainer | GdlzL8E8Vh4 | 9046 | 1012 | 452.2 | t/t | no |
+| ja | explainer | GdlzL8E8Vh4 | 9046 | 881 | 452.2 | t/t | no |
 | ja | explainer | j5l9vk1xGZI | 88036 | 8870 | 405.7 | t/t | yes |
 | ja | podcast | 3PuM4d-06xY | 2464 | 835 | 507.4 | t/t | no |
-| ja | podcast | s7I16xFt3vs | 8727 | 1087 | 370.5 | t/t | no |
+| ja | podcast | s7I16xFt3vs | 8727 | 1303 | 370.5 | t/t | no |
 | ja | podcast | UEqj3RRUlDA | 7626 | 786 | 470.6 | t/t | yes |
 | ja | music | hg0wu8HQWyY | 1341 | 257 | 115.3 | t/t | no band |
 | ja | music | qNIBWyqmS6s | 5679 | 1516 | 89.3 | t/t | no band |
