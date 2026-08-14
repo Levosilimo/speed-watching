@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Speed Watcher — playback speed from the video's own speech rate</title>
+    <meta
+      name="description"
+      content="Speed Watcher measures a video's caption speech rate and recommends the playback multiplier that lands you in the 250–275 wpm comfortable listening range. Chrome, Firefox, userscript, mpv. Everything runs locally."
+    />
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #0f0f0f;
+        --panel: #1b1b1b;
+        --text: #e8e8e8;
+        --muted: #9a9a9a;
+        --accent: #ffcc4d;
+        --border: #333;
+        --radius: 10px;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font: 17px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif;
+      }
+      main { max-width: 760px; margin: 0 auto; padding: 48px 20px 64px; }
+      h1 { font-size: 2.2rem; margin: 8px 0 4px; }
+      h2 { font-size: 1.35rem; margin: 48px 0 12px; }
+      .tagline { color: var(--muted); margin-top: 0; }
+      img.hero { width: 100%; border-radius: var(--radius); border: 1px solid var(--border); }
+      table { border-collapse: collapse; width: 100%; }
+      th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+      th { color: var(--muted); font-weight: 600; }
+      code, .key { background: #262626; border: 1px solid var(--border); border-radius: 4px; padding: 1px 6px; font-size: 0.9em; }
+      a { color: var(--accent); }
+      .status { color: var(--muted); font-size: 0.9em; white-space: nowrap; }
+      .step { margin-bottom: 10px; }
+      .step b { color: var(--accent); }
+      footer { margin-top: 64px; color: var(--muted); font-size: 0.9em; border-top: 1px solid var(--border); padding-top: 20px; }
+      .to-fill { background: #2a2412; border: 1px dashed var(--accent); border-radius: 4px; padding: 1px 6px; font-style: italic; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Speed Watcher</h1>
+      <p class="tagline">
+        Recommends the playback speed that lands speech in the 250–275 wpm
+        comfortable listening range — measured from the video's own captions,
+        not guessed from content type.
+      </p>
+
+      <img
+        class="hero"
+        src="store-screenshot.png"
+        alt="Speed Watcher options page: target rate, content-type presets, per-site overrides, and the local habits report"
+      />
+
+      <h2>How it works</h2>
+      <p>
+        Most speed tools adjust silently. Speed Watcher shows you the number:
+        it reads the word-timed caption data a video already carries, computes
+        the natural speech rate, and recommends the playback multiplier that
+        lands your effective listening speed in the comfortable range. One
+        click applies it, one click dismisses it — your manual speed is always
+        respected.
+      </p>
+      <p class="step"><b>1.</b> Reads word-timed caption data from the video page — no network requests from the extension itself.</p>
+      <p class="step"><b>2.</b> Computes the natural speech rate in wpm (or the language's own unit: characters, syllables, morae).</p>
+      <p class="step"><b>3.</b> Recommends the exact playback multiplier to hit your target — a floating pill on the video, apply or dismiss with one click.</p>
+      <p>
+        It slows down fast talkers instead of only ever speeding up, skips
+        music so it's not miscounted as speech, and offers opt-in auto-apply
+        for lectures, talks, explainers, and podcasts.
+      </p>
+
+      <h2>The science</h2>
+      <p>
+        250–275 wpm is a commonly cited comfortable listening range, not a
+        comprehension guarantee. The rate model measures each language in its
+        own unit — English is measured, non-English targets are labeled
+        derived estimates, and 12 languages carry corpus-measured natural-rate
+        priors. <a href="https://github.com/levosilimo/speed-watching/blob/main/docs/languages.md">Full model and sources</a>.
+      </p>
+
+      <h2>Install</h2>
+      <table>
+        <tr><th>Surface</th><th>Where</th><th>Status</th></tr>
+        <tr>
+          <td>Chrome</td>
+          <td><a href="https://chrome.google.com/webstore/detail/&lt;storeId&gt;">Chrome Web Store</a></td>
+          <td class="status">filling at launch</td>
+        </tr>
+        <tr>
+          <td>Firefox</td>
+          <td><a href="https://addons.mozilla.org/firefox/addon/speed-watcher/">Firefox Add-ons</a></td>
+          <td class="status">filling at launch</td>
+        </tr>
+        <tr>
+          <td>Userscript</td>
+          <td><a href="https://github.com/levosilimo/speed-watching/releases/latest/download/speed-watcher.user.js">speed-watcher.user.js</a></td>
+          <td class="status">ready — Tampermonkey / Violentmonkey</td>
+        </tr>
+        <tr>
+          <td>mpv</td>
+          <td><a href="https://github.com/levosilimo/speed-watching">git clone</a> or release source tarball</td>
+          <td class="status">ready — see install notes below</td>
+        </tr>
+      </table>
+
+      <h2>Ports</h2>
+      <p>
+        The same measurement and recommendation math ships as an mpv script and
+        a userscript — one codebase across extension, desktop player, and
+        store-free bundle.
+      </p>
+      <p>
+        <b>mpv:</b> put <code>main.lua</code>, <code>rate.lua</code> and
+        <code>languages.lua</code> from <code>mpv/</code> into
+        <code>~/.config/mpv/scripts/speed-watcher/</code> — <code>main.lua</code>
+        is the name that makes mpv load the directory as one script.
+        <code>Ctrl+w</code> measures, <code>Ctrl+Shift+w</code> applies,
+        <code>Ctrl+Alt+w</code> dismisses. Options go in
+        <code>~/.config/mpv/script-opts/speed_watcher.conf</code>.
+      </p>
+      <p>
+        <b>Userscript:</b> install <code>speed-watcher.user.js</code> into
+        Tampermonkey or Violentmonkey and visit a YouTube watch page.
+        <code>Shift+W</code> applies, <code>Escape</code> dismisses. Storage is
+        two GM keys; nothing leaves the browser.
+      </p>
+
+      <h2>Privacy</h2>
+      <p>
+        Everything runs locally — the extension reads captions from the page's
+        own context and makes no outbound requests. No analytics, no
+        telemetry. Full policy: <a href="privacy-policy.html">Privacy Policy</a>.
+      </p>
+
+      <footer>
+        Free forever. If it saves you time,
+        <a href="https://github.com/sponsors/levosilimo">Sponsor</a>. Code and
+        issues: <a href="https://github.com/levosilimo/speed-watching">github.com/levosilimo/speed-watching</a>.
+      </footer>
+    </main>
+  </body>
+</html>
