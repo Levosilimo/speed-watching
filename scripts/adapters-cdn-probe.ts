@@ -333,7 +333,7 @@ async function main(): Promise<void> {
   const headed = !args.includes('--headless');
   const limitArg = args.find((a) => a.startsWith('--limit='))?.slice('--limit='.length);
   const limit = limitArg === undefined ? Infinity : Number(limitArg);
-  if (!Number.isFinite(limit) || limit < 1) {
+  if (limitArg !== undefined && (!Number.isFinite(limit) || limit < 1)) {
     console.error('--limit must be a positive number');
     process.exit(2);
   }
