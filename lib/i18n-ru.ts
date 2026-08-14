@@ -16,6 +16,8 @@ export const RU: Record<I18nKey, string> = {
   'pill.resetTo': 'Сбросить до {rate}×',
   'pill.resetToAria': 'Вернуть скорость воспроизведения, которая была до автоприменения',
   'pill.label.autoPrefix': 'Авто · ',
+  'pill.firstRun':
+    'Мы измерили темп речи в этом видео: ~{rate} {unit} — воспроизведение на {mult}× даст ~{effective} {unit}, комфортный темп. Применить или закрыть.',
   'pill.warning.aboveZone': 'Скорость выше диапазона {lo}–{hi} {unit}, который обычно считают комфортным',
   'pill.warning.cappedBelow': 'Оценка неточна — для безопасности скорость ограничена 1,5×',
   'pill.warning.pauseDiluted': 'Речь на этой скорости звучит слишком быстро — оценка неточна',

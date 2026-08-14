@@ -112,6 +112,15 @@ describe('SettingsStore', () => {
     expect((await auto.load()).uiLanguage).toBe('auto');
   });
 
+  it('round-trips the seenFirstRun onboarding flag and drops non-true values', async () => {
+    const store = new SettingsStore(mockStorage({ 'sw.settings': { seenFirstRun: true } }));
+    expect((await store.load()).seenFirstRun).toBe(true);
+    const absent = new SettingsStore(mockStorage());
+    expect((await absent.load()).seenFirstRun).toBeUndefined();
+    const corrupt = new SettingsStore(mockStorage({ 'sw.settings': { seenFirstRun: 'yes' } }));
+    expect((await corrupt.load()).seenFirstRun).toBeUndefined();
+  });
+
   it('update mutates and persists', async () => {
     const store = new SettingsStore(mockStorage());
     await store.update((settings) => ({ ...settings, target: 240 }));

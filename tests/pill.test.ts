@@ -651,6 +651,35 @@ describe('warningNoteCopy keys the range to the track language (P0)', () => {
   });
 });
 
+describe('createPill first-run onboarding line (P1c)', () => {
+  it('renders the measured-rate explainer when flagged and hides otherwise', () => {
+    const host = shadowHost();
+    const pill = createPill(host, {}, { locale: 'en' });
+    pill.mount();
+    const line = rootOf(host).querySelector<HTMLDivElement>('.first-run')!;
+    pill.update(state());
+    expect(line.hidden).toBe(true);
+    pill.update(state({ firstRun: true }));
+    expect(line.hidden).toBe(false);
+    expect(line.textContent).toBe(
+      "We measured this video's speech at ~160 wpm — playing at 1.55× lands ~248 wpm, a comfortable rate. Apply or dismiss.",
+    );
+    // A later render without the flag hides it again.
+    pill.update(state());
+    expect(line.hidden).toBe(true);
+  });
+
+  it('localizes the first-run line for ru', () => {
+    const host = shadowHost();
+    const pill = createPill(host, {}, { locale: 'ru' });
+    pill.mount();
+    pill.update(state({ firstRun: true }));
+    expect(rootOf(host).querySelector('.first-run')?.textContent).toBe(
+      'Мы измерили темп речи в этом видео: ~160 слов/мин — воспроизведение на 1,55× даст ~248 слов/мин, комфортный темп. Применить или закрыть.',
+    );
+  });
+});
+
 describe('createPill saved-time line', () => {
   afterEach(() => {
     vi.restoreAllMocks();

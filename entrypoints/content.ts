@@ -348,6 +348,15 @@ function renderRecommendation(
     autoState = 'auto';
     appliedSource = 'auto';
   }
+  // P1c: the one-time first-run explainer rides the first recommend-mode
+  // render of a MEASURED tier (the copy promises a measurement; estimated
+  // priors are not one). The flag persists via the bridge — best-effort, a
+  // dead bridge only re-shows it on the next video.
+  const firstRun =
+    settings.seenFirstRun !== true && tier !== 'estimated' && recommendation.mode === 'recommend';
+  if (firstRun) {
+    void bridge.request({ type: 'settings:seenFirstRun' }).catch(() => undefined);
+  }
   showPill({
     mode: recommendation.mode,
     rateWpm: naturalRate,
@@ -359,6 +368,7 @@ function renderRecommendation(
     range,
     applied: appliedSource,
     undoRate: appliedSource === 'auto' ? preAutoRate ?? 1 : undefined,
+    firstRun,
   });
 }
 

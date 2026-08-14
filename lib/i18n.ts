@@ -26,6 +26,8 @@ const EN = {
   'pill.resetTo': 'Reset to {rate}×',
   'pill.resetToAria': 'Restore the playback speed that played before auto-apply',
   'pill.label.autoPrefix': 'Auto · ',
+  'pill.firstRun':
+    "We measured this video's speech at ~{rate} {unit} — playing at {mult}× lands ~{effective} {unit}, a comfortable rate. Apply or dismiss.",
   'pill.warning.aboveZone': 'Past the {lo}–{hi} {unit} range commonly cited for comfortable listening',
   'pill.warning.cappedBelow': 'Estimate uncertain — capped at 1.5x for safety',
   'pill.warning.pauseDiluted': 'Speech runs fast at this speed — estimate uncertain',

@@ -68,6 +68,9 @@ export interface Settings {
   autoApply: AutoApplyPrefs;
   /** UI-language preference; unset/'auto' → navigator.language. */
   uiLanguage?: UiLanguageSetting;
+  /** First-run onboarding (P1c): the pill's one-time explainer line has
+   * shown. Optional — absent means it has not shown yet. */
+  seenFirstRun?: boolean;
 }
 
 /** Injectable chrome.storage.local stand-in for unit tests. */
@@ -128,6 +131,7 @@ function normalizeSettings(raw: unknown): Settings {
   if (target !== undefined) settings.target = target;
   if (typeof raw.contentType === 'string') settings.contentType = raw.contentType as ContentType;
   if (isUiLanguageSetting(raw.uiLanguage)) settings.uiLanguage = raw.uiLanguage;
+  if (raw.seenFirstRun === true) settings.seenFirstRun = true;
   return settings;
 }
 

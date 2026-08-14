@@ -49,6 +49,8 @@ export interface PillState {
   /** The rate the stop-auto/dismiss undo restores (the pre-auto rate);
    * absent → plain 'Stop auto' with no rate change. */
   undoRate?: number;
+  /** P1c: the one-time first-run explainer line shows on this render. */
+  firstRun?: boolean;
 }
 
 export interface PillEvents {
@@ -92,6 +94,7 @@ interface PillDom {
   liveEl: HTMLSpanElement;
   savedEl: HTMLSpanElement;
   warningNote: HTMLDivElement;
+  firstRunEl: HTMLDivElement;
   applyBtn: HTMLButtonElement;
   dismissBtn: HTMLButtonElement;
   stopAutoBtn: HTMLButtonElement;
@@ -126,7 +129,11 @@ function buildDom(): PillDom {
   const warningNote = document.createElement('div');
   warningNote.className = 'warning-note';
 
-  mainText.append(labelEl, tierEl, liveEl, savedEl, warningNote);
+  const firstRunEl = document.createElement('div');
+  firstRunEl.className = 'first-run';
+  firstRunEl.hidden = true;
+
+  mainText.append(labelEl, tierEl, liveEl, savedEl, warningNote, firstRunEl);
 
   const actions = document.createElement('div');
   actions.className = 'actions';
@@ -159,6 +166,7 @@ function buildDom(): PillDom {
     liveEl,
     savedEl,
     warningNote,
+    firstRunEl,
     applyBtn,
     dismissBtn,
     stopAutoBtn,
@@ -322,6 +330,22 @@ function localizedApplyAria(state: PillState, locale: UiLocale): string {
   });
 }
 
+/** One-time onboarding line: measured rate → applied multiplier → effective
+ * rate, rendered only on the first recommend-mode render (P1c). */
+function renderFirstRun(dom: PillDom, state: PillState, locale: UiLocale): void {
+  if (state.firstRun !== true) {
+    dom.firstRunEl.hidden = true;
+    return;
+  }
+  dom.firstRunEl.hidden = false;
+  dom.firstRunEl.textContent = t('pill.firstRun', locale, {
+    rate: Math.round(state.rateWpm),
+    mult: formatMultiplier(state.multiplier, locale),
+    effective: Math.round(state.effectiveWpm),
+    unit: unitLabel(extractUnit(state.label), locale),
+  });
+}
+
 function render(
   dom: PillDom,
   state: PillState,
@@ -377,6 +401,9 @@ function render(
 
   // Label
   dom.labelEl.textContent = localizedLabel(state, locale);
+
+  // First-run onboarding line
+  renderFirstRun(dom, state, locale);
 
   // Tier
   if (state.tierLabel) {
