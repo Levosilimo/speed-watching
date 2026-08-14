@@ -51,6 +51,12 @@ export interface PillState {
   undoRate?: number;
   /** P1c: the one-time first-run explainer line shows on this render. */
   firstRun?: boolean;
+  /** The page exposed chapter markers; the consent toggle renders only then. */
+  chaptersAvailable?: boolean;
+  /** Chapter consent state: the scheduler is armed for this video. */
+  autoAdjust?: boolean;
+  /** Scheduler status line copy picker; absent ≡ 'active'. */
+  chapterStatus?: 'active' | 'yielded' | 'music';
 }
 
 export interface PillEvents {
@@ -58,6 +64,8 @@ export interface PillEvents {
   onDismiss?: () => void;
   /** Stop-auto: disengage auto-apply for this video (rate untouched). */
   onStopAuto?: () => void;
+  /** Chapter consent toggle: enabled = arm the per-chapter scheduler. */
+  onAutoAdjust?: (enabled: boolean) => void;
 }
 
 export interface PillOptions {
@@ -95,9 +103,11 @@ interface PillDom {
   savedEl: HTMLSpanElement;
   warningNote: HTMLDivElement;
   firstRunEl: HTMLDivElement;
+  chapterStatusEl: HTMLSpanElement;
   applyBtn: HTMLButtonElement;
   dismissBtn: HTMLButtonElement;
   stopAutoBtn: HTMLButtonElement;
+  chapterToggleBtn: HTMLButtonElement;
 }
 
 function buildDom(): PillDom {
@@ -133,7 +143,11 @@ function buildDom(): PillDom {
   firstRunEl.className = 'first-run';
   firstRunEl.hidden = true;
 
-  mainText.append(labelEl, tierEl, liveEl, savedEl, warningNote, firstRunEl);
+  const chapterStatusEl = document.createElement('span');
+  chapterStatusEl.className = 'chapter-status';
+  chapterStatusEl.hidden = true;
+
+  mainText.append(labelEl, tierEl, liveEl, savedEl, warningNote, firstRunEl, chapterStatusEl);
 
   const actions = document.createElement('div');
   actions.className = 'actions';
@@ -156,7 +170,12 @@ function buildDom(): PillDom {
   stopAutoBtn.className = 'btn-stop-auto';
   stopAutoBtn.hidden = true;
 
-  actions.append(applyBtn, dismissBtn, stopAutoBtn);
+  const chapterToggleBtn = document.createElement('button');
+  chapterToggleBtn.type = 'button';
+  chapterToggleBtn.className = 'btn-chapter-toggle';
+  chapterToggleBtn.hidden = true;
+
+  actions.append(applyBtn, dismissBtn, stopAutoBtn, chapterToggleBtn);
   pill.append(mainText, actions);
 
   return {
@@ -167,9 +186,11 @@ function buildDom(): PillDom {
     savedEl,
     warningNote,
     firstRunEl,
+    chapterStatusEl,
     applyBtn,
     dismissBtn,
     stopAutoBtn,
+    chapterToggleBtn,
   };
 }
 
@@ -207,10 +228,17 @@ function wireEvents(
     restoreFocus(host);
   });
 
+  dom.chapterToggleBtn.addEventListener('click', () => {
+    events?.onAutoAdjust?.(getState()?.autoAdjust !== true);
+    restoreFocus(host);
+  });
+
   // Keyboard: Enter applies (or undoes auto in the auto-applied state),
   // Escape dismisses. Both route through the button handlers so the focus
-  // restoration is shared with clicks.
+  // restoration is shared with clicks. The chapter toggle is excluded — it
+  // is a native button whose own Enter activation must not also Apply.
   dom.pill.addEventListener('keydown', (e: KeyboardEvent) => {
+    if (e.target === dom.chapterToggleBtn) return;
     if (e.key === 'Enter' && !e.defaultPrevented) {
       const state = getState();
       if (state?.applied === 'auto' && state.mode === 'recommend') {
@@ -388,6 +416,30 @@ function render(
       ? t('pill.resetTo', locale, { rate: formatMultiplier(state.undoRate ?? 1, locale) })
       : t('pill.stopAuto', locale);
     dom.stopAutoBtn.setAttribute('aria-label', undo ? t('pill.resetToAria', locale) : t('pill.stopAutoAria', locale));
+  }
+
+  // Chapter consent toggle: only when the page exposed chapter markers and
+  // the recommendation is actionable. aria-pressed mirrors the consent state.
+  const showChapterToggle =
+    state.chaptersAvailable === true && (mode === 'recommend' || mode === 'warning');
+  dom.chapterToggleBtn.hidden = !showChapterToggle;
+  if (showChapterToggle) {
+    dom.chapterToggleBtn.textContent = t('pill.chapter.toggle', locale);
+    dom.chapterToggleBtn.setAttribute('aria-label', t('pill.chapter.toggleAria', locale));
+    dom.chapterToggleBtn.setAttribute('aria-pressed', state.autoAdjust === true ? 'true' : 'false');
+  }
+  // Scheduler status line: while consent is on, the current segment's state
+  // (active / paused after a manual override / a music chapter at 1x).
+  const showChapterStatus = showChapterToggle && state.autoAdjust === true;
+  dom.chapterStatusEl.hidden = !showChapterStatus;
+  if (showChapterStatus) {
+    const statusKey =
+      state.chapterStatus === 'yielded'
+        ? 'pill.chapter.yielded'
+        : state.chapterStatus === 'music'
+          ? 'pill.chapter.music'
+          : 'pill.chapter.active';
+    dom.chapterStatusEl.textContent = t(statusKey, locale);
   }
 
   // Hide the live and saved lines outside recommend/warning, even in the
