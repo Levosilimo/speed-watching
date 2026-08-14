@@ -78,13 +78,14 @@ function rewriteTransformerBundle(source: Buffer): Buffer {
 
 // VAD fixture: silero VAD v4 ONNX (643,854 bytes, sha256 9e2449e1…), the box's
 // canonical model — the same file ~/va runs via sherpa-onnx (16k, window 512,
-// threshold 0.35). Copied from VAD_MODEL_SOURCE by the --vad step into this
-// gitignored dir. v4 has no If node, so it runs on the pinned ort 1.23 wasm
-// without the v5 If-branch crash (dead-lane error: Invalid typed array
-// length: 1099511627520).
+// threshold 0.35). Copied by the --vad step from VAD_MODEL_SOURCE (override
+// with the VAD_MODEL env var; default whisper-bench/models/silero_vad.onnx)
+// into this gitignored dir. v4 has no If node, so it runs on the pinned ort
+// 1.23 wasm without the v5 If-branch crash (dead-lane error: Invalid typed
+// array length: 1099511627520).
 export const VAD_DIR = join(ROOT, 'scripts', 'data', 'whisper-bench', 'vad');
 export const VAD_MODEL_FILE = join(VAD_DIR, 'silero_vad.onnx');
-export const VAD_MODEL_SOURCE = '/home/levosilimo/models/silero_vad.onnx';
+export const VAD_MODEL_SOURCE = process.env.VAD_MODEL ?? join(MODELS_DIR, 'silero_vad.onnx');
 export const VAD_MODEL_SHA256 = '9e2449e1087496d8d4caba907f23e0bd3f78d91fa552479bb9c23ac09cbb1fd6';
 
 const RUNNER_SOURCE = `

@@ -21,3 +21,7 @@ work of their creators; copyright remains with them.
 | jeF_L_Qxdl4.json | jeF_L_Qxdl4 | Ярослав Грицак - Історія України. Лекція 1 | 2026-08-14 | 8783 | 1815 | 4601 | 1244693 |
 | oi55ii6B9sA.json | oi55ii6B9sA | Droga Mleczna – przeszłość, przyszłość i skrywane światy / dr Dorota Skowron | 2026-08-14 | 5858 | 1156 | 2882 | 795174 |
 | r-5Y1w7y6TU.json | r-5Y1w7y6TU | Spinoza / dr hab. Michał Zembrzuski, prof. UKSW | 2026-08-14 | 5969 | 1442 | 3533 | 877491 |
+
+These captures are regenerated on demand by the harness
+(scripts/measure-corpus.ts --gap-full) and are not committed; re-run the
+harness to refresh the table above.
