@@ -11,6 +11,7 @@
     "zip": "wxt zip",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "test:mpv": "sh scripts/test-mpv.sh",
     "lint": "oxlint",
     "check": "bunx aislop scan . --format sarif | bun run scripts/aislop-gate.ts",
     "check:cws": "sh scripts/cws-check.sh",

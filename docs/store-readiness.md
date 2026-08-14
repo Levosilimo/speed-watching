@@ -18,6 +18,7 @@ from caption speech rate). No secondary purposes are present or planned.
 | `storage` | Settings (`sw.settings`), override log (`sw.overrideLog`), audio-probe session state. Everything is `chrome.storage.local`; nothing syncs. |
 | `tabCapture` | Required-not-optional: the Chrome API refuses this permission as optional, so it must sit in the manifest from day one. Serves the shipped audio capture test — the options-page "Test audio capture" button, which captures the audio of the video tab the user is watching, shows a live level meter, and stops on demand — and the future on-device STT feature, which stays feature-gated behind an explicit user opt-in. `tabCapture` is never called without a user gesture. |
 | `offscreen` | `chrome.offscreen.createDocument` fails without this manifest permission (live Chrome docs); `lib/capture-orchestrator.ts` calls it with reason `USER_MEDIA` for the audio capture test. Offscreen documents cannot be created lazily on Chrome 116–, hence the static declaration. |
+| `contextMenus` | The measure-link context menu (background `installContextMenu`): right-clicking a video link shows "Measure this video's rate", which opens the link in a tab where the existing measurement pipeline takes over — the pill appears there with no extra logic. |
 
 No `host_permissions` block (STORE-4): the content scripts match
 `<all_urls>` with `all_frames` (embedded players live in cross-origin
@@ -34,11 +35,11 @@ contexts.
 Run `bun run check:cws` after every build. It runs the offline
 [`cws-check`](https://github.com/0prob/cws-check) CLI over
 `.output/chrome-mv3` — the bundle CWS reviewers actually scan — and exits 1
-on MV2, remote-code, or unsafe-CSP findings. Reference run on v0.0.1
-(2026-08-12):
+on MV2, remote-code, or unsafe-CSP findings. Reference run on v0.0.2
+(2026-08-14, manifest with all four permissions):
 
 ```
-cws-check — Speed Watcher v0.0.1
+cws-check — Speed Watcher v0.0.2
 
 Manifest version
   ✓ manifest_version 3 — current.
@@ -71,7 +72,7 @@ No issues detected by this tool. This does not replace human review of your sing
   checker's high-scrutiny list, but they are the declared surface a human
   reviewer will question; the justification lives in the Permissions table
   above (user-gesture-gated audio capture test, feature-gated STT).
-- **single-purpose — clean since the STORE-4 cut**: 3 declared
+- **single-purpose — clean since the STORE-4 cut**: 4 declared
   permissions, no `host_permissions`, so cws-check reports a modest count.
   The count only grows with new permissions — re-check the single-purpose
   story before adding any.
@@ -104,6 +105,18 @@ findings from `docs/phase0-offscreen-audio.md` are probe-only diagnostics; no
 WASM ships in the MVP. The manifest has no `content_security_policy` override
 (WXT dev mode injects one for HMR; the production build ships the default
 `script-src 'self'`).
+
+## Bundle-weight note: dormant STT recorder plumbing
+
+The shipped bundle carries ~6 KB of currently driver-less audio plumbing
+— `lib/audio-recorder.ts`, `lib/resampler.ts`, `lib/recorder-worklet.ts`,
+imported by `entrypoints/offscreen/main.ts` (the offscreen chunk plus the
+worklet asset). Intentional, not dead weight: it is the de-risked STT
+path — the recorder is created at offscreen load and wired into the
+capture flow, so the on-device STT feature lands without a
+bundle/permission change. The rest of the STT surface is already absent:
+`lib/model-store.ts` is referenced by no entrypoint, so the bundler
+tree-shakes it out entirely.
 
 ## Data usage
 
@@ -181,8 +194,17 @@ These are hard submission requirements, not polish:
    the tabCapture → offscreen → getUserMedia flow is unit-tested only;
    `chrome.offscreen` is absent from every Playwright build, so a human must
    run the shipped options-page test on a real Chrome once before submission.
-3. **Firefox AMO listing metadata** (name/description/summary fields) and the
-   optional source-code upload for `web-ext sign --channel listed`.
+3. **Firefox AMO listing metadata** (name/description/summary fields) and
+   the **mandatory source-code upload**: AMO requires the source of any
+   bundled/minified add-on — this WXT build is both, so the upload is
+   required, every version (the publish workflow already passes
+   `--upload-source-code`). Package the repo at the release tag (ports
+   included), `bun.lock`, and a build note. Reviewer environments default
+   to npm; the build is bun-run — `bun install --frozen-lockfile` with
+   `bun.lock` as the lockfile, then `bun run build` (Chrome) or
+   `bun run build:firefox` (Firefox) — so the note must state the bun
+   requirement, or an npm-based reviewer gets no lockfile and a broken
+   install.
 
 The CWS listing assets (screenshots, description body, final icons) are
 listed under "CWS listing assets" above and are mandatory before the first

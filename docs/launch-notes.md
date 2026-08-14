@@ -20,7 +20,7 @@ rules are respected, and nothing here names a competitor.
 75 chars. The hook is the mechanism, not a superlative: caption speech rate
 tells you it's WPM-based, not fixed multipliers.
 
-### Body (~150–250 words)
+### Body (~400 words; trim to ~250 before posting if HN's length norm bites)
 
 Playback speed in most video players is a fixed multiplier: you guess 1.5×,
 hope it's not too fast, and re-adjust. Speed Watcher removes the guessing.
@@ -45,10 +45,27 @@ What it does differently:
 - **Live rate line.** After you apply, the pill shows your actual rate in
   real time — "now ≈ 248 wpm at 1.55x" — so you see where you land, not
   just the multiplier.
+- **Opt-in auto-apply.** Lectures, talks, explainers, and podcasts can
+  apply the recommendation automatically — per video, switched on by
+  you; music and unmeasured content never auto-apply.
 - **Notices music.** Music tracks get the recommendation skipped, not
   miscounted as speech.
 - **Privacy is local-only.** Nothing is transmitted. The extension reads
   caption data from the page's own context and makes no outbound requests.
+
+It covers 22 languages: English is measured; non-English targets are
+labeled derived estimates, not measurements — and 12 of them (ru, uk, pl,
+cs, ar, id, vi, ms, tl, ja, th, ko; ms and tl ride on id) have
+corpus-measured natural-rate priors, so the no-captions estimate is
+anchored in real speech rather than scaled guesses. The interface ships
+in English and Russian. The same math also ships as an mpv script and a
+userscript — extension, desktop player, and store-free bundle from one
+codebase.
+
+Most speed tools adjust silently; Speed Watcher shows you the number —
+the measured rate and the multiplier that lands you in range. YouTube's
+own Auto Speed needs Premium, runs on Android, and only handles English;
+this is free, desktop, no-Premium, and slows down fast talkers.
 
 The 250–275 wpm range is a commonly cited target for comfortable listening;
 research on comprehension at higher rates is mixed. It's a recommendation
@@ -72,9 +89,13 @@ from your video's own speech rate, not a claim that faster is always better.
 > Honest caveats: measured wpm over a whole track gets diluted by pauses, so
 > a lecture with long silences shows a lower rate than the talking parts
 > actually run — the pill carries a warning in that case. Non-English targets
-> are labeled derived estimates, not measurements; only the Chinese ceiling
-> and the English rate are comprehension-measured. DRM-protected video can't
-> be read from captions the same way, so it falls back to an estimate.
+> are labeled derived estimates, not measurements — only the English rate
+> and the Chinese ceiling are comprehension-measured. What 12 languages do
+> have (ru, uk, pl, cs, ar, id, vi, ms, tl, ja, th, ko; ms/tl ride on id) is
+> corpus-measured natural-rate priors, so the no-captions estimate sits on
+> real speech data, not ratio guesses. Auto-apply is opt-in per video and
+> never fires on music or unmeasured tiers. DRM-protected video can't be
+> read from captions the same way, so it falls back to an estimate.
 >
 > What it does *not* solve: genuinely comprehension-heavy material at the
 > top of the range, DRM-locked pages, and caption-less videos.
@@ -143,10 +164,12 @@ five minutes. Applied when I agreed, dismissed when I didn't.
 **6. The non-English angle (for study threads with international lectures)**
 
 One thing most speed tools miss: "words per minute" only means something
-for English. If you're watching lectures in Japanese or Spanish or German,
-the target rate is different — syllables and morae aren't the same as words.
-I found a tool that handles that and labels the per-language targets as
-derived estimates rather than pretending they're measured. If you watch a
+for English. Japanese runs on morae, Thai and Chinese on characters,
+Korean on syllable blocks — the target rate is different in each unit. I
+found a tool that covers 22 languages that way, labels the non-English
+targets as derived estimates rather than pretending they're measured, and
+for 12 of them (ru, uk, pl, cs, ar, id, vi, ms, tl, ja, th, ko) anchors
+the no-captions estimate in corpus-measured speech rates. If you watch a
 lot of non-English material, that distinction matters.
 
 **7. The music-detection angle (for "it counts music as talking" threads)**
@@ -156,6 +179,15 @@ video had a music intro and the tool treated it as fast talking and
 recommended slowing it down. The one I use skips music tracks so the
 recommendation is actually about the speech. Small thing, but it stops a
 whole class of wrong suggestions.
+
+**8. The auto-apply angle (for "I keep meaning to set the speed" threads)**
+
+Setting the speed manually is a habit I kept forgetting, so I switched on
+auto-apply for lectures and podcasts — the tool applies its own
+recommendation instead of waiting for me. It's opt-in per video and it
+never auto-applies to music or anything it couldn't measure, which is why
+I trusted it. If the recommendation feels off, one click dismisses it and
+the manual speed wins.
 
 ### r/chrome_extensions launch post body
 
@@ -173,18 +205,23 @@ carries, computes its natural speech rate, and recommends the multiplier
 that lands your effective listening speed in the 250–275 wpm range (default
 target 250, adjustable 100–400).
 
-The useful differences: it **suggests, never forces** — a pill shows the
+The useful differences: it **shows you the number** — the measured rate
+and the multiplier that lands you in range — where most tools adjust
+silently; it **suggests, never forces** — a pill shows the
 recommendation, you apply or dismiss, and your manual speed is always
 respected; it **slows down fast talkers** instead of only ever going faster;
-it **skips music** so it's not miscounted as speech; and it's **local-only** —
-no data leaves the browser, no network requests from the extension. Keyboard
-shortcuts (Alt+Shift+S apply, Alt+Shift+D dismiss) and a live rate line show
-where you actually land after applying.
+it **skips music** so it's not miscounted as speech; it **auto-applies
+opt-in** for lectures, talks, explainers, and podcasts; and it's
+**local-only** — no data leaves the browser, no network requests from the
+extension. Keyboard shortcuts (Alt+Shift+S apply, Alt+Shift+D dismiss) and
+a live rate line show where you actually land after applying. The same
+math also ships as an mpv script and a userscript.
 
 The 250–275 wpm range is a commonly cited comfortable listening range;
 comprehension research above it is mixed, so this is a recommendation from
 the video's own speech rate, not a claim that faster is better. English is
-measured; non-English targets are labeled derived estimates. DRM-protected
+measured; non-English targets are labeled derived estimates, with
+corpus-measured natural-rate priors for 12 languages. DRM-protected
 pages fall back to an estimate.
 
 Firefox and Chrome builds are both shipping. Feedback on edge cases —
@@ -201,15 +238,19 @@ them.
 ### Pre-traffic (days before)
 
 - [ ] CWS submitted first (manual review track 1–3 wk: `<all_urls>` +
-      `tabCapture`/`offscreen`). AMO submitted same day (instant auto-review,
-      free second storefront).
+      `tabCapture`/`offscreen`/`contextMenus`). AMO submitted same day
+      (instant auto-review, free second storefront).
 - [ ] **Store links live before traffic.** Homepage and privacy policy hosted
       and returning 200 (GitHub Pages); replace the placeholder URLs in the
       CWS listing and AMO metadata before submit. Confirm both store pages
       resolve when logged out.
 - [ ] Privacy policy URL pasted into the CWS Privacy tab (mandatory field).
 - [ ] Version `0.0.2` zip uploaded; `bun run check:cws` exits 0.
-- [ ] Screenshot regenerated for the current options UI; real icons verified.
+- [ ] Screenshot re-verified after the surface-lane merge (auto-apply card);
+      real icons verified.
+- [ ] Ports in release state: mpv script and userscript built and documented
+      (`docs/ports.md`) — the store-free distribution wedge for launch-thread
+      links.
 
 ### Show HN day
 
@@ -222,10 +263,11 @@ them.
       science questions with the effective-rate frame; don't dodge the
       mixed-research honesty.
 - [ ] Pre-empt YouTube's native Auto Speed (Premium, ~June 2026): it sets a
-      rate without showing you the speech rate. Speed Watcher's pitch is the
-      information gap — the measured rate and where your effective rate
-      lands. Also free, desktop, works without Premium, and slows down fast
-      talkers. Do not dismiss it.
+      rate without showing you the speech rate, and it is Android/English-only.
+      Speed Watcher's pitch is the information gap — the measured rate and
+      where your effective rate lands — plus 22 languages (12 with
+      corpus-measured priors), free, desktop, works without Premium, slows
+      down fast talkers, and the mpv/userscript ports. Do not dismiss it.
 
 ### Reddit
 
@@ -238,7 +280,10 @@ them.
 
 ### Copy rules (every venue)
 
-- [ ] No superlatives, no keyword stuffing, no competitor names.
+- [ ] No superlatives, no keyword stuffing, no competitor names. YouTube's
+      own Auto Speed feature is the one exception — it is a platform
+      feature, not a rival brand, and the information-gap contrast is the
+      core pitch.
 - [ ] Science hedged: "commonly cited range", "research on comprehension at
       higher rates is mixed" — not a claim of proof.
 - [ ] Honest scope: DRM fallback, derived-estimate labels, pause dilution.
@@ -248,7 +293,8 @@ them.
 
 ### After day one
 
-- [ ] 100 installs + 3+ reviews flips CWS organic discovery — the follow-up
-      comments are the lever (~80% of the first 100 installs come from
-      comment replies), so keep replying through day one.
+- [ ] 100 installs + 3+ reviews help CWS organic discovery (installs feed
+      the ranking and review signals — discovery is helped, not flipped);
+      the follow-up comments are the lever (~80% of the first 100 installs
+      come from comment replies), so keep replying through day one.
 - [ ] ~50% week-1 churn is normal; don't read a quiet week as failure.

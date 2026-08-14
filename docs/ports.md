@@ -11,7 +11,8 @@ A script for the mpv media player that measures the natural speech rate of
 the currently loaded file's external subtitle track and recommends a
 playback multiplier for the safe zone.
 
-- **Files**: `speed-watcher.lua` (glue: options, events, keybindings, OSD),
+- **Files**: `main.lua` (glue: options, events, keybindings, OSD — the
+  `main.lua` name is what makes mpv load the directory as one script),
   `rate.lua` (pure math, require-able without `mp`), `languages.lua` (the
   22-language table as Lua data), `README.md`, `tests/`.
 - **Source of truth**: subtitle files read from
