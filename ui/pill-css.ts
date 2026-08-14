@@ -172,6 +172,30 @@ export function pillCss(t: Theme): string {
       box-shadow: 0 0 0 3px ${t.focusRing};
     }
 
+    .btn-stop-auto {
+      padding: ${TOKENS.sp1} ${TOKENS.sp2};
+      font-family: ${TOKENS.fontSans};
+      font-size: ${TOKENS.textXs};
+      color: ${t.textSecondary};
+      background: transparent;
+      border: 1px solid ${t.border};
+      border-radius: ${TOKENS.rPill};
+      cursor: pointer;
+      transition: background ${TOKENS.durationFast} ease,
+                  color ${TOKENS.durationFast} ease;
+    }
+
+    .btn-stop-auto:hover {
+      background: ${t.border};
+      color: ${t.text};
+    }
+
+    .btn-stop-auto:focus-visible {
+      outline: 2px solid ${t.primary};
+      outline-offset: 1px;
+      box-shadow: 0 0 0 3px ${t.focusRing};
+    }
+
     .warning-note {
       font-size: ${TOKENS.textXs};
       color: ${t.warning};

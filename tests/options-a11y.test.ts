@@ -50,10 +50,10 @@ describe('options accessibility structure', () => {
   });
 
   it('marks the shipped section labels as headings', () => {
-    // dev.ts injects its own div.section-label sections; the shipped eight
-    // (incl. the interface-language and Integration sections) are the only
-    // h2s with the class.
-    expect(document.querySelectorAll('h2.section-label')).toHaveLength(8);
+    // dev.ts injects its own div.section-label sections; the shipped nine
+    // (incl. the interface-language, Integration, and Auto-apply sections)
+    // are the only h2s with the class.
+    expect(document.querySelectorAll('h2.section-label')).toHaveLength(9);
   });
 
   it('pairs the habits stats as a description list', () => {

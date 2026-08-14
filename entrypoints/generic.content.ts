@@ -16,6 +16,11 @@
 // settings via the window-event bridge (lib/messaging.ts), and the
 // __speedwatcherPill test hook the shared e2e specs assert on (E2E builds
 // only — SEC-2, same gate as content.ts).
+// The file carries the auto-apply lifecycle and the saved-time accrual
+// plumbing on top of the measurement pipeline, which keeps it past the
+// 440-line reviewability budget; the suppression mirrors content.ts's — a
+// reviewed exception, not license to grow further.
+// aislop-ignore-file file-too-large
 
 import { defineContentScript } from 'wxt/utils/define-content-script';
 import { harvestCaptions, type VttHost } from '@/lib/captions-harvest';
@@ -27,6 +32,7 @@ import { createBridgeClient } from '@/lib/messaging';
 import type { ContentType } from '@/lib/music';
 import { detectMusic } from '@/lib/music';
 import { recommend, type RateTier, type Recommendation } from '@/lib/recommend';
+import { shouldAutoApply } from '@/lib/auto-apply';
 import {
   defaultSettings,
   resolveContentType,
@@ -35,7 +41,7 @@ import {
   type Settings,
 } from '@/lib/settings';
 import { asrTierInputs, filteredTokensOverTrimmedSpan, manualCueRate } from '@/lib/wpm';
-import { createPill, type LiveRate, type PillApi, type PillState } from '@/ui/pill';
+import { createPill, type AppliedSource, type LiveRate, type PillApi, type PillState } from '@/ui/pill';
 import {
   RATE_EPSILON,
   savedSeconds,
@@ -65,6 +71,15 @@ let current: {
 
 let pill: { api: PillApi; host: HTMLElement } | null = null;
 let activeVideo: HTMLVideoElement | null = null;
+/** Last rendered pill state — stop-auto and override detection re-render it. */
+let pillState: PillState | null = null;
+
+// Auto-apply lifecycle (per video): mirror of entrypoints/content.ts —
+// 'pending' until the first measure, 'auto' after a self-apply, 'stopped'
+// after manual override, dismiss, or Stop-auto.
+let autoState: 'pending' | 'auto' | 'stopped' = 'pending';
+/** How the current rate got applied — rides into the pill as applied. */
+let appliedSource: AppliedSource = 'none';
 let observerTimer: ReturnType<typeof setTimeout> | null = null;
 let hasSeenVideo = false;
 const reapplier = new RateReapplier();
@@ -92,6 +107,7 @@ interface PillTestHook {
   state: PillState | null;
   apply(): void;
   dismiss(): void;
+  stopAuto?(): void;
 }
 
 declare global {
@@ -132,6 +148,7 @@ export default defineContentScript({
           applyMultiplier(current.recommendation.multiplier);
         },
         dismiss: () => dismissCurrent(),
+        stopAuto: () => stopAutoForVideo(),
       };
     }
     // Player elements appear and disappear dynamically (embeds mount late,
@@ -162,6 +179,8 @@ function handleVideoMutations(): void {
     savedSec = null;
     savedMultiplier = null;
     current = null;
+    autoState = 'pending';
+    appliedSource = 'none';
     return;
   }
   if (active !== activeVideo) {
@@ -169,6 +188,8 @@ function handleVideoMutations(): void {
     savedTracker.detach();
     savedSec = null;
     savedMultiplier = null;
+    autoState = 'pending';
+    appliedSource = 'none';
     void measure();
   }
 }
@@ -181,8 +202,11 @@ function onMediaEvent(event: Event): void {
     savedTracker.detach();
     savedSec = null;
     savedMultiplier = null;
+    autoState = 'pending';
+    appliedSource = 'none';
     void measure();
   }
+  markUserOverride();
   refreshLiveRate();
   refreshSavedSec();
 }
@@ -234,9 +258,12 @@ async function measureOnce(): Promise<void> {
       : manualCueRate(harvest.cues, language);
     if (naturalRate !== null) {
       const detected = detectMusic(harvest.cues, naturalRate) ? 'music' : 'generic';
+      // The user/site content-type preference outranks the detected default
+      // (mirror of content.ts): auto-apply gates on this resolved type.
+      const contentType = resolveContentType(settings, site, detected);
       const { tier, wordInputs } = asrTierInputs(asr ? 'asr' : 'manual', harvest.words, harvest.cues);
       if (__E2E__) window.__speedwatcherCaptionTier = tier;
-      renderRecommendation(naturalRate, tier, detected, settings, site, wordInputs, language);
+      renderRecommendation(naturalRate, tier, contentType, settings, site, wordInputs, language);
       return;
     }
   }
@@ -283,6 +310,11 @@ function renderRecommendation(
     ...wordInputs,
   });
   current = { site, contentType, naturalRate, platformMax, tier, unit: language?.unit ?? 'wpm', recommendation };
+  if (autoState === 'pending' && shouldAutoApply(settings, recommendation, tier, contentType)) {
+    applyMultiplier(recommendation.multiplier);
+    autoState = 'auto';
+    appliedSource = 'auto';
+  }
   showPill({
     mode: recommendation.mode,
     rateWpm: naturalRate,
@@ -291,6 +323,7 @@ function renderRecommendation(
     tierLabel: recommendation.tierLabel,
     label: recommendation.label,
     reason: recommendation.reason ?? undefined,
+    applied: appliedSource,
   });
 }
 
@@ -321,8 +354,13 @@ function ensurePill(): PillApi {
   // The player was replaced (SPA navigation): rebuild on the fresh host.
   pill?.api.destroy();
   const api = createPill(host, {
-    onApply: (multiplier) => applyMultiplier(multiplier),
+    onApply: (multiplier) => {
+      autoState = 'stopped';
+      appliedSource = 'user';
+      applyMultiplier(multiplier);
+    },
     onDismiss: () => dismissCurrent(),
+    onStopAuto: () => stopAutoForVideo(),
   });
   api.mount();
   pill = { api, host };
@@ -330,6 +368,7 @@ function ensurePill(): PillApi {
 }
 
 function showPill(state: PillState): void {
+  pillState = state;
   ensurePill().update(state);
   if (__E2E__ && window.__speedwatcherPill !== undefined) window.__speedwatcherPill.state = state;
 }
@@ -371,6 +410,32 @@ function refreshSavedSec(): void {
   pill.api.updateSavedSec(computeSavedSec());
 }
 
+/** Disengages auto-apply for this video: rate untouched, re-assert loop
+ * detached (a later reset to 1.0 sticks), pill drops its stop-auto state.
+ * Not logged. */
+function stopAutoForVideo(): void {
+  if (current === null) return;
+  autoState = 'stopped';
+  appliedSource = 'none';
+  reapplier.stop();
+  if (pillState !== null) showPill({ ...pillState, applied: 'none' });
+}
+
+/** Manual-override detection on ratechange: mirror of entrypoints/content.ts
+ * — divergence from the applied value (except a reset to exactly 1.0, which
+ * the reapplier treats as its re-assert trigger) is the user taking over. */
+function markUserOverride(): void {
+  if (autoState !== 'auto') return;
+  const video = activeVideo ?? document.querySelector<HTMLVideoElement>('video');
+  if (video === null || video.paused) return;
+  if (video.playbackRate === 1) return; // reset, not an override
+  if (savedMultiplier === null) return;
+  if (Math.abs(video.playbackRate - savedMultiplier) <= RATE_EPSILON) return; // our own apply
+  autoState = 'stopped';
+  appliedSource = 'user';
+  if (pillState !== null) showPill({ ...pillState, applied: 'user' });
+}
+
 function applyMultiplier(multiplier: number): void {
   if (current === null) return;
   const video = activeVideo ?? document.querySelector<HTMLVideoElement>('video');
@@ -391,6 +456,8 @@ function applyMultiplier(multiplier: number): void {
 
 function dismissCurrent(): void {
   if (current === null) return;
+  autoState = 'stopped';
+  appliedSource = 'none';
   // Detach first: the unflushed tail is credited to the store before the
   // pill hides.
   savedTracker.detach();

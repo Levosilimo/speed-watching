@@ -382,6 +382,31 @@ body {
   cursor: pointer;
 }
 
+/* ── Auto-apply type group ────────────────────────────────────────────── */
+
+.auto-type-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  margin-top: 12px;
+}
+
+.auto-type-label {
+  flex-basis: 100%;
+  font-size: 12px;
+  color: var(--sw-text-secondary);
+}
+
+.auto-type-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--sw-text);
+  cursor: pointer;
+}
+
 /* ── Habits Report ───────────────────────────────────────────────────── */
 
 .habits-grid {

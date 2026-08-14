@@ -66,7 +66,12 @@ const e2e = __E2E__ || window.__speedwatcherE2E === true;
 declare global {
   interface Window {
     __speedwatcherE2E?: boolean;
-    __speedwatcherPill?: { state: PillState | null; apply(): void; dismiss(): void };
+    __speedwatcherPill?: {
+      state: PillState | null;
+      apply(): void;
+      dismiss(): void;
+      stopAuto?(): void;
+    };
     __speedwatcherCaptionSource?: 'web' | 'android' | 'none';
   }
 }
