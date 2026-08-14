@@ -308,6 +308,7 @@ async function main(): Promise<void> {
     await runBridgeSpecs(e2e);
     await runGenericSpecs(e2e);
     await runMultiVideoSpecs(e2e);
+    await runLiveSuppressionSpecs(e2e);
     if (server.androidPosts() === 0) {
       // The web-blocked fixture must have sent the ANDROID innertube POST
       // (same-origin, so the PAC proxy delivers it to this server).
