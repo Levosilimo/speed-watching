@@ -45,6 +45,12 @@ playwright-report
 # Benchmark assets (downloaded once at dev time)
 scripts/data/whisper-bench/
 
+# Verbatim corpus transcripts — regenerated on demand by the harness,
+# never committed (copyright stays with the creators)
+scripts/data/gap-full/*.json
+scripts/data/web-rerun/*.json3
+scripts/data/ru-corpus/ru-corpus.jsonl
+
 # cortexkit project cache (magic-context historian)
 .cortexkit/
 
