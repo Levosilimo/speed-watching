@@ -41,7 +41,7 @@ describe('priorRange — language-aware', () => {
     expect(priorRange('lecture', LANGUAGES['ru'])).toEqual({ min: 95, max: 135 });
     expect(priorRange('podcast', LANGUAGES['ru'])).toEqual({ min: 100, max: 140 });
     expect(priorRange('generic', LANGUAGES['ru'])).toEqual({ min: 105, max: 145 });
-    expect(priorRange('talk', LANGUAGES['uk'])).toEqual({ min: 100, max: 140 });
+    expect(priorRange('talk', LANGUAGES['uk'])).toEqual({ min: 140, max: 180 });
   });
 
   it('falls back to the language generic band for registers without a band', () => {

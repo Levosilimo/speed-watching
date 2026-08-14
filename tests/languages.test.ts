@@ -86,7 +86,7 @@ describe('language table', () => {
     }
   });
 
-  it('anchors ru/uk register priors to the gathered Russian rate norms', () => {
+  it('anchors ru register priors to the gathered Russian rate norms', () => {
     const register: Partial<Record<ContentType, { min: number; max: number }>> = {
       news: { min: 120, max: 150 },
       podcast: { min: 100, max: 140 },
@@ -95,15 +95,32 @@ describe('language table', () => {
       talk: { min: 100, max: 140 },
       generic: { min: 105, max: 145 },
     };
-    for (const code of ['ru', 'uk']) {
-      const model = LANGUAGES[code]!;
-      expect(model.registerPriors).toEqual(register);
-      expect(model.priors).toEqual(register.generic);
-      for (const [type, band] of Object.entries(register)) {
-        expect(band!.min, `${code} ${type}`).toBeGreaterThan(0);
-        expect(band!.max, `${code} ${type}`).toBeLessThan(model.target);
-      }
+    const model = LANGUAGES['ru']!;
+    expect(model.registerPriors).toEqual(register);
+    expect(model.priors).toEqual(register.generic);
+    for (const [type, band] of Object.entries(register)) {
+      expect(band!.min, `ru ${type}`).toBeGreaterThan(0);
+      expect(band!.max, `ru ${type}`).toBeLessThan(model.target);
     }
+  });
+
+  it('anchors uk register priors to its measured lecture/talk bands', () => {
+    // uk news/podcast/explainer are unmeasured and keep the ru-copied bands;
+    // lecture/talk are measured (phase0-slavic-corpus, median ± 20 wpm).
+    const uk = LANGUAGES['uk']!;
+    expect(uk.registerPriors).toEqual({
+      news: { min: 120, max: 150 },
+      podcast: { min: 100, max: 140 },
+      lecture: { min: 110, max: 150 },
+      explainer: { min: 100, max: 140 },
+      talk: { min: 140, max: 180 },
+      generic: { min: 120, max: 160 },
+    });
+    expect(uk.priors).toEqual({ min: 120, max: 160 });
+    // measured bands can ride the derived target: uk talk measures at the
+    // safe zone, so its band top equals the ceiling rather than sitting
+    // below the target.
+    expect(uk.registerPriors?.talk?.max).toBe(uk.ceiling);
   });
 
   it('keeps the register priors off every other language', () => {

@@ -22,5 +22,16 @@
   { "videoId": "eLi9wpqzT70", "register": "news", "title": "Wiadomości wPolsce24", "language": "pl" },
   { "videoId": "Ixdj05Wn8qg", "register": "lecture", "title": "Nowak — Skąd się wzięła Ukraina", "language": "pl" },
   { "videoId": "M5GnO-TgNq8", "register": "lecture", "title": "Michalkiewicz wykład", "language": "pl" },
-  { "videoId": "r-5Y1w7y6TU", "register": "lecture", "title": "Zembrzuski — Spinoza", "language": "pl" }
+  { "videoId": "r-5Y1w7y6TU", "register": "lecture", "title": "Zembrzuski — Spinoza", "language": "pl" },
+  { "videoId": "U0-GWXzrb7o", "register": "talk", "title": "Торонто — Кідрук інтерв'ю", "language": "uk" },
+  { "videoId": "cmRygm05WVU", "register": "lecture", "title": "Karazin — історія України", "language": "uk" },
+  { "videoId": "UU8R1ld14rk", "register": "news", "title": "Wiadomości wPolsce24", "language": "pl" },
+  { "videoId": "oi55ii6B9sA", "register": "podcast", "title": "Radio Naukowe — Droga Mleczna", "language": "pl" },
+  { "videoId": "cgDLxMCj3EI", "register": "podcast", "title": "Radio Naukowe — mózg", "language": "pl" },
+  { "videoId": "S32kCeB0B-k", "register": "news", "title": "CNN Prima NEWS — Babiš", "language": "cs" },
+  { "videoId": "8HHLIPCJeW0", "register": "news", "title": "iDNES — přistání", "language": "cs" },
+  { "videoId": "e9xnLc6UOfQ", "register": "lecture", "title": "CVUTFEL — Kulhánek OTR", "language": "cs" },
+  { "videoId": "TY1Vo4Q_p3Y", "register": "lecture", "title": "Hvězdárna Zlín — černé díry", "language": "cs" },
+  { "videoId": "NVqyA9_hks8", "register": "news", "title": "N1 Srbija — Dnevnik (probe)", "language": "sr" },
+  { "videoId": "OVbRSt95I7U", "register": "news", "title": "RTS — Jutarnji program (probe)", "language": "sr" }
 ]

@@ -3,7 +3,7 @@
 // manifest, computes per-language G1–G5 gates (scripts/measure-analysis.ts),
 // and writes scripts/data/ru-corpus/ru-corpus.jsonl + a gate summary.
 //
-// Run: bun run scripts/measure-corpus.ts [--lang=ru|uk|pl|all] [--video=ID]
+// Run: bun run scripts/measure-corpus.ts [--lang=ru|uk|pl|cs|sr|all] [--video=ID]
 //      [--limit=N] [--headed] [--no-fixtures] [--fixture-anchor=ID]
 //
 // Re-runs merge by videoId, so a failed video can be re-measured alone
@@ -179,7 +179,7 @@ async function main(): Promise<void> {
     console.error('--limit must be a number');
     process.exit(2);
   }
-  const langs = langArg === 'all' ? ['ru', 'uk', 'pl'] : langArg.split(',');
+  const langs = langArg === 'all' ? ['ru', 'uk', 'pl', 'cs', 'sr'] : langArg.split(',');
 
   let videos = loadManifest().filter((v) => langs.includes(v.language));
   if (videoArg !== undefined) videos = videos.filter((v) => v.videoId === videoArg);
