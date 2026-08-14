@@ -187,8 +187,8 @@ Secrets needed:
 
 | Store | Secrets | Tool |
 |---|---|---|
-| Chrome Web Store | `EXTENSION_ID`, `CLIENT_ID`, `CLIENT_SECRET`, `REFRESH_TOKEN` (OAuth2 desktop client, scope `chromewebstore`) | `chrome-webstore-upload-cli@4 upload --source ... --auto-publish` |
-| AMO | `WEB_EXT_API_KEY` (JWT issuer), `WEB_EXT_API_SECRET` | `web-ext@8 sign --channel listed --amo-metadata --upload-source-code` |
+| Chrome Web Store | `EXTENSION_ID`, `PUBLISHER_ID`, `CLIENT_ID`, `CLIENT_SECRET`, `REFRESH_TOKEN` (OAuth2 desktop client, scope `chromewebstore`) | `chrome-webstore-upload-cli@4 upload --source ...` — v4 is draft-only (no `--auto-publish`); the launch gate is the dashboard submit |
+| AMO | `WEB_EXT_API_KEY` (JWT issuer), `WEB_EXT_API_SECRET` | `web-ext@8 sign --channel listed --amo-metadata --source-code-zip .output/source.zip` (source archive = `git archive` of the release ref, per AMO source-submission policy) |
 
 web-ext stays out of devDependencies (the addons-linter/image-size
 vulnerability that removed it); the workflow pulls it via `npx` only at

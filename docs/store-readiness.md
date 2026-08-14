@@ -198,7 +198,8 @@ These are hard submission requirements, not polish:
    the **mandatory source-code upload**: AMO requires the source of any
    bundled/minified add-on — this WXT build is both, so the upload is
    required, every version (the publish workflow already passes
-   `--upload-source-code`). Package the repo at the release tag (ports
+   `--source-code-zip .output/source.zip`, the git archive of the release
+   ref). Package the repo at the release tag (ports
    included), `bun.lock`, and a build note. Reviewer environments default
    to npm; the build is bun-run — `bun install --frozen-lockfile` with
    `bun.lock` as the lockfile, then `bun run build` (Chrome) or
