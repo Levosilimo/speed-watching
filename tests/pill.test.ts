@@ -1,6 +1,12 @@
 // @vitest-environment happy-dom
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { createPill, warningNoteCopy, type PillState } from '../ui/pill';
+import {
+  createPill,
+  warningNoteCopy,
+  type PillApi,
+  type PillMode,
+  type PillState,
+} from '../ui/pill';
 
 // The pill's shadow root is open (accessibility: closed roots are invisible
 // to assistive tech), so tests reach the surface through host.shadowRoot.
@@ -299,6 +305,42 @@ describe('createPill', () => {
     pill.update(state({ label: '→ 1.9x ≈ 380 cpm' }));
     expect(rootOf(host).querySelector('.label')?.textContent).toBe('→ 1.9x ≈ 380 cpm');
     pill.destroy();
+  });
+});
+
+describe('pill contract (lib-16 guard)', () => {
+  it('keeps the mode union exactly the five contract modes', () => {
+    // The tuple type-checks against the union: a removed or renamed mode
+    // breaks compilation; the runtime set pins the exact list.
+    const modes: PillMode[] = ['recommend', 'warning', 'unreachable', 'music', 'none'];
+    expect(new Set(modes)).toEqual(new Set(['recommend', 'warning', 'unreachable', 'music', 'none']));
+    // Every mode renders without throwing and lands in data-mode (none
+    // hides the surface — the 'hidden' state is its render contract).
+    const host = shadowHost();
+    const pill = createPill(host, {}, { locale: 'en' });
+    pill.mount();
+    for (const mode of modes) {
+      pill.update(state({ mode, label: mode }));
+      const surface = rootOf(host).querySelector('.pill')!;
+      expect(surface.getAttribute('data-mode')).toBe(mode === 'none' ? 'hidden' : mode);
+    }
+  });
+
+  it('exposes exactly {mount, update, updateLiveRate, destroy} on PillApi', () => {
+    const pill: PillApi = createPill(shadowHost(), {}, { locale: 'en' });
+    expect(Object.keys(pill).sort()).toEqual(['destroy', 'mount', 'update', 'updateLiveRate']);
+  });
+
+  it('keeps PillState free of nudge fields — the nudge is a separate surface', () => {
+    const pillState: PillState = state();
+    expect(Object.keys(pillState).filter((key) => key.includes('nudge'))).toEqual([]);
+    const host = shadowHost();
+    const pill = createPill(host, {}, { locale: 'en' });
+    pill.mount();
+    pill.update(pillState);
+    // No nudge markup may appear inside the pill's shadow root.
+    expect(rootOf(host).querySelector('.nudge')).toBeNull();
+    expect(rootOf(host).querySelector('[data-nudge]')).toBeNull();
   });
 });
 
