@@ -68,8 +68,7 @@ function wordTokens(payload: Record<string, unknown>): Segment[] {
   return tokens;
 }
 
-/** Joined seg text, whitespace-collapsed; null when the segs carry no text. */
-function textFromSegs(segs: unknown[]): string | null {
+export function textFromSegs(segs: unknown[]): string | null {
   const text = segs
     .map((seg) => (isRecord(seg) ? asString(seg.utf8) : null))
     .filter((t): t is string => t !== null)

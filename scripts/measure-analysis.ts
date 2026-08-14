@@ -139,7 +139,6 @@ export function registerBand(
   return { min: mid * 0.8, max: mid * 1.2, mid };
 }
 
-/** Timed-word tokens over non-marker cue text tokens. */
 function tokenCoverage(parsed: ParsedCaptions): number | null {
   const cueTokens = parsed.cues.reduce(
     (sum, cue) => (isBracketMarker(cue.text) ? sum : sum + countWordTokens(cue.text)),

@@ -259,7 +259,6 @@ export function koGate(own: CorpusRecord[]): GateSummary['g3'] {
   return summaryFromChecks(checks, 'regex-icu+hangul');
 }
 
-/** Words-mode G3: production counter vs Intl.Segmenter per video. */
 export function countGate(own: CorpusRecord[]): GateSummary['g3'] {
   const countRows = gateRows(own).filter((r) => r.countDeltaPct !== null);
   const checks: GateCheck[] = countRows.map((r) => ({
@@ -336,7 +335,6 @@ export function countingInputs(parsed: ParsedCaptions, lang: string): CountingIn
   };
 }
 
-/** G3 variant labels for the summary printer. */
 export const G3_MODE_LABELS: Record<GateSummary['g3']['mode'], string> = {
   'regex-icu': 'G3 count accuracy',
   'vowels-sample': 'G3 vowels sample+determinism',

@@ -36,7 +36,6 @@ export const DEFAULT_AUTO_TYPES: ReadonlySet<ContentType> = new Set([
   'podcast',
 ]);
 
-/** Per-type opt-in: an explicit user choice wins, absent → the default set. */
 export function isAutoContentType(settings: Settings, contentType: ContentType): boolean {
   return settings.autoApply.contentTypes[contentType] ?? DEFAULT_AUTO_TYPES.has(contentType);
 }

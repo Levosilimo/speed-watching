@@ -4,8 +4,6 @@
 
 import { TOKENS, type Theme } from './styles';
 
-// ── Styles (injected into shadow root) ───────────────────────────────────
-
 export function pillCss(t: Theme): string {
   return `
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }

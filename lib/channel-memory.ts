@@ -28,7 +28,7 @@ export interface ChannelRecord {
   ts: number;
 }
 
-// Forgery bounds mirror lib/messaging.ts's SEC-3 log-entry bounds: no
+// Forgery bounds mirror lib/bridge-protocol.ts's SEC-3 log-entry bounds: no
 // speech track runs above 1000 wpm and every measured rate is positive.
 const RATE_MIN = 1;
 const RATE_MAX = 1000;

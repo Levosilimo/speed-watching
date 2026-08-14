@@ -106,7 +106,6 @@ export interface Recommendation {
   reason: 'above-zone' | 'capped-below' | 'pause-diluted' | null;
   /** User-facing pill string, e.g. '→ 1.6x ≈ 240 wpm'. */
   label: string;
-  /** 'from captions' | 'from captions (corrected)' | 'estimated'. */
   tierLabel: string;
 }
 

@@ -39,7 +39,6 @@ export function priorRange(contentType: ContentType, language?: LanguageModel): 
   return GENERIC_PRIOR;
 }
 
-/** Best-guess natural rate for the 'estimated' tier: prior-range midpoint. */
 export function priorMidpoint(contentType: ContentType, language?: LanguageModel): number {
   const { min, max } = priorRange(contentType, language);
   return (min + max) / 2;

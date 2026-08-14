@@ -65,9 +65,7 @@ function normalizeNudge(raw: unknown): NudgeRecord {
   };
 }
 
-/** Pure evaluator: permanent dismissal wins, then the cooldown, then the
- * minimum interval between shows; otherwise the applied-count threshold.
- * `now` is injected so tests pin dates. */
+/** `now` is injected so tests pin dates. */
 export function shouldShowNudge(record: NudgeRecord, now: number): boolean {
   if (record.dismissedForever === true) return false;
   if (record.dismissedUntil !== undefined && record.dismissedUntil > now) return false;
@@ -125,7 +123,6 @@ export class NudgeStore {
 
   private async dismissNow(forever: boolean, now: number): Promise<NudgeRecord> {
     const current = normalizeNudge((await this.storage.get(this.key))[this.key]);
-    // Both dismiss flavors reset the applied count.
     const next: NudgeRecord = {
       ...current,
       highApplied: 0,

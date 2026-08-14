@@ -19,7 +19,6 @@ export interface ModelDb {
   keys(): Promise<string[]>;
 }
 
-/** True when the blob's sha-256 digest (lowercase hex) matches expected. */
 export async function verifyChecksum(blob: Blob, expected: string): Promise<boolean> {
   const digest = await crypto.subtle.digest('SHA-256', await blob.arrayBuffer());
   const hex = [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
@@ -75,7 +74,6 @@ export function indexedDbModels(): ModelDb {
 export class ModelStore {
   constructor(private readonly db: ModelDb = indexedDbModels()) {}
 
-  /** Writes to a temp key, verifies the checksum when given, then commits. */
   async storeModel(name: string, version: string, blob: Blob, checksum?: string): Promise<void> {
     const finalKey = `${name}@${version}`;
     const tempKey = `${finalKey}${TEMP_KEY_SUFFIX}`;

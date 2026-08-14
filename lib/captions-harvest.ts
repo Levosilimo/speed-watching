@@ -78,7 +78,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 const VTT_TAG = /<[^>]*>/g;
 
-/** Strips VTT inline tags (<v>, <c>, timestamps) and decodes entities. */
 export function cleanVttText(text: string): string {
   return text
     .replace(VTT_TAG, '')
@@ -90,7 +89,7 @@ export function cleanVttText(text: string): string {
     .trim();
 }
 
-/** Parses WebVTT text into cue-level segments (vtt.js, Apache-2.0). */
+/** Cue-level segments via vtt.js (Apache-2.0). */
 export function parseVtt(text: string, host: VttHost): Segment[] {
   const parser = new WebVTT.Parser(host, new WebVTT.StringDecoder());
   const segments: Segment[] = [];
@@ -145,8 +144,7 @@ export function parseVttWords(text: string, host: VttHost): Segment[] {
   };
   parser.parse(text);
   parser.flush();
-  // Word-tokens tail pattern (lib/captions.ts): sort by start, backfill
-  // durSec from the next word's start.
+  // Tail pattern shared with lib/captions.ts.
   words.sort((a, b) => a.startSec - b.startSec);
   words.forEach((word, i) => {
     const next = words[i + 1];
@@ -172,8 +170,7 @@ export function normalizeSrt(srt: string): string {
   );
 }
 
-/** Parses SRT text into cue-level segments (Rutube's pic.rtbcdn.ru
- * subtitle payloads). */
+/** SRT payloads (Rutube's pic.rtbcdn.ru), cue-level. */
 export function parseSrt(text: string, host: VttHost): Segment[] {
   return parseVtt(normalizeSrt(text), host);
 }
@@ -234,7 +231,7 @@ async function safe<T>(run: () => Promise<T | null>, label: string): Promise<T |
     return await run();
   } catch (error) {
     console.debug(`[speed-watcher] caption harvest ${label} failed: ${String(error)}`);
-    return null; // harvest is best-effort: a failed probe falls to the next
+    return null;
   }
 }
 
@@ -338,8 +335,7 @@ export interface CaptionHarvest {
   cues: Segment[];
 }
 
-/** Runs every probe in order; returns the first non-empty harvest, or null
- * when the page exposes no harvestable captions (→ estimated tier). */
+/** First non-empty probe harvest; null → estimated tier. */
 export async function harvestCaptions(options: HarvestOptions): Promise<CaptionHarvest | null> {
   const segments =
     (await safe(() => probeVimeoConfig(options), 'vimeo config')) ??
