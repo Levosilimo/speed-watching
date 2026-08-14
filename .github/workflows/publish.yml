@@ -48,7 +48,7 @@ jobs:
         # Pin the exact version: .output keeps every release's zip, so the
         # speed-watcher-*-chrome.zip glob would match two paths and fail.
         # Bump this on every release, before tagging.
-        run: npx chrome-webstore-upload-cli@4 upload --source .output/speed-watcher-0.0.2-chrome.zip --auto-publish
+        run: npx chrome-webstore-upload-cli@4 upload --source .output/speed-watcher-0.0.3-chrome.zip --auto-publish
 
   amo:
     name: Firefox Add-ons (AMO)

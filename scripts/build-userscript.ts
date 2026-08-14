@@ -15,7 +15,7 @@ const outPath = join(root, 'userscript', 'dist', 'speed-watcher.user.js');
 const METADATA = `// ==UserScript==
 // @name         Speed Watcher
 // @namespace    speed-watcher
-// @version      0.0.2
+// @version      0.0.3
 // @description  Sets YouTube playback speed so effective speech rate lands in the ~250-275 wpm safe zone
 // @license      MIT
 // @match        *://*.youtube.com/*
