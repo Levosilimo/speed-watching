@@ -197,10 +197,10 @@ describe('nudge and onboarding copy (lib-16)', () => {
 
   it('locks the why-250 onboarding copy in both locales', () => {
     expect(t('options.why250', 'en')).toBe(
-      'Why 250? Listening comprehension stays comfortable through about 275 wpm — the range commonly cited for speech — and silent reading runs roughly 240–260 wpm. 250 matches your reading rate and leaves a ~9% buffer below that ceiling: a comfortable default, not a maximum to push.',
+      'Why 250? Listening comprehension stays comfortable through about 275 wpm — the range commonly cited for speech — and silent reading runs roughly 240–260 wpm. 250 matches your reading rate and leaves a ~9% buffer below that ceiling: a comfortable default, not a maximum to push. This is the English comfort range; other languages use their derived ranges.',
     );
     expect(t('options.why250', 'ru')).toBe(
-      'Почему 250? Комфортное восприятие речи сохраняется примерно до 275 слов/мин — диапазона, который обычно считают комфортным, — а чтение про себя идёт около 240–260 слов/мин. 250 совпадает со скоростью чтения и оставляет запас ~9% до этого предела: комфортное значение по умолчанию, а не максимум, который стоит выжимать.',
+      'Почему 250? Комфортное восприятие речи сохраняется примерно до 275 слов/мин — диапазона, который обычно считают комфортным, — а чтение про себя идёт около 240–260 слов/мин. 250 совпадает со скоростью чтения и оставляет запас ~9% до этого предела: комфортное значение по умолчанию, а не максимум, который стоит выжимать. Это английский комфортный диапазон; для других языков используются производные диапазоны.',
     );
   });
 });

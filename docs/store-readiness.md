@@ -34,11 +34,11 @@ contexts.
 Run `bun run check:cws` after every build. It runs the offline
 [`cws-check`](https://github.com/0prob/cws-check) CLI over
 `.output/chrome-mv3` — the bundle CWS reviewers actually scan — and exits 1
-on MV2, remote-code, or unsafe-CSP findings. Reference run on v0.0.1
+on MV2, remote-code, or unsafe-CSP findings. Reference run on v0.0.2
 (2026-08-12):
 
 ```
-cws-check — Speed Watcher v0.0.1
+cws-check — Speed Watcher v0.0.2
 
 Manifest version
   ✓ manifest_version 3 — current.

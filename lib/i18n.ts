@@ -54,9 +54,11 @@ const EN = {
   'options.tagline': 'WPM-based playback speed recommendations',
   'options.targetLabel': 'Target speech rate',
   'options.slow': 'Slow',
-  'options.safeZone': 'Comfortable range (250–275)',
+  'options.safeZone': 'English comfort range (250–275)',
+  'options.safeZoneLanguage': 'Comfortable range for your language: {lo}–{hi} {unit}',
+  'options.targetUnitNote': "A manual target value applies in the video's language unit",
   'options.why250':
-    'Why 250? Listening comprehension stays comfortable through about 275 wpm — the range commonly cited for speech — and silent reading runs roughly 240–260 wpm. 250 matches your reading rate and leaves a ~9% buffer below that ceiling: a comfortable default, not a maximum to push.',
+    'Why 250? Listening comprehension stays comfortable through about 275 wpm — the range commonly cited for speech — and silent reading runs roughly 240–260 wpm. 250 matches your reading rate and leaves a ~9% buffer below that ceiling: a comfortable default, not a maximum to push. This is the English comfort range; other languages use their derived ranges.',
   'options.fast': 'Fast',
   'options.contentTypeLabel': 'Content type',
   'options.contentTypeAria': 'Content type presets',
@@ -83,7 +85,7 @@ const EN = {
   'options.timeSavedStarted': 'Time-saved tracking started',
   'options.probeLabel': 'Test audio capture',
   'options.probeNote':
-    'Verifies that the extension can capture audio from a video tab. The meter shows the live audio level of the captured tab while the test runs. No audio is recorded, stored, or transmitted — the meter is the only output.',
+    "Confirms your browser lets us read a video tab's audio — needed before on-device speech-to-text can ship.",
   'options.probeStart': 'Test audio capture',
   'options.probeStop': 'Stop audio capture',
   'options.probeIdle': 'Idle',

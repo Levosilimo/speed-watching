@@ -6,8 +6,7 @@
 // (lib/time-saved.ts, the wall time reclaimed by applied rates), and
 // 'sw.nudge' (lib/nudge.ts, the recall-nudge record). The options page,
 // the isolated-world bridge, and the background all read/write through the
-// lib stores over browser.storage.local; ui/storage.ts's parallel 'sw:'
-// schema is retired. No other key may be introduced.
+// lib stores over browser.storage.local. No other key may be introduced.
 
 import type { ContentType } from './music';
 

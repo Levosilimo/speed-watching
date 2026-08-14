@@ -56,6 +56,25 @@ describe('options accessibility structure', () => {
     expect(document.querySelectorAll('h2.section-label')).toHaveLength(9);
   });
 
+  it('keeps the Auto-apply section in slot 2, right after Target (P3)', () => {
+    const target = document.querySelector('h2[data-i18n="options.targetLabel"]');
+    const auto = document.querySelector('h2[data-i18n="options.autoLabel"]');
+    const contentType = document.querySelector('h2[data-i18n="options.contentTypeLabel"]');
+    expect(target).not.toBeNull();
+    expect(auto).not.toBeNull();
+    expect(contentType).not.toBeNull();
+    if (target === null || auto === null || contentType === null) return;
+    // compareDocumentPosition's bits are relative to the caller (auto).
+    const targetPrecedes = (auto.compareDocumentPosition(target) & Node.DOCUMENT_POSITION_PRECEDING) !== 0;
+    const contentTypeFollows = (auto.compareDocumentPosition(contentType) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
+    expect(targetPrecedes).toBe(true);
+    expect(contentTypeFollows).toBe(true);
+  });
+
+  it('hides the per-language range line for an English browser language', () => {
+    expect(document.getElementById('safe-zone-language')?.hidden).toBe(true);
+  });
+
   it('pairs the habits stats as a description list', () => {
     const grid = document.querySelector('.habits-grid');
     expect(grid?.tagName).toBe('DL');
