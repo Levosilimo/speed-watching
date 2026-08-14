@@ -20,19 +20,21 @@
 import { defineContentScript } from 'wxt/utils/define-content-script';
 import { harvestCaptions, type VttHost } from '@/lib/captions-harvest';
 import { priorMidpoint } from '@/lib/heuristics';
+import { resolveLanguage, type LanguageModel } from '@/lib/languages';
 import { SerializedRunner } from '@/lib/measure-guard';
 import { RateReapplier, selectVideo } from '@/lib/matcher';
 import { createBridgeClient } from '@/lib/messaging';
 import type { ContentType } from '@/lib/music';
 import { detectMusic } from '@/lib/music';
-import { recommend, type RateTier, type Recommendation } from '@/lib/recommend';import {
+import { recommend, type RateTier, type Recommendation } from '@/lib/recommend';
+import {
   defaultSettings,
   resolveContentType,
   resolvePlatformMax,
   resolveUserTarget,
   type Settings,
 } from '@/lib/settings';
-import { manualCueRate } from '@/lib/wpm';
+import { asrTierInputs, filteredTokensOverTrimmedSpan, manualCueRate } from '@/lib/wpm';
 import { createPill, type LiveRate, type PillApi, type PillState } from '@/ui/pill';
 
 const RESOURCE_WAIT_MS = 2000;
@@ -49,8 +51,8 @@ let current: {
   naturalRate: number;
   platformMax: number;
   tier: RateTier;
-  /** Rate-unit display label; the generic path never resolves a language, so
-   * always 'wpm' (mirror of content.ts's unit field). */
+  /** Rate-unit display label; the track language resolves it when the
+   * track declares one (Dzen's ru → wpm), else the wpm default. */
   unit: string;
   recommendation: Recommendation;
 } | null = null;
@@ -79,7 +81,7 @@ interface PillTestHook {
 declare global {
   interface Window {
     __speedwatcherPill?: PillTestHook;
-    __speedwatcherCaptionTier?: 'captions' | 'estimated';
+    __speedwatcherCaptionTier?: RateTier;
     __vimeo_player_config__?: { player?: { config_url?: string } };
   }
 }
@@ -175,7 +177,18 @@ async function measureOnce(): Promise<void> {
   const settings = await loadSettings();
   const site = location.hostname.replace(/^www\./, '');
   const vimeo = window.__vimeo_player_config__;
-  const segments = await harvestCaptions({
+  // Track-src probe inputs: the src attributes of every video > track[src]
+  // on the page (Dzen's signed OK.ru VTT, Rutube's pic.rtbcdn.ru SRT). The
+  // first track also names the caption language for rate/unit resolution.
+  const trackSrcs = [...document.querySelectorAll('video')]
+    .flatMap((el) => [...el.querySelectorAll<HTMLTrackElement>(':scope > track[src]')])
+    .map((track) => track.getAttribute('src'))
+    .filter((src): src is string => src !== null && src !== '');
+  const track =
+    video.querySelector<HTMLTrackElement>(':scope > track[src]');
+  const language =
+    resolveLanguage(track?.srclang || track?.getAttribute('lang') || undefined) ?? undefined;
+  const harvest = await harvestCaptions({
     videoSrc: video.getAttribute('src'),
     resourceUrls: await captionResourceUrls(),
     hostname: location.hostname,
@@ -183,13 +196,22 @@ async function measureOnce(): Promise<void> {
     vimeoConfig: vimeo === undefined ? null : { __vimeo_player_config__: vimeo },
     vttHost: vttHost(),
     fetchImpl: (url) => fetch(url),
+    trackSrcs,
   });
-  if (segments !== null) {
-    if (__E2E__) window.__speedwatcherCaptionTier = 'captions';
-    const naturalRate = manualCueRate(segments);
+  if (harvest !== null) {
+    // Word-timed tracks (Dzen's `<TS><c>word</c>` VTT) take the asr branch:
+    // presentation rate over the cue span, asr-word when ≥2 words timed
+    // (mirror of content.ts). Cue-only payloads (Rutube SRT) keep the
+    // manual-cue path.
+    const asr = harvest.words.length > 0;
+    const naturalRate = asr
+      ? filteredTokensOverTrimmedSpan(harvest.cues, language)
+      : manualCueRate(harvest.cues, language);
     if (naturalRate !== null) {
-      const detected = detectMusic(segments, naturalRate) ? 'music' : 'generic';
-      renderRecommendation(naturalRate, 'manual-cue', detected, settings, site);
+      const detected = detectMusic(harvest.cues, naturalRate) ? 'music' : 'generic';
+      const { tier, wordInputs } = asrTierInputs(asr ? 'asr' : 'manual', harvest.words, harvest.cues);
+      if (__E2E__) window.__speedwatcherCaptionTier = tier;
+      renderRecommendation(naturalRate, tier, detected, settings, site, wordInputs, language);
       return;
     }
   }
@@ -222,6 +244,8 @@ function renderRecommendation(
   contentType: ContentType,
   settings: Settings,
   site: string,
+  wordInputs?: { articulatoryWpm: number; timingCoverageOk: boolean } | null,
+  language?: LanguageModel,
 ): void {
   const platformMax = resolvePlatformMax(settings, site);
   const recommendation = recommend({
@@ -230,8 +254,10 @@ function renderRecommendation(
     contentType,
     platformMax,
     userTarget: resolveUserTarget(settings, site, contentType),
+    language,
+    ...wordInputs,
   });
-  current = { site, contentType, naturalRate, platformMax, tier, unit: 'wpm', recommendation };
+  current = { site, contentType, naturalRate, platformMax, tier, unit: language?.unit ?? 'wpm', recommendation };
   showPill({
     mode: recommendation.mode,
     rateWpm: naturalRate,

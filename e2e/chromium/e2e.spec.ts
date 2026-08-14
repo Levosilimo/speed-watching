@@ -26,6 +26,7 @@ import {
   type E2EDriver,
 } from '../shared/specs';
 import { FIXTURE_PORT } from '../server';
+import type { RateTier } from '../../lib/recommend';
 import type { Settings } from '../../lib/settings';
 
 const extensionPath = resolve('.output/chrome-mv3-e2e');
@@ -165,6 +166,9 @@ test.beforeAll(async () => {
     async navigateToGeneric() {
       await page.goto(`${fixtureBase}/generic`);
     },
+    async navigateToGenericDzen() {
+      await page.goto(`${fixtureBase}/generic-dzen`);
+    },
     async readCaptionTier() {
       await page.waitForFunction(
         () => window.__speedwatcherCaptionTier !== undefined,
@@ -172,7 +176,7 @@ test.beforeAll(async () => {
         { timeout: 15_000 },
       );
       return page.evaluate(
-        () => (window.__speedwatcherCaptionTier as 'captions' | 'estimated') ?? null,
+        () => (window.__speedwatcherCaptionTier as RateTier) ?? null,
       );
     },
     async resetPlaybackRate() {
