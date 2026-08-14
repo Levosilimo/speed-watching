@@ -1,8 +1,9 @@
-// Storage namespace: chrome.storage.local holds exactly four keys, all
+// Storage namespace: chrome.storage.local holds exactly five keys, all
 // prefixed 'sw.' and owned by their lib module — 'sw.settings' (this file,
 // via SettingsStore), 'sw.overrideLog' (lib/override-log.ts), 'sw.demand'
-// (lib/demand.ts, the local STT demand proxy), and 'sw.channelRates'
-// (lib/channel-memory.ts, per-channel measured rates). The options page,
+// (lib/demand.ts, the local STT demand proxy), 'sw.channelRates'
+// (lib/channel-memory.ts, per-channel measured rates), and 'sw.nudge'
+// (lib/nudge.ts, the recall-nudge record). The options page,
 // the isolated-world bridge, and the background all read/write through the
 // lib stores over browser.storage.local; ui/storage.ts's parallel 'sw:'
 // schema is retired. No other key may be introduced.
