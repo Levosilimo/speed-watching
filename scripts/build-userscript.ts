@@ -17,6 +17,7 @@ const METADATA = `// ==UserScript==
 // @namespace    speed-watcher
 // @version      0.0.2
 // @description  Sets YouTube playback speed so effective speech rate lands in the ~250-275 wpm safe zone
+// @license      MIT
 // @match        *://*.youtube.com/*
 // @grant        GM_setValue
 // @grant        GM_getValue

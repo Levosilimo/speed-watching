@@ -1,6 +1,8 @@
 {
   "name": "speed-watcher",
   "description": "WPM-based speed-watching extension",
+  "license": "MIT",
+  "author": "Levosilimo",
   "private": true,
   "version": "0.0.2",
   "type": "module",
