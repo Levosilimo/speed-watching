@@ -7,18 +7,30 @@ export type RecommendationMode = 'recommend' | 'warning' | 'unreachable' | 'musi
 export type RateTier = 'asr-word' | 'asr-cue' | 'manual-cue' | 'estimated';
 
 export const TARGET_WPM = 250;
-/** Comprehension cliff (Murphy et al.): above this, warning mode. */
+/**
+ * Presentation-rate ceiling above which the recommendation warns. From
+ * Chen et al. 2024 (Educ Psychol Rev 36:79, doi 10.1007/s10648-024-09917-7
+ * — first author Chen, senior author Murphy; earlier notes cite it as
+ * "Murphy et al."): comprehension holds near 250–275 wpm at speed. 275
+ * is a heuristic pick from that band, not a crisp measured threshold —
+ * Tharumalingam & Risko 2025 (Educ Psychol Rev, doi
+ * 10.1007/s10648-025-10003-9) meta-analysis finds speed increases can
+ * impair test performance.
+ */
 export const SAFE_ZONE_CEILING_WPM = 275;
 export const ROUNDING_STEP = 0.05;
 export const MANUAL_CUE_CLAMP = 1.5;
 export const SLOW_DOWN_FLOOR = 0.5;
 
 /**
- * Multimedia-ceiling modulation (Chen et al. 2024, comprehension at speed
- * with visual support): slide-heavy visuals (lecture/explainer) offload
- * processing, so their safe-zone ceiling rides 5% up; audio-only podcasts
- * get no such offload and ride 5% down. Applied to the warning ceilings
- * only — never to the target or the multiplier bounds.
+ * Multimedia-ceiling modulation: lecture/explainer slide-heavy visuals
+ * offload processing at speed, audio-only podcasts get no such offload —
+ * the direction is Chen et al. 2024's comprehension-at-speed finding
+ * (same study as SAFE_ZONE_CEILING_WPM's). The ±5% magnitudes are a
+ * model choice, not sourced from the paper; the countervailing evidence
+ * (Tharumalingam & Risko 2025: speed increases can impair test
+ * performance) is why the modulation only moves the warning ceilings —
+ * never the target or the multiplier bounds.
  */
 export const MULTIMEDIA_CEILING_FACTOR = 1.05;
 export const PODCAST_CEILING_FACTOR = 0.95;

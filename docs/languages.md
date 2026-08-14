@@ -9,7 +9,11 @@ info-rate frame — none are comprehension-measured except zh's ceiling.
 
 The English 250 wpm target / 275 wpm ceiling anchor the ~39 bits/s
 information-rate ceiling (Coupé et al. 2019: 250 wpm × 1.5 syl/word ×
-6.3 bits/syll ≈ 39.4 bits/s). A non-English target scales that ceiling by the
+6.3 bits/syll ≈ 39.4 bits/s). The 275 ceiling is a heuristic pick from
+the comprehension-at-speed band (Chen et al. 2024), not a crisp
+measured threshold — Tharumalingam & Risko 2025 (meta-analysis) find
+speed increases can impair test performance. A non-English target
+scales that ceiling by the
 language's syllabic rate and word structure:
 
 - **word-unit (wpm)** — English wpm scaled by syllables per word vs
@@ -303,10 +307,18 @@ keeps working in every mode.
 - `MULTIMEDIA_CEILING_FACTOR` (1.05, lecture/explainer) and
   `PODCAST_CEILING_FACTOR` (0.95, podcast) modulate the **warning
   ceilings** — above-zone and pause-diluted articulatory — by content
-  type, per Chen et al. 2024: slide-heavy visuals offload comprehension
-  processing at speed, audio-only podcasts get no such offload. The
-  factors never touch the target or the multiplier bounds; every other
-  content type rides at 1.0.
+  type. The **direction** is Chen et al. 2024's comprehension-at-speed
+  finding (Educ Psychol Rev 36:79, doi 10.1007/s10648-024-09917-7 — the
+  same study the 275 cliff derives from, first author Chen, senior
+  author Murphy): slide-heavy visuals offload comprehension processing
+  at speed, audio-only podcasts get no such offload. The ±5%
+  **magnitudes are a model choice**, not sourced from the paper.
+  Countervailing evidence: Tharumalingam & Risko 2025 (Educ Psychol
+  Rev, doi 10.1007/s10648-025-10003-9, meta-analysis) find increasing
+  speed can impair test performance — the 275 cliff is a heuristic, not
+  a crisp measured threshold, which is why the modulation only moves
+  the warning ceilings, never the target or the multiplier bounds; every
+  other content type rides at 1.0.
 
 ## Deferred / known limits
 
