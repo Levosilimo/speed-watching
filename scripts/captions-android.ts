@@ -5,7 +5,6 @@
 
 import type { Page } from 'playwright';
 import { parseYouTubeJson3 } from '../lib/captions';
-import type { SampleRecord } from './sample-analysis';
 
 export const ANDROID_CLIENT = {
   clientName: 'ANDROID',
@@ -25,6 +24,8 @@ export interface ExtractResult {
 export async function extractCaptionsInPage(input: {
   videoId: string;
   client: Record<string, unknown>;
+  /** Preferred track language (normalized); defaults to en. */
+  lang?: string;
 }): Promise<ExtractResult | { error: string }> {
   const playerRes = await fetch(
     'https://www.youtube.com/youtubei/v1/player?prettyPrint=false',
@@ -53,9 +54,13 @@ export async function extractCaptionsInPage(input: {
   };
   const tracks =
     playerJson.captions?.playerCaptionsTracklistRenderer?.captionTracks ?? [];
+  const lang = input.lang ?? 'en';
+  // page-side code: normalization inlined, imports do not cross evaluate()
+  const inLang = (t: { kind?: string; languageCode?: string }): boolean =>
+    t.languageCode !== undefined && t.languageCode.toLowerCase().split('-')[0] === lang;
   const pick =
-    tracks.find((t) => t.kind === 'asr' && t.languageCode === 'en') ??
-    tracks.find((t) => t.kind !== 'asr' && t.languageCode === 'en') ??
+    tracks.find((t) => t.kind === 'asr' && inLang(t)) ??
+    tracks.find((t) => t.kind !== 'asr' && inLang(t)) ??
     tracks.find((t) => t.kind === 'asr') ??
     tracks[0];
   if (!pick) return { error: 'no-caption-tracks' };
@@ -79,17 +84,33 @@ export async function extractCaptionsInPage(input: {
   };
 }
 
+/** Fields androidControl mutates on the caller's record — the en harness's
+ * SampleRecord and the ru corpus runner's CorpusRecord both satisfy it. */
+export interface AndroidRecord {
+  error: string | null;
+  status: string;
+  webAsrCount?: number | null;
+  androidKind: string | null;
+  androidLang: string | null;
+  androidTrackCount: number | null;
+  segsCues: number | null;
+  segsWords: number | null;
+}
+
 /** ANDROID innertube control: fills segs fields, upgrades web-empty to
- * android-fallback, and flags WEB/ANDROID track-list disagreements. */
+ * android-fallback, and flags WEB/ANDROID track-list disagreements. `lang`
+ * (default 'en') is the preferred track language the control re-picks. */
 export async function androidControl(
   page: Page,
-  record: SampleRecord,
+  record: AndroidRecord,
   videoId: string,
   onJson: (json: unknown) => void,
+  lang = 'en',
 ): Promise<void> {
   const extracted = await page.evaluate(extractCaptionsInPage, {
     videoId,
     client: ANDROID_CLIENT,
+    lang,
   });
   if ('error' in extracted) {
     if (record.status === 'web-captured' || record.status === 'parse-failed') {

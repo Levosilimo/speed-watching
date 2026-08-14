@@ -62,7 +62,7 @@ vowel letters (one vowel per syllable), hi counts Devanagari vowel nuclei.
 | id | syl/min | 400 | 412 | words | yes | 208–304 |
 | ms | syl/min | 400 | 412 | words | yes | 208–304 |
 | tl | syl/min | 400 | 412 | words | yes | 208–304 |
-| ru | wpm | 168 | 180 | words | yes | 105–145 (per register, below) |
+| ru | wpm | 168 | 180 | words | yes | 105–145 (per register, below) † |
 | uk | wpm | 168 | 180 | words | yes | 105–145 (per register, below) |
 | pl | wpm | 185 | 200 | words | yes | 96–141 |
 | cs | wpm | 185 | 200 | words | yes | 96–141 |
@@ -70,6 +70,11 @@ vowel letters (one vowel per syllable), hi counts Devanagari vowel nuclei.
 
 \* zh is marked derived:false only because its ceiling is
 comprehension-measured; its target is derived.
+
+† ru's priors are **corpus-measured** (16-video ru:asr corpus, 2026-08,
+docs/phase0-russian-corpus.md); its target and ceiling remain derived
+(168/180 — a rate corpus measures speech rate, not comprehension of the
+safe zone).
 
 Priors scale the English estimated-tier ratio (0.52–0.76 × target) to each
 language's target — the same below-target relationship as the English
@@ -82,12 +87,22 @@ ratio-scaled (below).
 ru and uk carry a per-register prior table (`registerPriors` in
 `lib/languages.ts`) used both as the estimated-tier prior per content type
 and as `detectContentType`'s classification bands. The bands are the
-gathered Russian natural-rate norms — news and dictation 120–150 wpm,
+Russian natural-rate norms — news and dictation 120–150 wpm,
 conversational ~100–140, lecture ~95–135, explainer ~100–140 (Kazabeeva
 2015 pedagogy norms; dictation and news readings at ~4.7–5.8 syl/s). The
 old content-invariant 87–128 prior sat under every band, which under-
 anchored every Russian estimated tier; the generic band is the union mid,
 105–145.
+
+The **ru bands are corpus-validated** (2026-08, phase0-russian-corpus): a
+16-video ru:asr corpus measured per-register median unified rates of news
+134.6, lecture 123.4, podcast 142.8, explainer 135.2 wpm — every median
+inside its midpoint ± 20% window (news 108–162, lecture 92–138,
+podcast/explainer 96–144). The Kazabeeva/Stepanova/Krivnova norms remain
+as corroboration, not the source of the numbers. uk copies the ru bands
+(its 4-video addendum measured faster: talk median 160.3 wpm, above the
+100–140 band — uk keeps the ru-copied priors, `priorsSource` stays
+unset).
 
 | register | ru/uk band (wpm) |
 |---|---|
@@ -190,11 +205,11 @@ keeps working in every mode.
 
 ## Deferred / known limits
 
-- **Corpus measurement** — the per-language targets are derived, not
-  measured. The harness validation plan (per-language natural-rate corpus,
-  comparing measured rates against the priors and targets) is deferred; the
-  `logWpm` measurement hooks remain word-based and English-labeled until the
-  harness runs per language.
+- **Corpus measurement** — ru's natural-rate priors are now corpus-
+  measured (2026-08, phase0-russian-corpus); every other language's
+  targets and priors remain derived. The harness plan for further
+  per-language corpora is deferred; the `logWpm` measurement hooks remain
+  word-based and English-labeled until a harness runs per language.
 - **generic.content.ts** stays on the English/default path by design.
 - The options-page target slider is wpm-labeled; a user target set there
   applies as a raw number in the track language's unit.

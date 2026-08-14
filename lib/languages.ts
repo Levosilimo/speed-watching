@@ -24,7 +24,8 @@
 // the researched pairs. Priors (estimated-tier natural-rate ranges) scale
 // the English generic-prior ratio (0.52–0.76 × target) to each target;
 // ru/uk are the exception — their per-register priors (registerPriors) are
-// the gathered Russian rate norms, not ratio-scaled (see the ru/uk row
+// Russian rate data, not ratio-scaled: ru's are corpus-measured (2026-08,
+// docs/phase0-russian-corpus.md), uk's copy them (see the ru/uk row
 // comment and docs/languages.md).
 // syllable-per-word factors (ar 2.0, id/ms/tl 1.5) are typological
 // approximations, documented as such; the multiplier itself is
@@ -50,6 +51,10 @@ export interface LanguageModel {
   derived: boolean;
   /** Estimated-tier natural-rate range, in `unit`. */
   priors: { min: number; max: number };
+  /** Evidence tier of the priors: 'corpus' = measured natural-rate corpus,
+   * absent = literature-sourced. Only ru carries 'corpus' (2026-08
+   * phase0-russian-corpus); every other language stays literature. */
+  priorsSource?: 'literature' | 'corpus';
   /** Per-register estimated-tier ranges, in `unit` (detectContentType's
    * bands and priorRange's register lookup). The generic entry mirrors
    * `priors`; absent → only the generic band. */
@@ -83,6 +88,9 @@ export const LANGUAGES: Record<string, LanguageModel> = {
   // explainer ~100–140 (Kazabeeva 2015 pedagogy norms; the "fast" band tops
   // out ~400 syl/min ≈ 174 wpm). The old content-invariant 87–128 prior sat
   // under every one of them; the generic band is their union mid (105–145).
+  // ru's priors are now corpus-measured (docs/phase0-russian-corpus.md,
+  // 2026-08: 16-video ru:asr corpus, per-register medians inside the ±20%
+  // windows; the Kazabeeva/Stepanova/Krivnova norms stay as corroboration).
   // The 180 ceiling keeps ~3.5% headroom above the fast band.
   ru: {
     code: 'ru',
@@ -91,6 +99,7 @@ export const LANGUAGES: Record<string, LanguageModel> = {
     ceiling: 180,
     tokenizerMode: 'words',
     derived: true,
+    priorsSource: 'corpus',
     priors: { min: 105, max: 145 },
     registerPriors: {
       news: { min: 120, max: 150 },
