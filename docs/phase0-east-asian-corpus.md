@@ -201,12 +201,21 @@ committed ru-corpus-summary.json blocks.
 | ko (syl/min) | 265–305 | 320–360 | 350–390 | 260–300 | 305–345 |
 
 These are the first corpus bands whose natural rates **reach or exceed
-the derived targets**: ja's generic 395–435 straddles the 380 target,
-th's 505–545 nearly doubles its 282, ko's 305–345 meets its 340. The
+the derived targets**: ja's lecture/podcast 450–490 straddles the
+re-derived 470 target, th's 505–545 nearly doubles its 282, ko's
+305–345 meets its 340. The
 estimated tier's prior range therefore overlaps the safe zone — natural
 Japanese, Thai and Korean content is genuinely fast by the model's
 frame, and the extension recommends ≈0.6–1.0× on it instead of
 flagging it fast.
+
+th's 420–630 cpm band must be read as a **presentation** rate: Thai
+graphemes pack vowels and tone marks around the consonant (~1.3+
+graphemes per syllable — สวัสดี = 6 code points / 3 syllables), so th
+cpm is not commensurable with zh cpm, the 282/290 target is a
+zh-ceiling scale rather than a measurement, and the band is not a
+comprehension safe zone. The grapheme-per-syllable ratio is an open
+measurement; zh's 240/258 stands (Lee & Chan 2005).
 
 ## Verdict
 
@@ -220,7 +229,9 @@ flagging it fast.
 - **Targets and ceilings stay `derived: true` for all three** — a rate
   corpus measures speech rate, not comprehension of the safe zone; the
   ru boundary holds. ja re-derived to 470/495 (2026-08 — the correction
-  note above), th 282/290 and ko 340/350 unchanged.
+  note above), th 282/290 and ko 340/350 unchanged; th's band remains a
+  presentation rate with unresolved orthographic interpretation (see
+  the built-bands note), not a comprehension safe zone.
   The `priors.max < target` invariant is relaxed for corpus-measured
   languages (uk talk precedent); ratio-derived languages keep it.
 

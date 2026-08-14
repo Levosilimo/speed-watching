@@ -19,7 +19,15 @@ language's syllabic rate and word structure:
   undercounts token runs ~25–30 % → 0.7 × English → 175.
 - **char-unit (cpm)** — zh 240–258 cpm, where the 258 ceiling
   (Lee & Chan, 4.3 char/s) is the **only comprehension-measured ceiling in
-  the set**; th ~282 cpm derived.
+  the set**; th ~282 cpm derived. **th cpm is not commensurable with zh
+  cpm**: Thai packs vowels and tone marks around the consonant
+  (สวัสดี = 6 code points → 4 graphemes over 3 syllables, ~1.3+
+  graphemes/syllable), so the th number is a zh-ceiling scale, not a
+  zh-comparable measurement, and the corpus's 420–630 cpm band is a
+  measured presentation rate with unresolved orthographic
+  interpretation — not a comprehension safe zone. The
+  grapheme-per-syllable ratio is an open measurement; zh's 240/258
+  stands.
 - **mora-unit (morae/min)** — ja 470 target / 495 ceiling, re-derived
   2026-08 from the model's own frame. The old 380/400 priced a mora at
   English-syllable information (6.33/6.67 morae/s × 6.3 bits/mora ≈ 40–42
@@ -199,6 +207,14 @@ instead of being flagged fast; the targets and ceilings stay derived
 | podcast | 450–490 | 535–575 | 260–300 |
 | generic | 395–435 | 505–545 | 305–345 |
 
+th's cpm numbers carry an unresolved orthographic interpretation: Thai
+packing (vowels/tone marks around the consonant, ~1.3+ graphemes per
+syllable) makes th cpm incommensurable with zh cpm — the 282/290 target
+is a zh-ceiling scale, and the measured 420–630 cpm band is a
+**presentation** rate, not a comprehension safe zone. The
+grapheme-per-syllable ratio is an open measurement; zh's 240/258 is
+untouched (Lee & Chan 2005, ~99% comprehension at 4.3 char/s).
+
 ## Tokenizer modes
 
 `countWordTokens(text, mode)` in `lib/tokenizer.ts`:
@@ -235,7 +251,7 @@ keeps working in every mode.
 ## The gate
 
 - Videos default to the language model's own target — en 250 wpm
-  (measured), every other language its **derived estimate** (ja 380
+  (measured), every other language its **derived estimate** (ja 470
   morae/min, de 175 wpm, …). An explicit target set on the options slider
   overrides it, applied as a raw number in the language's unit.
 - Non-English word-tier content is measured with the language-appropriate

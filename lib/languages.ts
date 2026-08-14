@@ -11,7 +11,15 @@
 //     compounding undercounts token runs ~25–30 % → 0.7 × English → 175.
 //   - char-unit (cpm): zh 240–258 cpm, where the 258 ceiling
 //     (Lee & Chan, 4.3 char/s) is the only comprehension-measured ceiling
-//     in the set; th ~282 cpm derived.
+//     in the set; th ~282 cpm derived. th cpm is NOT commensurable with
+//     zh cpm: Thai packs vowels/tone marks around the consonant (~1.3+
+//     graphemes per syllable — สวัสดี = 6 code points / 4 graphemes / 3
+//     syllables), so the 282 target is a zh-ceiling scale, not a
+//     zh-comparable measurement, and the corpus's 420–630 cpm band is a
+//     measured PRESENTATION rate with unresolved orthographic
+//     interpretation — NOT a comprehension safe zone. The
+//     grapheme-per-syllable ratio is an open measurement; zh stands
+//     (Lee & Chan 2005, ~99% comprehension at 4.3 char/s).
 //   - mora-unit (morae/min): ja 470–495, re-derived 2026-08 from the
 //     model's own frame (the old 380–400 priced a mora at English-syllable
 //     information — 6.33/6.67 morae/s × 6.3 bits/mora ≈ 40–42 bits/s,
