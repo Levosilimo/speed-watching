@@ -293,13 +293,14 @@ async function probeVttEntries(options: HarvestOptions): Promise<Segment[] | nul
   return null;
 }
 
-/** Probe #5: video > track[src] subtitles. Reads the src attributes the
- * content script collected (no document access here), fetches each, and
- * returns the first payload that yields words or cues: Dzen's OK.ru VTT
- * gives both (word runs + cues from one fetch), Rutube's SRT cues only.
- * A track with no caption content falls through to the next src; an empty
- * track list yields null (→ estimated tier; Rutube's author-gated ~50%
- * of videos have no track element at all). */
+/** Track-src probe (probe #5 in the adapter spec; third in execution
+ * order): reads the src attributes the content script collected (no
+ * document access here), fetches each, and returns the first payload that
+ * yields words or cues: Dzen's OK.ru VTT gives both (word runs + cues from
+ * one fetch), Rutube's SRT cues only. A track with no caption content
+ * falls through to the next src; an empty track list yields null (→
+ * estimated tier; Rutube's author-gated ~50% of videos have no track
+ * element at all). */
 async function probeTrackSrcs(options: HarvestOptions): Promise<CaptionHarvest | null> {
   for (const src of options.trackSrcs) {
     const response = await options.fetchImpl(src);

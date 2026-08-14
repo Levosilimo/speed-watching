@@ -184,8 +184,7 @@ async function measureOnce(): Promise<void> {
     .flatMap((el) => [...el.querySelectorAll<HTMLTrackElement>(':scope > track[src]')])
     .map((track) => track.getAttribute('src'))
     .filter((src): src is string => src !== null && src !== '');
-  const track =
-    video.querySelector<HTMLTrackElement>(':scope > track[src]');
+  const track = video.querySelector<HTMLTrackElement>(':scope > track[src]');
   const language =
     resolveLanguage(track?.srclang || track?.getAttribute('lang') || undefined) ?? undefined;
   const harvest = await harvestCaptions({
