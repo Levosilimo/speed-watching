@@ -140,9 +140,10 @@ leaves the browser.
 
 ## Privacy policy
 
-Placeholder: CWS requires a hosted privacy-policy URL. The user must host a
-short policy (the data-usage statement above is the content) and paste the
-URL into the CWS listing before submission. AMO requires a "privacy policy"
+The privacy policy is live at
+`https://levosilimo.github.io/speed-watching/privacy-policy`; paste that URL
+into the CWS listing before submission. Questions route via the GitHub
+profile: https://github.com/Levosilimo. AMO requires a "privacy policy"
 field only for add-ons that collect data; this one does not, but a policy
 page is still good practice.
 

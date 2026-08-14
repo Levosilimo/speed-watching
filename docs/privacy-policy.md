@@ -54,6 +54,5 @@ third-party code.
 ## Updates and contact
 
 This policy is updated when the extension's data handling changes; the
-version in the store listing marks each release. Questions:
-privacy@levosilimo.dev — placeholder address; replace with the real inbox
-before the policy URL goes live.
+version in the store listing marks each release. Questions: via the GitHub
+profile: https://github.com/Levosilimo.

@@ -88,7 +88,7 @@ network calls.
 | Does this extension comply with the Families Policy? | Yes |
 | Is the data encrypted in transit? | N/A — no data is transmitted |
 | Can users request data deletion? | N/A — no data is collected |
-| Is there a privacy policy URL? | _User must provide before submission_ |
+| Is there a privacy policy URL? | `https://levosilimo.github.io/speed-watching/privacy-policy` |
 
 **Data-safety note:** "content from the browser" is Yes because the
 extension reads caption and speech-rate data from the active video page.
