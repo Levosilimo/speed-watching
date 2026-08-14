@@ -15,7 +15,7 @@
 //
 // Run: bun run e2e:firefox
 
-import { homedir } from 'node:os';
+import { homedir, tmpdir } from 'node:os';
 import { existsSync, readdirSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -68,7 +68,7 @@ function findFirefox(): string {
       '  # or the official build:\n' +
       '  mkdir -p ~/.cache/firefox && curl -L https://download.mozilla.org/?product=firefox-latest&os=linux64&lang=en-US | tar -xj -C ~/.cache/firefox --strip-components=1\n' +
       '  # then: FIREFOX_BIN=~/.cache/firefox/firefox bun run e2e:firefox\n' +
-      '  # (CI uses the Mozilla APT repo instead; see .github/workflows/ci.yml)',
+      '  # (CI installs the Playwright build; see .github/workflows/ci.yml)',
   );
 }
 
@@ -83,6 +83,13 @@ async function main(): Promise<void> {
   const server = await createFixtureServer(0);
   const binary = findFirefox();
   console.log(`firefox binary: ${binary}`);
+  // First launch of a fresh Firefox is slow (profile init) and can exceed
+  // geckodriver's MarionetteActivePort read window; launch once headless so
+  // that work is done before the driver starts.
+  spawnSync(binary, ['--headless', '--screenshot', join(tmpdir(), 'sw-preheat.png'), 'about:blank'], {
+    stdio: 'ignore',
+    timeout: 60_000,
+  });
   console.log(`fixture server: ${server.baseUrl}`);
 
   const geckodriver = await startGeckodriver({ port: GECKODRIVER_PORT });
