@@ -69,6 +69,13 @@ let autoState: 'pending' | 'auto' | 'stopped' = 'pending';
 /** How the current rate got applied — rides into the pill as applied. */
 let appliedSource: AppliedSource = 'none';
 
+/** Navigation epoch: bumped by every video reset (onNavigationStart) so an
+ * in-flight measure that began before the reset cannot render — or
+ * auto-apply — after it. The stale measure's recommendation belongs to the
+ * old video; without the guard it would apply the old multiplier to the new
+ * video and set autoState='auto', blocking the fresh measure's apply. */
+let epoch = 0;
+
 // Time-saved session (lib/time-saved.ts): the tracker counts wall time at
 // the applied rate; the pill shows the accumulated saved seconds of the
 // current video (null before apply, while paused, or while the rate
@@ -166,6 +173,7 @@ export default defineContentScript({
 });
 
 function onNavigationStart(): void {
+  epoch += 1;
   current = null;
   activeVideo = null;
   savedTracker.detach();
@@ -195,6 +203,7 @@ function measure(): void {
 }
 
 async function measureOnce(): Promise<void> {
+  const startedAt = epoch;
   const response = await waitForPlayerResponse();
   if (!response) {
     if (__E2E__) console.info('[speed-watcher] wpm: player response never appeared');
@@ -213,13 +222,13 @@ async function measureOnce(): Promise<void> {
   const language = resolveLanguage(track?.languageCode) ?? undefined;
   if (track === undefined) {
     if (__E2E__) console.info('[speed-watcher] wpm: no caption tracks for this video — estimated');
-    void showEstimatedPill(videoId, settings, site, undefined, response.videoDetails);
+    void showEstimatedPill(videoId, settings, site, undefined, response.videoDetails, startedAt);
     return;
   }
   const json = await fetchCaptions(track, videoId);
   if (json === null) {
     if (__E2E__) console.info('[speed-watcher] wpm: caption fetch failed — estimated');
-    void showEstimatedPill(videoId, settings, site, language, response.videoDetails);
+    void showEstimatedPill(videoId, settings, site, language, response.videoDetails, startedAt);
     return;
   }
   const { words, cues } = parseYouTubeJson3(json);
@@ -242,14 +251,14 @@ async function measureOnce(): Promise<void> {
     if (__E2E__) {
       console.info(`[speed-watcher] video=${videoId} kind=${kind} lang=${lang}: captions parsed but empty — estimated`);
     }
-    void showEstimatedPill(videoId, settings, site, language, response.videoDetails);
+    void showEstimatedPill(videoId, settings, site, language, response.videoDetails, startedAt);
     return;
   }
 
   const naturalRate =
     kind === 'asr' ? filteredTokensOverTrimmedSpan(cues, language) : manualCueRate(cues, language);
   if (naturalRate === null) {
-    void showEstimatedPill(videoId, settings, site, language, response.videoDetails);
+    void showEstimatedPill(videoId, settings, site, language, response.videoDetails, startedAt);
     return;
   }
   // Auto-detect the register from the measured signal; the user/site
@@ -261,7 +270,7 @@ async function measureOnce(): Promise<void> {
   if (detectMusic(cues, naturalRate)) detected = 'music';
   const contentType = resolveContentType(settings, site, detected);
   const { tier, wordInputs } = asrTierInputs(kind, words, cues);
-  renderRecommendation(videoId, naturalRate, tier, contentType, settings, site, wordInputs, language);
+  renderRecommendation(videoId, naturalRate, tier, contentType, settings, site, wordInputs, language, startedAt);
   rememberChannelRate(response.videoDetails, naturalRate, language);
 }
 
@@ -274,10 +283,11 @@ async function showEstimatedPill(
   site: string,
   language?: LanguageModel,
   videoDetails?: PlayerResponse['videoDetails'],
+  startedAt?: number,
 ): Promise<void> {
   const contentType = resolveContentType(settings, site, 'generic');
   const seeded = await channelSeededRate(videoDetails, language);
-  renderRecommendation(videoId, seeded ?? priorMidpoint(contentType, language), 'estimated', contentType, settings, site, null, language);
+  renderRecommendation(videoId, seeded ?? priorMidpoint(contentType, language), 'estimated', contentType, settings, site, null, language, startedAt);
   // Demand proxy (Phase-2 STT gate): one local count per estimated render.
   // Best-effort like logAction — a dead bridge must not suppress the pill.
   void bridge
@@ -294,7 +304,11 @@ function renderRecommendation(
   site: string,
   wordInputs?: { articulatoryWpm: number; timingCoverageOk: boolean } | null,
   language?: LanguageModel,
+  startedAt?: number,
 ): void {
+  // The video reset while this measure was in flight (navigation epoch):
+  // the recommendation belongs to the old video — render nothing.
+  if (startedAt !== undefined && epoch !== startedAt) return;
   const platformMax = resolvePlatformMax(settings, site);
   const recommendation = recommend({
     naturalRate,

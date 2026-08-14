@@ -28,7 +28,7 @@ import {
 } from '../shared/specs';
 import { FIXTURE_PORT } from '../server';
 import type { RateTier } from '../../lib/recommend';
-import type { Settings } from '../../lib/settings';
+import { defaultSettings, type Settings } from '../../lib/settings';
 
 const extensionPath = resolve('.output/chrome-mv3-e2e');
 const fixtureBase = `http://127.0.0.1:${FIXTURE_PORT}`;
@@ -395,6 +395,84 @@ test('measure race: a slow in-flight measure cannot overwrite a newer one', asyn
       `measure race: final pill ${state?.mode}/${state?.reason}/${state?.multiplier}, ` +
         `expected ${rec.mode}/${rec.reason}/${rec.multiplier} (stale measure must not win)`,
     );
+  }
+});
+
+test('auto-apply race: a stale in-flight measure never applies; the fresh measure auto-applies', async () => {
+  // The navigation epoch (E2): onNavigationStart resets autoState but cannot
+  // cancel an in-flight measure. Without the guard the stale measure's
+  // renderRecommendation auto-applies the OLD video's multiplier (manual-cue
+  // 1.4) and sets autoState='auto', which blocks the fresh ja measure's
+  // correct apply (0.9).
+  await driver.navigateToWatch('real/manual-cue.json');
+  await driver.readPillState();
+  try {
+    await driver.writeSettings({
+      ...defaultSettings(),
+      contentType: 'talk',
+      autoApply: { enabled: true, contentTypes: {} },
+    });
+    // Measure 1 reads the manual-cue response, but its caption fetch is
+    // delayed; the player response is swapped to ja before it lands.
+    await page.evaluate(() => {
+      const realFetch = window.fetch.bind(window);
+      let delayed = false;
+      window.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = input instanceof URL ? input.href : typeof input === 'string' ? input : input.url;
+        if (!delayed && url.includes('/api/timedtext')) {
+          delayed = true;
+          return new Promise<Response>((resolve, reject) => {
+            setTimeout(() => {
+              realFetch(input, init).then(resolve, reject);
+            }, 1500);
+          });
+        }
+        return realFetch(input, init);
+      };
+    });
+    await page.evaluate(() => {
+      document.dispatchEvent(new Event('yt-navigate-start'));
+      document.dispatchEvent(new Event('yt-navigate-finish'));
+    });
+    const jaResponse = {
+      videoDetails: { videoId: 'e2e-fixture', title: 'E2E fixture: synthetic/ja-captions.json' },
+      captions: {
+        playerCaptionsTracklistRenderer: {
+          captionTracks: [
+            { baseUrl: '/api/timedtext?fixture=synthetic/ja-captions.json', languageCode: 'ja' },
+          ],
+        },
+      },
+    };
+    await page.evaluate((response) => {
+      window.ytInitialPlayerResponse = response;
+      document.dispatchEvent(new Event('yt-navigate-start'));
+      document.dispatchEvent(new Event('yt-navigate-finish'));
+    }, jaResponse);
+    // Both measures landed; the stale one must not have applied its
+    // multiplier — the queued fresh measure auto-applies the ja one.
+    await driver.sleep(2500);
+    const state = await driver.readPillState();
+    const { rec } = expectedRecommendation('synthetic/ja-captions.json');
+    if (
+      state === null ||
+      state.applied !== 'auto' ||
+      state.mode !== rec.mode ||
+      Math.abs(state.multiplier - rec.multiplier) > 1e-9
+    ) {
+      throw new Error(
+        `auto-apply race: pill ${state?.mode}/${state?.applied}/${state?.multiplier}, ` +
+          `expected ${rec.mode}/auto/${rec.multiplier} (stale measure must not set autoState)`,
+      );
+    }
+    const rate = await driver.readPlaybackRate();
+    if (rate === null || Math.abs(rate - rec.multiplier) > 0.01) {
+      throw new Error(
+        `auto-apply race: playbackRate ${rate}, expected ${rec.multiplier} (fresh measure's multiplier, not the stale one's)`,
+      );
+    }
+  } finally {
+    await driver.writeSettings(defaultSettings());
   }
 });
 

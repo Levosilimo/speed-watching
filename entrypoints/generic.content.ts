@@ -80,6 +80,10 @@ let pillState: PillState | null = null;
 let autoState: 'pending' | 'auto' | 'stopped' = 'pending';
 /** How the current rate got applied — rides into the pill as applied. */
 let appliedSource: AppliedSource = 'none';
+/** Video-swap epoch: bumped by every video reset so an in-flight measure
+ * cannot render — or auto-apply — for the video it measured after the swap
+ * (mirror of content.ts's navigation epoch). */
+let epoch = 0;
 let observerTimer: ReturnType<typeof setTimeout> | null = null;
 let hasSeenVideo = false;
 const reapplier = new RateReapplier();
@@ -179,6 +183,7 @@ function handleVideoMutations(): void {
     savedSec = null;
     savedMultiplier = null;
     current = null;
+    epoch += 1;
     autoState = 'pending';
     appliedSource = 'none';
     return;
@@ -188,6 +193,7 @@ function handleVideoMutations(): void {
     savedTracker.detach();
     savedSec = null;
     savedMultiplier = null;
+    epoch += 1;
     autoState = 'pending';
     appliedSource = 'none';
     void measure();
@@ -202,6 +208,7 @@ function onMediaEvent(event: Event): void {
     savedTracker.detach();
     savedSec = null;
     savedMultiplier = null;
+    epoch += 1;
     autoState = 'pending';
     appliedSource = 'none';
     void measure();
@@ -216,6 +223,7 @@ function measure(): void {
 }
 
 async function measureOnce(): Promise<void> {
+  const startedAt = epoch;
   const video = activeVideo ?? document.querySelector<HTMLVideoElement>('video');
   if (video === null) return;
   // Live streams have no finite rate target; suppress the pill like the
@@ -263,13 +271,13 @@ async function measureOnce(): Promise<void> {
       const contentType = resolveContentType(settings, site, detected);
       const { tier, wordInputs } = asrTierInputs(asr ? 'asr' : 'manual', harvest.words, harvest.cues);
       if (__E2E__) window.__speedwatcherCaptionTier = tier;
-      renderRecommendation(naturalRate, tier, contentType, settings, site, wordInputs, language);
+      renderRecommendation(naturalRate, tier, contentType, settings, site, wordInputs, language, startedAt);
       return;
     }
   }
   if (__E2E__) window.__speedwatcherCaptionTier = 'estimated';
   const contentType = resolveContentType(settings, site, 'generic');
-  renderRecommendation(priorMidpoint(contentType), 'estimated', contentType, settings, site);
+  renderRecommendation(priorMidpoint(contentType), 'estimated', contentType, settings, site, undefined, undefined, startedAt);
 }
 
 /** Resource-timeline URLs naming caption sources, waiting briefly for the
@@ -298,7 +306,11 @@ function renderRecommendation(
   site: string,
   wordInputs?: { articulatoryWpm: number; timingCoverageOk: boolean } | null,
   language?: LanguageModel,
+  startedAt?: number,
 ): void {
+  // The video swapped while this measure was in flight (video epoch): the
+  // recommendation belongs to the old video — render nothing.
+  if (startedAt !== undefined && epoch !== startedAt) return;
   const platformMax = resolvePlatformMax(settings, site);
   const recommendation = recommend({
     naturalRate,
