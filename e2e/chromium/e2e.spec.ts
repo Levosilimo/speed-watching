@@ -291,6 +291,31 @@ test('generic matcher harvests captions, applies, and re-asserts after a reset',
   await runGenericSpecs(driver);
 });
 
+test('applied generic playback accrues sw.timeSavedSec (time-saved metric)', async () => {
+  // The tracker flushes to the background store every 10 s and on detach, so
+  // the assertion reads around a fresh apply and forces the flush with a
+  // dismiss; the value lives in chrome.storage.local, reachable only from
+  // the extension (same read pattern as the demand test).
+  const readSaved = (): Promise<number> =>
+    serviceWorker.evaluate(async () => {
+      const items = await new Promise<Record<string, unknown>>((resolve) =>
+        chrome.storage.local.get('sw.timeSavedSec', (items) => resolve(items)),
+      );
+      const value = items['sw.timeSavedSec'];
+      return typeof value === 'number' && Number.isFinite(value) ? value : 0;
+    });
+
+  await driver.navigateToGeneric();
+  await driver.readPillState();
+  await driver.applyPill();
+  const before = await readSaved();
+  // The fixture video plays the silent webm at the applied rate; real
+  // timeupdate ticks accrue wall time during the sleep.
+  await driver.sleep(4500);
+  await driver.dismissPill(); // detach flushes the accrued tail to the store
+  await expect.poll(async () => readSaved(), { timeout: 10_000 }).toBeGreaterThan(before);
+});
+
 test('multi-video page: Apply targets the video that actually plays', async () => {
   await runMultiVideoSpecs(driver);
 });
