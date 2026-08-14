@@ -23,10 +23,12 @@
 // Ceilings on target-only entries apply the ≈1.03 target:ceiling ratio of
 // the researched pairs. Priors (estimated-tier natural-rate ranges) scale
 // the English generic-prior ratio (0.52–0.76 × target) to each target;
-// ru/uk are the exception — their per-register priors (registerPriors) are
-// Russian rate data, not ratio-scaled: ru's are corpus-measured (2026-08,
-// docs/phase0-russian-corpus.md), uk's copy them (see the ru/uk row
-// comment and docs/languages.md).
+// ru/uk/pl/cs are the exceptions — their priors are corpus-measured
+// (docs/phase0-russian-corpus.md, docs/phase0-slavic-corpus.md): ru's
+// per-register priors (registerPriors) are the gathered Russian rate norms
+// validated by a 16-video corpus; uk's lecture/talk bands are measured
+// (its news/podcast/explainer registers retain the ru-copied bands); pl/cs
+// keep their ratio-scaled generic band, corpus-validated in place.
 // syllable-per-word factors (ar 2.0, id/ms/tl 1.5) are typological
 // approximations, documented as such; the multiplier itself is
 // factor-invariant (target and rate share the unit), so only the displayed
@@ -52,8 +54,9 @@ export interface LanguageModel {
   /** Estimated-tier natural-rate range, in `unit`. */
   priors: { min: number; max: number };
   /** Evidence tier of the priors: 'corpus' = measured natural-rate corpus,
-   * absent = literature-sourced. Only ru carries 'corpus' (2026-08
-   * phase0-russian-corpus); every other language stays literature. */
+   * absent = literature-sourced. ru (2026-08 phase0-russian-corpus) and
+   * uk/pl/cs (2026-08 phase0-slavic-corpus) carry 'corpus'; every other
+   * language stays literature. */
   priorsSource?: 'literature' | 'corpus';
   /** Per-register estimated-tier ranges, in `unit` (detectContentType's
    * bands and priorRange's register lookup). The generic entry mirrors
@@ -91,6 +94,9 @@ export const LANGUAGES: Record<string, LanguageModel> = {
   // ru's priors are now corpus-measured (docs/phase0-russian-corpus.md,
   // 2026-08: 16-video ru:asr corpus, per-register medians inside the ±20%
   // windows; the Kazabeeva/Stepanova/Krivnova norms stay as corroboration).
+  // uk's lecture/talk bands are its own 2026-08 measurements
+  // (docs/phase0-slavic-corpus.md, median ± 20 wpm); its news/podcast/
+  // explainer registers are unmeasured and keep the ru-copied bands.
   // The 180 ceiling keeps ~3.5% headroom above the fast band.
   ru: {
     code: 'ru',
@@ -117,18 +123,19 @@ export const LANGUAGES: Record<string, LanguageModel> = {
     ceiling: 180,
     tokenizerMode: 'words',
     derived: true,
-    priors: { min: 105, max: 145 },
+    priorsSource: 'corpus',
+    priors: { min: 120, max: 160 },
     registerPriors: {
       news: { min: 120, max: 150 },
       podcast: { min: 100, max: 140 },
-      lecture: { min: 95, max: 135 },
+      lecture: { min: 110, max: 150 },
       explainer: { min: 100, max: 140 },
-      talk: { min: 100, max: 140 },
-      generic: { min: 105, max: 145 },
+      talk: { min: 140, max: 180 },
+      generic: { min: 120, max: 160 },
     },
   },
-  pl: { code: 'pl', unit: 'wpm', target: 185, ceiling: 200, tokenizerMode: 'words', derived: true, priors: { min: 96, max: 141 } },
-  cs: { code: 'cs', unit: 'wpm', target: 185, ceiling: 200, tokenizerMode: 'words', derived: true, priors: { min: 96, max: 141 } },
+  pl: { code: 'pl', unit: 'wpm', target: 185, ceiling: 200, tokenizerMode: 'words', derived: true, priorsSource: 'corpus', priors: { min: 96, max: 141 } },
+  cs: { code: 'cs', unit: 'wpm', target: 185, ceiling: 200, tokenizerMode: 'words', derived: true, priorsSource: 'corpus', priors: { min: 96, max: 141 } },
   sr: { code: 'sr', unit: 'wpm', target: 185, ceiling: 200, tokenizerMode: 'words', derived: true, priors: { min: 96, max: 141 } },
 };
 

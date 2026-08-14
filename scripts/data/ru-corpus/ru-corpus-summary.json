@@ -103,69 +103,144 @@
   },
   {
     "language": "uk",
-    "records": 4,
+    "records": 6,
     "classification": {
-      "web-ok": 4
+      "web-ok": 6
     },
-    "asrBearing": 4,
+    "asrBearing": 6,
     "g1": {
-      "webOk": 4,
-      "anyPath": 4,
+      "webOk": 6,
+      "anyPath": 6,
       "pass": true
     },
     "g2": {
       "registers": {
         "lecture": {
-          "n": 2,
-          "median": 134.9621773510499,
-          "bandMin": 92,
-          "bandMax": 138,
-          "bandMid": 115,
-          "inBandFraction": 0.5,
+          "n": 3,
+          "median": 130.515800758981,
+          "bandMin": 104,
+          "bandMax": 156,
+          "bandMid": 130,
+          "inBandFraction": 0.6666666666666666,
           "status": "pass"
         },
         "talk": {
-          "n": 2,
-          "median": 160.29103604808256,
-          "bandMin": 96,
-          "bandMax": 144,
-          "bandMid": 120,
-          "inBandFraction": 0,
-          "status": "fail"
+          "n": 3,
+          "median": 161.85850957906075,
+          "bandMin": 128,
+          "bandMax": 192,
+          "bandMid": 160,
+          "inBandFraction": 1,
+          "status": "pass"
         }
       },
-      "pass": false
+      "pass": true
     },
     "g3": {
-      "n": 4,
+      "n": 6,
       "median": 0.46274556971261277,
-      "maxDeltaPct": 0.6149456388055295,
+      "maxDeltaPct": 0.831353919239905,
       "violations": [],
       "pass": true
     },
     "g4": {
-      "rows": 4,
+      "rows": 6,
       "falseRows": [],
       "pass": true
     },
     "g5": {
-      "n": 4,
+      "n": 6,
       "median": -47.71582517086614
     },
     "confusion": {
       "lecture": {
-        "news": 1,
-        "generic": 1
+        "generic": 3
       },
       "talk": {
-        "generic": 2
+        "generic": 3
       }
     },
-    "verdict": "addendum-measured",
-    "note": "uk ASR only; ru-broadcasting uk-topic channels classify wrong-lang"
+    "verdict": "corpus-validated",
+    "note": null
   },
   {
     "language": "pl",
+    "records": 7,
+    "classification": {
+      "web-ok": 7
+    },
+    "asrBearing": 7,
+    "g1": {
+      "webOk": 7,
+      "anyPath": 7,
+      "pass": true
+    },
+    "g2": {
+      "registers": {
+        "news": {
+          "n": 2,
+          "median": 132.76155093251245,
+          "bandMin": 94.80000000000001,
+          "bandMax": 142.2,
+          "bandMid": 118.5,
+          "inBandFraction": 1,
+          "status": "pass"
+        },
+        "lecture": {
+          "n": 3,
+          "median": 104.94946877429386,
+          "bandMin": 94.80000000000001,
+          "bandMax": 142.2,
+          "bandMid": 118.5,
+          "inBandFraction": 1,
+          "status": "pass"
+        },
+        "podcast": {
+          "n": 2,
+          "median": 140.97162758177876,
+          "bandMin": 94.80000000000001,
+          "bandMax": 142.2,
+          "bandMid": 118.5,
+          "inBandFraction": 0.5,
+          "status": "pass"
+        }
+      },
+      "pass": true
+    },
+    "g3": {
+      "n": 7,
+      "median": 0.02835270768358378,
+      "maxDeltaPct": 0.07748934521503294,
+      "violations": [],
+      "pass": true
+    },
+    "g4": {
+      "rows": 7,
+      "falseRows": [],
+      "pass": true
+    },
+    "g5": {
+      "n": 7,
+      "median": -61.69384974488632
+    },
+    "confusion": {
+      "news": {
+        "generic": 1,
+        "news": 1
+      },
+      "lecture": {
+        "generic": 3
+      },
+      "podcast": {
+        "generic": 1,
+        "news": 1
+      }
+    },
+    "verdict": "corpus-validated",
+    "note": null
+  },
+  {
+    "language": "cs",
     "records": 4,
     "classification": {
       "web-ok": 4
@@ -179,30 +254,30 @@
     "g2": {
       "registers": {
         "news": {
-          "n": 1,
-          "median": 128.23184472606556,
+          "n": 2,
+          "median": 128.70569153108238,
           "bandMin": 94.80000000000001,
           "bandMax": 142.2,
           "bandMid": 118.5,
-          "inBandFraction": 1,
-          "status": "underpowered"
+          "inBandFraction": 0.5,
+          "status": "pass"
         },
         "lecture": {
-          "n": 3,
-          "median": 104.94946877429386,
+          "n": 2,
+          "median": 135.74254765515673,
           "bandMin": 94.80000000000001,
           "bandMax": 142.2,
           "bandMid": 118.5,
-          "inBandFraction": 1,
+          "inBandFraction": 0.5,
           "status": "pass"
         }
       },
-      "pass": false
+      "pass": true
     },
     "g3": {
       "n": 4,
-      "median": 0.01417635384179189,
-      "maxDeltaPct": 0.03873716831299632,
+      "median": 0.06547035473187565,
+      "maxDeltaPct": 0.11231748408835641,
       "violations": [],
       "pass": true
     },
@@ -213,17 +288,63 @@
     },
     "g5": {
       "n": 4,
-      "median": -84.07258486724662
+      "median": -52.79331555072821
     },
     "confusion": {
       "news": {
-        "generic": 1
+        "generic": 2
       },
       "lecture": {
-        "generic": 3
+        "generic": 2
       }
     },
-    "verdict": "underpowered",
+    "verdict": "corpus-validated",
     "note": null
+  },
+  {
+    "language": "sr",
+    "records": 2,
+    "classification": {
+      "no-track": 2
+    },
+    "asrBearing": 0,
+    "g1": {
+      "webOk": 0,
+      "anyPath": 0,
+      "pass": false
+    },
+    "g2": {
+      "registers": {
+        "news": {
+          "n": 0,
+          "median": null,
+          "bandMin": 94.80000000000001,
+          "bandMax": 142.2,
+          "bandMid": 118.5,
+          "inBandFraction": null,
+          "status": "underpowered"
+        }
+      },
+      "pass": false
+    },
+    "g3": {
+      "n": 0,
+      "median": null,
+      "maxDeltaPct": null,
+      "violations": [],
+      "pass": true
+    },
+    "g4": {
+      "rows": 0,
+      "falseRows": [],
+      "pass": true
+    },
+    "g5": {
+      "n": 0,
+      "median": null
+    },
+    "confusion": {},
+    "verdict": "stays-derived",
+    "note": "sr availability probe: no sr ASR tracks (not on YouTube's ASR language list); structural fail recorded"
   }
 ]
