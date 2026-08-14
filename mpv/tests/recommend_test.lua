@@ -1,0 +1,110 @@
+-- Unit tests for mpv/rate.lua recommend(): rounding, clamps, modes.
+-- Run with: lua5.1 mpv/tests/recommend_test.lua
+
+local script_dir = debug.getinfo(1, "S").source:match("^@(.*)/[^/]*$")
+package.path = package.path .. ";" .. script_dir .. "/?.lua;" .. script_dir .. "/../?.lua"
+
+local harness = require("harness")
+local rate = require("rate")
+
+local assert_eq = harness.assert_eq
+local assert_close = harness.assert_close
+
+harness.run("recommend: round to 0.05 step", function()
+  local rec = rate.recommend(160, "estimated", 250, 275, 8)
+  assert_close(rec.multiplier, 1.55, 1e-9, "1.5625 rounds to 1.55")
+  assert_close(rec.effective_wpm, 248, 1e-9, "effective rate")
+  assert_eq(rec.mode, "recommend", "mode")
+  assert_eq(rec.reason, nil, "no warning")
+  assert_eq(rec.label, "→ 1.55x ≈ 248 wpm", "label")
+end)
+
+harness.run("recommend: exact step", function()
+  local rec = rate.recommend(156.25, "estimated", 250, 275, 8)
+  assert_close(rec.multiplier, 1.6, 1e-9, "exact 1.6")
+  assert_close(rec.effective_wpm, 250, 1e-9, "effective lands on target")
+  assert_eq(rec.label, "→ 1.6x ≈ 250 wpm", "label")
+end)
+
+harness.run("recommend: manual-cue clamp to 1.5", function()
+  local rec = rate.recommend(100, "manual-cue", 250, 275, 8)
+  assert_close(rec.multiplier, 1.5, 1e-9, "2.5 clamps to 1.5")
+  assert_close(rec.effective_wpm, 150, 1e-9, "effective rate")
+  assert_eq(rec.mode, "warning", "clamp misses target")
+  assert_eq(rec.reason, "capped-below", "capped-below reason")
+  assert_eq(rec.label, "→ 1.5x ≈ 150 wpm (capped below safe zone)", "label")
+end)
+
+harness.run("recommend: other tiers skip the manual clamp", function()
+  local rec = rate.recommend(100, "estimated", 250, 275, 8)
+  assert_close(rec.multiplier, 2.5, 1e-9, "2.5 kept")
+  assert_eq(rec.mode, "recommend", "mode")
+  assert_eq(rec.label, "→ 2.5x ≈ 250 wpm", "label")
+end)
+
+harness.run("recommend: platform_max clamp", function()
+  local rec = rate.recommend(32, "estimated", 250, 275, 8)
+  assert_close(rec.multiplier, 7.8, 1e-9, "7.8125 rounds to 7.8")
+  assert_close(rec.effective_wpm, 249.6, 1e-9, "effective rate")
+  assert_eq(rec.mode, "recommend", "clamp at platform max is not a warning")
+  assert_eq(rec.label, "→ 7.8x ≈ 250 wpm", "label")
+end)
+
+harness.run("recommend: slow-down floor", function()
+  local rec = rate.recommend(700, "estimated", 250, 275, 8)
+  assert_close(rec.multiplier, 0.5, 1e-9, "0.35 floors to 0.5")
+  assert_close(rec.effective_wpm, 350, 1e-9, "effective rate")
+  assert_eq(rec.mode, "warning", "crosses the ceiling")
+  assert_eq(rec.reason, "above-zone", "above-zone outranks the clamp")
+  assert_eq(rec.label, "→ 0.5x ≈ 350 wpm", "label")
+end)
+
+harness.run("recommend: floor boundary lands exactly on target", function()
+  local rec = rate.recommend(500, "estimated", 250, 275, 8)
+  assert_close(rec.multiplier, 0.5, 1e-9, "0.5 kept")
+  assert_close(rec.effective_wpm, 250, 1e-9, "effective on target")
+  assert_eq(rec.mode, "recommend", "clamp that reaches the target is not a warning")
+  assert_eq(rec.label, "→ 0.5x ≈ 250 wpm", "label")
+end)
+
+harness.run("recommend: unreachable mode", function()
+  local rec = rate.recommend(25, "manual-cue", 250, 275, 8)
+  assert_close(rec.multiplier, 8, 1e-9, "platform max")
+  assert_close(rec.effective_wpm, 200, 1e-9, "effective rate")
+  assert_eq(rec.mode, "unreachable", "mode")
+  assert_eq(rec.reason, nil, "no reason")
+  assert_eq(rec.label, "safe zone unreachable — 8x ≈ 200 wpm", "label")
+end)
+
+harness.run("recommend: above-zone with tight ceiling", function()
+  local rec = rate.recommend(200, "estimated", 250, 240, 8)
+  assert_close(rec.multiplier, 1.25, 1e-9, "multiplier")
+  assert_close(rec.effective_wpm, 250, 1e-9, "effective rate")
+  assert_eq(rec.mode, "warning", "mode")
+  assert_eq(rec.reason, "above-zone", "reason")
+end)
+
+harness.run("recommend: platform_max below the floor", function()
+  local rec = rate.recommend(1000, "estimated", 250, 275, 0.4)
+  assert_close(rec.multiplier, 0.4, 1e-9, "floor yields to platform max")
+  assert_close(rec.effective_wpm, 400, 1e-9, "effective rate")
+  assert_eq(rec.mode, "warning", "mode")
+  assert_eq(rec.reason, "above-zone", "reason")
+  assert_eq(rec.label, "→ 0.4x ≈ 400 wpm", "label")
+end)
+
+harness.run("recommend: unit label", function()
+  local rec = rate.recommend(160, "estimated", 250, 275, 8, "syl/min")
+  assert_eq(rec.label, "→ 1.55x ≈ 248 syl/min", "custom unit in label")
+  local rec_default = rate.recommend(160, "estimated", 250, 275, 8)
+  assert_eq(rec_default.label, "→ 1.55x ≈ 248 wpm", "default unit is wpm")
+end)
+
+harness.run("recommend: manual-cue clamp not hit", function()
+  local rec = rate.recommend(200, "manual-cue", 250, 275, 8)
+  assert_close(rec.multiplier, 1.25, 1e-9, "1.25 under the clamp")
+  assert_eq(rec.mode, "recommend", "no clamp, no warning")
+  assert_eq(rec.reason, nil, "no reason")
+end)
+
+harness.finish()
