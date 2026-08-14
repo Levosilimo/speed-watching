@@ -115,6 +115,16 @@ async function buildGraph(
   return { context, node, source };
 }
 
+/** Wires the worklet port: pushes posted Float32Array chunks into the ring
+ * and starts the port. */
+function wireWorklet(node: AudioWorkletNode, ring: RingBuffer): void {
+  node.port.onmessage = (event: MessageEvent) => {
+    // The worklet posts only Float32Arrays; anything else is not ours.
+    if (event.data instanceof Float32Array) ring.push(event.data);
+  };
+  node.port.start();
+}
+
 export function createAudioRecorder(env: AudioRecorderEnv, hooks: AudioRecorderHooks) {
   // Same stop-race discipline as lib/audio-capture.ts (SEC-5): every stop()
   // bumps the generation, so an in-flight start whose async setup is still
@@ -135,11 +145,7 @@ export function createAudioRecorder(env: AudioRecorderEnv, hooks: AudioRecorderH
     ring.clear();
     try {
       const { context, node, source } = await buildGraph(env, stream);
-      node.port.onmessage = (event: MessageEvent) => {
-        // The worklet posts only Float32Arrays; anything else is not ours.
-        if (event.data instanceof Float32Array) ring.push(event.data);
-      };
-      node.port.start();
+      wireWorklet(node, ring);
       if (startedAt !== generation) {
         // A stop() landed during setup: discard the fresh graph so the
         // recorder cannot outlive the stop (tab-switch race).

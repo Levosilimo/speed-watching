@@ -8,7 +8,7 @@
 // aislop-ignore-file console-leftover, file-too-large
 import { defineContentScript } from 'wxt/utils/define-content-script';
 import { fetchAndroidCaptions, fetchJson3 } from '@/lib/caption-fetch';
-import { parseYouTubeJson3 } from '@/lib/captions';
+import { parseYouTubeJson3, type Segment } from '@/lib/captions';
 import { cueSignal, detectContentType, priorMidpoint } from '@/lib/heuristics';
 import { resolveLanguage, UNIT_LABELS, type LanguageModel, type RateRange } from '@/lib/languages';
 import { logWpm, waitForPlayerResponse } from '@/lib/measure-hooks';
@@ -251,6 +251,64 @@ function measure(): void {
   measureRunner.run(measureOnce);
 }
 
+/** Track resolution + web/android fetch + json3 parse. On failure carries
+ * the resolved language (undefined only for the no-track case) for the
+ * estimated pill, and logs the reason — the caller dispatches. */
+async function fetchAndParseCaptions(
+  response: PlayerResponse,
+  videoId: string,
+): Promise<
+  | { ok: true; words: Segment[]; cues: Segment[]; track: CaptionTrack; language: LanguageModel | undefined }
+  | { ok: false; language: LanguageModel | undefined }
+> {
+  const track = response.captions?.playerCaptionsTracklistRenderer?.captionTracks?.[0];
+  const language = resolveLanguage(track?.languageCode) ?? undefined;
+  if (track === undefined) {
+    if (__E2E__) console.info('[speed-watcher] wpm: no caption tracks for this video — estimated');
+    return { ok: false, language: undefined };
+  }
+  const json = await fetchCaptions(track, videoId);
+  if (json === null) {
+    if (__E2E__) console.info('[speed-watcher] wpm: caption fetch failed — estimated');
+    return { ok: false, language };
+  }
+  const { words, cues } = parseYouTubeJson3(json);
+  return { ok: true, words, cues, track, language };
+}
+
+/** The 3-branch measurement log (word-level when the payload carries per-
+ * word timings, cue-level otherwise); false when the captions parsed empty,
+ * which routes the caller to the estimated path. */
+function logMeasuredWpm(
+  videoId: string,
+  kind: string,
+  lang: string,
+  words: Segment[],
+  cues: Segment[],
+): boolean {
+  if (words.length >= 2) {
+    logWpm(videoId, kind, lang, {
+      word: wordLevelWpm(words),
+      cue: cueLevelWpm(cues),
+      corrected: correctedCueLevelWpm(cues),
+      nWords: totalWords(words),
+    });
+    return true;
+  }
+  if (cues.length > 0) {
+    logWpm(videoId, kind, lang, {
+      cue: cueLevelWpm(cues),
+      corrected: correctedCueLevelWpm(cues),
+      nWords: totalWords(cues),
+    });
+    return true;
+  }
+  if (__E2E__) {
+    console.info(`[speed-watcher] video=${videoId} kind=${kind} lang=${lang}: captions parsed but empty — estimated`);
+  }
+  return false;
+}
+
 async function measureOnce(): Promise<void> {
   const startedAt = epoch;
   const response = await waitForPlayerResponse();
@@ -267,43 +325,19 @@ async function measureOnce(): Promise<void> {
   const settings = await loadSettings();
   // Options-page overrides key on the bare hostname ('youtube.com').
   const site = location.hostname.replace(/^www\./, '');
-  const track = response.captions?.playerCaptionsTracklistRenderer?.captionTracks?.[0];
-  const language = resolveLanguage(track?.languageCode) ?? undefined;
-  if (track === undefined) {
-    if (__E2E__) console.info('[speed-watcher] wpm: no caption tracks for this video — estimated');
-    void showEstimatedPill(videoId, settings, site, undefined, response.videoDetails, startedAt);
+  const parsed = await fetchAndParseCaptions(response, videoId);
+  if (!parsed.ok) {
+    void showEstimatedPill(videoId, settings, site, parsed.language, response.videoDetails, startedAt);
     return;
   }
-  const json = await fetchCaptions(track, videoId);
-  if (json === null) {
-    if (__E2E__) console.info('[speed-watcher] wpm: caption fetch failed — estimated');
-    void showEstimatedPill(videoId, settings, site, language, response.videoDetails, startedAt);
-    return;
-  }
-  const { words, cues } = parseYouTubeJson3(json);
+  const { words, cues, track, language } = parsed;
   // Chapter markers ride the page's ytInitialData (not the player response);
   // absent → null and the feature stays off for this video.
   chapterRates = null; // any earlier plan belongs to a previous measure
   const chapters = chaptersOf(window.ytInitialData);
   const kind = track.kind ?? 'manual';
   const lang = track.languageCode ?? '?';
-  if (words.length >= 2) {
-    logWpm(videoId, kind, lang, {
-      word: wordLevelWpm(words),
-      cue: cueLevelWpm(cues),
-      corrected: correctedCueLevelWpm(cues),
-      nWords: totalWords(words),
-    });
-  } else if (cues.length > 0) {
-    logWpm(videoId, kind, lang, {
-      cue: cueLevelWpm(cues),
-      corrected: correctedCueLevelWpm(cues),
-      nWords: totalWords(cues),
-    });
-  } else {
-    if (__E2E__) {
-      console.info(`[speed-watcher] video=${videoId} kind=${kind} lang=${lang}: captions parsed but empty — estimated`);
-    }
+  if (!logMeasuredWpm(videoId, kind, lang, words, cues)) {
     void showEstimatedPill(videoId, settings, site, language, response.videoDetails, startedAt);
     return;
   }

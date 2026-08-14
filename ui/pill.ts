@@ -3,9 +3,10 @@
 // closed roots hide their content and ARIA from the accessibility tree.
 // No chrome.* imports. The two lib imports are the i18n layer (display
 // strings) and the bridge client it uses to resolve the UI language.
-// The saved-time line (lib-13) pushed the file and createPill past the
-// reviewability budgets — suppressed like entrypoints/content.ts.
-// aislop-ignore-file file-too-large, function-too-long
+// The saved-time line (lib-13) pushed the file past the reviewability
+// budget — suppressed like entrypoints/content.ts; a reviewed exception,
+// not license to grow further.
+// aislop-ignore-file file-too-large
 
 import { DARK, LIGHT, type Theme } from './styles';
 import { pillCss } from './pill-css';
@@ -110,11 +111,17 @@ interface PillDom {
   chapterToggleBtn: HTMLButtonElement;
 }
 
-function buildDom(): PillDom {
-  const pill = document.createElement('div');
-  pill.className = 'pill';
-  pill.dataset.mode = 'hidden';
-
+/** The live-region line elements; buildDom appends the container first. */
+function buildMainText(): {
+  mainText: HTMLDivElement;
+  labelEl: HTMLSpanElement;
+  tierEl: HTMLSpanElement;
+  liveEl: HTMLSpanElement;
+  savedEl: HTMLSpanElement;
+  warningNote: HTMLDivElement;
+  firstRunEl: HTMLDivElement;
+  chapterStatusEl: HTMLSpanElement;
+} {
   const mainText = document.createElement('div');
   mainText.className = 'main-text';
   // Live region covers only the text: status regions announce atomically
@@ -149,6 +156,17 @@ function buildDom(): PillDom {
 
   mainText.append(labelEl, tierEl, liveEl, savedEl, warningNote, firstRunEl, chapterStatusEl);
 
+  return { mainText, labelEl, tierEl, liveEl, savedEl, warningNote, firstRunEl, chapterStatusEl };
+}
+
+/** The action buttons; buildDom appends the container second. */
+function buildActions(): {
+  actions: HTMLDivElement;
+  applyBtn: HTMLButtonElement;
+  dismissBtn: HTMLButtonElement;
+  stopAutoBtn: HTMLButtonElement;
+  chapterToggleBtn: HTMLButtonElement;
+} {
   const actions = document.createElement('div');
   actions.className = 'actions';
 
@@ -176,22 +194,20 @@ function buildDom(): PillDom {
   chapterToggleBtn.hidden = true;
 
   actions.append(applyBtn, dismissBtn, stopAutoBtn, chapterToggleBtn);
-  pill.append(mainText, actions);
 
-  return {
-    pill,
-    labelEl,
-    tierEl,
-    liveEl,
-    savedEl,
-    warningNote,
-    firstRunEl,
-    chapterStatusEl,
-    applyBtn,
-    dismissBtn,
-    stopAutoBtn,
-    chapterToggleBtn,
-  };
+  return { actions, applyBtn, dismissBtn, stopAutoBtn, chapterToggleBtn };
+}
+
+function buildDom(): PillDom {
+  const pill = document.createElement('div');
+  pill.className = 'pill';
+  pill.dataset.mode = 'hidden';
+
+  const mainText = buildMainText();
+  const actions = buildActions();
+  pill.append(mainText.mainText, actions.actions);
+
+  return { pill, ...mainText, ...actions };
 }
 
 /** The player area that hosted the pill — #movie_player on YouTube, else the
@@ -384,31 +400,20 @@ function renderFirstRun(dom: PillDom, state: PillState, locale: UiLocale): void 
   });
 }
 
-function render(
-  dom: PillDom,
-  state: PillState,
-  live: LiveRate | null,
-  saved: number | null,
-  locale: UiLocale,
-  destroyed: boolean,
-): void {
-  if (destroyed) return;
-
-  // Button strings live in render so a late locale resolution re-labels
-  // them (buildDom only supplies the structural defaults).
+/** Button strings + aria live here so a late locale resolution re-labels
+ * them (buildDom only supplies the structural defaults). */
+function renderActionLabels(dom: PillDom, locale: UiLocale): void {
   dom.applyBtn.textContent = t('pill.apply', locale);
   dom.applyBtn.setAttribute('aria-label', t('pill.applyAria', locale));
   dom.dismissBtn.setAttribute('aria-label', t('pill.dismissAria', locale));
+}
 
-  const mode = state.mode;
-
-  // Stop-auto button: only while the recommendation is showing AND this
-  // video's rate was applied automatically. In that state it is the undo
-  // affordance — 'Reset to {rate}×' restoring the pre-auto rate when the
-  // content script captured one, plain 'Stop auto' otherwise. Computed
-  // before the none early-return so a hide flips it back even when the
-  // surface goes dark.
-  const showStopAuto = state.applied === 'auto' && mode === 'recommend';
+/** Stop-auto button: only while the recommendation is showing AND this
+ * video's rate was applied automatically. In that state it is the undo
+ * affordance — 'Reset to {rate}×' restoring the pre-auto rate when the
+ * content script captured one, plain 'Stop auto' otherwise. */
+function renderStopAuto(dom: PillDom, state: PillState, locale: UiLocale): void {
+  const showStopAuto = state.applied === 'auto' && state.mode === 'recommend';
   dom.stopAutoBtn.hidden = !showStopAuto;
   if (showStopAuto) {
     const undo = state.undoRate !== undefined;
@@ -417,20 +422,28 @@ function render(
       : t('pill.stopAuto', locale);
     dom.stopAutoBtn.setAttribute('aria-label', undo ? t('pill.resetToAria', locale) : t('pill.stopAutoAria', locale));
   }
+}
 
-  // Chapter consent toggle: only when the page exposed chapter markers and
-  // the recommendation is actionable. aria-pressed mirrors the consent state.
+/** Chapter consent toggle: only when the page exposed chapter markers and
+ * the recommendation is actionable. aria-pressed mirrors the consent state. */
+function renderChapterToggle(dom: PillDom, state: PillState, locale: UiLocale): void {
   const showChapterToggle =
-    state.chaptersAvailable === true && (mode === 'recommend' || mode === 'warning');
+    state.chaptersAvailable === true && (state.mode === 'recommend' || state.mode === 'warning');
   dom.chapterToggleBtn.hidden = !showChapterToggle;
   if (showChapterToggle) {
     dom.chapterToggleBtn.textContent = t('pill.chapter.toggle', locale);
     dom.chapterToggleBtn.setAttribute('aria-label', t('pill.chapter.toggleAria', locale));
     dom.chapterToggleBtn.setAttribute('aria-pressed', state.autoAdjust === true ? 'true' : 'false');
   }
-  // Scheduler status line: while consent is on, the current segment's state
-  // (active / paused after a manual override / a music chapter at 1x).
-  const showChapterStatus = showChapterToggle && state.autoAdjust === true;
+}
+
+/** Scheduler status line: while consent is on, the current segment's state
+ * (active / paused after a manual override / a music chapter at 1x). */
+function renderChapterStatus(dom: PillDom, state: PillState, locale: UiLocale): void {
+  const showChapterStatus =
+    state.chaptersAvailable === true &&
+    (state.mode === 'recommend' || state.mode === 'warning') &&
+    state.autoAdjust === true;
   dom.chapterStatusEl.hidden = !showChapterStatus;
   if (showChapterStatus) {
     const statusKey =
@@ -441,6 +454,27 @@ function render(
           : 'pill.chapter.active';
     dom.chapterStatusEl.textContent = t(statusKey, locale);
   }
+}
+
+function render(
+  dom: PillDom,
+  state: PillState,
+  live: LiveRate | null,
+  saved: number | null,
+  locale: UiLocale,
+  destroyed: boolean,
+): void {
+  if (destroyed) return;
+
+  renderActionLabels(dom, locale);
+
+  const mode = state.mode;
+
+  // Stop-auto and the chapter affordances render before the none
+  // early-return so a hide flips them back even when the surface goes dark.
+  renderStopAuto(dom, state, locale);
+  renderChapterToggle(dom, state, locale);
+  renderChapterStatus(dom, state, locale);
 
   // Hide the live and saved lines outside recommend/warning, even in the
   // none branch below (the pill surface itself is invisible there, but the
@@ -508,6 +542,31 @@ async function resolvePillLocale(win: Window | null): Promise<UiLocale> {
   return resolveUiLanguage(setting, navigator.language);
 }
 
+/** Bridge round-trip for settings.uiLanguage; no-op when the caller pinned
+ * a locale. onResolved runs after the round-trip, so the caller guards
+ * against its own post-destroy/state drift. */
+function bootstrapLocale(
+  opts: PillOptions | undefined,
+  host: HTMLElement,
+  onResolved: (resolved: UiLocale) => void,
+): void {
+  if (opts?.locale !== undefined) return;
+  void resolvePillLocale(host.ownerDocument.defaultView).then(onResolved);
+}
+
+/** (prefers-color-scheme) listener that re-injects the stylesheet on theme
+ * change; returns a disposer. */
+function watchTheme(
+  doc: Document,
+  style: HTMLStyleElement,
+  onDark: (dark: boolean) => void,
+): () => void {
+  const mq = doc.defaultView?.matchMedia?.('(prefers-color-scheme: dark)');
+  const onChange = (e: MediaQueryListEvent): void => onDark(e.matches);
+  mq?.addEventListener('change', onChange);
+  return () => mq?.removeEventListener('change', onChange);
+}
+
 export function createPill(host: HTMLElement, events?: PillEvents, opts?: PillOptions): PillApi {
   const shadow = host.attachShadow({ mode: 'open' });
   let mounted = false;
@@ -523,22 +582,16 @@ export function createPill(host: HTMLElement, events?: PillEvents, opts?: PillOp
   let liveRate: LiveRate | null = null;
   let savedSec: number | null = null;
 
-  if (opts?.locale === undefined) {
-    void resolvePillLocale(host.ownerDocument.defaultView).then((resolved) => {
-      if (destroyed || resolved === locale) return;
-      locale = resolved;
-      if (currentState !== null) render(dom, currentState, liveRate, savedSec, locale, destroyed);
-    });
-  }
+  bootstrapLocale(opts, host, (resolved) => {
+    if (destroyed || resolved === locale) return;
+    locale = resolved;
+    if (currentState !== null) render(dom, currentState, liveRate, savedSec, locale, destroyed);
+  });
 
   // Detect theme from host's document or system
   const doc = host.ownerDocument;
-  const mq = doc.defaultView?.matchMedia?.('(prefers-color-scheme: dark)');
-  let dark = mq?.matches ?? false;
-
-  function theme(): Theme {
-    return dark ? DARK : LIGHT;
-  }
+  let dark = doc.defaultView?.matchMedia?.('(prefers-color-scheme: dark)')?.matches ?? false;
+  const theme = (): Theme => (dark ? DARK : LIGHT);
 
   const dom = buildDom();
 
@@ -548,13 +601,10 @@ export function createPill(host: HTMLElement, events?: PillEvents, opts?: PillOp
   shadow.append(style, dom.pill);
 
   wireEvents(dom, host, events, () => currentState);
-
-  // Theme listener
-  const onThemeChange = (e: MediaQueryListEvent): void => {
-    dark = e.matches;
+  const disposeTheme = watchTheme(doc, style, (isDark) => {
+    dark = isDark;
     style.textContent = pillCss(theme());
-  };
-  mq?.addEventListener('change', onThemeChange);
+  });
 
   return {
     mount() {
@@ -592,7 +642,7 @@ export function createPill(host: HTMLElement, events?: PillEvents, opts?: PillOp
       if (destroyed) return;
       destroyed = true;
       mounted = false;
-      mq?.removeEventListener('change', onThemeChange);
+      disposeTheme();
       shadow.innerHTML = '';
       host.innerHTML = '';
       // The host keeps its shadow root after destroy; a second attachShadow

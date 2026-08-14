@@ -19,6 +19,48 @@ interface AudioCaptureHooks {
   onError(message: string): void;
 }
 
+/** getUserMedia for the tab stream; null on failure after hooks.onError. */
+async function acquireStream(
+  env: AudioCaptureEnv,
+  streamId: string,
+  hooks: AudioCaptureHooks,
+): Promise<MediaStream | null> {
+  const audio: TabAudioConstraints = {
+    mandatory: { chromeMediaSource: 'tab', chromeMediaSourceId: streamId },
+  };
+  try {
+    return await env.getUserMedia({ video: false, audio });
+  } catch (error) {
+    hooks.onError(errorMessage(error));
+    return null;
+  }
+}
+
+/** AudioContext + analyser meter over the stream: samples every
+ * LEVEL_INTERVAL_MS into hooks.onLevel and watches the tracks for 'ended'.
+ * No destination: the analyser keeps the capture alive without re-playing
+ * the tab's audio, which would be audible and could feed back. */
+function buildMeter(
+  env: AudioCaptureEnv,
+  stream: MediaStream,
+  hooks: AudioCaptureHooks,
+  onTrackEnded: () => void,
+): { context: AudioContext; timer: ReturnType<typeof setInterval> } {
+  const context = new env.AudioContextCtor();
+  const source = context.createMediaStreamSource(stream);
+  const analyser = context.createAnalyser();
+  source.connect(analyser);
+  const samples = new Float32Array(analyser.fftSize);
+  for (const track of stream.getAudioTracks()) {
+    track.addEventListener('ended', onTrackEnded);
+  }
+  const timer = setInterval(() => {
+    analyser.getFloatTimeDomainData(samples);
+    hooks.onLevel(rmsLevel(samples));
+  }, LEVEL_INTERVAL_MS);
+  return { context, timer };
+}
+
 export function createAudioCapture(env: AudioCaptureEnv, hooks: AudioCaptureHooks) {
   let stream: MediaStream | null = null;
   let audioContext: AudioContext | null = null;
@@ -32,16 +74,8 @@ export function createAudioCapture(env: AudioCaptureEnv, hooks: AudioCaptureHook
   async function start(streamId: string): Promise<void> {
     const startedAt = generation;
     await teardownActive();
-    let acquired: MediaStream;
-    try {
-      const audio: TabAudioConstraints = {
-        mandatory: { chromeMediaSource: 'tab', chromeMediaSourceId: streamId },
-      };
-      acquired = await env.getUserMedia({ video: false, audio });
-    } catch (error) {
-      hooks.onError(errorMessage(error));
-      return;
-    }
+    const acquired = await acquireStream(env, streamId, hooks);
+    if (acquired === null) return;
     if (startedAt !== generation) {
       // A stop() landed while the stream was being acquired: discard it so
       // the capture cannot outlive the stop.
@@ -49,20 +83,9 @@ export function createAudioCapture(env: AudioCaptureEnv, hooks: AudioCaptureHook
       return;
     }
     stream = acquired;
-    audioContext = new env.AudioContextCtor();
-    const source = audioContext.createMediaStreamSource(stream);
-    const analyser = audioContext.createAnalyser();
-    // No destination: the analyser keeps the capture alive without re-playing
-    // the tab's audio, which would be audible and could feed back.
-    source.connect(analyser);
-    const samples = new Float32Array(analyser.fftSize);
-    for (const track of stream.getAudioTracks()) {
-      track.addEventListener('ended', handleTrackEnded);
-    }
-    meterTimer = setInterval(() => {
-      analyser.getFloatTimeDomainData(samples);
-      hooks.onLevel(rmsLevel(samples));
-    }, LEVEL_INTERVAL_MS);
+    const meter = buildMeter(env, stream, hooks, handleTrackEnded);
+    audioContext = meter.context;
+    meterTimer = meter.timer;
     hooks.onStarted();
   }
 
