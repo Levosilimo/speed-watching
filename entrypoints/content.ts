@@ -34,8 +34,10 @@ import {
 import type { CaptionTrack, PlayerResponse } from '@/lib/youtube';
 import { channelKeyOf } from '@/lib/youtube';
 import { createPill, type LiveRate, type PillApi, type PillState } from '@/ui/pill';
+import { createNudgeHost } from '@/ui/nudge-host';
 
 const bridge = createBridgeClient(window);
+const nudgeSurface = createNudgeHost(bridge);
 
 /** Current video's recommendation context; null until the first measure. */
 let current: (MeasurementContext & { videoId: string; recommendation: Recommendation }) | null = null;
@@ -130,6 +132,7 @@ function onNavigationStart(): void {
   current = null;
   activeVideo = null;
   showPill(NONE_STATE);
+  nudgeSurface.teardown();
 }
 
 function onMediaEvent(event: Event): void {
@@ -362,6 +365,7 @@ function applyMultiplier(multiplier: number): void {
   // Show the live line immediately; steady-state ticks are throttled in the pill.
   refreshLiveRate();
   void logAction('apply', multiplier);
+  nudgeSurface.reportApply(multiplier);
 }
 
 function dismissCurrent(): void {

@@ -29,6 +29,11 @@ const EN = {
   'pill.label.unreachable': 'safe zone unreachable — {mult}x ≈ {rate} {unit}',
   'pill.label.music': 'music — speed not recommended',
   'pill.label.cappedSuffix': ' (capped below safe zone)',
+  'nudge.title': 'At a glance, was that still fully clear?',
+  'nudge.body':
+    'Fast playback can feel as clear as normal speed even when recall dips — speed-watching mostly affects how confident you feel about understanding, not what you objectively catch. If anything felt rushed, 250–275 wpm is the comfortable range to fall back to.',
+  'nudge.gotIt': 'Got it',
+  'nudge.dontShowAgain': "Don't show again",
   'tier.asrWord': 'from captions',
   'tier.asrCue': 'from captions',
   'tier.manualCue': 'from captions (corrected)',
@@ -42,6 +47,8 @@ const EN = {
   'options.targetLabel': 'Target speech rate',
   'options.slow': 'Slow',
   'options.safeZone': 'Comfortable range (250–275)',
+  'options.why250':
+    'Why 250? Listening comprehension stays comfortable through about 275 wpm — the range commonly cited for speech — and silent reading runs roughly 240–260 wpm. 250 matches your reading rate and leaves a ~9% buffer below that ceiling: a comfortable default, not a maximum to push.',
   'options.fast': 'Fast',
   'options.contentTypeLabel': 'Content type',
   'options.contentTypeAria': 'Content type presets',

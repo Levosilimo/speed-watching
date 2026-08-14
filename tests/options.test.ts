@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { chromeMock } from './chrome-mock';
+import { t } from '../lib/i18n';
 import type { OverrideLogEntry } from '../lib/override-log';
 import { SETTINGS_STORAGE_KEY } from '../lib/settings';
 
@@ -107,6 +108,35 @@ describe('options interface language', () => {
     await flush();
     expect(document.getElementById('target-rate-label')?.textContent).toBe('Target speech rate');
     expect(document.documentElement.lang).toBe('en');
+  });
+});
+
+describe('options why-250 onboarding note', () => {
+  it('sits in the target-slider section card, after the safe-zone label', async () => {
+    await import('../entrypoints/options/main');
+    await flush();
+    const note = document.getElementById('why-250');
+    expect(note).not.toBeNull();
+    expect(note?.className).toBe('section-note');
+    const card = note?.closest('.section-card');
+    expect(card).not.toBeNull();
+    expect(card?.querySelector('.safe-zone-label')).not.toBeNull();
+    if (note === null || card === null || card === undefined) return;
+    const label = card.querySelector('.safe-zone-label');
+    if (label === null) return;
+    expect(label.compareDocumentPosition(note) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('localizes to the stored ui-language like every other data-i18n node', async () => {
+    await import('../entrypoints/options/main');
+    await flush();
+    expect(document.getElementById('why-250')?.textContent).toBe(t('options.why250', 'en'));
+
+    const select = document.getElementById('ui-language') as HTMLSelectElement;
+    select.value = 'ru';
+    select.dispatchEvent(new Event('change'));
+    await flush();
+    expect(document.getElementById('why-250')?.textContent).toBe(t('options.why250', 'ru'));
   });
 });
 

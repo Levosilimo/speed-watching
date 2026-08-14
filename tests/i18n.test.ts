@@ -117,3 +117,32 @@ describe('unitLabel / tierLabel', () => {
     expect(tierLabel('estimated', 'ru')).toBe('оценка');
   });
 });
+
+describe('nudge and onboarding copy (lib-16)', () => {
+  it('locks the English nudge copy', () => {
+    expect(t('nudge.title', 'en')).toBe('At a glance, was that still fully clear?');
+    expect(t('nudge.body', 'en')).toBe(
+      'Fast playback can feel as clear as normal speed even when recall dips — speed-watching mostly affects how confident you feel about understanding, not what you objectively catch. If anything felt rushed, 250–275 wpm is the comfortable range to fall back to.',
+    );
+    expect(t('nudge.gotIt', 'en')).toBe('Got it');
+    expect(t('nudge.dontShowAgain', 'en')).toBe("Don't show again");
+  });
+
+  it('locks the Russian nudge copy', () => {
+    expect(t('nudge.title', 'ru')).toBe('Сходу всё было понятно?');
+    expect(t('nudge.body', 'ru')).toBe(
+      'Быстрое воспроизведение может ощущаться таким же понятным, как обычное, даже когда запоминание немного падает: на скорости чаще страдает уверенность в понимании, а не то, что вы объективно улавливаете. Если что-то казалось слишком быстрым — комфортный диапазон 250–275 слов/мин.',
+    );
+    expect(t('nudge.gotIt', 'ru')).toBe('Понятно');
+    expect(t('nudge.dontShowAgain', 'ru')).toBe('Больше не показывать');
+  });
+
+  it('locks the why-250 onboarding copy in both locales', () => {
+    expect(t('options.why250', 'en')).toBe(
+      'Why 250? Listening comprehension stays comfortable through about 275 wpm — the range commonly cited for speech — and silent reading runs roughly 240–260 wpm. 250 matches your reading rate and leaves a ~9% buffer below that ceiling: a comfortable default, not a maximum to push.',
+    );
+    expect(t('options.why250', 'ru')).toBe(
+      'Почему 250? Комфортное восприятие речи сохраняется примерно до 275 слов/мин — диапазона, который обычно считают комфортным, — а чтение про себя идёт около 240–260 слов/мин. 250 совпадает со скоростью чтения и оставляет запас ~9% до этого предела: комфортное значение по умолчанию, а не максимум, который стоит выжимать.',
+    );
+  });
+});
