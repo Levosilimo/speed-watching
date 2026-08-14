@@ -26,7 +26,7 @@ end
 -- True when the text is only bracket markers like [Music], whitespace
 -- tolerated (lib/tokenizer.ts isBracketMarker).
 function M.is_bracket_marker(text)
-  return text:match("^%s*%[%[^%]]*%]%s*$") ~= nil
+  return text:match("^%s*%[[^%]]*%]%s*$") ~= nil
 end
 
 -- Token count in the language's rate unit. Only the word-run tokenizer and
@@ -110,11 +110,31 @@ local function parse_timestamp_pair(line)
   return to_sec(sh, sm, ss, sms), to_sec(eh, em, es, ems)
 end
 
+-- Yields every line of text, empty ones included, so blocks separated by
+-- blank lines can be told apart (gmatch on "[^\r\n]+" would swallow the
+-- blank lines and let SRT index lines leak into the previous cue's text).
+local function line_iterator(text)
+  local pos = 1
+  local n = #text
+  return function()
+    if pos > n then return nil end
+    local s, e = text:find("\r?\n", pos)
+    if s == nil then
+      local line = text:sub(pos)
+      pos = n + 1
+      return line
+    end
+    local line = text:sub(pos, s - 1)
+    pos = e + 1
+    return line
+  end
+end
+
 -- Shared block walker: a line carrying "start --> end" opens a cue, the
--- following non-timestamp lines (transformed by `transform`) are its text,
--- the next timestamp closes it. Cue ids and headers (SRT index lines, the
--- WEBVTT banner, VTT cue identifiers) fall through the timestamp branch
--- and are skipped.
+-- following lines (transformed by `transform`) are its text until a blank
+-- line or the next timestamp closes it. Cue ids and headers (SRT index
+-- lines, the WEBVTT banner, VTT cue identifiers) fall through the
+-- timestamp branch and are skipped.
 local function parse_cues(text, transform)
   local cues = {}
   local pending
@@ -124,11 +144,13 @@ local function parse_cues(text, transform)
     end
     pending = nil
   end
-  for line in text:gmatch("[^\r\n]+") do
+  for line in line_iterator(text) do
     local start_sec, end_sec = parse_timestamp_pair(line)
     if start_sec then
       flush()
       pending = { start_sec = start_sec, dur_sec = end_sec - start_sec }
+    elseif line == "" then
+      flush()
     elseif pending then
       local text_line = transform(line)
       if pending.text then
