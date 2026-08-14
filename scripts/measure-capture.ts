@@ -81,6 +81,7 @@ export function initRecord(video: CorpusVideo): CorpusRecord {
     detectExpected: video.register,
     detectActual: 'unknown',
     durationSec: null,
+    provenance: video.provenance ?? null,
     captureDate: new Date().toISOString().slice(0, 10),
   };
 }

@@ -3,12 +3,13 @@
 // manifest, computes per-language G1–G5 gates (scripts/measure-analysis.ts),
 // and writes scripts/data/ru-corpus/ru-corpus.jsonl + a gate summary.
 //
-// Run: bun run scripts/measure-corpus.ts [--lang=ru|uk|pl|cs|sr|all] [--video=ID]
-//      [--limit=N] [--headed] [--no-fixtures] [--fixture-anchor=ID]
+// Run: bun run scripts/measure-corpus.ts [--lang=ru|uk|pl|cs|sr|hi|ar|id|vi|all]
+//      [--video=ID] [--limit=N] [--headed] [--no-fixtures]
+//      [--fixture-anchor=ID] [--manifest=corpus-b.json]
 //
 // Re-runs merge by videoId, so a failed video can be re-measured alone
 // (--video=ID); structural failures print the fallback-pool substitution
-// list from the spec.
+// list from the manifest's per-language pools.
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -27,15 +28,16 @@ import {
 import { measureVideo, setupBrowser } from './measure-capture';
 
 const ROOT = fileURLToPath(new URL('.', import.meta.url));
-const MANIFEST = join(ROOT, 'data', 'corpus-ru.json');
+const DEFAULT_MANIFEST = 'corpus-ru.json';
 const OUT_DIR = join(ROOT, 'data', 'ru-corpus');
 const RESULTS_FILE = join(OUT_DIR, 'ru-corpus.jsonl');
 const SUMMARY_FILE = join(OUT_DIR, 'ru-corpus-summary.json');
 const FIXTURES_DIR = join(ROOT, '..', 'tests', 'fixtures', 'real');
 const PAGE_PACE_MS = 2500;
 
-/** Spec fallback pools (same register, verified ru:asr), used only as
- * substitution suggestions on structural failures. */
+/** Legacy ru fallback pools (same register, verified ru:asr), used only as
+ * substitution suggestions on structural failures for manifests without
+ * their own pools. */
 const FALLBACKS: Record<string, string[]> = {
   lecture: ['EzETovF1wJY', 'Q655Siyo9h4', '7f2e5JmpJiM', 'foG2it4Rc6Q'],
   explainer: ['ecjRPDIA7Sk', 'cfyy1MS_3MM', 'KxFdjF2CtWM'],
@@ -44,19 +46,34 @@ const FALLBACKS: Record<string, string[]> = {
   music: ['3KQGqWYd_-g', 'uiPM4QToPBA'],
 };
 
-function loadManifest(): CorpusVideo[] {
-  const rows = JSON.parse(readFileSync(MANIFEST, 'utf8')) as Array<{
-    videoId: string;
-    register: string;
-    title?: string;
-    language?: string;
-  }>;
-  return rows.map((row) => ({
-    videoId: row.videoId,
-    register: row.register,
-    title: row.title ?? '',
-    language: row.language ?? 'ru',
-  }));
+/** Manifest shape: a bare array of video rows (ru-corpus.json), or
+ * { videos, fallbacks } where fallbacks maps 'lang:register' → candidate
+ * pools for structural-failure substitution (corpus-b.json). */
+function loadManifest(manifestPath: string): {
+  videos: CorpusVideo[];
+  fallbacks: Map<string, string[]>;
+} {
+  const raw = JSON.parse(readFileSync(manifestPath, 'utf8')) as
+    | Array<{ videoId: string; register: string; title?: string; language?: string; provenance?: string }>
+    | {
+        videos: Array<{ videoId: string; register: string; title?: string; language?: string; provenance?: string }>;
+        fallbacks?: Record<string, string[]>;
+      };
+  const rows = Array.isArray(raw) ? raw : raw.videos;
+  const fallbacks = new Map<string, string[]>();
+  if (!Array.isArray(raw) && raw.fallbacks !== undefined) {
+    for (const [key, ids] of Object.entries(raw.fallbacks)) fallbacks.set(key, ids);
+  }
+  return {
+    videos: rows.map((row) => ({
+      videoId: row.videoId,
+      register: row.register,
+      title: row.title ?? '',
+      language: row.language ?? 'ru',
+      provenance: row.provenance,
+    })),
+    fallbacks,
+  };
 }
 
 function recordLine(record: CorpusRecord): string {
@@ -73,7 +90,7 @@ function recordLine(record: CorpusRecord): string {
   return `${record.classification}${record.error ? ` (${record.error})` : ''}`;
 }
 
-function printSubstitutions(records: CorpusRecord[]): void {
+function printSubstitutions(records: CorpusRecord[], fallbacks: Map<string, string[]>): void {
   const failed = records.filter((r) =>
     ['geo-block', 'pot-fail', 'no-track', 'manual-only', 'wrong-lang'].includes(
       r.classification,
@@ -82,9 +99,10 @@ function printSubstitutions(records: CorpusRecord[]): void {
   if (failed.length === 0) return;
   console.log('\n=== SUBSTITUTION NEEDED (structural fail or missing ASR) ===');
   for (const r of failed) {
-    const pool = FALLBACKS[r.register] ?? [];
+    const pool =
+      fallbacks.get(`${r.language}:${r.register}`) ?? FALLBACKS[r.register] ?? [];
     console.log(
-      `  ${r.videoId} [${r.register}] ${r.classification} (${r.error ?? ''}) -> fallback: ${pool.join(', ') || 'none'}`,
+      `  ${r.videoId} [${r.language}:${r.register}] ${r.classification} (${r.error ?? ''}) -> fallback: ${pool.join(', ') || 'none'}`,
     );
   }
 }
@@ -179,9 +197,12 @@ async function main(): Promise<void> {
     console.error('--limit must be a number');
     process.exit(2);
   }
-  const langs = langArg === 'all' ? ['ru', 'uk', 'pl', 'cs', 'sr'] : langArg.split(',');
+  const manifestArg = args.find((a) => a.startsWith('--manifest='))?.slice('--manifest='.length);
+  const manifestPath = join(ROOT, 'data', manifestArg ?? DEFAULT_MANIFEST);
+  const langs = langArg === 'all' ? ['ru', 'uk', 'pl', 'cs', 'sr', 'hi', 'ar', 'id', 'vi'] : langArg.split(',');
 
-  let videos = loadManifest().filter((v) => langs.includes(v.language));
+  const { videos: manifestVideos, fallbacks } = loadManifest(manifestPath);
+  let videos = manifestVideos.filter((v) => langs.includes(v.language));
   if (videoArg !== undefined) videos = videos.filter((v) => v.videoId === videoArg);
   if (limit !== undefined) videos = videos.slice(0, limit);
   if (videos.length === 0) {
@@ -190,7 +211,7 @@ async function main(): Promise<void> {
   }
   mkdirSync(OUT_DIR, { recursive: true });
   mkdirSync(FIXTURES_DIR, { recursive: true });
-  console.log(`measure-corpus: ${videos.length} video(s), langs=${langs.join(',')}, headed=${headed}`);
+  console.log(`measure-corpus: ${videos.length} video(s), langs=${langs.join(',')}, manifest=${manifestPath}, headed=${headed}`);
 
   const { browser, context } = await setupBrowser(headed);
   let runRecords: CorpusRecord[] = [];
@@ -208,7 +229,7 @@ async function main(): Promise<void> {
   writeResults(all, summaries, runRecords);
   for (const summary of summaries) printLangSummary(summary);
   printVerdict(summaries);
-  printSubstitutions(runRecords);
+  printSubstitutions(runRecords, fallbacks);
   emitAnchorIfRequested(all, webPayloads, fixtureAnchor, noFixtures);
 }
 

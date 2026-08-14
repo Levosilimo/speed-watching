@@ -1,7 +1,7 @@
 import type { Segment } from './captions';
 import type { LanguageModel } from './languages';
 import type { RateTier } from './recommend';
-import { countHangulSyllables, countVowelNuclei, countWordTokens, isBracketMarker } from './tokenizer';
+import { countHangulSyllables, countVowelNuclei, countWordTokens, hasDevanagari, isBracketMarker } from './tokenizer';
 
 export function countWords(text: string): number {
   return text.match(/\S+/g)?.length ?? 0;
@@ -72,9 +72,13 @@ function spokenCues(cues: readonly Segment[]): Segment[] {
 
 /** Token count in the language's rate unit: word runs, graphemes (chars),
  * morae, or vowel nuclei; word-run languages convert to syllables via the
- * factor or Hangul blocks. */
-function unitTokens(text: string, language: LanguageModel | undefined): number {
-  if (language?.tokenizerMode === 'vowels') return countVowelNuclei(text, language.code);
+ * factor or Hangul blocks. Latin-script hi (hi-Latn tracks) counts word
+ * runs — the Devanagari counter measures nothing on Latin text. */
+export function unitTokens(text: string, language: LanguageModel | undefined): number {
+  if (language?.tokenizerMode === 'vowels') {
+    if (language.code === 'hi' && !hasDevanagari(text)) return countWordTokens(text);
+    return countVowelNuclei(text, language.code);
+  }
   const n = countWordTokens(text, language?.tokenizerMode);
   if (language?.hangulBlocks === true) return countHangulSyllables(text);
   if (language?.syllablesPerWord !== undefined) return n * language.syllablesPerWord;

@@ -32,6 +32,15 @@ const DEVANAGARI_CONSONANT_RE = /[\u0915-\u0939\u0958-\u095F]/;
 const DEVANAGARI_CONTINUATION_RE = /[\u0900-\u095F\u0970-\u097F]/;
 const DEVANAGARI_HALANT = '\u094D';
 
+/** True when the text contains Devanagari letters — the script the hi
+ * vowel-nucleus counter measures. Latin-script hi (hi-Latn/hinglish
+ * tracks) counts word runs instead: the Devanagari counter returns 0 on
+ * Latin text, so unitTokens resolves the mode from the text, not just the
+ * model's tokenizerMode. */
+export function hasDevanagari(text: string): boolean {
+  return /[\u0900-\u097F]/.test(text);
+}
+
 /** Whitespace, punctuation, or symbol graphemes — never speech. */
 const NON_SPEECH_GRAPHENE_RE = /^[\s\p{P}\p{S}]$/u;
 

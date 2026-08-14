@@ -9,8 +9,14 @@ import {
   type LanguageModel,
 } from '../lib/languages';
 import { detectMusic, type ContentType } from '../lib/music';
-import { countWordTokens, isBracketMarker } from '../lib/tokenizer';
+import { countVowelNuclei, countWordTokens, hasDevanagari, isBracketMarker } from '../lib/tokenizer';
 import { cueSpanSec } from '../lib/wpm';
+import {
+  countAccuracy,
+  g3Gate,
+  medianOf,
+  spokenText,
+} from './measure-count-gate';
 import {
   cuesParity,
   ratesFor,
@@ -67,6 +73,8 @@ export interface CorpusRecord {
   detectExpected: string;
   detectActual: string;
   durationSec: number | null;
+  /** es-419-style provenance recorded at selection: ar dialect, hi script. */
+  provenance: string | null;
   captureDate: string;
 }
 
@@ -75,6 +83,8 @@ export interface CorpusVideo {
   register: string;
   title: string;
   language: string;
+  /** Region/dialect provenance (ar dialect, hi script); optional. */
+  provenance?: string;
 }
 
 export interface RegisterGate {
@@ -95,6 +105,10 @@ export interface GateSummary {
   g1: { webOk: number; anyPath: number; pass: boolean };
   g2: { registers: Record<string, RegisterGate>; pass: boolean };
   g3: {
+    /** 'regex-icu' = G3 as the ru/slavic batches ran it (words-mode
+     * languages); 'vowels-sample' = hi's determinism + hand-annotated
+     * sample gate (Intl.Segmenter has no vowel-nuclei segmenter). */
+    mode: 'regex-icu' | 'vowels-sample';
     n: number;
     median: number | null;
     maxDeltaPct: number | null;
@@ -132,29 +146,6 @@ function tokenCoverage(parsed: ParsedCaptions): number | null {
   return (wordTokens / cueTokens) * 100;
 }
 
-/** Production word-run counter vs Intl.Segmenter over the joined
- * non-marker cue text (G3 input). */
-function countAccuracy(
-  parsed: ParsedCaptions,
-  lang: string,
-): { regex: number; icu: number; deltaPct: number } | null {
-  const text = parsed.cues
-    .filter((cue) => !isBracketMarker(cue.text))
-    .map((cue) => cue.text)
-    .join(' ');
-  if (text === '') return null;
-  const regex = countWordTokens(text);
-  let icu = regex;
-  if (typeof Intl !== 'undefined' && Intl.Segmenter) {
-    icu = 0;
-    for (const part of new Intl.Segmenter(lang, { granularity: 'word' }).segment(text)) {
-      if (part.isWordLike) icu++;
-    }
-  }
-  const deltaPct = icu > 0 ? (Math.abs(regex - icu) / icu) * 100 : 0;
-  return { regex, icu, deltaPct };
-}
-
 /** Production detection pipeline: music has precedence, then the register
  * bands over the cue signal. */
 function detectActualFor(parsed: ParsedCaptions, rate: number, model: LanguageModel): string {
@@ -181,7 +172,7 @@ export function applyStats(
   }
   const source = webParsed ?? androidParsed;
   if (source === null || model === undefined) return;
-  const stats = ratesFor(source);
+  const stats = ratesFor(source, model);
   if (stats === null) return;
   record.rateSource = webParsed !== null ? 'web' : 'android';
   record.unifiedRate = stats.unifiedRate;
@@ -189,11 +180,31 @@ export function applyStats(
   record.pauseBiasPct = stats.pauseBiasPct;
   record.durationSec = cueSpanSec(source.cues);
   record.coveragePct = tokenCoverage(source);
-  const acc = countAccuracy(source, video.language);
-  if (acc !== null) {
-    record.regexCount = acc.regex;
-    record.icuCount = acc.icu;
-    record.countDeltaPct = acc.deltaPct;
+  const text = spokenText(source);
+  if (video.language === 'hi' && record.classification === 'web-ok' && !hasDevanagari(text)) {
+    // hi:asr tracks can serve Latin-script (hi-Latn/hinglish) text; the
+    // vowels-mode counter measures nothing on it, so the track is not
+    // Hindi and drops out of the hi denominator (spec: wrong-lang).
+    record.classification = 'wrong-lang';
+    record.status = 'manual-only';
+    record.error = 'latin-script hi track (hi-Latn text); excluded from the hi denominator';
+  }
+  if (model.tokenizerMode === 'vowels') {
+    // hi G3 input: determinism — the nuclei counter applied to the real
+    // corpus text twice must agree (regex-vs-ICU is meaningless here;
+    // Intl.Segmenter has no vowel-nuclei granularity).
+    const first = countVowelNuclei(text, video.language);
+    const second = countVowelNuclei(text, video.language);
+    record.regexCount = first;
+    record.icuCount = second;
+    record.countDeltaPct = first > 0 ? (Math.abs(first - second) / first) * 100 : 0;
+  } else {
+    const acc = countAccuracy(source, video.language);
+    if (acc !== null) {
+      record.regexCount = acc.regex;
+      record.icuCount = acc.icu;
+      record.countDeltaPct = acc.deltaPct;
+    }
   }
   const band = registerBand(video.language, video.register);
   record.bandMin = band?.min ?? null;
@@ -202,13 +213,6 @@ export function applyStats(
   record.inBand = band !== null ? stats.unifiedRate >= band.min && stats.unifiedRate <= band.max : null;
   record.detectExpected = video.register;
   record.detectActual = detectActualFor(source, stats.unifiedRate, model);
-}
-
-function medianOf(sorted: number[]): number | null {
-  if (sorted.length === 0) return null;
-  const mid = Math.floor(sorted.length / 2);
-  if (sorted.length % 2 === 1) return sorted[mid]!;
-  return (sorted[mid - 1]! + sorted[mid]!) / 2;
 }
 
 function registerStatus(input: {
@@ -296,20 +300,6 @@ function registerGates(own: CorpusRecord[], lang: string): {
   };
 }
 
-function countGate(own: CorpusRecord[]): GateSummary['g3'] {
-  const countRows = own.filter((r) => r.register !== 'music' && r.countDeltaPct !== null);
-  const deltas = countRows.map((r) => r.countDeltaPct as number).sort((a, b) => a - b);
-  return {
-    n: countRows.length,
-    median: medianOf(deltas),
-    maxDeltaPct: deltas.at(-1) ?? null,
-    violations: countRows
-      .filter((r) => (r.countDeltaPct as number) > 10)
-      .map((r) => `${r.videoId} ${(r.countDeltaPct as number).toFixed(1)}%`),
-    pass: countRows.every((r) => (r.countDeltaPct as number) <= 10),
-  };
-}
-
 function parityGate(own: CorpusRecord[]): GateSummary['g4'] {
   const parityRows = own.filter((r) => r.wordsParity !== null || r.cuesParity !== null);
   const falseRows = parityRows
@@ -354,7 +344,7 @@ function verdictFor(
         : 'sr availability probe: sr ASR tracks present; measured';
     return { verdict: 'stays-derived', note: srNote };
   }
-  if (['ru', 'uk', 'pl', 'cs'].includes(lang)) {
+  if (['ru', 'uk', 'pl', 'cs', 'hi', 'ar', 'id', 'vi'].includes(lang)) {
     if (g1.pass && g2.pass && g3.pass) return { verdict: 'corpus-validated', note: null };
     if (underpowered) return { verdict: 'underpowered', note: 'a register has <2 measured videos; no verdict' };
     return {
@@ -374,7 +364,7 @@ export function summarizeLang(records: CorpusRecord[], lang: string): GateSummar
   const { asrBearing, g1 } = availabilityGate(own);
   const { registers, pass: g2Pass } = registerGates(own, lang);
   const g2 = { registers, pass: g2Pass };
-  const g3 = countGate(own);
+  const g3 = g3Gate(own, lang);
   const g4 = parityGate(own);
   const g5 = pauseGate(own);
   const { verdict, note } = verdictFor(lang, g1, g2, g3, registers, asrBearing);
@@ -415,8 +405,12 @@ export function printLangSummary(summary: GateSummary): void {
     );
   }
   console.log(`G2 verdict: ${summary.g2.pass ? 'PASS' : 'FAIL'}`);
+  const g3Label =
+    summary.g3.mode === 'vowels-sample'
+      ? 'G3 vowels sample+determinism'
+      : 'G3 count accuracy';
   console.log(
-    `G3 count accuracy: n=${summary.g3.n} median=${summary.g3.median === null ? 'n/a' : `${summary.g3.median.toFixed(1)}%`} ` +
+    `${g3Label}: n=${summary.g3.n} median=${summary.g3.median === null ? 'n/a' : `${summary.g3.median.toFixed(1)}%`} ` +
       `max=${summary.g3.maxDeltaPct === null ? 'n/a' : `${summary.g3.maxDeltaPct.toFixed(1)}%`} ` +
       `${summary.g3.pass ? 'PASS' : `FAIL (${summary.g3.violations.join(', ')})`}`,
   );

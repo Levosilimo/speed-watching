@@ -110,6 +110,31 @@ describe('wpm across the synthetic fixture pipeline', () => {
   });
 });
 
+describe('hi-Latn script handling', () => {
+  it('counts Latin-script hi text as word runs, not Devanagari nuclei', () => {
+    // The Devanagari counter measures nothing on Latin text — the latent
+    // hi-Latn bug: vowels-mode returned 0 and every rate collapsed.
+    const cues = [
+      { text: 'hello', startSec: 0 },
+      { text: 'world', startSec: 0.6 },
+      { text: 'how', startSec: 1.2 },
+      { text: 'are', startSec: 1.8 },
+      { text: 'you', startSec: 2.4 },
+    ];
+    // 5 words over the first-to-last-start span (2.4 s) = 125 wpm, not 0
+    expect(filteredTokensOverTrimmedSpan(cues, LANGUAGES['hi'])).toBeCloseTo(125, 6);
+  });
+
+  it('keeps counting Devanagari vowel nuclei on script-bearing hi text', () => {
+    const cues = [
+      { text: 'मैं जा रहा हूँ', startSec: 0 },
+      { text: 'वह ठीक है', startSec: 5 },
+    ];
+    // 5 + 3 nuclei over a 5 s span
+    expect(filteredTokensOverTrimmedSpan(cues, LANGUAGES['hi'])).toBeCloseTo(96, 6);
+  });
+});
+
 describe('speechDurationSec (per-word inter-start spans)', () => {
   it('sums inter-start spans, excluding gaps ≥ 1 s', () => {
     const words = [
