@@ -24,7 +24,7 @@ describe('userscript bundle', () => {
     const bundle = readFileSync(bundlePath, 'utf8');
     const pkg = JSON.parse(readFileSync(join(repoRoot, 'package.json'), 'utf8')) as { version: string };
     expect(bundle).toContain('==UserScript==');
-    expect(bundle).toMatch(/@match\s+\*:\/\/*\.youtube\.com\/\*/);
+    expect(bundle).toMatch(/@match\s+\*:\/\/\*\.youtube\.com\/\*/);
     expect(bundle).toMatch(/@grant\s+GM_setValue/);
     expect(bundle).toMatch(/@grant\s+GM_getValue/);
     expect(bundle).toMatch(/@run-at\s+document-start/);
