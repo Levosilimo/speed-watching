@@ -32,6 +32,9 @@ lce-setup-hint.md
 # Build artifacts
 *.zip
 
+# Userscript build output (gate-safety: the .user.js is JS and must never be scanned)
+userscript/dist/
+
 # Playwright output
 test-results
 playwright-report
