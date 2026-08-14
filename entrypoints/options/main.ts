@@ -1,6 +1,6 @@
 import '../../ui/options-styles.css';
 import { browser } from 'wxt/browser';
-import type { ProbeState } from '../../lib/audio-probe';
+import { createAudioProbeUi } from '../../ui/options-audio-probe';
 import type { ContentType } from '../../lib/music';
 import {
   OVERRIDE_LOG_STORAGE_KEY,
@@ -26,7 +26,6 @@ import {
   resolveUiLanguage,
   t,
   unitLabel,
-  type I18nKey,
   type UiLocale,
 } from '../../lib/i18n';
 
@@ -35,10 +34,6 @@ import {
 // ships none of them. The audio capture test below ships.
 // Awaited so the dynamic import cannot float past the importing context's
 // teardown (the vitest module-cache quirk documented in options-a11y.test.ts).
-// The auto-apply section (lib-14) pushed the file past the 440-line
-// reviewability budget; the suppression mirrors content.ts's — a reviewed
-// exception, not license to grow further.
-// aislop-ignore-file file-too-large
 if (import.meta.env.DEV) {
   await import('./dev');
 }
@@ -108,11 +103,13 @@ const uiLangSelect = el('ui-language') as HTMLSelectElement;
 
 let uiLocale: UiLocale = 'en';
 
+const probe = createAudioProbeUi();
+
 function renderLocale(): void {
   document.documentElement.lang = uiLocale;
   applyI18n(document, uiLocale);
   renderLanguageRange();
-  renderProbe();
+  probe.setLocale(uiLocale);
   // The saved-time headline is localized text (the other habit stats are
   // numbers) — re-render it on a language switch.
   void refreshHabits();
@@ -328,94 +325,6 @@ function renderHabits(habits: OverrideLogEntry[], savedSec: number): void {
 async function refreshHabits(): Promise<void> {
   const [habits, savedSec] = await Promise.all([overrideLog.entries(), timeSavedStore.get()]);
   renderHabits(habits, savedSec);
-}
-
-// ── Audio Capture Test (shipped; the tabCapture/offscreen justification) ──
-// probe-start/stop/state are answered by the background orchestrator, the
-// meter by its offscreen 'level' events. Chrome-only: Firefox has no
-// offscreen API, so the section is hidden and inert there.
-
-const probeSection = el('probe-section');
-const probeSupported = import.meta.env.BROWSER === 'chrome';
-probeSection.hidden = !probeSupported;
-
-const toggle = el('toggle') as HTMLButtonElement;
-const status = el('status');
-const meterFill = el('meter-fill');
-
-const POLL_INTERVAL_MS = 400;
-
-const STATE_LABELS: Record<ProbeState['state'], I18nKey> = {
-  idle: 'options.probeIdle',
-  starting: 'options.probeStarting',
-  capturing: 'options.probeCapturing',
-  degraded: 'options.probeDegraded',
-  error: 'options.probeError',
-};
-
-let probeState: ProbeState = { state: 'idle', level: 0 };
-let pollTimer: ReturnType<typeof setInterval> | null = null;
-
-function sendProbe(kind: 'probe-start' | 'probe-stop' | 'probe-state'): Promise<ProbeState> {
-  return browser.runtime.sendMessage({ kind }) as Promise<ProbeState>;
-}
-
-function probeActive(): boolean {
-  return probeState.state === 'starting' || probeState.state === 'capturing';
-}
-
-function renderProbe(): void {
-  toggle.textContent = probeActive()
-    ? t('options.probeStop', uiLocale)
-    : t('options.probeStart', uiLocale);
-  toggle.disabled = probeState.state === 'starting';
-  status.textContent = probeState.error
-    ? t('options.probeFail', uiLocale, { error: probeState.error })
-    : t(STATE_LABELS[probeState.state], uiLocale);
-  meterFill.style.width = `${Math.min(100, probeState.level * 300)}%`;
-}
-
-function startProbePolling(): void {
-  if (pollTimer) return;
-  pollTimer = setInterval(() => void refreshProbe(), POLL_INTERVAL_MS);
-}
-
-function stopProbePolling(): void {
-  if (!pollTimer) return;
-  clearInterval(pollTimer);
-  pollTimer = null;
-}
-
-async function refreshProbe(): Promise<void> {
-  let next: ProbeState;
-  try {
-    next = await sendProbe('probe-state');
-  } catch (error) {
-    status.textContent = t('options.probeFail', uiLocale, { error: String(error) });
-    stopProbePolling();
-    return;
-  }
-  probeState = next;
-  renderProbe();
-  if (probeActive()) {
-    startProbePolling();
-  } else {
-    stopProbePolling();
-  }
-}
-
-async function onProbeToggle(): Promise<void> {
-  try {
-    await sendProbe(probeActive() ? 'probe-stop' : 'probe-start');
-  } catch (error) {
-    status.textContent = t('options.probeFail', uiLocale, { error: String(error) });
-  }
-  await refreshProbe();
-}
-
-if (probeSupported) {
-  toggle.addEventListener('click', () => void onProbeToggle());
-  void refreshProbe();
 }
 
 // ── Load persisted state ─────────────────────────────────────────────────
