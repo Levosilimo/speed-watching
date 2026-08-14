@@ -4,8 +4,9 @@
 // (chrome.* is unavailable in the page world). Answers the window
 // postMessage envelopes defined in lib/messaging.ts straight from
 // chrome.storage.local — no service-worker round trip. Demand increments
-// are the exception: they are forwarded to the background, the single
-// writer (lib-11#3), so per-frame stores never interleave get→set pairs.
+// and the nudge messages are the exceptions: they are forwarded to the
+// background, the single writer (lib-11#3), so per-frame stores never
+// interleave get→set pairs.
 //
 // World tolerance: Firefox has no isolated worlds, so the bridge may share
 // the page world with the main script. Correctness never depends on world
@@ -50,6 +51,10 @@ export default defineContentScript({
           channels,
           forwardDemand: (contentType) =>
             browser.runtime.sendMessage({ type: 'demand:increment', contentType }),
+          forwardNudgeRecordApply: (multiplier) =>
+            browser.runtime.sendMessage({ type: 'nudge:recordApply', multiplier }),
+          forwardNudgeDismiss: (forever) =>
+            browser.runtime.sendMessage({ type: 'nudge:dismiss', forever }),
         },
         window,
       ),

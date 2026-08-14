@@ -5,10 +5,13 @@ import { isOffscreenEvent, isOptionsMessage } from '../lib/audio-probe';
 import { DemandStore } from '../lib/demand';
 import {
   isDemandIncrementMessage,
+  isNudgeDismiss,
+  isNudgeRecordApply,
   SHORTCUT_APPLY,
   SHORTCUT_DISMISS,
   type ShortcutMessage,
 } from '../lib/messaging';
+import { NudgeStore } from '../lib/nudge';
 import { clampWpmResponse, isWpmGetRequest, isWpmGetResponse, WPM_GET, WPM_PROTOCOL_VERSION, type WpmGetResponse } from '../lib/wpm-protocol';
 import { SettingsStore } from '../lib/settings';
 
@@ -28,6 +31,9 @@ export default defineBackground(() => {
   // forwards demand:increment here, so one promise chain covers all frames
   // instead of per-frame get→set interleaves.
   const demand = new DemandStore(browser.storage.local);
+  // Single writer for the recall nudge (lib-16), same routing: every frame
+  // forwards nudge:recordApply and nudge:dismiss here.
+  const nudge = new NudgeStore(browser.storage.local);
   const settings = new SettingsStore(browser.storage.local);
 
   browser.runtime.onMessageExternal.addListener(
@@ -60,6 +66,14 @@ export default defineBackground(() => {
       }
       if (isDemandIncrementMessage(message)) {
         void demand.increment(message.contentType).then(sendResponse);
+        return true;
+      }
+      if (isNudgeRecordApply(message)) {
+        void nudge.recordApply(message.multiplier).then(sendResponse);
+        return true;
+      }
+      if (isNudgeDismiss(message)) {
+        void nudge.dismiss(message.forever).then(sendResponse);
         return true;
       }
       return false;

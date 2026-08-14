@@ -144,6 +144,78 @@ describe('background wiring', () => {
     expect(b).toMatchObject({ estimatedCount: 2, byContentType: { generic: 1, talk: 1 } });
   });
 
+  it('answers nudge:recordApply through its single NudgeStore (lib-16 single writer)', async () => {
+    installLocalStorage();
+    const main = (backgroundModule as { main: () => unknown }).main;
+    main();
+    const listener = registeredListener();
+
+    const first = await driveMessage(listener, { type: 'nudge:recordApply', multiplier: 1.6 });
+    expect(first).toEqual({ show: false });
+    await driveMessage(listener, { type: 'nudge:recordApply', multiplier: 1.6 });
+    const third = await driveMessage(listener, { type: 'nudge:recordApply', multiplier: 1.6 });
+    expect(third).toEqual({ show: true });
+  });
+
+  it('serializes concurrent nudge:recordApply from two frames without loss', async () => {
+    installLocalStorage();
+    const main = (backgroundModule as { main: () => unknown }).main;
+    main();
+    const listener = registeredListener();
+
+    // Three frames race their applies; the background-owned chain counts
+    // them in order, so exactly the third lands the show.
+    const [a, b, c] = await Promise.all([
+      driveMessage(listener, { type: 'nudge:recordApply', multiplier: 1.6 }, 1),
+      driveMessage(listener, { type: 'nudge:recordApply', multiplier: 1.6 }, 2),
+      driveMessage(listener, { type: 'nudge:recordApply', multiplier: 1.6 }, 3),
+    ]);
+    expect(a).toEqual({ show: false });
+    expect(b).toEqual({ show: false });
+    expect(c).toEqual({ show: true });
+  });
+
+  it('applies a nudge:dismiss cooldown: subsequent applies do not show', async () => {
+    installLocalStorage();
+    const main = (backgroundModule as { main: () => unknown }).main;
+    main();
+    const listener = registeredListener();
+
+    const dismissed = await driveMessage(listener, { type: 'nudge:dismiss', forever: false });
+    expect(dismissed).toMatchObject({ highApplied: 0, dismissedUntil: expect.any(Number) });
+    await driveMessage(listener, { type: 'nudge:recordApply', multiplier: 1.6 });
+    await driveMessage(listener, { type: 'nudge:recordApply', multiplier: 1.6 });
+    const third = await driveMessage(listener, { type: 'nudge:recordApply', multiplier: 1.6 });
+    expect(third).toEqual({ show: false });
+  });
+
+  it('applies a permanent nudge:dismiss: applies never show again', async () => {
+    installLocalStorage();
+    const main = (backgroundModule as { main: () => unknown }).main;
+    main();
+    const listener = registeredListener();
+
+    const dismissed = await driveMessage(listener, { type: 'nudge:dismiss', forever: true });
+    expect(dismissed).toMatchObject({ highApplied: 0, dismissedForever: true });
+    for (let i = 0; i < 3; i++) {
+      const response = await driveMessage(listener, { type: 'nudge:recordApply', multiplier: 1.6 });
+      expect(response).toEqual({ show: false });
+    }
+  });
+
+  it('drops malformed nudge messages without answering (shape guards)', async () => {
+    installLocalStorage();
+    const main = (backgroundModule as { main: () => unknown }).main;
+    main();
+    const listener = registeredListener();
+
+    const sendResponse = vi.fn();
+    expect(listener({ type: 'nudge:recordApply', multiplier: 50 }, { tab: { id: 1 } }, sendResponse)).toBe(false);
+    expect(listener({ type: 'nudge:recordApply', multiplier: 'fast' }, { tab: { id: 1 } }, sendResponse)).toBe(false);
+    expect(listener({ type: 'nudge:dismiss', forever: 'yes' }, { tab: { id: 1 } }, sendResponse)).toBe(false);
+    expect(sendResponse).not.toHaveBeenCalled();
+  });
+
   it('ignores an action click without a tab id', async () => {
     const main = (backgroundModule as { main: () => unknown }).main;
     main();

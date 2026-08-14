@@ -4,10 +4,10 @@
 // Requests and responses travel as postMessage envelopes on the shared
 // window. Settings, log, and channel-memory requests the bridge answers
 // directly from chrome.storage.local — no service-worker round trip.
-// demand:increment is the exception: the bridge forwards it to the
-// background (runtime.sendMessage), the single writer, so increments from
-// every frame serialize on one DemandStore instead of interleaving
-// per-frame get→set pairs (lib-11#3).
+// demand:increment and the nudge messages are the exceptions: the bridge
+// forwards them to the background (runtime.sendMessage), the single
+// writer, so increments from every frame serialize on one DemandStore /
+// NudgeStore instead of interleaving per-frame get→set pairs (lib-11#3).
 // World choice documented in entrypoints/content.ts.
 //
 // Transport choice: postMessage, not CustomEvents. Firefox does not deliver
@@ -45,6 +45,33 @@ export function isDemandIncrementMessage(value: unknown): value is DemandIncreme
   return isRecord(value) && value.type === 'demand:increment' && isContentType(value.contentType);
 }
 
+/** Runtime message the bridge sends the background for nudge:recordApply
+ * (single-writer routing like demand:increment); the background answers
+ * with the show flag. Same shape as the bridge request it carries. */
+interface NudgeRecordApplyMessage {
+  type: 'nudge:recordApply';
+  multiplier: number;
+}
+
+export function isNudgeRecordApply(value: unknown): value is NudgeRecordApplyMessage {
+  return (
+    isRecord(value) &&
+    value.type === 'nudge:recordApply' &&
+    isFiniteNumberIn(value.multiplier, MULTIPLIER_MIN, MULTIPLIER_MAX)
+  );
+}
+
+/** Runtime message the bridge sends the background for nudge:dismiss —
+ * 'Got it' (cooldown) or 'Don't show again' (permanent). */
+interface NudgeDismissMessage {
+  type: 'nudge:dismiss';
+  forever: boolean;
+}
+
+export function isNudgeDismiss(value: unknown): value is NudgeDismissMessage {
+  return isRecord(value) && value.type === 'nudge:dismiss' && typeof value.forever === 'boolean';
+}
+
 /** Runtime message the background sends the active tab on a keyboard
  * shortcut (chrome.commands, wxt.config.ts). The ISOLATED bridge receives
  * it and relays it to the MAIN-world script (see ShortcutEnvelope). */
@@ -78,13 +105,17 @@ export type BridgeRequest =
   | { type: 'log:append'; entry: Omit<OverrideLogEntry, 'ts'> }
   | { type: 'channel:get'; channelKey: string }
   | { type: 'channel:put'; channelKey: string; record: ChannelRecord }
-  | DemandIncrementMessage;
+  | DemandIncrementMessage
+  | NudgeRecordApplyMessage
+  | NudgeDismissMessage;
 
 export type BridgeResult<T extends BridgeRequest> = T extends { type: 'settings:get' }
   ? Settings
   : T extends { type: 'channel:get' }
     ? ChannelRecord | null
-    : void;
+    : T extends { type: 'nudge:recordApply' }
+      ? { show: boolean }
+      : void;
 
 export interface BridgeEnvelope {
   channel: typeof BRIDGE_CHANNEL;
@@ -125,6 +156,10 @@ export interface BridgeDeps {
   channels: ChannelMemory;
   /** Forwards demand:increment to the background — the single writer. */
   forwardDemand: (contentType: ContentType) => Promise<unknown>;
+  /** Forwards nudge:recordApply to the background — the single writer. */
+  forwardNudgeRecordApply: (multiplier: number) => Promise<unknown>;
+  /** Forwards nudge:dismiss to the background — the single writer. */
+  forwardNudgeDismiss: (forever: boolean) => Promise<unknown>;
 }
 
 export function isFiniteNumberIn(value: unknown, min: number, max: number): boolean {
@@ -215,7 +250,7 @@ export async function handleBridgeRequest(
   request: BridgeRequest,
   deps: BridgeDeps,
   siteHost: string,
-): Promise<Settings | ChannelRecord | null | void> {
+): Promise<unknown> {
   switch (request.type) {
     case 'settings:get':
       return deps.settings.load();
@@ -264,6 +299,19 @@ export async function handleBridgeRequest(
       }
       await deps.forwardDemand(request.contentType);
       return undefined;
+    case 'nudge:recordApply':
+      // Shape validation at the boundary: out-of-range multipliers are
+      // rejected here and never reach the background writer.
+      if (!isNudgeRecordApply(request)) {
+        throw new Error('nudge:recordApply: invalid multiplier');
+      }
+      // The background's show flag rides back on the response envelope.
+      return deps.forwardNudgeRecordApply(request.multiplier);
+    case 'nudge:dismiss':
+      if (!isNudgeDismiss(request)) {
+        throw new Error('nudge:dismiss: invalid forever flag');
+      }
+      return deps.forwardNudgeDismiss(request.forever);
   }
 }
 
@@ -311,9 +359,11 @@ export function createBridgeListener(
 
 /** MAIN-world side: posts a request envelope and awaits the matching
  * response envelope. */
-export function createBridgeClient(host: EventHost): {
+export interface BridgeClient {
   request<T extends BridgeRequest>(request: T): Promise<BridgeResult<T>>;
-} {
+}
+
+export function createBridgeClient(host: EventHost): BridgeClient {
   let nextId = 1;
   const pending = new Map<
     number,

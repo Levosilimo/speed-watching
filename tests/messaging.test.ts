@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { ChannelMemory } from '../lib/channel-memory';
 import { DemandStore } from '../lib/demand';
+import { NudgeStore } from '../lib/nudge';
 import {
   BRIDGE_CHANNEL,
   BRIDGE_TIMEOUT_MS,
@@ -66,6 +67,8 @@ function serve(host: EventHost, forwardDemand: BridgeDeps['forwardDemand'] = vi.
     log: new OverrideLog(mockStorage()),
     channels: new ChannelMemory(mockStorage()),
     forwardDemand,
+    forwardNudgeRecordApply: vi.fn(),
+    forwardNudgeDismiss: vi.fn(),
   };
   host.addEventListener('message', createBridgeListener(deps, host as unknown as Window));
   return deps;
@@ -416,6 +419,52 @@ describe('messaging bridge', () => {
       client.request({ type: 'demand:increment', contentType: 'bogus' as ContentType }),
     ).rejects.toThrow('unknown content type');
     expect(forwardDemand).not.toHaveBeenCalled();
+  });
+
+  it('forwards nudge:recordApply to the background single writer and resolves on its response', async () => {
+    const { host } = fakeWindow();
+    const background = new NudgeStore(mockStorage());
+    const deps = serve(host);
+    deps.forwardNudgeRecordApply = vi.fn((multiplier: number) => background.recordApply(multiplier));
+    const client = createBridgeClient(host);
+    await client.request({ type: 'nudge:recordApply', multiplier: 1.6 });
+    await client.request({ type: 'nudge:recordApply', multiplier: 1.6 });
+    const show = await client.request({ type: 'nudge:recordApply', multiplier: 1.6 });
+    expect(deps.forwardNudgeRecordApply).toHaveBeenCalledTimes(3);
+    expect(show).toEqual({ show: true });
+  });
+
+  it('rejects nudge:recordApply with an out-of-range multiplier before forwarding', async () => {
+    const { host } = fakeWindow();
+    const deps = serve(host);
+    const client = createBridgeClient(host);
+    await expect(
+      client.request({ type: 'nudge:recordApply', multiplier: 50 }),
+    ).rejects.toThrow('nudge:recordApply: invalid multiplier');
+    expect(deps.forwardNudgeRecordApply).not.toHaveBeenCalled();
+  });
+
+  it('forwards nudge:dismiss to the background single writer', async () => {
+    const { host } = fakeWindow();
+    const background = new NudgeStore(mockStorage());
+    const deps = serve(host);
+    deps.forwardNudgeDismiss = vi.fn((forever: boolean) => background.dismiss(forever));
+    const client = createBridgeClient(host);
+    await client.request({ type: 'nudge:dismiss', forever: false });
+    expect(deps.forwardNudgeDismiss).toHaveBeenCalledExactlyOnceWith(false);
+    const record = await background.get();
+    expect(record.highApplied).toBe(0);
+    expect(record.dismissedUntil).toEqual(expect.any(Number));
+  });
+
+  it('rejects nudge:dismiss with a non-boolean forever flag before forwarding', async () => {
+    const { host } = fakeWindow();
+    const deps = serve(host);
+    const client = createBridgeClient(host);
+    await expect(
+      client.request({ type: 'nudge:dismiss', forever: 'yes' } as unknown as BridgeRequest),
+    ).rejects.toThrow('nudge:dismiss: invalid forever flag');
+    expect(deps.forwardNudgeDismiss).not.toHaveBeenCalled();
   });
 
   it('times out when no response arrives', async () => {
