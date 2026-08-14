@@ -4,7 +4,8 @@
 // docs/phase0-generic-probe.md), so captions cannot come from the standard
 // API. Instead the harvest probes the page's network layer — the same
 // requests the player itself made — and converts whatever it finds to our
-// Segment type (cue-level; no word timing on generic sites).
+// Segment type. Most probes yield cue-level segments; the track-src probe
+// (Dzen) also yields word-level segments from inline VTT timestamps.
 //
 // Probe order, first non-empty result wins:
 //   1. Vimeo player config (player.vimeo.com embeds carry
@@ -12,7 +13,9 @@
 //   2. HLS: EXT-X-MEDIA TYPE=SUBTITLES URIs from the master playlist
 //      (manifest found via the video src or the resource timeline)
 //   3. WebVTT resource entries any site loaded directly (Coursera et al.)
-//   4. edX sjson transcripts (/api/transcripts/…, same-origin only)
+//   4. video > track[src] subtitles (Dzen's signed OK.ru VTT with inline
+//      word timestamps, Rutube's pic.rtbcdn.ru SRT)
+//   5. edX sjson transcripts (/api/transcripts/…, same-origin only)
 //
 // Every probe is defensive: a failure yields null and the caller falls back
 // to the heuristic estimated tier. Twitch and Coursera endpoints could not
@@ -44,6 +47,10 @@ export interface FetchLike {
 export interface HarvestOptions {
   /** The active video's src attribute; null when the player uses MSE (blob:). */
   videoSrc: string | null;
+  /** Subtitle track src attributes on the page (video > track[src]); the
+   * content script reads them from the DOM — the harvest itself stays
+   * DOM-free. Empty on sites without track elements. */
+  trackSrcs: readonly string[];
   /** Resource-timeline URLs observed on the page (performance entries). */
   resourceUrls: readonly string[];
   /** Hostname of the current frame, e.g. 'player.vimeo.com'. */
@@ -93,6 +100,76 @@ export function parseVtt(text: string, host: VttHost): Segment[] {
   parser.parse(text);
   parser.flush();
   return segments;
+}
+
+// ── Word-timed VTT (Dzen) and SRT (Rutube) ────────────────────────────────
+
+/** Inline word-timing runs in Dzen's OK.ru caption track: a timestamp tag
+ * immediately followed by a <c> run, e.g. `<00:00:19.225><c>самого</c>`. */
+const VTT_WORD_RUN = /<(\d{1,2}:\d{2}:\d{2}[.,]\d{3})><c>([^<]*)<\/c>/g;
+
+function parseVttTimestamp(ts: string): number {
+  const parts = ts.split(':');
+  const secs = Number(parts.at(-1)!.replace(',', '.'));
+  const mins = Number(parts.at(-2) ?? '0');
+  const hours = parts.length === 3 ? Number(parts[0]) : 0;
+  return hours * 3600 + mins * 60 + secs;
+}
+
+/** Parses WebVTT text into word-level segments by expanding the inline
+ * `<TS><c>word</c>` runs Dzen's caption track carries. Cue text is kept
+ * raw (vtt.js preserves the tags) so the runs survive to be expanded.
+ * Untimed lead text before a cue's first run (e.g. `С` in the observed
+ * shape) attaches to that run's start; untimed gaps between runs are
+ * dropped. Text without word-timing runs yields no segments. */
+export function parseVttWords(text: string, host: VttHost): Segment[] {
+  const parser = new WebVTT.Parser(host, new WebVTT.StringDecoder());
+  const words: Segment[] = [];
+  parser.oncue = (cue: { startTime: number; endTime: number; text: string }) => {
+    const runs = [...cue.text.matchAll(VTT_WORD_RUN)];
+    if (runs.length === 0) return;
+    const firstStart = parseVttTimestamp(runs[0]![1]!);
+    const lead = cleanVttText(cue.text.slice(0, runs[0]!.index));
+    if (lead !== '') words.push({ text: lead, startSec: firstStart });
+    for (const run of runs) {
+      const word = run[2]!.trim();
+      if (word === '') continue;
+      words.push({ text: word, startSec: parseVttTimestamp(run[1]!) });
+    }
+  };
+  parser.parse(text);
+  parser.flush();
+  // Word-tokens tail pattern (lib/captions.ts): sort by start, backfill
+  // durSec from the next word's start.
+  words.sort((a, b) => a.startSec - b.startSec);
+  words.forEach((word, i) => {
+    const next = words[i + 1];
+    if (next !== undefined) word.durSec = next.startSec - word.startSec;
+  });
+  return words;
+}
+
+/** Normalizes an SRT file into WebVTT text vtt.js accepts: comma
+ * timestamps → dots, sequence-number lines dropped, `WEBVTT\n\n` header
+ * prepended (the blank line is mandatory — without it vtt.js swallows the
+ * first cue). The comma replacement is global, so text commas become dots
+ * too; harmless — the text feeds only rate math, never display. */
+export function normalizeSrt(srt: string): string {
+  return (
+    'WEBVTT\n\n' +
+    srt
+      .replace(/,/g, '.')
+      .split(/\r?\n/)
+      .filter((line) => !/^\d+$/.test(line))
+      .join('\n')
+      .trim()
+  );
+}
+
+/** Parses SRT text into cue-level segments (Rutube's pic.rtbcdn.ru
+ * subtitle payloads). */
+export function parseSrt(text: string, host: VttHost): Segment[] {
+  return parseVtt(normalizeSrt(text), host);
 }
 
 // ── HLS ───────────────────────────────────────────────────────────────────
@@ -210,6 +287,27 @@ async function probeVttEntries(options: HarvestOptions): Promise<Segment[] | nul
   return null;
 }
 
+/** Probe #5: video > track[src] subtitles. Reads the src attributes the
+ * content script collected (no document access here), fetches each, and
+ * returns the first payload that yields words or cues: Dzen's OK.ru VTT
+ * gives both (word runs + cues from one fetch), Rutube's SRT cues only.
+ * A track with no caption content falls through to the next src; an empty
+ * track list yields null (→ estimated tier; Rutube's author-gated ~50%
+ * of videos have no track element at all). */
+async function probeTrackSrcs(options: HarvestOptions): Promise<CaptionHarvest | null> {
+  for (const src of options.trackSrcs) {
+    const response = await options.fetchImpl(src);
+    if (!response.ok) continue;
+    const text = await response.text();
+    const words = parseVttWords(text, options.vttHost);
+    let cues = parseVtt(text, options.vttHost);
+    if (cues.length === 0) cues = parseSrt(text, options.vttHost);
+    if (words.length === 0 && cues.length === 0) continue;
+    return { words, cues };
+  }
+  return null;
+}
+
 async function probeEdxTranscripts(options: HarvestOptions): Promise<Segment[] | null> {
   for (const url of options.resourceUrls) {
     if (!/\/api\/transcripts\//.test(url)) continue;
@@ -222,13 +320,27 @@ async function probeEdxTranscripts(options: HarvestOptions): Promise<Segment[] |
   return null;
 }
 
+/** What a successful harvest found: word-level segments when the payload
+ * carried inline word timings (Dzen), cue-level segments always (Dzen's
+ * VTT and every other source). A probe can yield both from one fetch. */
+export interface CaptionHarvest {
+  /** Per-word segments from inline VTT word-timing runs; empty when the
+   * payload has none (SRT, plain VTT, transcripts). */
+  words: Segment[];
+  /** Cue-level segments from the same payload. */
+  cues: Segment[];
+}
+
 /** Runs every probe in order; returns the first non-empty harvest, or null
  * when the page exposes no harvestable captions (→ estimated tier). */
-export async function harvestCaptions(options: HarvestOptions): Promise<Segment[] | null> {
+export async function harvestCaptions(options: HarvestOptions): Promise<CaptionHarvest | null> {
   const segments =
     (await safe(() => probeVimeoConfig(options), 'vimeo config')) ??
     (await safe(() => probeHls(options), 'hls')) ??
     (await safe(() => probeVttEntries(options), 'vtt entries')) ??
+    (await safe(() => probeTrackSrcs(options), 'track srcs')) ??
     (await safe(() => probeEdxTranscripts(options), 'edx transcript'));
-  return segments !== null && segments.length > 0 ? segments : null;
+  if (segments === null) return null;
+  // Cue-level probes return Segment[]; probe #5 returns a full harvest.
+  return Array.isArray(segments) ? { words: [], cues: segments } : segments;
 }
