@@ -34,6 +34,12 @@ import { recommend, type RateTier, type Recommendation } from '@/lib/recommend';
 } from '@/lib/settings';
 import { manualCueRate } from '@/lib/wpm';
 import { createPill, type LiveRate, type PillApi, type PillState } from '@/ui/pill';
+import {
+  RATE_EPSILON,
+  savedSeconds,
+  TimeSavedTracker,
+  type SavedTick,
+} from '@/lib/time-saved';
 
 const RESOURCE_WAIT_MS = 2000;
 const RESOURCE_POLL_MS = 250;
@@ -61,6 +67,16 @@ let observerTimer: ReturnType<typeof setTimeout> | null = null;
 let hasSeenVideo = false;
 const reapplier = new RateReapplier();
 const measureRunner = new SerializedRunner();
+
+// Time-saved session (lib/time-saved.ts): mirror of entrypoints/content.ts —
+// the tracker counts wall time at the applied rate, the pill shows the
+// current video's accumulated saved seconds, and the flushes ride the
+// bridge to the background store.
+const savedTracker = new TimeSavedTracker();
+/** Saved seconds accumulated for the current video; null before apply. */
+let savedSec: number | null = null;
+/** The multiplier the session is gated on; null while no session runs. */
+let savedMultiplier: number | null = null;
 
 const NONE_STATE: PillState = {
   mode: 'none',
@@ -140,23 +156,33 @@ function handleVideoMutations(): void {
       pill = null;
     }
     reapplier.stop();
+    savedTracker.detach();
+    savedSec = null;
+    savedMultiplier = null;
     current = null;
     return;
   }
   if (active !== activeVideo) {
     activeVideo = active;
+    savedTracker.detach();
+    savedSec = null;
+    savedMultiplier = null;
     void measure();
   }
 }
 
 function onMediaEvent(event: Event): void {
   // Multi-video pages: the last element to fire a media event is the one
-  // the user is watching; a swap re-measures.
+  // the user is watching; a swap re-measures and ends the old session.
   if (event.target instanceof HTMLVideoElement && event.target !== activeVideo) {
     activeVideo = event.target;
+    savedTracker.detach();
+    savedSec = null;
+    savedMultiplier = null;
     void measure();
   }
   refreshLiveRate();
+  refreshSavedSec();
 }
 
 function measure(): void {
@@ -303,20 +329,48 @@ function refreshLiveRate(): void {
   pill.api.updateLiveRate(computeLiveRate());
 }
 
+/** The saved time on the current video: the session's accumulated flushes,
+ * null before apply, while paused, or while the rate diverged from the
+ * applied multiplier (the tracker's accrual gates, mirrored for display). */
+function computeSavedSec(): number | null {
+  if (current === null || savedSec === null || savedMultiplier === null) return null;
+  const video = activeVideo ?? document.querySelector<HTMLVideoElement>('video');
+  if (video === null || video.paused) return null;
+  if (Math.abs(video.playbackRate - savedMultiplier) > RATE_EPSILON) return null;
+  return savedSec;
+}
+
+function refreshSavedSec(): void {
+  // Never create the pill from a tick — that would mount an empty one pre-measure.
+  if (pill === null) return;
+  pill.api.updateSavedSec(computeSavedSec());
+}
+
 function applyMultiplier(multiplier: number): void {
   if (current === null) return;
   const video = activeVideo ?? document.querySelector<HTMLVideoElement>('video');
   if (video === null) return;
   // start() applies the multiplier and re-asserts it (ratechange/play/pause
-  // listeners + the re-check interval) until dismiss.
-  reapplier.start(video, multiplier, current.platformMax);
+  // listeners + the re-check interval) until dismiss; the clamped value is
+  // the tracker's accrual gate.
+  const applied = Math.min(multiplier, current.platformMax);
+  reapplier.start(video, applied, current.platformMax);
+  savedSec = 0;
+  savedMultiplier = applied;
+  savedTracker.attach(video, applied, flushSavedTick);
   // Show the live line immediately; steady-state ticks are throttled in the pill.
   refreshLiveRate();
+  refreshSavedSec();
   void logAction('apply', multiplier);
 }
 
 function dismissCurrent(): void {
   if (current === null) return;
+  // Detach first: the unflushed tail is credited to the store before the
+  // pill hides.
+  savedTracker.detach();
+  savedSec = null;
+  savedMultiplier = null;
   reapplier.stop();
   showPill(NONE_STATE);
   void logAction('dismiss', current.recommendation.multiplier);
@@ -338,5 +392,14 @@ function logAction(userAction: 'apply' | 'dismiss', multiplier: number): void {
         userAction,
       },
     })
+    .catch(() => undefined);
+}
+
+/** Tracker flush → the background store (fire-and-forget like logAction);
+ * the same delta also advances the pill's per-video accumulator. */
+function flushSavedTick(tick: SavedTick): void {
+  if (savedSec !== null) savedSec += savedSeconds(tick.deltaSec, tick.multiplier);
+  void bridge
+    .request({ type: 'timeSaved:accrue', deltaSec: tick.deltaSec, multiplier: tick.multiplier })
     .catch(() => undefined);
 }

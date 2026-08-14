@@ -1,7 +1,11 @@
 // E2E hooks: one-line console.info wpm summaries compiled out of the store
 // bundle (SEC-2). MAIN world — the signed timedtext fetch needs page
 // context; entrypoints/bridge.content.ts is the ISOLATED sibling.
-// aislop-ignore-file console-leftover
+// The file also carries the time-saved accrual plumbing (lib-13) on top of
+// the measurement pipeline, which keeps it past the 440-line reviewability
+// budget; the suppression mirrors the console-leftover one — reviewed
+// exceptions, not license to grow further.
+// aislop-ignore-file console-leftover, file-too-large
 import { defineContentScript } from 'wxt/utils/define-content-script';
 import { fetchAndroidCaptions, fetchJson3 } from '@/lib/caption-fetch';
 import { parseYouTubeJson3 } from '@/lib/captions';
@@ -34,6 +38,12 @@ import {
 import type { CaptionTrack, PlayerResponse } from '@/lib/youtube';
 import { channelKeyOf } from '@/lib/youtube';
 import { createPill, type LiveRate, type PillApi, type PillState } from '@/ui/pill';
+import {
+  RATE_EPSILON,
+  savedSeconds,
+  TimeSavedTracker,
+  type SavedTick,
+} from '@/lib/time-saved';
 
 const bridge = createBridgeClient(window);
 
@@ -47,6 +57,16 @@ let pillState: PillState | null = null;
 /** The element that last fired a media event — the apply target on pages
  * with more than one video. */
 let activeVideo: HTMLVideoElement | null = null;
+
+// Time-saved session (lib/time-saved.ts): the tracker counts wall time at
+// the applied rate; the pill shows the accumulated saved seconds of the
+// current video (null before apply, while paused, or while the rate
+// diverged), and the flushes ride the bridge to the background store.
+const savedTracker = new TimeSavedTracker();
+/** Saved seconds accumulated for the current video; null before apply. */
+let savedSec: number | null = null;
+/** The multiplier the session is gated on; null while no session runs. */
+let savedMultiplier: number | null = null;
 
 // Serializes measure() against overlapping triggers (initial load + SPA navigation).
 const measureRunner = new SerializedRunner();
@@ -129,12 +149,16 @@ export default defineContentScript({
 function onNavigationStart(): void {
   current = null;
   activeVideo = null;
+  savedTracker.detach();
+  savedSec = null;
+  savedMultiplier = null;
   showPill(NONE_STATE);
 }
 
 function onMediaEvent(event: Event): void {
   if (event.target instanceof HTMLVideoElement) activeVideo = event.target;
   refreshLiveRate();
+  refreshSavedSec();
 }
 
 function isLive(): boolean {
@@ -353,19 +377,47 @@ function refreshLiveRate(): void {
   pill.api.updateLiveRate(computeLiveRate());
 }
 
+/** The saved time on the current video: the session's accumulated flushes,
+ * null before apply, while paused, or while the rate diverged from the
+ * applied multiplier (the tracker's accrual gates, mirrored for display). */
+function computeSavedSec(): number | null {
+  if (current === null || savedSec === null || savedMultiplier === null) return null;
+  const video = activeVideo ?? document.querySelector<HTMLVideoElement>('video');
+  if (video === null || video.paused) return null;
+  if (Math.abs(video.playbackRate - savedMultiplier) > RATE_EPSILON) return null;
+  return savedSec;
+}
+
+function refreshSavedSec(): void {
+  // Never create the pill from a tick — that would mount an empty one pre-measure.
+  if (pill === null) return;
+  pill.api.updateSavedSec(computeSavedSec());
+}
+
 function applyMultiplier(multiplier: number): void {
   if (current === null) return;
   const video = activeVideo ?? document.querySelector<HTMLVideoElement>('video');
   if (video === null) return;
   // recommend() already clamps to platformMax; min() re-states the invariant.
-  video.playbackRate = Math.min(multiplier, current.platformMax);
+  const applied = Math.min(multiplier, current.platformMax);
+  video.playbackRate = applied;
+  // Time-saved session: count wall time at the applied rate from now on.
+  savedSec = 0;
+  savedMultiplier = applied;
+  savedTracker.attach(video, applied, flushSavedTick);
   // Show the live line immediately; steady-state ticks are throttled in the pill.
   refreshLiveRate();
+  refreshSavedSec();
   void logAction('apply', multiplier);
 }
 
 function dismissCurrent(): void {
   if (current === null) return;
+  // Detach first: the unflushed tail is credited to the store before the
+  // pill hides.
+  savedTracker.detach();
+  savedSec = null;
+  savedMultiplier = null;
   showPill(NONE_STATE);
   void logAction('dismiss', current.recommendation.multiplier);
 }
@@ -386,6 +438,15 @@ function logAction(userAction: 'apply' | 'dismiss', multiplier: number): void {
         userAction,
       },
     })
+    .catch(() => undefined);
+}
+
+/** Tracker flush → the background store (fire-and-forget like logAction);
+ * the same delta also advances the pill's per-video accumulator. */
+function flushSavedTick(tick: SavedTick): void {
+  if (savedSec !== null) savedSec += savedSeconds(tick.deltaSec, tick.multiplier);
+  void bridge
+    .request({ type: 'timeSaved:accrue', deltaSec: tick.deltaSec, multiplier: tick.multiplier })
     .catch(() => undefined);
 }
 
