@@ -41,6 +41,13 @@ export interface ContentTypePrefs {
   target?: number;
 }
 
+/** Auto-apply opt-in: the master toggle plus per-content-type choices.
+ * An absent contentTypes key falls back to DEFAULT_AUTO_TYPES. */
+export interface AutoApplyPrefs {
+  enabled: boolean;
+  contentTypes: Partial<Record<ContentType, boolean>>;
+}
+
 export interface Settings {
   /** Explicit profile target; unset → the language model's own target
    * (conservative mode lowers the default to 225). */
@@ -57,6 +64,8 @@ export interface Settings {
   /** Keyed by hostname, e.g. 'youtube.com'. */
   sites: Record<string, SiteOverride>;
   contentTypes: Partial<Record<ContentType, ContentTypePrefs>>;
+  /** Per-video auto-apply opt-in; off by default. */
+  autoApply: AutoApplyPrefs;
   /** UI-language preference; unset/'auto' → navigator.language. */
   uiLanguage?: UiLanguageSetting;
 }
@@ -74,6 +83,9 @@ export function defaultSettings(): Settings {
     externalApiEnabled: false,
     sites: {},
     contentTypes: {},
+    // Empty map = use DEFAULT_AUTO_TYPES; normalizeSettings produces the
+    // same shape so the round-trip test holds.
+    autoApply: { enabled: false, contentTypes: {} },
   };
 }
 
@@ -102,6 +114,15 @@ function normalizeSettings(raw: unknown): Settings {
     contentTypes: isRecord(raw.contentTypes)
       ? (raw.contentTypes as Partial<Record<ContentType, ContentTypePrefs>>)
       : {},
+    // Migration: pre-auto-apply records lack the field; the load-time
+    // default fills it. Strict consent gate: anything but true = off. No
+    // storage rewrite pass — normalize is read-path only.
+    autoApply: {
+      enabled: isRecord(raw.autoApply) && raw.autoApply.enabled === true,
+      contentTypes: isRecord(raw.autoApply) && isRecord(raw.autoApply.contentTypes)
+        ? (raw.autoApply.contentTypes as Partial<Record<ContentType, boolean>>)
+        : {},
+    },
   };
   const target = finiteOr(raw.target, undefined);
   if (target !== undefined) settings.target = target;

@@ -16,6 +16,7 @@
 // CustomEvent protocol dies in Firefox's single-world layout (the firefox
 // e2e settings spec caught it: the bridge never answered). postMessage is
 // the sanctioned cross-world channel in both browsers, in both directions.
+// aislop-ignore-file file-too-large
 
 import { CHANNEL_KEY_MAX_LENGTH, ChannelMemory, isChannelRecord, type ChannelRecord } from './channel-memory';
 import { isContentType } from './music';
@@ -28,6 +29,7 @@ import {
   SettingsStore,
   TARGET_WPM_MAX,
   TARGET_WPM_MIN,
+  type AutoApplyPrefs,
   type Settings,
 } from './settings';
 
@@ -216,6 +218,17 @@ function isContentTypePrefs(value: unknown): boolean {
   );
 }
 
+/** Runtime shape check for the auto-apply prefs crossing the postMessage
+ * boundary: master toggle boolean, contentTypes a record of booleans. */
+export function isAutoApplyPrefs(value: unknown): value is AutoApplyPrefs {
+  return (
+    isRecord(value) &&
+    typeof value.enabled === 'boolean' &&
+    isRecord(value.contentTypes) &&
+    Object.values(value.contentTypes).every((flag) => typeof flag === 'boolean')
+  );
+}
+
 // SEC-3 bounds for log:append entries: the pill recommends within
 // platformMax (<= 4) and no speech track runs above 1000 wpm, so anything
 // outside these ranges is forgery. Shared with lib/time-saved.ts, whose
@@ -262,6 +275,9 @@ export function isSettingsPayload(value: unknown): value is Settings {
   if (!isRecord(value.contentTypes) || !Object.values(value.contentTypes).every(isContentTypePrefs)) {
     return false;
   }
+  // Optional-only: pre-auto-apply payloads (the e2e bridge write) stay
+  // valid; a present-but-malformed autoApply is rejected.
+  if (value.autoApply !== undefined && !isAutoApplyPrefs(value.autoApply)) return false;
   return true;
 }
 

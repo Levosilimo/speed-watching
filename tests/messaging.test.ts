@@ -9,6 +9,7 @@ import {
   createBridgeClient,
   createBridgeListener,
   isBridgeEnvelope,
+  isSettingsPayload,
   type BridgeDeps,
   type BridgeRequest,
   type EventHost,
@@ -120,6 +121,7 @@ describe('messaging bridge', () => {
           },
         },
         contentTypes: { lecture: { target: 235 } },
+        autoApply: { enabled: true, contentTypes: { talk: true, music: false } },
       },
     });
     const saved = await settings.load();
@@ -134,6 +136,7 @@ describe('messaging bridge', () => {
       contentType: 'lecture',
     });
     expect(saved.contentTypes.lecture).toEqual({ target: 235 });
+    expect(saved.autoApply).toEqual({ enabled: true, contentTypes: { talk: true, music: false } });
   });
 
   it('rejects forged settings:set with out-of-range target and saves nothing', async () => {
@@ -551,6 +554,36 @@ describe('messaging bridge', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+});
+
+describe('isSettingsPayload autoApply', () => {
+  it('accepts well-formed autoApply shapes', () => {
+    const base = defaultSettings();
+    expect(isSettingsPayload({ ...base, autoApply: { enabled: true, contentTypes: {} } })).toBe(true);
+    expect(
+      isSettingsPayload({
+        ...base,
+        autoApply: { enabled: false, contentTypes: { talk: true, music: false, news: true } },
+      }),
+    ).toBe(true);
+  });
+
+  it('rejects non-boolean enabled and non-boolean map values', () => {
+    const base = defaultSettings();
+    expect(
+      isSettingsPayload({ ...base, autoApply: { enabled: 'yes', contentTypes: {} } }),
+    ).toBe(false);
+    expect(
+      isSettingsPayload({ ...base, autoApply: { enabled: true, contentTypes: { talk: 'yes' } } }),
+    ).toBe(false);
+    expect(isSettingsPayload({ ...base, autoApply: 'garbage' })).toBe(false);
+  });
+
+  it('compat: accepts a payload WITHOUT autoApply (pre-auto-apply writers)', () => {
+    const legacy = { ...defaultSettings() };
+    delete (legacy as Record<string, unknown>).autoApply;
+    expect(isSettingsPayload(legacy)).toBe(true);
   });
 });
 

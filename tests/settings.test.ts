@@ -135,3 +135,37 @@ describe('external API opt-in', () => {
     expect((await new SettingsStore(mockStorage()).load()).externalApiEnabled).toBe(false);
   });
 });
+
+describe('auto-apply prefs', () => {
+  it('defaults to disabled with an empty contentTypes map', () => {
+    expect(defaultSettings().autoApply).toEqual({ enabled: false, contentTypes: {} });
+  });
+
+  it('migrates a stored record without autoApply to off', async () => {
+    const store = new SettingsStore(mockStorage({ 'sw.settings': { conservative: true } }));
+    const loaded = await store.load();
+    expect(loaded.autoApply).toEqual({ enabled: false, contentTypes: {} });
+    expect(loaded.conservative).toBe(true);
+  });
+
+  it('round-trips autoApply through storage', async () => {
+    const store = new SettingsStore(mockStorage());
+    const settings = {
+      ...defaultSettings(),
+      autoApply: { enabled: true, contentTypes: { talk: true, news: false } },
+    };
+    await store.save(settings);
+    expect(await store.load()).toEqual(settings);
+  });
+
+  it('normalizes a non-true enabled to off (strict consent) and malformed contentTypes to {}', async () => {
+    const store = new SettingsStore(
+      mockStorage({ 'sw.settings': { autoApply: { enabled: 'yes', contentTypes: { talk: true } } } }),
+    );
+    expect((await store.load()).autoApply).toEqual({ enabled: false, contentTypes: { talk: true } });
+    const broken = new SettingsStore(
+      mockStorage({ 'sw.settings': { autoApply: { enabled: true, contentTypes: 'garbage' } } }),
+    );
+    expect((await broken.load()).autoApply).toEqual({ enabled: true, contentTypes: {} });
+  });
+});

@@ -519,6 +519,8 @@ export async function runBridgeSpecs(driver: E2EDriver): Promise<void> {
   // Wait for the content script (and its settings hook) to be up before
   // writing through it.
   expectState(await driver.readPillState(), fixture);
+  // Deliberately omits autoApply — pre-auto-apply payloads must keep
+  // validating (isSettingsPayload's optional-only check).
   await driver.writeSettings({
     target: 300,
     conservative: false,
@@ -527,7 +529,7 @@ export async function runBridgeSpecs(driver: E2EDriver): Promise<void> {
     externalApiEnabled: false,
     sites: {},
     contentTypes: {},
-  });
+  } as Settings);
   try {
     await driver.navigateToWatch(fixture);
     const state = expectState(await driver.readPillState(), fixture);
