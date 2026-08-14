@@ -27,6 +27,7 @@ import { resolveLanguage } from '../../lib/languages';
 import { detectMusic } from '../../lib/music';
 import { recommend, type RateTier, type Recommendation } from '../../lib/recommend';
 import { defaultSettings, resolveUserTarget, type Settings } from '../../lib/settings';
+import { defaultSkipSilence, pauseRateFor, type SkipSilencePrefs } from '../../lib/skip-silence';
 import type { PillState } from '../../ui/pill';
 import { chaptersOf } from '../../lib/youtube';
 import {
@@ -110,6 +111,11 @@ export interface E2EDriver {
   sleep(ms: number): Promise<void>;
   /** Write settings through the bridge — same path the options page uses. */
   writeSettings(settings: Settings): Promise<void>;
+  /** Write skip-silence prefs through the bridge (mirror of writeSettings). */
+  writeSkipPrefs(prefs: SkipSilencePrefs): Promise<void>;
+  /** Simulate a live stream: the player badge + a navigation cycle that
+   * re-measures (the content script suppresses the pill on live). */
+  setLiveStream(): Promise<void>;
   /** The chapter hook: the per-chapter plan and the enforced segment index. */
   readChapterHook(): Promise<{
     rates: Array<{ startSec: number; endSec: number; multiplier: number; mode: string }>;
@@ -907,5 +913,119 @@ export async function runChapterSpecs(driver: E2EDriver): Promise<void> {
     throw new Error(
       `${fixture}: rate ${stopped} after a boundary with consent off, expected ${music.multiplier} (scheduler stopped)`,
     );
+  }
+}
+
+/**
+ * Skip-silence e2e: with the toggle on and a rate applied, a timeupdate
+ * inside the fixture's caption gap dips the rate to the pause target and
+ * restores the applied rate outside it; the toggle off never dips; music
+ * and live streams are no-ops. Expected rates are recomputed from the same
+ * pure lib functions the content script uses (recommend over the fixture,
+ * pauseRateFor over the applied multiplier), so the assertions are
+ * math-level. The fixture video never plays — the driver steps through
+ * time with the chapter hook's applyFor (currentTime + timeupdate).
+ */
+export async function runSkipSpecs(driver: E2EDriver): Promise<void> {
+  const fixture = 'synthetic/gapped.json';
+  const on = { ...defaultSkipSilence(), enabled: true };
+  await driver.navigateToWatch(fixture);
+  expectState(await driver.readPillState(), fixture);
+  try {
+    // (a) Toggle on: apply, step inside the gap span [1.2, 2.7) → the pause
+    // rate; step outside → the applied rate; back inside → the dip repeats.
+    await driver.writeSkipPrefs(on);
+    await driver.navigateToWatch(fixture);
+    const state = expectState(await driver.readPillState(), fixture);
+    const { rec } = expectedRecommendation(fixture);
+    if (state.mode !== rec.mode) {
+      throw new Error(`${fixture}: pill mode ${state.mode}, expected ${rec.mode}`);
+    }
+    await driver.applyPill();
+    const applied = await driver.readPlaybackRate();
+    if (applied === null || Math.abs(applied - state.multiplier) > RATE_TOLERANCE) {
+      throw new Error(
+        `${fixture}: playbackRate ${applied} after apply, expected ${state.multiplier} ± ${RATE_TOLERANCE}`,
+      );
+    }
+    const pause = pauseRateFor(state.multiplier, on);
+    if (pause >= state.multiplier) {
+      throw new Error(`${fixture}: fixture must produce a dip (pause ${pause} >= applied ${state.multiplier})`);
+    }
+    await driver.chapterApplyFor(2.0);
+    const dipped = await driver.readPlaybackRate();
+    if (dipped === null || Math.abs(dipped - pause) > RATE_TOLERANCE) {
+      throw new Error(
+        `${fixture}: in-gap playbackRate ${dipped}, expected the pause rate ${pause} ± ${RATE_TOLERANCE}`,
+      );
+    }
+    await driver.chapterApplyFor(1.0);
+    const restored = await driver.readPlaybackRate();
+    if (restored === null || Math.abs(restored - state.multiplier) > RATE_TOLERANCE) {
+      throw new Error(
+        `${fixture}: out-of-gap playbackRate ${restored}, expected the applied ${state.multiplier} ± ${RATE_TOLERANCE}`,
+      );
+    }
+    await driver.chapterApplyFor(2.0);
+    const redipped = await driver.readPlaybackRate();
+    if (redipped === null || Math.abs(redipped - pause) > RATE_TOLERANCE) {
+      throw new Error(
+        `${fixture}: in-gap playbackRate ${redipped}, expected the pause rate ${pause} ± ${RATE_TOLERANCE} (repeat)`,
+      );
+    }
+
+    // (b) Toggle off: no plan, so the rate never dips.
+    await driver.writeSkipPrefs(defaultSkipSilence());
+    await driver.navigateToWatch(fixture);
+    expectState(await driver.readPillState(), fixture);
+    await driver.applyPill();
+    await driver.chapterApplyFor(2.0);
+    const held = await driver.readPlaybackRate();
+    if (held === null || Math.abs(held - state.multiplier) > RATE_TOLERANCE) {
+      throw new Error(
+        `${fixture}: toggle-off in-gap playbackRate ${held}, expected the applied ${state.multiplier} ± ${RATE_TOLERANCE}`,
+      );
+    }
+
+    // (c) Music: apply is a no-op, so no dip can ever attach.
+    await driver.writeSkipPrefs(on);
+    const musicFixture = 'synthetic/music-lyrics.json';
+    await driver.navigateToWatch(musicFixture);
+    const music = expectState(await driver.readPillState(), musicFixture);
+    if (music.mode !== 'music') {
+      throw new Error(`${musicFixture}: pill mode ${music.mode}, expected music`);
+    }
+    await driver.applyPill();
+    await driver.chapterApplyFor(2.0);
+    const musicRate = await driver.readPlaybackRate();
+    if (musicRate === null || Math.abs(musicRate - 1) > RATE_TOLERANCE) {
+      throw new Error(
+        `${musicFixture}: playbackRate ${musicRate} after an in-gap tick, expected 1 (no dip on music)`,
+      );
+    }
+
+    // (d) Live: the badge suppresses the pill; apply is a no-op.
+    await driver.navigateToWatch(fixture);
+    await driver.setLiveStream();
+    let live: PillState | null = null;
+    for (let i = 0; i < 20 && (live === null || live.mode !== 'none'); i++) {
+      live = await driver.readPillState();
+      if (live === null || live.mode !== 'none') await driver.sleep(250);
+    }
+    if (live === null || live.mode !== 'none') {
+      throw new Error(`live: pill mode ${live?.mode}, expected none after the live badge`);
+    }
+    await driver.applyPill();
+    await driver.chapterApplyFor(2.0);
+    const liveRate = await driver.readPlaybackRate();
+    if (liveRate === null || Math.abs(liveRate - 1) > RATE_TOLERANCE) {
+      throw new Error(
+        `live: playbackRate ${liveRate} after an in-gap tick, expected 1 (no dip on live)`,
+      );
+    }
+  } finally {
+    await driver.navigateToWatch(fixture);
+    expectState(await driver.readPillState(), fixture);
+    await driver.writeSkipPrefs(defaultSkipSilence());
   }
 }

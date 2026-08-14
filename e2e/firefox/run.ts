@@ -36,6 +36,7 @@ import {
   type Measurement,
 } from '../shared/specs';
 import type { Settings } from '../../lib/settings';
+import type { SkipSilencePrefs } from '../../lib/skip-silence';
 
 const GECKODRIVER_PORT = 4444;
 
@@ -221,6 +222,33 @@ async function main(): Promise<void> {
         if (result !== null && result !== undefined) {
           throw new Error(`writeSettings failed: ${String(result)}`);
         }
+      },
+      async writeSkipPrefs(prefs: SkipSilencePrefs) {
+        const result = await driver.executeAsyncScript(
+          'const done = arguments[arguments.length - 1];' +
+            'const hook = window.__speedwatcherSkip;' +
+            'if (!hook) { done("hook missing"); return; }' +
+            'hook.set(JSON.parse(arguments[0])).then(() => done());',
+          JSON.stringify(prefs),
+        );
+        if (result !== null && result !== undefined) {
+          throw new Error(`writeSkipPrefs failed: ${String(result)}`);
+        }
+      },
+      async setLiveStream() {
+        // The live badge plus a navigation cycle: yt-navigate-start clears
+        // the old video context, the finish re-measures and renders the
+        // live suppression (mirror of the SPA transition).
+        await driver.executeScript(
+          'const anchor = document.querySelector("#movie_player");' +
+            'if (anchor !== null) {' +
+            '  const badge = document.createElement("div");' +
+            '  badge.className = "ytp-live-badge";' +
+            '  anchor.appendChild(badge);' +
+            '}' +
+            'document.dispatchEvent(new Event("yt-navigate-start"));' +
+            'document.dispatchEvent(new Event("yt-navigate-finish"));',
+        );
       },
       async readChapterHook() {
         const deadline = Date.now() + 15_000;
