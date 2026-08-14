@@ -195,8 +195,11 @@ async function main(): Promise<void> {
   const fallbacks: Record<string, string[]> = {};
   for (const [lang, registers] of Object.entries(candidates)) {
     for (const [register, queries] of Object.entries(registers)) {
+      // music carries 2 control videos (no band); every register keeps one
+      // verified fallback in the pool
+      const primary = register === 'music' ? 2 : 3;
       const { videos: picked, fallbacks: pool } = await selectRegister(lang, register, queries, 4);
-      for (const v of picked.slice(0, 3)) {
+      for (const v of picked.slice(0, primary)) {
         videos.push({
           videoId: v.videoId,
           register,
