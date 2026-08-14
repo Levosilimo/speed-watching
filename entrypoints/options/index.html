@@ -34,16 +34,59 @@
         </div>
         <div class="safe-zone-label">
           <span data-i18n="options.slow">Slow</span>
-          <span data-i18n="options.safeZone">Comfortable range (250–275)</span>
+          <span data-i18n="options.safeZone">English comfort range (250–275)</span>
           <span data-i18n="options.fast">Fast</span>
         </div>
+        <p class="section-note" id="safe-zone-language" hidden></p>
+        <p class="section-note" data-i18n="options.targetUnitNote">
+          A manual target value applies in the video's language unit
+        </p>
         <p class="section-note" data-i18n="options.why250" id="why-250">
           Why 250? Listening comprehension stays comfortable through about
           275 wpm — the range commonly cited for speech — and silent reading
           runs roughly 240–260 wpm. 250 matches your reading rate and leaves
           a ~9% buffer below that ceiling: a comfortable default, not a
-          maximum to push.
+          maximum to push. This is the English comfort range; other
+          languages use their derived ranges.
         </p>
+      </div>
+    </div>
+
+    <!-- Auto-apply speed -->
+    <div class="section" id="auto-apply-section">
+      <h2 class="section-label" id="auto-label" data-i18n="options.autoLabel">Auto-apply speed</h2>
+      <div class="section-card">
+        <p class="section-note" data-i18n="options.autoNote">
+          When on, the recommended speed applies automatically to each new
+          video. Only confident caption-based recommendations for talks,
+          lectures, explainers, and podcasts auto-apply — music and
+          estimated guesses never do. A manual speed change or "Stop auto"
+          overrides it for that video; it returns on the next one. Off by
+          default.
+        </p>
+        <label class="toggle-row">
+          <input type="checkbox" id="auto-toggle" />
+          <span data-i18n="options.autoToggle">Apply the recommended speed automatically</span>
+        </label>
+        <div class="auto-type-group" role="group" aria-labelledby="auto-type-label">
+          <span class="auto-type-label" id="auto-type-label" data-i18n="options.autoTypeLabel">Apply to these content types</span>
+          <label class="auto-type-item">
+            <input type="checkbox" data-type="talk" />
+            <span data-i18n="options.preset.talk">Talk</span>
+          </label>
+          <label class="auto-type-item">
+            <input type="checkbox" data-type="lecture" />
+            <span data-i18n="options.preset.lecture">Lecture</span>
+          </label>
+          <label class="auto-type-item">
+            <input type="checkbox" data-type="explainer" />
+            <span data-i18n="options.preset.explainer">Explainer</span>
+          </label>
+          <label class="auto-type-item">
+            <input type="checkbox" data-type="podcast" />
+            <span data-i18n="options.preset.podcast">Podcast</span>
+          </label>
+        </div>
       </div>
     </div>
 
@@ -120,10 +163,8 @@
       <h2 class="section-label" id="probe-section-label" data-i18n="options.probeLabel">Test audio capture</h2>
       <div class="section-card">
         <p class="section-note" data-i18n="options.probeNote">
-          Verifies that the extension can capture audio from a video tab. The
-          meter shows the live audio level of the captured tab while the test
-          runs. No audio is recorded, stored, or transmitted — the meter is
-          the only output.
+          Confirms your browser lets us read a video tab's audio — needed
+          before on-device speech-to-text can ship.
         </p>
         <button type="button" id="toggle">Test audio capture</button>
         <div id="status" role="status">Idle</div>
@@ -144,44 +185,6 @@
           <input type="checkbox" id="external-api-toggle" />
           <span data-i18n="options.integrationToggle">Allow measurement requests from partner extensions</span>
         </label>
-      </div>
-    </div>
-
-    <!-- Auto-apply speed -->
-    <div class="section" id="auto-apply-section">
-      <h2 class="section-label" id="auto-label" data-i18n="options.autoLabel">Auto-apply speed</h2>
-      <div class="section-card">
-        <p class="section-note" data-i18n="options.autoNote">
-          When on, the recommended speed applies automatically to each new
-          video. Only confident caption-based recommendations for talks,
-          lectures, explainers, and podcasts auto-apply — music and
-          estimated guesses never do. A manual speed change or "Stop auto"
-          overrides it for that video; it returns on the next one. Off by
-          default.
-        </p>
-        <label class="toggle-row">
-          <input type="checkbox" id="auto-toggle" />
-          <span data-i18n="options.autoToggle">Apply the recommended speed automatically</span>
-        </label>
-        <div class="auto-type-group" role="group" aria-labelledby="auto-type-label">
-          <span class="auto-type-label" id="auto-type-label" data-i18n="options.autoTypeLabel">Apply to these content types</span>
-          <label class="auto-type-item">
-            <input type="checkbox" data-type="talk" />
-            <span data-i18n="options.preset.talk">Talk</span>
-          </label>
-          <label class="auto-type-item">
-            <input type="checkbox" data-type="lecture" />
-            <span data-i18n="options.preset.lecture">Lecture</span>
-          </label>
-          <label class="auto-type-item">
-            <input type="checkbox" data-type="explainer" />
-            <span data-i18n="options.preset.explainer">Explainer</span>
-          </label>
-          <label class="auto-type-item">
-            <input type="checkbox" data-type="podcast" />
-            <span data-i18n="options.preset.podcast">Podcast</span>
-          </label>
-        </div>
       </div>
     </div>
 

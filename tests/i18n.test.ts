@@ -45,7 +45,7 @@ describe('time-saved strings (12 new keys, both locales)', () => {
     );
     expect(t('options.timeSavedStarted', 'en')).toBe('Time-saved tracking started');
     expect(t('pill.savedTime', 'en', { amount: '2', unit: 'minutes' })).toBe(
-      '~2 minutes saved',
+      '~2 minutes saved (estimate)',
     );
     expect(t('time.unit.hourOne', 'en')).toBe('hour');
     expect(t('time.unit.hourMany', 'en')).toBe('hours');
@@ -61,7 +61,7 @@ describe('time-saved strings (12 new keys, both locales)', () => {
     );
     expect(t('options.timeSavedStarted', 'ru')).toBe('Учёт сэкономленного времени начат');
     expect(t('pill.savedTime', 'ru', { amount: '2', unit: 'минуты' })).toBe(
-      '~2 минуты сэкономлено',
+      '~2 минуты сэкономлено (оценка)',
     );
     expect(t('time.unit.hourOne', 'ru')).toBe('час');
     expect(t('time.unit.hourFew', 'ru')).toBe('часа');
@@ -177,7 +177,9 @@ describe('unitLabel / tierLabel', () => {
 describe('nudge and onboarding copy (lib-16)', () => {
   it('locks the English nudge copy', () => {
     expect(t('nudge.title', 'en')).toBe('At a glance, was that still fully clear?');
-    expect(t('nudge.body', 'en')).toBe(
+    // The body's range is parametrized (P0: keys to the track language);
+    // the en defaults render the locked 250–275 wpm sentence.
+    expect(t('nudge.body', 'en', { lo: 250, hi: 275, unit: 'wpm' })).toBe(
       'Fast playback can feel as clear as normal speed even when recall dips — speed-watching mostly affects how confident you feel about understanding, not what you objectively catch. If anything felt rushed, 250–275 wpm is the comfortable range to fall back to.',
     );
     expect(t('nudge.gotIt', 'en')).toBe('Got it');
@@ -186,7 +188,7 @@ describe('nudge and onboarding copy (lib-16)', () => {
 
   it('locks the Russian nudge copy', () => {
     expect(t('nudge.title', 'ru')).toBe('Сходу всё было понятно?');
-    expect(t('nudge.body', 'ru')).toBe(
+    expect(t('nudge.body', 'ru', { lo: 250, hi: 275, unit: 'слов/мин' })).toBe(
       'Быстрое воспроизведение может ощущаться таким же понятным, как обычное, даже когда запоминание немного падает: на скорости чаще страдает уверенность в понимании, а не то, что вы объективно улавливаете. Если что-то казалось слишком быстрым — комфортный диапазон 250–275 слов/мин.',
     );
     expect(t('nudge.gotIt', 'ru')).toBe('Понятно');
@@ -195,10 +197,10 @@ describe('nudge and onboarding copy (lib-16)', () => {
 
   it('locks the why-250 onboarding copy in both locales', () => {
     expect(t('options.why250', 'en')).toBe(
-      'Why 250? Listening comprehension stays comfortable through about 275 wpm — the range commonly cited for speech — and silent reading runs roughly 240–260 wpm. 250 matches your reading rate and leaves a ~9% buffer below that ceiling: a comfortable default, not a maximum to push.',
+      'Why 250? Listening comprehension stays comfortable through about 275 wpm — the range commonly cited for speech — and silent reading runs roughly 240–260 wpm. 250 matches your reading rate and leaves a ~9% buffer below that ceiling: a comfortable default, not a maximum to push. This is the English comfort range; other languages use their derived ranges.',
     );
     expect(t('options.why250', 'ru')).toBe(
-      'Почему 250? Комфортное восприятие речи сохраняется примерно до 275 слов/мин — диапазона, который обычно считают комфортным, — а чтение про себя идёт около 240–260 слов/мин. 250 совпадает со скоростью чтения и оставляет запас ~9% до этого предела: комфортное значение по умолчанию, а не максимум, который стоит выжимать.',
+      'Почему 250? Комфортное восприятие речи сохраняется примерно до 275 слов/мин — диапазона, который обычно считают комфортным, — а чтение про себя идёт около 240–260 слов/мин. 250 совпадает со скоростью чтения и оставляет запас ~9% до этого предела: комфортное значение по умолчанию, а не максимум, который стоит выжимать. Это английский комфортный диапазон; для других языков используются производные диапазоны.',
     );
   });
 });

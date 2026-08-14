@@ -37,7 +37,7 @@ function state(overrides: Partial<PillState> = {}): PillState {
   };
 }
 
-const LIVE: LiveRate = { rate: 248, multiplier: 1.55, unit: 'wpm' };
+const LIVE: LiveRate = { rate: 249, multiplier: 1.55, unit: 'wpm' };
 
 function liveElOf(host: HTMLElement): HTMLSpanElement {
   const el = rootOf(host).querySelector<HTMLSpanElement>('.live-rate');
@@ -95,7 +95,7 @@ describe('createPill live-rate line', () => {
 
     const live = liveElOf(host);
     expect(live.hidden).toBe(false);
-    expect(live.textContent).toBe('now ≈ 248 wpm at 1.55x');
+    expect(live.textContent).toBe('now ≈ 249 wpm at 1.55x');
   });
 
   it('shows the line in warning mode as well', () => {
@@ -148,7 +148,7 @@ describe('createPill live-rate line', () => {
 
     const live = liveElOf(host);
     expect(live.hidden).toBe(false);
-    expect(live.textContent).toBe('now ≈ 248 wpm at 1.55x');
+    expect(live.textContent).toBe('now ≈ 249 wpm at 1.55x');
   });
 
   it('drops the stale rate when a full update leaves recommend/warning', () => {
@@ -175,7 +175,7 @@ describe('createPill live-rate line', () => {
 
     pill.updateLiveRate(LIVE);
     pill.updateLiveRate(LIVE);
-    expect(live.textContent).toBe('now ≈ 248 wpm at 1.55x');
+    expect(live.textContent).toBe('now ≈ 249 wpm at 1.55x');
     expect(live.hidden).toBe(false);
   });
 });

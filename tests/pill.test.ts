@@ -79,6 +79,62 @@ describe('createPill stop-auto button', () => {
     );
   });
 
+  it('becomes the undo affordance in the auto state: Apply hidden, Reset to {rate}× label', () => {
+    const host = shadowHost();
+    const pill = createPill(host, {}, { locale: 'en' });
+    pill.mount();
+    const root = rootOf(host);
+    pill.update(state({ applied: 'auto', undoRate: 1 }));
+    const apply = root.querySelector<HTMLButtonElement>('.btn-apply')!;
+    const stopAuto = stopAutoOf(host);
+    // P1b: the redundant Apply is dropped in the auto-applied state.
+    expect(apply.hidden).toBe(true);
+    expect(stopAuto.hidden).toBe(false);
+    // P1a: the undo restores the pre-auto rate — the button says what it
+    // will do.
+    expect(stopAuto.textContent).toBe('Reset to 1×');
+    expect(stopAuto.getAttribute('aria-label')).toBe(
+      'Restore the playback speed that played before auto-apply',
+    );
+    pill.update(state({ applied: 'auto', undoRate: 1.25 }));
+    expect(stopAuto.textContent).toBe('Reset to 1.25×');
+  });
+
+  it('localizes the undo affordance and the auto label marker for ru', () => {
+    const host = shadowHost();
+    const pill = createPill(host, {}, { locale: 'ru' });
+    pill.mount();
+    const root = rootOf(host);
+    pill.update(state({ applied: 'auto', undoRate: 1 }));
+    expect(stopAutoOf(host).textContent).toBe('Сбросить до 1×');
+    expect(root.querySelector('.label')?.textContent).toBe('Авто · 1,55× ≈ 248 слов/мин');
+  });
+
+  it('leads the label line with the Auto marker and drops the arrow (P1b)', () => {
+    const host = shadowHost();
+    const pill = createPill(host, {}, { locale: 'en' });
+    pill.mount();
+    pill.update(state({ applied: 'auto', undoRate: 1 }));
+    expect(rootOf(host).querySelector('.label')?.textContent).toBe('Auto · 1.55x ≈ 248 wpm');
+    // Without the auto state the verbatim recommendation label stays.
+    pill.update(state());
+    expect(rootOf(host).querySelector('.label')?.textContent).toBe('→ 1.55x ≈ 248 wpm');
+  });
+
+  it('routes Enter to the undo in the auto-applied state, not Apply', () => {
+    const onStopAuto = vi.fn();
+    const onApply = vi.fn();
+    const host = shadowHost();
+    const pill = createPill(host, { onStopAuto, onApply }, { locale: 'en' });
+    pill.mount();
+    pill.update(state({ applied: 'auto', undoRate: 1 }));
+    rootOf(host).querySelector('.pill')!.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Enter' }),
+    );
+    expect(onStopAuto).toHaveBeenCalledExactlyOnceWith();
+    expect(onApply).not.toHaveBeenCalled();
+  });
+
   it('keeps the stop-auto button outside the live-region main text', () => {
     const host = shadowHost();
     const pill = createPill(host, {}, { locale: 'en' });
@@ -476,9 +532,11 @@ describe('createPill — ru locale', () => {
     const pill = createPill(host, {}, { locale: 'ru' });
     pill.mount();
     pill.update(state());
-    pill.updateLiveRate({ rate: 248, multiplier: 1.55, unit: 'wpm' });
+    // A live rate that duplicates the label's effective rate is hidden
+    // (P2b) — push a divergent one so the localization is exercised.
+    pill.updateLiveRate({ rate: 251, multiplier: 1.6, unit: 'wpm' });
     expect(rootOf(host).querySelector('.live-rate')?.textContent).toBe(
-      'сейчас ≈ 248 слов/мин при 1,55×',
+      'сейчас ≈ 251 слов/мин при 1,6×',
     );
     pill.updateLiveRate({ rate: 380, multiplier: 1.9, unit: 'morae/min' });
     expect(rootOf(host).querySelector('.live-rate')?.textContent).toBe(
@@ -545,6 +603,85 @@ describe('createPill — ru locale', () => {
   });
 });
 
+describe('warningNoteCopy keys the range to the track language (P0)', () => {
+  it('renders the en 250–275 defaults when no track range resolves', () => {
+    expect(warningNoteCopy('above-zone')).toBe(
+      'Past the 250–275 wpm range commonly cited for comfortable listening',
+    );
+    expect(warningNoteCopy('above-zone', 'ru')).toBe(
+      'Скорость выше диапазона 250–275 слов/мин, который обычно считают комфортным',
+    );
+  });
+
+  it('renders the ru track range (168–180 слов/мин), never the en 250–275', () => {
+    const note = warningNoteCopy('above-zone', 'ru', { lo: 168, hi: 180, unit: 'wpm' });
+    expect(note).toContain('168–180');
+    expect(note).toContain('слов/мин');
+    expect(note).not.toContain('250');
+    // The en UI renders the same track range in English.
+    expect(warningNoteCopy('above-zone', 'en', { lo: 168, hi: 180, unit: 'wpm' })).toContain(
+      'Past the 168–180 wpm range',
+    );
+  });
+
+  it('renders the resolved track range through the pill surface', () => {
+    const host = shadowHost();
+    const pill = createPill(host, {}, { locale: 'ru' });
+    pill.mount();
+    pill.update(
+      state({
+        mode: 'warning',
+        reason: 'above-zone',
+        label: 'w',
+        effectiveWpm: 200,
+        range: { lo: 168, hi: 180, unit: 'wpm' },
+      }),
+    );
+    const note = rootOf(host).querySelector<HTMLDivElement>('.warning-note')!;
+    expect(note.textContent).toBe(
+      'Скорость выше диапазона 168–180 слов/мин, который обычно считают комфортным',
+    );
+  });
+
+  it('keeps capped-below and pause-diluted copy free of range params', () => {
+    expect(warningNoteCopy('capped-below', 'ru', { lo: 168, hi: 180, unit: 'wpm' })).toBe(
+      'Оценка неточна — для безопасности скорость ограничена 1,5×',
+    );
+    expect(warningNoteCopy('pause-diluted', 'en', { lo: 168, hi: 180, unit: 'wpm' })).toBe(
+      'Speech runs fast at this speed — estimate uncertain',
+    );
+  });
+});
+
+describe('createPill first-run onboarding line (P1c)', () => {
+  it('renders the measured-rate explainer when flagged and hides otherwise', () => {
+    const host = shadowHost();
+    const pill = createPill(host, {}, { locale: 'en' });
+    pill.mount();
+    const line = rootOf(host).querySelector<HTMLDivElement>('.first-run')!;
+    pill.update(state());
+    expect(line.hidden).toBe(true);
+    pill.update(state({ firstRun: true }));
+    expect(line.hidden).toBe(false);
+    expect(line.textContent).toBe(
+      "We measured this video's speech at ~160 wpm — playing at 1.55× lands ~248 wpm, a comfortable rate. Apply or dismiss.",
+    );
+    // A later render without the flag hides it again.
+    pill.update(state());
+    expect(line.hidden).toBe(true);
+  });
+
+  it('localizes the first-run line for ru', () => {
+    const host = shadowHost();
+    const pill = createPill(host, {}, { locale: 'ru' });
+    pill.mount();
+    pill.update(state({ firstRun: true }));
+    expect(rootOf(host).querySelector('.first-run')?.textContent).toBe(
+      'Мы измерили темп речи в этом видео: ~160 слов/мин — воспроизведение на 1,55× даст ~248 слов/мин, комфортный темп. Применить или закрыть.',
+    );
+  });
+});
+
 describe('createPill saved-time line', () => {
   afterEach(() => {
     vi.restoreAllMocks();
@@ -557,7 +694,7 @@ describe('createPill saved-time line', () => {
     return el;
   }
 
-  it('renders the saved line in recommend mode when saved > 0', () => {
+  it('renders the saved line in recommend mode when saved >= 30', () => {
     const host = shadowHost();
     const pill = createPill(host, {}, { locale: 'en' });
     pill.mount();
@@ -566,7 +703,20 @@ describe('createPill saved-time line', () => {
 
     const saved = savedElOf(host);
     expect(saved.hidden).toBe(false);
-    expect(saved.textContent).toBe('~2 minutes saved');
+    expect(saved.textContent).toBe('~2 minutes saved (estimate)');
+  });
+
+  it('hides the line below the 30 s floor and shows it at exactly 30', () => {
+    const host = shadowHost();
+    const pill = createPill(host, {}, { locale: 'en' });
+    pill.mount();
+    pill.update(state());
+    const saved = savedElOf(host);
+    pill.updateSavedSec(29);
+    expect(saved.hidden).toBe(true);
+    pill.updateSavedSec(30);
+    expect(saved.hidden).toBe(false);
+    expect(saved.textContent).toBe('~30 seconds saved (estimate)');
   });
 
   it('shows the line in warning mode as well', () => {
@@ -590,7 +740,7 @@ describe('createPill saved-time line', () => {
     }
   });
 
-  it('hides the line for null and for zero saved time', () => {
+  it('hides the line for null and for sub-floor saved time', () => {
     const host = shadowHost();
     const pill = createPill(host, {}, { locale: 'en' });
     pill.mount();
@@ -601,8 +751,10 @@ describe('createPill saved-time line', () => {
     pill.updateSavedSec(null);
     expect(savedElOf(host).hidden).toBe(true);
 
-    // A fresh session at 0 saved is not worth a line.
+    // A sub-floor amount is not worth a line.
     pill.updateSavedSec(0);
+    expect(savedElOf(host).hidden).toBe(true);
+    pill.updateSavedSec(20);
     expect(savedElOf(host).hidden).toBe(true);
   });
 
@@ -615,7 +767,7 @@ describe('createPill saved-time line', () => {
 
     pill.updateSavedSec(120);
     pill.updateSavedSec(120);
-    expect(saved.textContent).toBe('~2 minutes saved');
+    expect(saved.textContent).toBe('~2 minutes saved (estimate)');
     expect(saved.hidden).toBe(false);
   });
 
@@ -640,6 +792,23 @@ describe('createPill saved-time line', () => {
     pill.mount();
     pill.update(state());
     pill.updateSavedSec(120);
-    expect(savedElOf(host).textContent).toBe('~2 минуты сэкономлено');
+    expect(savedElOf(host).textContent).toBe('~2 минуты сэкономлено (оценка)');
+  });
+});
+
+describe('createPill live-line duplication (P2b)', () => {
+  it('hides the live line when it duplicates the label (same rate, same multiplier)', () => {
+    const host = shadowHost();
+    const pill = createPill(host, {}, { locale: 'en' });
+    pill.mount();
+    pill.update(state({ effectiveWpm: 248, multiplier: 1.55 }));
+    const live = rootOf(host).querySelector<HTMLSpanElement>('.live-rate')!;
+    // Auto-applied state: the live rate equals the label's effective rate.
+    pill.updateLiveRate({ rate: 248.3, multiplier: 1.55, unit: 'wpm' });
+    expect(live.hidden).toBe(true);
+    // A divergent rate is new information — the line shows.
+    pill.updateLiveRate({ rate: 251, multiplier: 1.6, unit: 'wpm' });
+    expect(live.hidden).toBe(false);
+    expect(live.textContent).toBe('now ≈ 251 wpm at 1.6x');
   });
 });

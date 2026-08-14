@@ -10,6 +10,7 @@
 import { DARK, LIGHT, type Theme } from './styles';
 import { pillCss } from './pill-css';
 import { createBridgeClient } from '../lib/messaging';
+import type { RateRange } from '../lib/languages';
 import {
   extractUnit,
   formatMultiplier,
@@ -39,8 +40,17 @@ export interface PillState {
   label: string;
   /** Warning-mode copy selector: cliff crossing vs clamp cap vs articulatory load. */
   reason?: 'above-zone' | 'capped-below' | 'pause-diluted';
+  /** The resolved track language's safe zone (target–ceiling, its unit);
+   * absent → the en 250–275 wpm defaults. Drives the warning copy and the
+   * first-run line's unit. */
+  range?: RateRange;
   /** Auto-applied this video; shows the Stop-auto button in recommend mode. */
   applied?: AppliedSource;
+  /** The rate the stop-auto/dismiss undo restores (the pre-auto rate);
+   * absent → plain 'Stop auto' with no rate change. */
+  undoRate?: number;
+  /** P1c: the one-time first-run explainer line shows on this render. */
+  firstRun?: boolean;
 }
 
 export interface PillEvents {
@@ -84,6 +94,7 @@ interface PillDom {
   liveEl: HTMLSpanElement;
   savedEl: HTMLSpanElement;
   warningNote: HTMLDivElement;
+  firstRunEl: HTMLDivElement;
   applyBtn: HTMLButtonElement;
   dismissBtn: HTMLButtonElement;
   stopAutoBtn: HTMLButtonElement;
@@ -118,7 +129,11 @@ function buildDom(): PillDom {
   const warningNote = document.createElement('div');
   warningNote.className = 'warning-note';
 
-  mainText.append(labelEl, tierEl, liveEl, savedEl, warningNote);
+  const firstRunEl = document.createElement('div');
+  firstRunEl.className = 'first-run';
+  firstRunEl.hidden = true;
+
+  mainText.append(labelEl, tierEl, liveEl, savedEl, warningNote, firstRunEl);
 
   const actions = document.createElement('div');
   actions.className = 'actions';
@@ -151,6 +166,7 @@ function buildDom(): PillDom {
     liveEl,
     savedEl,
     warningNote,
+    firstRunEl,
     applyBtn,
     dismissBtn,
     stopAutoBtn,
@@ -191,11 +207,17 @@ function wireEvents(
     restoreFocus(host);
   });
 
-  // Keyboard: Enter applies, Escape dismisses. Both route through the
-  // button handlers so the focus restoration is shared with clicks.
+  // Keyboard: Enter applies (or undoes auto in the auto-applied state),
+  // Escape dismisses. Both route through the button handlers so the focus
+  // restoration is shared with clicks.
   dom.pill.addEventListener('keydown', (e: KeyboardEvent) => {
     if (e.key === 'Enter' && !e.defaultPrevented) {
-      dom.applyBtn.click();
+      const state = getState();
+      if (state?.applied === 'auto' && state.mode === 'recommend') {
+        dom.stopAutoBtn.click();
+      } else {
+        dom.applyBtn.click();
+      }
     } else if (e.key === 'Escape' && !e.defaultPrevented) {
       dom.dismissBtn.click();
     }
@@ -205,36 +227,34 @@ function wireEvents(
 export function warningNoteCopy(
   reason?: 'above-zone' | 'capped-below' | 'pause-diluted',
   locale: UiLocale = 'en',
+  range?: RateRange,
 ): string {
-  if (locale === 'ru') {
-    const key =
-      reason === 'capped-below'
-        ? 'pill.warning.cappedBelow'
-        : reason === 'pause-diluted'
-          ? 'pill.warning.pauseDiluted'
-          : 'pill.warning.aboveZone';
-    return t(key, 'ru');
-  }
-  if (reason === 'capped-below') {
-    return 'Estimate uncertain — capped at 1.5x for safety';
-  }
-  if (reason === 'pause-diluted') {
-    return 'Speech runs fast at this speed — estimate uncertain';
-  }
-  return 'Past the 250–275 wpm range commonly cited for comfortable listening';
+  const key =
+    reason === 'capped-below'
+      ? 'pill.warning.cappedBelow'
+      : reason === 'pause-diluted'
+        ? 'pill.warning.pauseDiluted'
+        : 'pill.warning.aboveZone';
+  // The above-zone copy renders the TRACK language's range (P0): a ru track
+  // warns past 168–180 слов/мин, never the en 250–275. Absent range → en.
+  const params =
+    key === 'pill.warning.aboveZone'
+      ? {
+          lo: range?.lo ?? 250,
+          hi: range?.hi ?? 275,
+          unit: unitLabel(range?.unit ?? 'wpm', locale),
+        }
+      : undefined;
+  return t(key, locale, params);
 }
 
 /** Formats the live-rate line, e.g. 'now ≈ 248 wpm at 1.55x'. */
 export function liveRateText(live: LiveRate, locale: UiLocale = 'en'): string {
-  if (locale === 'ru') {
-    return t('pill.liveRate', 'ru', {
-      rate: Math.round(live.rate),
-      unit: unitLabel(extractUnit(live.unit), 'ru'),
-      mult: formatMultiplier(live.multiplier, 'ru'),
-    });
-  }
-  const multiplier = String(Math.round(live.multiplier * 100) / 100);
-  return `now ≈ ${Math.round(live.rate)} ${live.unit} at ${multiplier}x`;
+  return t('pill.liveRate', locale, {
+    rate: Math.round(live.rate),
+    unit: unitLabel(extractUnit(live.unit), locale),
+    mult: formatMultiplier(live.multiplier, locale),
+  });
 }
 
 /** Throttle gate: true only when pushing `next` would change the live line.
@@ -251,41 +271,60 @@ export function shouldRefreshLive(prev: LiveRate | null, next: LiveRate | null):
 }
 
 /** Live line visibility: recommend/warning modes only, and only while a
- * live rate is pushed. Full state updates re-evaluate it via render(). */
-function renderLive(dom: PillDom, mode: PillMode, live: LiveRate | null, locale: UiLocale): void {
-  const visible = live !== null && (mode === 'recommend' || mode === 'warning');
+ * live rate is pushed. A live rate that equals the label's effective rate
+ * at the same multiplier duplicates the label (P2b) — hidden. Full state
+ * updates re-evaluate it via render(). */
+function renderLive(dom: PillDom, state: PillState | null, live: LiveRate | null, locale: UiLocale): void {
+  let visible =
+    live !== null && state !== null && (state.mode === 'recommend' || state.mode === 'warning');
+  if (visible && state !== null && live !== null) {
+    const duplicates =
+      Math.round(live.rate) === Math.round(state.effectiveWpm) &&
+      Math.round(live.multiplier * 100) === Math.round(state.multiplier * 100);
+    visible = !duplicates;
+  }
   dom.liveEl.hidden = !visible;
-  if (visible) dom.liveEl.textContent = liveRateText(live, locale);
+  if (visible && live !== null) dom.liveEl.textContent = liveRateText(live, locale);
 }
 
-/** Saved-time line visibility: recommend/warning modes only, and only while
- * a positive amount is pushed — a fresh session at 0 saved is not worth a
- * line, and null hides it (before apply, paused, rate diverged). Full state
- * updates re-evaluate it via render(). */
+/** Saved-time line visibility: recommend/warning modes only, and only once
+ * a meaningful amount accumulated (P2c: the per-video floor is 30 s — a
+ * sub-minute gain is not worth a line) and a positive amount is pushed —
+ * null hides it (before apply, paused, rate diverged). Full state updates
+ * re-evaluate it via render(). */
 function renderSaved(dom: PillDom, mode: PillMode, saved: number | null, locale: UiLocale): void {
-  const visible = saved !== null && saved > 0 && (mode === 'recommend' || mode === 'warning');
+  const visible = saved !== null && saved >= 30 && (mode === 'recommend' || mode === 'warning');
   dom.savedEl.hidden = !visible;
   if (visible) dom.savedEl.textContent = t('pill.savedTime', locale, formatTimeSaved(saved, locale));
 }
 
 /** Localized main line: English renders the recommendation verbatim; ru
- * rebuilds it from the structured state (unit recovered from the label). */
+ * rebuilds it from the structured state (unit recovered from the label).
+ * In the auto-applied state the line leads with the 'Auto · ' marker and
+ * drops the leading arrow (P1b: 'Auto · 1.6x ≈ 240 wpm'). */
 function localizedLabel(state: PillState, locale: UiLocale): string {
-  if (locale === 'en') return state.label;
-  const mult = formatMultiplier(state.multiplier, 'ru');
-  const rate = Math.round(state.effectiveWpm);
-  const unit = unitLabel(extractUnit(state.label), 'ru');
-  switch (state.mode) {
-    case 'music':
-      return t('pill.label.music', 'ru');
-    case 'unreachable':
-      return t('pill.label.unreachable', 'ru', { mult, rate, unit });
-    default:
-      return (
-        t('pill.label.recommend', 'ru', { mult, rate, unit }) +
-        (state.reason === 'capped-below' ? t('pill.label.cappedSuffix', 'ru') : '')
-      );
+  const prefix = state.applied === 'auto' ? t('pill.label.autoPrefix', locale) : '';
+  let text: string;
+  if (locale === 'en') {
+    text = state.label;
+  } else {
+    const mult = formatMultiplier(state.multiplier, 'ru');
+    const rate = Math.round(state.effectiveWpm);
+    const unit = unitLabel(extractUnit(state.label), 'ru');
+    switch (state.mode) {
+      case 'music':
+        text = t('pill.label.music', 'ru');
+        break;
+      case 'unreachable':
+        text = t('pill.label.unreachable', 'ru', { mult, rate, unit });
+        break;
+      default:
+        text =
+          t('pill.label.recommend', 'ru', { mult, rate, unit }) +
+          (state.reason === 'capped-below' ? t('pill.label.cappedSuffix', 'ru') : '');
+    }
   }
+  return prefix === '' ? text : prefix + text.replace(/^→\s*/, '');
 }
 
 /** Localized tier badge; unknown labels pass through unchanged. */
@@ -296,11 +335,25 @@ function localizedTier(tierLabelText: string, locale: UiLocale): string {
 }
 
 function localizedApplyAria(state: PillState, locale: UiLocale): string {
-  const mult =
-    locale === 'ru' ? state.multiplier.toFixed(1).replace('.', ',') : state.multiplier.toFixed(1);
-  return locale === 'ru'
-    ? t('pill.applyAriaSpeed', 'ru', { mult })
-    : `Apply ${mult}x playback speed`;
+  return t('pill.applyAriaSpeed', locale, {
+    mult: locale === 'ru' ? state.multiplier.toFixed(1).replace('.', ',') : state.multiplier.toFixed(1),
+  });
+}
+
+/** One-time onboarding line: measured rate → applied multiplier → effective
+ * rate, rendered only on the first recommend-mode render (P1c). */
+function renderFirstRun(dom: PillDom, state: PillState, locale: UiLocale): void {
+  if (state.firstRun !== true) {
+    dom.firstRunEl.hidden = true;
+    return;
+  }
+  dom.firstRunEl.hidden = false;
+  dom.firstRunEl.textContent = t('pill.firstRun', locale, {
+    rate: Math.round(state.rateWpm),
+    mult: formatMultiplier(state.multiplier, locale),
+    effective: Math.round(state.effectiveWpm),
+    unit: unitLabel(extractUnit(state.label), locale),
+  });
 }
 
 function render(
@@ -322,20 +375,26 @@ function render(
   const mode = state.mode;
 
   // Stop-auto button: only while the recommendation is showing AND this
-  // video's rate was applied automatically. Computed before the none
-  // early-return so a hide flips it back even when the surface goes dark.
+  // video's rate was applied automatically. In that state it is the undo
+  // affordance — 'Reset to {rate}×' restoring the pre-auto rate when the
+  // content script captured one, plain 'Stop auto' otherwise. Computed
+  // before the none early-return so a hide flips it back even when the
+  // surface goes dark.
   const showStopAuto = state.applied === 'auto' && mode === 'recommend';
   dom.stopAutoBtn.hidden = !showStopAuto;
   if (showStopAuto) {
-    dom.stopAutoBtn.textContent = t('pill.stopAuto', locale);
-    dom.stopAutoBtn.setAttribute('aria-label', t('pill.stopAutoAria', locale));
+    const undo = state.undoRate !== undefined;
+    dom.stopAutoBtn.textContent = undo
+      ? t('pill.resetTo', locale, { rate: formatMultiplier(state.undoRate ?? 1, locale) })
+      : t('pill.stopAuto', locale);
+    dom.stopAutoBtn.setAttribute('aria-label', undo ? t('pill.resetToAria', locale) : t('pill.stopAutoAria', locale));
   }
 
   // Hide the live and saved lines outside recommend/warning, even in the
   // none branch below (the pill surface itself is invisible there, but the
   // elements must not keep stale text).
   if (mode !== 'recommend' && mode !== 'warning') {
-    renderLive(dom, mode, null, locale);
+    renderLive(dom, state, null, locale);
     renderSaved(dom, mode, null, locale);
   }
 
@@ -347,11 +406,14 @@ function render(
 
   dom.pill.removeAttribute('aria-hidden');
   dom.pill.dataset.mode = mode;
-  renderLive(dom, mode, live, locale);
+  renderLive(dom, state, live, locale);
   renderSaved(dom, mode, saved, locale);
 
   // Label
   dom.labelEl.textContent = localizedLabel(state, locale);
+
+  // First-run onboarding line
+  renderFirstRun(dom, state, locale);
 
   // Tier
   if (state.tierLabel) {
@@ -363,14 +425,15 @@ function render(
 
   // Warning note (only for warning mode; copy picked by reason)
   if (mode === 'warning') {
-    dom.warningNote.textContent = warningNoteCopy(state.reason, locale);
+    dom.warningNote.textContent = warningNoteCopy(state.reason, locale, state.range);
     dom.warningNote.hidden = false;
   } else {
     dom.warningNote.hidden = true;
   }
 
-  // Apply button variant + visibility
-  if (mode === 'unreachable' || mode === 'music') {
+  // Apply button variant + visibility: hidden for unreachable/music and in
+  // the auto-applied state, where the undo affordance replaces it (P1b).
+  if (mode === 'unreachable' || mode === 'music' || state.applied === 'auto') {
     dom.applyBtn.hidden = true;
   } else {
     dom.applyBtn.hidden = false;
@@ -398,7 +461,10 @@ export function createPill(host: HTMLElement, events?: PillEvents, opts?: PillOp
   let mounted = false;
   let destroyed = false;
   let currentState: PillState | null = null;
-  let locale: UiLocale = opts?.locale ?? 'en';
+  // Browser-language seed (no English flash for ru users); the bridge
+  // round-trip refines it with settings.uiLanguage when the caller did not
+  // pin a locale — the same two-step the options page uses.
+  let locale: UiLocale = opts?.locale ?? resolveUiLanguage(undefined, navigator.language);
   // Throttled live-rate and saved-time state: render()/updateLiveRate()/
   // updateSavedSec() all drive the lines so a line update never re-renders
   // the recommendation and a recommendation update re-evaluates visibility.
@@ -461,7 +527,7 @@ export function createPill(host: HTMLElement, events?: PillEvents, opts?: PillOp
     updateLiveRate(live: LiveRate | null) {
       if (destroyed || !shouldRefreshLive(liveRate, live)) return;
       liveRate = live;
-      renderLive(dom, currentState?.mode ?? 'none', live, locale);
+      renderLive(dom, currentState, live, locale);
     },
 
     updateSavedSec(saved: number | null) {

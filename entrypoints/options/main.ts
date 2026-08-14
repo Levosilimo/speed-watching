@@ -18,12 +18,14 @@ import {
   type Settings,
   type UiLanguageSetting,
 } from '../../lib/settings';
+import { resolveLanguage } from '../../lib/languages';
 import { TIME_SAVED_STORAGE_KEY, TimeSavedStore } from '../../lib/time-saved';
 import {
   applyI18n,
   formatTimeSaved,
   resolveUiLanguage,
   t,
+  unitLabel,
   type I18nKey,
   type UiLocale,
 } from '../../lib/i18n';
@@ -48,11 +50,10 @@ function el(id: string): HTMLElement {
 }
 
 // ── Settings: single storage namespace ───────────────────────────────────
-// chrome.storage.local holds exactly five keys — 'sw.settings'
+// chrome.storage.local holds exactly six keys — 'sw.settings'
 // (SettingsStore), 'sw.overrideLog' (OverrideLog), 'sw.demand' (DemandStore),
-// 'sw.channelRates' (ChannelMemory), and 'sw.timeSavedSec' (TimeSavedStore);
-// see the lib/settings.ts module doc. ui/storage.ts's parallel 'sw:' schema
-// is retired.
+// 'sw.channelRates' (ChannelMemory), 'sw.timeSavedSec' (TimeSavedStore),
+// and 'sw.nudge' (NudgeStore); see the lib/settings.ts module doc.
 
 const settingsStore = new SettingsStore(browser.storage.local, SETTINGS_STORAGE_KEY);
 const overrideLog = new OverrideLog(browser.storage.local);
@@ -63,6 +64,7 @@ const timeSavedStore = new TimeSavedStore(browser.storage.local);
 const wpmSlider = el('wpm-slider') as HTMLInputElement;
 const wpmValue = el('wpm-value');
 const safeZone = el('safe-zone');
+const safeZoneLanguage = el('safe-zone-language');
 
 function positionSafeZone(): void {
   const min = Number(wpmSlider.min);
@@ -109,10 +111,32 @@ let uiLocale: UiLocale = 'en';
 function renderLocale(): void {
   document.documentElement.lang = uiLocale;
   applyI18n(document, uiLocale);
+  renderLanguageRange();
   renderProbe();
   // The saved-time headline is localized text (the other habit stats are
   // numbers) — re-render it on a language switch.
   void refreshHabits();
+}
+
+/** P2a: the slider's numeric scale is the English wpm scale, so next to it
+ * the resolved language's own range (when the user's default language maps
+ * to a non-en model) shows what that model considers comfortable, in its
+ * unit. En browsers get no extra line — the marker is already theirs. */
+function renderLanguageRange(): void {
+  const setting: UiLanguageSetting = isUiLanguageSetting(uiLangSelect.value)
+    ? uiLangSelect.value
+    : 'auto';
+  const model = resolveLanguage(setting === 'auto' ? navigator.language : setting);
+  if (model === null || model.code === 'en') {
+    safeZoneLanguage.hidden = true;
+    return;
+  }
+  safeZoneLanguage.hidden = false;
+  safeZoneLanguage.textContent = t('options.safeZoneLanguage', uiLocale, {
+    lo: model.target,
+    hi: model.ceiling,
+    unit: unitLabel(model.unit, uiLocale),
+  });
 }
 
 uiLangSelect.addEventListener('change', () => {

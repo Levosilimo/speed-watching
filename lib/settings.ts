@@ -6,8 +6,7 @@
 // (lib/time-saved.ts, the wall time reclaimed by applied rates), and
 // 'sw.nudge' (lib/nudge.ts, the recall-nudge record). The options page,
 // the isolated-world bridge, and the background all read/write through the
-// lib stores over browser.storage.local; ui/storage.ts's parallel 'sw:'
-// schema is retired. No other key may be introduced.
+// lib stores over browser.storage.local. No other key may be introduced.
 
 import type { ContentType } from './music';
 
@@ -68,6 +67,9 @@ export interface Settings {
   autoApply: AutoApplyPrefs;
   /** UI-language preference; unset/'auto' → navigator.language. */
   uiLanguage?: UiLanguageSetting;
+  /** First-run onboarding (P1c): the pill's one-time explainer line has
+   * shown. Optional — absent means it has not shown yet. */
+  seenFirstRun?: boolean;
 }
 
 /** Injectable chrome.storage.local stand-in for unit tests. */
@@ -128,6 +130,7 @@ function normalizeSettings(raw: unknown): Settings {
   if (target !== undefined) settings.target = target;
   if (typeof raw.contentType === 'string') settings.contentType = raw.contentType as ContentType;
   if (isUiLanguageSetting(raw.uiLanguage)) settings.uiLanguage = raw.uiLanguage;
+  if (raw.seenFirstRun === true) settings.seenFirstRun = true;
   return settings;
 }
 

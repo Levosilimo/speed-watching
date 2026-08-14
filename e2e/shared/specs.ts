@@ -623,10 +623,12 @@ export async function runAutoSpecs(driver: E2EDriver): Promise<void> {
     if (stopped.applied !== 'none') {
       throw new Error(`${fixture}: pill applied ${stopped.applied}, expected none after stop-auto`);
     }
+    // P1a: stop-auto in the auto state is the undo — the pre-auto rate (1,
+    // the fixture never played) is restored, not left at the auto rate.
     const stoppedRate = await driver.readPlaybackRate();
-    if (stoppedRate === null || Math.abs(stoppedRate - before.multiplier) > RATE_TOLERANCE) {
+    if (stoppedRate === null || Math.abs(stoppedRate - 1) > RATE_TOLERANCE) {
       throw new Error(
-        `${fixture}: playbackRate ${stoppedRate} after stop-auto, expected ${before.multiplier} (rate untouched)`,
+        `${fixture}: playbackRate ${stoppedRate} after stop-auto, expected 1 (pre-auto rate restored)`,
       );
     }
     await driver.navigateToWatch(fixture);
@@ -684,6 +686,17 @@ export async function runAutoSpecs(driver: E2EDriver): Promise<void> {
     const gUser = expectState(await driver.readPillState(), 'generic-auto');
     if (gUser.applied !== 'user') {
       throw new Error(`generic: pill applied ${gUser.applied}, expected user after manual rate`);
+    }
+    // E1: the override itself must have detached the re-assert loop — a
+    // later reset to 1.0 sticks (without the fix the sentinel re-asserts the
+    // old auto rate and fights the reset).
+    await driver.resetPlaybackRate();
+    await driver.sleep(3500); // > one re-check interval (2s)
+    const gReset = await driver.readPlaybackRate();
+    if (gReset === null || Math.abs(gReset - 1) > RATE_TOLERANCE) {
+      throw new Error(
+        `generic: playbackRate ${gReset} after override + reset, expected 1 (loop detached by the override)`,
+      );
     }
     await driver.stopAuto();
     await driver.resetPlaybackRate();

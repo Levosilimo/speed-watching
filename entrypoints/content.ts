@@ -10,7 +10,7 @@ import { defineContentScript } from 'wxt/utils/define-content-script';
 import { fetchAndroidCaptions, fetchJson3 } from '@/lib/caption-fetch';
 import { parseYouTubeJson3 } from '@/lib/captions';
 import { cueSignal, detectContentType, priorMidpoint } from '@/lib/heuristics';
-import { resolveLanguage, UNIT_LABELS, type LanguageModel } from '@/lib/languages';
+import { resolveLanguage, UNIT_LABELS, type LanguageModel, type RateRange } from '@/lib/languages';
 import { logWpm, waitForPlayerResponse } from '@/lib/measure-hooks';
 import { SerializedRunner } from '@/lib/measure-guard';
 import { buildWpmResponse, type MeasurementContext } from '@/lib/wpm-provider';
@@ -19,7 +19,7 @@ import { isWpmEnvelope, isWpmGetRequest, WPM_CHANNEL } from '@/lib/wpm-protocol'
 import type { ContentType } from '@/lib/music';
 import { detectMusic } from '@/lib/music';
 import { shouldAutoApply } from '@/lib/auto-apply';
-import { recommend, TARGET_WPM, type RateTier, type Recommendation } from '@/lib/recommend';
+import { recommend, SAFE_ZONE_CEILING_WPM, TARGET_WPM, type RateTier, type Recommendation } from '@/lib/recommend';
 import {
   defaultSettings,
   resolveContentType,
@@ -51,7 +51,13 @@ const bridge = createBridgeClient(window);
 const nudgeSurface = createNudgeHost(bridge);
 
 /** Current video's recommendation context; null until the first measure. */
-let current: (MeasurementContext & { videoId: string; recommendation: Recommendation }) | null = null;
+let current: (MeasurementContext & {
+  videoId: string;
+  recommendation: Recommendation;
+  /** The track language's safe zone — the pill warning and nudge copy key
+   * on it (P0); en defaults when the track language is unmapped. */
+  range: RateRange;
+}) | null = null;
 let pill: { api: PillApi; host: HTMLElement } | null = null;
 
 /** Last rendered pill state — the shortcut handler and live line gate on it. */
@@ -68,6 +74,17 @@ let activeVideo: HTMLVideoElement | null = null;
 let autoState: 'pending' | 'auto' | 'stopped' = 'pending';
 /** How the current rate got applied — rides into the pill as applied. */
 let appliedSource: AppliedSource = 'none';
+/** The playback rate that was playing before auto applied it (P1a): the
+ * Stop-auto/dismiss undo restores this, not a blind 1×. null while auto
+ * never applied this video, and after the user takes over manually. */
+let preAutoRate: number | null = null;
+
+/** Navigation epoch: bumped by every video reset (onNavigationStart) so an
+ * in-flight measure that began before the reset cannot render — or
+ * auto-apply — after it. The stale measure's recommendation belongs to the
+ * old video; without the guard it would apply the old multiplier to the new
+ * video and set autoState='auto', blocking the fresh measure's apply. */
+let epoch = 0;
 
 // Time-saved session (lib/time-saved.ts): the tracker counts wall time at
 // the applied rate; the pill shows the accumulated saved seconds of the
@@ -129,6 +146,7 @@ export default defineContentScript({
         if (current === null || pillState === null || (pillState.mode !== 'recommend' && pillState.mode !== 'warning')) return;
         autoState = 'stopped';
         appliedSource = 'user';
+        preAutoRate = null;
         applyMultiplier(current.recommendation.multiplier);
       } else if (pillState !== null && pillState.mode !== 'none') dismissCurrent();
     });
@@ -166,6 +184,7 @@ export default defineContentScript({
 });
 
 function onNavigationStart(): void {
+  epoch += 1;
   current = null;
   activeVideo = null;
   savedTracker.detach();
@@ -173,6 +192,7 @@ function onNavigationStart(): void {
   savedMultiplier = null;
   autoState = 'pending';
   appliedSource = 'none';
+  preAutoRate = null;
   showPill(NONE_STATE);
   nudgeSurface.teardown();
 }
@@ -195,6 +215,7 @@ function measure(): void {
 }
 
 async function measureOnce(): Promise<void> {
+  const startedAt = epoch;
   const response = await waitForPlayerResponse();
   if (!response) {
     if (__E2E__) console.info('[speed-watcher] wpm: player response never appeared');
@@ -213,13 +234,13 @@ async function measureOnce(): Promise<void> {
   const language = resolveLanguage(track?.languageCode) ?? undefined;
   if (track === undefined) {
     if (__E2E__) console.info('[speed-watcher] wpm: no caption tracks for this video — estimated');
-    void showEstimatedPill(videoId, settings, site, undefined, response.videoDetails);
+    void showEstimatedPill(videoId, settings, site, undefined, response.videoDetails, startedAt);
     return;
   }
   const json = await fetchCaptions(track, videoId);
   if (json === null) {
     if (__E2E__) console.info('[speed-watcher] wpm: caption fetch failed — estimated');
-    void showEstimatedPill(videoId, settings, site, language, response.videoDetails);
+    void showEstimatedPill(videoId, settings, site, language, response.videoDetails, startedAt);
     return;
   }
   const { words, cues } = parseYouTubeJson3(json);
@@ -242,14 +263,14 @@ async function measureOnce(): Promise<void> {
     if (__E2E__) {
       console.info(`[speed-watcher] video=${videoId} kind=${kind} lang=${lang}: captions parsed but empty — estimated`);
     }
-    void showEstimatedPill(videoId, settings, site, language, response.videoDetails);
+    void showEstimatedPill(videoId, settings, site, language, response.videoDetails, startedAt);
     return;
   }
 
   const naturalRate =
     kind === 'asr' ? filteredTokensOverTrimmedSpan(cues, language) : manualCueRate(cues, language);
   if (naturalRate === null) {
-    void showEstimatedPill(videoId, settings, site, language, response.videoDetails);
+    void showEstimatedPill(videoId, settings, site, language, response.videoDetails, startedAt);
     return;
   }
   // Auto-detect the register from the measured signal; the user/site
@@ -261,7 +282,7 @@ async function measureOnce(): Promise<void> {
   if (detectMusic(cues, naturalRate, language?.unit ?? 'wpm')) detected = 'music';
   const contentType = resolveContentType(settings, site, detected);
   const { tier, wordInputs } = asrTierInputs(kind, words, cues);
-  renderRecommendation(videoId, naturalRate, tier, contentType, settings, site, wordInputs, language);
+  renderRecommendation(videoId, naturalRate, tier, contentType, settings, site, wordInputs, language, startedAt);
   rememberChannelRate(response.videoDetails, naturalRate, language);
 }
 
@@ -274,10 +295,11 @@ async function showEstimatedPill(
   site: string,
   language?: LanguageModel,
   videoDetails?: PlayerResponse['videoDetails'],
+  startedAt?: number,
 ): Promise<void> {
   const contentType = resolveContentType(settings, site, 'generic');
   const seeded = await channelSeededRate(videoDetails, language);
-  renderRecommendation(videoId, seeded ?? priorMidpoint(contentType, language), 'estimated', contentType, settings, site, null, language);
+  renderRecommendation(videoId, seeded ?? priorMidpoint(contentType, language), 'estimated', contentType, settings, site, null, language, startedAt);
   // Demand proxy (Phase-2 STT gate): one local count per estimated render.
   // Best-effort like logAction — a dead bridge must not suppress the pill.
   void bridge
@@ -294,8 +316,17 @@ function renderRecommendation(
   site: string,
   wordInputs?: { articulatoryWpm: number; timingCoverageOk: boolean } | null,
   language?: LanguageModel,
+  startedAt?: number,
 ): void {
+  // The video reset while this measure was in flight (navigation epoch):
+  // the recommendation belongs to the old video — render nothing.
+  if (startedAt !== undefined && epoch !== startedAt) return;
   const platformMax = resolvePlatformMax(settings, site);
+  const range: RateRange = {
+    lo: language?.target ?? TARGET_WPM,
+    hi: language?.ceiling ?? SAFE_ZONE_CEILING_WPM,
+    unit: language?.unit ?? 'wpm',
+  };
   const recommendation = recommend({
     naturalRate,
     tier,
@@ -308,11 +339,23 @@ function renderRecommendation(
   current = { videoId, site, contentType, naturalRate, platformMax, tier,
     unit: UNIT_LABELS[language?.unit ?? 'wpm'], language: language?.code ?? null,
     target: resolveUserTarget(settings, site, contentType) ?? language?.target ?? TARGET_WPM,
-    recommendation };
+    recommendation, range };
   if (autoState === 'pending' && shouldAutoApply(settings, recommendation, tier, contentType)) {
+    // The undo anchor: the rate the user was at before auto took over.
+    preAutoRate =
+      (activeVideo ?? document.querySelector<HTMLVideoElement>('video'))?.playbackRate ?? null;
     applyMultiplier(recommendation.multiplier);
     autoState = 'auto';
     appliedSource = 'auto';
+  }
+  // P1c: the one-time first-run explainer rides the first recommend-mode
+  // render of a MEASURED tier (the copy promises a measurement; estimated
+  // priors are not one). The flag persists via the bridge — best-effort, a
+  // dead bridge only re-shows it on the next video.
+  const firstRun =
+    settings.seenFirstRun !== true && tier !== 'estimated' && recommendation.mode === 'recommend';
+  if (firstRun) {
+    void bridge.request({ type: 'settings:seenFirstRun' }).catch(() => undefined);
   }
   showPill({
     mode: recommendation.mode,
@@ -322,7 +365,10 @@ function renderRecommendation(
     tierLabel: recommendation.tierLabel,
     label: recommendation.label,
     reason: recommendation.reason ?? undefined,
+    range,
     applied: appliedSource,
+    undoRate: appliedSource === 'auto' ? preAutoRate ?? 1 : undefined,
+    firstRun,
   });
 }
 
@@ -372,10 +418,11 @@ function ensurePill(): PillApi {
   if (pill !== null && pill.host === host && host.isConnected) return pill.api;
   // The player was replaced (SPA navigation): rebuild on the fresh host.
   pill?.api.destroy();
-  const api = createPill(host, {
+    const api = createPill(host, {
     onApply: (multiplier) => {
       autoState = 'stopped';
       appliedSource = 'user';
+      preAutoRate = null;
       applyMultiplier(multiplier);
     },
     onDismiss: () => dismissCurrent(),
@@ -428,14 +475,25 @@ function refreshSavedSec(): void {
   pill.api.updateSavedSec(computeSavedSec());
 }
 
-/** Disengages auto-apply for this video: the applied rate stays untouched
- * (never fight a non-1.0 rate) and the pill drops its stop-auto state.
- * Not logged — auto's own log entries already exist. */
+/** Disengages auto-apply for this video: the auto-applied rate is undone
+ * back to the pre-auto rate (P1a — the in-pill escape hatch; a manual
+ * override already means the user took over) and the pill drops its
+ * stop-auto state. Not logged — auto's own log entries already exist. */
 function stopAutoForVideo(): void {
   if (current === null) return;
+  const wasAuto = appliedSource === 'auto';
   autoState = 'stopped';
   appliedSource = 'none';
-  if (pillState !== null) showPill({ ...pillState, applied: 'none' });
+  if (wasAuto && preAutoRate !== null) restorePreAutoRate();
+  preAutoRate = null;
+  if (pillState !== null) showPill({ ...pillState, applied: 'none', undoRate: undefined });
+}
+
+/** Restores the pre-auto playback rate on the current video. */
+function restorePreAutoRate(): void {
+  const video = activeVideo ?? document.querySelector<HTMLVideoElement>('video');
+  if (video === null) return;
+  video.playbackRate = preAutoRate ?? 1;
 }
 
 /** Manual-override detection on ratechange: while auto applied a rate, any
@@ -451,7 +509,8 @@ function markUserOverride(): void {
   if (Math.abs(video.playbackRate - savedMultiplier) <= RATE_EPSILON) return; // our own apply
   autoState = 'stopped';
   appliedSource = 'user';
-  if (pillState !== null) showPill({ ...pillState, applied: 'user' });
+  preAutoRate = null; // the user took over — no undo anchor left
+  if (pillState !== null) showPill({ ...pillState, applied: 'user', undoRate: undefined });
 }
 
 function applyMultiplier(multiplier: number): void {
@@ -469,11 +528,12 @@ function applyMultiplier(multiplier: number): void {
   refreshLiveRate();
   refreshSavedSec();
   void logAction('apply', multiplier);
-  nudgeSurface.reportApply(multiplier);
+  nudgeSurface.reportApply(multiplier, current.range);
 }
 
 function dismissCurrent(): void {
   if (current === null) return;
+  const wasAuto = appliedSource === 'auto';
   autoState = 'stopped';
   appliedSource = 'none';
   // Detach first: the unflushed tail is credited to the store before the
@@ -481,6 +541,8 @@ function dismissCurrent(): void {
   savedTracker.detach();
   savedSec = null;
   savedMultiplier = null;
+  if (wasAuto && preAutoRate !== null) restorePreAutoRate();
+  preAutoRate = null;
   showPill(NONE_STATE);
   void logAction('dismiss', current.recommendation.multiplier);
 }

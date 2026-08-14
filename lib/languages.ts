@@ -66,6 +66,15 @@ import type { ContentType } from './music';
 
 export type RateUnit = 'wpm' | 'cpm' | 'syl' | 'mora';
 
+/** The resolved track language's safe zone — target through ceiling, in its
+ * unit — that the pill warning and nudge copy render (P0: the copy keys to
+ * the track language, not the UI locale; absent → en 250–275 wpm). */
+export interface RateRange {
+  lo: number;
+  hi: number;
+  unit: RateUnit;
+}
+
 export interface LanguageModel {
   /** Normalized caption-track language code (lowercase, region stripped). */
   code: string;

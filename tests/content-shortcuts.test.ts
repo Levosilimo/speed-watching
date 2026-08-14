@@ -234,11 +234,10 @@ describe('content shortcut envelope handling', () => {
       expect(video?.playbackRate).toBe(rec.multiplier);
     });
 
-    const fmt = (m: number): string => String(Math.round(m * 100) / 100);
-    expect(liveLine()?.textContent).toBe(
-      `now ≈ ${Math.round(naturalRate * rec.multiplier)} wpm at ${fmt(rec.multiplier)}x`,
-    );
-    expect(liveLine()?.hidden).toBe(false);
+    // P2b: at the applied multiplier the live rate duplicates the label's
+    // effective rate — the line stays hidden; a divergent rate shows it.
+    expect(liveLine()?.textContent).toBe('');
+    expect(liveLine()?.hidden).toBe(true);
 
     if (video === null) throw new Error('video missing');
     video.playbackRate = 2;
@@ -246,6 +245,7 @@ describe('content shortcut envelope handling', () => {
     await vi.waitFor(() => {
       expect(liveLine()?.textContent).toBe(`now ≈ ${Math.round(naturalRate * 2)} wpm at 2x`);
     });
+    expect(liveLine()?.hidden).toBe(false);
   });
 
   it('dismiss-shortcut hides the pill and later applies become no-ops', async () => {

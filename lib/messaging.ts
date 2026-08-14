@@ -123,6 +123,7 @@ export function isShortcutEnvelope(value: unknown): value is ShortcutEnvelope {
 export type BridgeRequest =
   | { type: 'settings:get' }
   | { type: 'settings:set'; settings: Settings }
+  | { type: 'settings:seenFirstRun' }
   | { type: 'log:append'; entry: Omit<OverrideLogEntry, 'ts'> }
   | { type: 'channel:get'; channelKey: string }
   | { type: 'channel:put'; channelKey: string; record: ChannelRecord }
@@ -308,6 +309,12 @@ export async function handleBridgeRequest(
         }
       }
       await deps.settings.save(request.settings);
+      return undefined;
+    case 'settings:seenFirstRun':
+      // One-flag merge, not a full settings:set — the content script cannot
+      // round-trip the stored settings through SEC-1 (foreign site
+      // overrides would reject the write).
+      await deps.settings.update((settings) => ({ ...settings, seenFirstRun: true }));
       return undefined;
     case 'log:append':
       // SEC-3: forged entries (NaN multipliers, unknown content types) must
