@@ -110,7 +110,7 @@ export async function waitForVideo(page: Page, timeoutMs: number): Promise<boole
   return false;
 }
 
-async function attemptPlay(page: Page): Promise<void> {
+export async function attemptPlay(page: Page): Promise<void> {
   for (const frame of page.frames()) {
     await withTimeout(
       frame.evaluate(() => {

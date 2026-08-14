@@ -1,0 +1,18 @@
+{
+  "seeds": [
+    { "platform": "dzen", "url": "https://dzen.ru/video/watch/6a673a21d29c014a1b594be3" },
+    { "platform": "dzen", "url": "https://dzen.ru/video/watch/6a673bec07b84e1487beeb47" },
+    { "platform": "dzen", "url": "https://dzen.ru/video/watch/6a7b3720dc95d4425fb854f8" },
+    { "platform": "dzen", "url": "https://dzen.ru/video/watch/6a75e06c883bd21b6f74a4ec" },
+    {
+      "platform": "rutube",
+      "url": "https://rutube.ru/video/53f46c8c8831891b182351db6cf96836/",
+      "verified": true
+    },
+    {
+      "platform": "rutube",
+      "url": "https://rutube.ru/video/71e2e7893d054d12be83b57f8d643780/",
+      "verified": true
+    }
+  ]
+}
