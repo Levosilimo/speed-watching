@@ -99,4 +99,5 @@ permissions now would force the re-accept disable when STT lands.
   — `bun install --frozen-lockfile`, then `bun run build` (Chrome) or
   `bun run build:firefox` (Firefox). Reviewers default to npm and would
   otherwise miss the lockfile and the bun-run scripts; the publish
-  workflow already passes `--upload-source-code`.
+  workflow already passes `--source-code-zip .output/source.zip` (the git
+  archive of the release ref).
