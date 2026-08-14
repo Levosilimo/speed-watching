@@ -33,7 +33,7 @@ gh api --method POST "repos/$FULL/rulesets" --input <(cat <<'JSON'
   "enforcement": "active",
   "conditions": { "ref_name": { "include": ["refs/heads/main"], "exclude": [] } },
   "rules": [
-    { "type": "required_pull_request", "parameters": {
+    { "type": "pull_request", "parameters": {
         "required_approving_review_count": 0,
         "dismiss_stale_reviews_on_push": false,
         "require_code_owner_review": false,
@@ -41,11 +41,13 @@ gh api --method POST "repos/$FULL/rulesets" --input <(cat <<'JSON'
         "required_review_thread_resolution": false } },
     { "type": "required_status_checks", "parameters": {
         "required_status_checks": [
-          { "context": "ci",                "strict_required_status_checks_policy": false },
-          { "context": "e2e-chromium",      "strict_required_status_checks_policy": false },
-          { "context": "e2e-chromium-cft",  "strict_required_status_checks_policy": false },
-          { "context": "e2e-userscript",    "strict_required_status_checks_policy": false },
-          { "context": "e2e-firefox",       "strict_required_status_checks_policy": false } ] } },
+          { "context": "ci" },
+          { "context": "e2e-chromium" },
+          { "context": "e2e-chromium-cft" },
+          { "context": "e2e-userscript" },
+          { "context": "e2e-firefox" }
+        ],
+        "strict_required_status_checks_policy": false } },
     { "type": "non_fast_forward" },
     { "type": "deletion" }
   ]
