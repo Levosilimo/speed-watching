@@ -25,7 +25,7 @@ recorded in the appendix: keep + justify is the shipped path.
 | Field | Value |
 |---|---|
 | Name | `Speed Watcher — Recommend Playback Speed from Speech Rate` (57/60 chars) |
-| Summary | `WPM-based speed-watching extension that recommends playback speed from caption speech rate` (90/132 chars) |
+| Summary | `Shows the number: playback speed recommended from the video's measured speech rate — 22 languages, opt-in auto-apply` (116/132 chars) |
 | Detailed description | Plain text of the "Full listing description" in `docs/store-listing.md` — CWS strips markdown, so drop the `**` markers and bullet formatting |
 | Category | Productivity |
 | Language | English |
