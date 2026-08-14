@@ -81,7 +81,7 @@ export function createRateController<C extends RateCurrent>(deps: RateController
     if (existing !== null) return existing;
     const wrapper = document.createElement('div');
     wrapper.className = 'speedwatcher-pill-host';
-    wrapper.style.cssText = 'position:absolute;top:0;right:0;width:0;height:0;pointer-events:none;';
+    // No inline styles: they would override the shadow :host fixed anchoring.
     anchor.appendChild(wrapper);
     return wrapper;
   }
