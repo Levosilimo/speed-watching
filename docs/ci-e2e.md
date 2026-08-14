@@ -218,11 +218,11 @@ publish time, pinned to `@8`.
   lane section above) and is covered by the manual gate in
   `docs/manual-gates-runbook.md` and the vitest suite.
 - **The stub page is not YouTube.** It mimics the watch page structure (a
-  `<video>` element, `ytInitialPlayerResponse`, `yt-navigate-finish`) so the
-  content script's real code path runs; it does not exercise the real
-  player's DOM. The pill specs run against the same stub (a wrapper div
-  inside `#movie_player` serves as the shadow host; real YouTube's
-  `#movie_player` is a div too). The ANDROID innertube fallback is exercised
+  `div#movie_player` wrapping a `<video>`, `ytInitialPlayerResponse`,
+  `yt-navigate-finish`) so the content script's real code path runs; it does
+  not exercise the real player's DOM. The pill specs run against the same
+  stub (the pill host mounts inside the stub's `#movie_player` div, which
+  mirrors real YouTube's shape). The ANDROID innertube fallback is exercised
   via the WEB-blocked fixture; the android-success path needs real YouTube
   and stays covered by the residential re-run (docs/store-readiness.md).
 - **Twitch/Coursera/Disney+** remain blocked for probing (429 /
