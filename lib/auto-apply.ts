@@ -2,6 +2,16 @@
 // Pure module shared by both content scripts (entrypoints/content.ts and
 // entrypoints/generic.content.ts) — no DOM, no chrome.*, unit-testable.
 //
+// Honest limits: auto keys on the RESOLVED content type (generic/news
+// resolve → pill-only unless the user forces a type); mode 'recommend'
+// guarantees reason===null but the multiplier may still be clamp-capped
+// (MANUAL_CUE_CLAMP 1.5) — auto applies that same value; a manual reset to
+// exactly 1.0 is not an override (sentinel semantics) — YouTube leaves auto
+// armed at 1x, generic re-asserts to the auto rate; auto applies log as
+// userAction 'apply' and count toward the recall nudge — deliberate, the
+// user opted in (a distinct 'auto' variant would widen the log schema);
+// Stop-auto never reverts the rate, only disengages auto for this video.
+//
 // Why there is no videospeed-style echo token (no fight-count, no
 // USER_INTENT): our design has no continuous loop on YouTube — auto-apply
 // fires ONCE per navigation, so there is nothing to re-arm and no feedback
