@@ -261,3 +261,58 @@ describe('options external API toggle', () => {
     expect(toggle().checked).toBe(true);
   });
 });
+
+describe('options auto-apply', () => {
+  function master(): HTMLInputElement {
+    return document.getElementById('auto-toggle') as HTMLInputElement;
+  }
+
+  function typeBox(type: string): HTMLInputElement {
+    return document.querySelector<HTMLInputElement>(`.auto-type-group input[data-type="${type}"]`)!;
+  }
+
+  it('defaults the master toggle off and the four types checked (default set)', async () => {
+    await import('../entrypoints/options/main');
+    await flush();
+    expect(master().checked).toBe(false);
+    for (const type of ['talk', 'lecture', 'explainer', 'podcast']) {
+      expect(typeBox(type).checked).toBe(true);
+    }
+    expect(document.querySelector('.auto-type-group input[data-type="music"]')).toBeNull();
+  });
+
+  it('persists the master toggle through the settings store', async () => {
+    await import('../entrypoints/options/main');
+    await flush();
+    master().checked = true;
+    master().dispatchEvent(new Event('change'));
+    await flush();
+    expect(storageData.get('sw.settings')).toMatchObject({
+      autoApply: { enabled: true },
+    });
+  });
+
+  it('reflects a persisted enabled setting on load', async () => {
+    storageData.set('sw.settings', {
+      autoApply: { enabled: true, contentTypes: {} },
+    });
+    await import('../entrypoints/options/main');
+    await flush();
+    expect(master().checked).toBe(true);
+  });
+
+  it('unchecking a type persists false', async () => {
+    storageData.set('sw.settings', { autoApply: { enabled: false, contentTypes: {} } });
+    await import('../entrypoints/options/main');
+    await flush();
+    typeBox('talk').checked = false;
+    typeBox('talk').dispatchEvent(new Event('change'));
+    await flush();
+    expect(storageData.get('sw.settings')).toMatchObject({
+      autoApply: { contentTypes: { talk: false } },
+    });
+    // The stored map carries the explicit false; the others are untouched.
+    const stored = storageData.get('sw.settings') as { autoApply: { contentTypes: Record<string, boolean> } };
+    expect(Object.keys(stored.autoApply.contentTypes)).toEqual(['talk']);
+  });
+});

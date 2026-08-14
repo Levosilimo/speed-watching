@@ -8,6 +8,9 @@ import {
   type OverrideLogEntry,
 } from '../../lib/override-log';
 import {
+  DEFAULT_AUTO_TYPES,
+} from '../../lib/auto-apply';
+import {
   DEFAULT_TARGET_WPM,
   SETTINGS_STORAGE_KEY,
   SettingsStore,
@@ -30,6 +33,10 @@ import {
 // ships none of them. The audio capture test below ships.
 // Awaited so the dynamic import cannot float past the importing context's
 // teardown (the vitest module-cache quirk documented in options-a11y.test.ts).
+// The auto-apply section (lib-14) pushed the file past the 440-line
+// reviewability budget; the suppression mirrors content.ts's — a reviewed
+// exception, not license to grow further.
+// aislop-ignore-file file-too-large
 if (import.meta.env.DEV) {
   await import('./dev');
 }
@@ -216,6 +223,33 @@ externalApiToggle.addEventListener('change', () => {
   }));
 });
 
+// ── Settings: Auto-apply (per-video opt-in) ─────────────────────────────
+
+const autoToggle = el('auto-toggle') as HTMLInputElement;
+const autoTypeBoxes = document.querySelectorAll<HTMLInputElement>(
+  '.auto-type-group input[type="checkbox"]',
+);
+
+autoToggle.addEventListener('change', () => {
+  void settingsStore.update((settings) => ({
+    ...settings,
+    autoApply: { ...settings.autoApply, enabled: autoToggle.checked },
+  }));
+});
+
+autoTypeBoxes.forEach((box) => {
+  box.addEventListener('change', () => {
+    const type = box.dataset.type as ContentType;
+    void settingsStore.update((settings) => ({
+      ...settings,
+      autoApply: {
+        ...settings.autoApply,
+        contentTypes: { ...settings.autoApply.contentTypes, [type]: box.checked },
+      },
+    }));
+  });
+});
+
 // ── Settings: Habits Report ──────────────────────────────────────────────
 
 const habitTotal = el('habit-total');
@@ -376,6 +410,11 @@ async function loadSettings(): Promise<void> {
   wpmValue.textContent = String(target);
   setActivePreset(settings.contentType ?? 'generic');
   externalApiToggle.checked = settings.externalApiEnabled;
+  autoToggle.checked = settings.autoApply.enabled;
+  autoTypeBoxes.forEach((box) => {
+    const type = box.dataset.type as ContentType;
+    box.checked = settings.autoApply.contentTypes[type] ?? DEFAULT_AUTO_TYPES.has(type);
+  });
   renderOverrides(siteList(settings));
   renderHabits(habits, savedSec);
 }

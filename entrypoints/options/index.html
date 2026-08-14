@@ -147,6 +147,44 @@
       </div>
     </div>
 
+    <!-- Auto-apply speed -->
+    <div class="section" id="auto-apply-section">
+      <h2 class="section-label" id="auto-label" data-i18n="options.autoLabel">Auto-apply speed</h2>
+      <div class="section-card">
+        <p class="section-note" data-i18n="options.autoNote">
+          When on, the recommended speed applies automatically to each new
+          video. Only confident caption-based recommendations for talks,
+          lectures, explainers, and podcasts auto-apply — music and
+          estimated guesses never do. A manual speed change or "Stop auto"
+          overrides it for that video; it returns on the next one. Off by
+          default.
+        </p>
+        <label class="toggle-row">
+          <input type="checkbox" id="auto-toggle" />
+          <span data-i18n="options.autoToggle">Apply the recommended speed automatically</span>
+        </label>
+        <div class="auto-type-group" role="group" aria-labelledby="auto-type-label">
+          <span class="auto-type-label" id="auto-type-label" data-i18n="options.autoTypeLabel">Apply to these content types</span>
+          <label class="auto-type-item">
+            <input type="checkbox" data-type="talk" />
+            <span data-i18n="options.preset.talk">Talk</span>
+          </label>
+          <label class="auto-type-item">
+            <input type="checkbox" data-type="lecture" />
+            <span data-i18n="options.preset.lecture">Lecture</span>
+          </label>
+          <label class="auto-type-item">
+            <input type="checkbox" data-type="explainer" />
+            <span data-i18n="options.preset.explainer">Explainer</span>
+          </label>
+          <label class="auto-type-item">
+            <input type="checkbox" data-type="podcast" />
+            <span data-i18n="options.preset.podcast">Podcast</span>
+          </label>
+        </div>
+      </div>
+    </div>
+
     <!-- Tier Info -->
     <div class="section">
       <h2 class="section-label" data-i18n="options.tiersLabel">Tier labels</h2>
