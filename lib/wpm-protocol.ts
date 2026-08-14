@@ -6,7 +6,8 @@
 // module stays under the aislop size budget.
 //
 // Bounds shared with the bridge protocol (NATURAL_RATE_MIN/MAX,
-// RECOMMENDATION_MODES, the numeric validators) come from lib/messaging.ts.
+// RECOMMENDATION_MODES, the numeric validators) come from
+// lib/bridge-protocol.ts.
 
 import { isContentType, type ContentType } from './music';
 import { SLOW_DOWN_FLOOR, type RateTier, type RecommendationMode } from './recommend';
@@ -17,7 +18,7 @@ import {
   NATURAL_RATE_MAX,
   NATURAL_RATE_MIN,
   RECOMMENDATION_MODES,
-} from './messaging';
+} from './bridge-protocol';
 
 export const WPM_GET = 'wpm:get';
 export const WPM_PROTOCOL_VERSION = 1;

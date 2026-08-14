@@ -342,7 +342,6 @@ export function normalizeLanguageCode(raw: string): string | null {
   return code === undefined || code === '' ? null : code;
 }
 
-/** Resolve a caption-track languageCode to its model; null when unmapped. */
 export function resolveLanguage(raw: string | undefined): LanguageModel | null {
   if (raw === undefined) return null;
   const code = normalizeLanguageCode(raw);

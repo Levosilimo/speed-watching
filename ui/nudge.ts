@@ -161,7 +161,6 @@ export function createNudge(host: HTMLElement, events?: NudgeEvents, opts?: Nudg
     });
   }
 
-  // Detect theme from host's document or system
   const doc = host.ownerDocument;
   const mq = doc.defaultView?.matchMedia?.('(prefers-color-scheme: dark)');
   let dark = mq?.matches ?? false;
@@ -170,14 +169,12 @@ export function createNudge(host: HTMLElement, events?: NudgeEvents, opts?: Nudg
     return dark ? DARK : LIGHT;
   }
 
-  // Inject styles
   const style = doc.createElement('style');
   style.textContent = nudgeCss(theme());
   shadow.append(style, dom.overlay);
 
   wireEvents(dom, host, events);
 
-  // Theme listener
   const onThemeChange = (e: MediaQueryListEvent): void => {
     dark = e.matches;
     style.textContent = nudgeCss(theme());

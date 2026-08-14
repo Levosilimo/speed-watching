@@ -10,7 +10,6 @@ import { WPM_PROTOCOL_VERSION, type WpmGetResponse } from './wpm-protocol';
 import type { ContentType } from './music';
 import type { RateTier, RecommendationMode } from './recommend';
 
-/** The slice of the measurement context the wpm:get response carries. */
 export interface MeasurementContext {
   site: string;
   contentType: ContentType;

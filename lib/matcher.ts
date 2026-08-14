@@ -34,7 +34,6 @@ export function selectVideo<T extends VideoLike>(
   return candidates.find((video) => !video.paused) ?? candidates[0] ?? null;
 }
 
-/** Sets the rate clamped to the platform max; returns the value applied. */
 export function applyRate(video: VideoLike, multiplier: number, platformMax: number): number {
   const clamped = Math.min(multiplier, platformMax);
   video.playbackRate = clamped;
@@ -56,12 +55,10 @@ export class RateReapplier {
     return this.video !== null;
   }
 
-  /** The multiplier currently being enforced, or null when inactive. */
   get lastApplied(): number | null {
     return this.applied;
   }
 
-  /** Applies the multiplier and re-asserts it until stop() is called. */
   start(video: VideoLike, multiplier: number, platformMax: number): void {
     this.stop();
     this.video = video;
@@ -73,7 +70,7 @@ export class RateReapplier {
     this.timer = setInterval(() => this.reassert(), this.intervalMs);
   }
 
-  /** Stops enforcement: listeners removed, timer cleared, rate untouched. */
+  /** Stops enforcement; the current rate stays untouched. */
   stop(): void {
     if (this.video !== null) {
       this.video.removeEventListener('ratechange', this.reassert);

@@ -24,7 +24,6 @@ export function wordLevelWpm(words: Segment[]): number | null {
   return (totalWords(words) / (last - first)) * 60;
 }
 
-/** Wall-clock span from the first cue start to the last cue end, in seconds. */
 export function cueSpanSec(cues: Segment[]): number | null {
   const first = cues[0];
   const last = cues.at(-1);
