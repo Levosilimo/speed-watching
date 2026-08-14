@@ -46,6 +46,8 @@ const RATE_EPSILON = 1e-6;
 export class RateReapplier {
   private video: VideoLike | null = null;
   private applied: number | null = null;
+  /** The in-gap dip rate (skip-silence); null while no pair is armed. */
+  private pause: number | null = null;
   private platformMax = 1;
   private timer: ReturnType<typeof setInterval> | null = null;
 
@@ -63,6 +65,7 @@ export class RateReapplier {
     this.stop();
     this.video = video;
     this.platformMax = platformMax;
+    this.pause = null;
     this.applied = applyRate(video, multiplier, platformMax);
     video.addEventListener('ratechange', this.reassert);
     video.addEventListener('play', this.reassert);
@@ -80,7 +83,23 @@ export class RateReapplier {
     if (this.timer !== null) clearInterval(this.timer);
     this.video = null;
     this.applied = null;
+    this.pause = null;
     this.timer = null;
+  }
+
+  /** Arms the base-vs-pause rate pair (skip-silence): base is the out-of-gap
+   * rate the loop re-asserts, pause the in-gap dip target. The reset
+   * sentinel is unchanged — only an exactly-1.0 reset re-asserts, so a
+   * user's non-1.0 rate outside the pair is never fought. */
+  setRates(base: number, pause: number): void {
+    this.applied = base;
+    this.pause = pause;
+  }
+
+  /** The rate to hold right now: the pause target inside a gap, the base
+   * rate outside; the base rate while no pair is armed. */
+  currentRateFor(inGap: boolean): number {
+    return inGap && this.pause !== null ? this.pause : (this.applied ?? 1);
   }
 
   private readonly reassert = (): void => {

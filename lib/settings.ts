@@ -1,10 +1,11 @@
-// Storage namespace: chrome.storage.local holds exactly six keys, all
+// Storage namespace: chrome.storage.local holds exactly seven keys, all
 // prefixed 'sw.' and owned by their lib module — 'sw.settings' (this file,
 // via SettingsStore), 'sw.overrideLog' (lib/override-log.ts), 'sw.demand'
 // (lib/demand.ts, the local STT demand proxy), 'sw.channelRates'
 // (lib/channel-memory.ts, per-channel measured rates), 'sw.timeSavedSec'
-// (lib/time-saved.ts, the wall time reclaimed by applied rates), and
-// 'sw.nudge' (lib/nudge.ts, the recall-nudge record). The options page,
+// (lib/time-saved.ts, the wall time reclaimed by applied rates), 'sw.nudge'
+// (lib/nudge.ts, the recall-nudge record), and 'sw.skipSilence'
+// (lib/skip-silence.ts, the slow-through-pauses opt-in). The options page,
 // the isolated-world bridge, and the background all read/write through the
 // lib stores over browser.storage.local. No other key may be introduced.
 
@@ -34,6 +35,8 @@ export interface SiteOverride {
   contentType?: ContentType;
   multiplierOverride?: number;
   platformMax?: number;
+  /** Skip-silence on for this site; overrides the global toggle. */
+  skipSilence?: boolean;
 }
 
 export interface ContentTypePrefs {
