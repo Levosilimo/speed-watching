@@ -16,154 +16,43 @@
 // CustomEvent protocol dies in Firefox's single-world layout (the firefox
 // e2e settings spec caught it: the bridge never answered). postMessage is
 // the sanctioned cross-world channel in both browsers, in both directions.
-// aislop-ignore-file file-too-large
+//
+// Wire protocol (envelope shapes, payload guards, shared bounds) lives in
+// lib/bridge-protocol.ts and is re-exported below for existing importers.
 
-import { CHANNEL_KEY_MAX_LENGTH, ChannelMemory, isChannelRecord, type ChannelRecord } from './channel-memory';
-import { isContentType } from './music';
-import type { ContentType } from './music';
-import type { OverrideLogEntry } from './override-log';
+import { CHANNEL_KEY_MAX_LENGTH, ChannelMemory, isChannelRecord } from './channel-memory';
+import { isContentType, type ContentType } from './music';
 import { OverrideLog } from './override-log';
-import {
-  PLATFORM_MAX_MAX,
-  PLATFORM_MAX_MIN,
-  SettingsStore,
-  TARGET_WPM_MAX,
-  TARGET_WPM_MIN,
-  type AutoApplyPrefs,
-  type Settings,
-} from './settings';
+import { SettingsStore } from './settings';
+import { BRIDGE_CHANNEL, isBridgeEnvelope, isLogEntry, isNudgeDismiss, isNudgeRecordApply, isSettingsPayload, isTimeSavedAccrueMessage, type BridgeRequest, type BridgeResult } from './bridge-protocol';
+export {
+  BRIDGE_CHANNEL,
+  isBridgeEnvelope,
+  isDemandIncrementMessage,
+  isNudgeDismiss,
+  isNudgeRecordApply,
+  isSettingsPayload,
+  isShortcutEnvelope,
+  isShortcutMessage,
+  isTimeSavedAccrueMessage,
+  MULTIPLIER_MAX,
+  MULTIPLIER_MIN,
+  SHORTCUT_APPLY,
+  SHORTCUT_CHANNEL,
+  SHORTCUT_DISMISS,
+  type BridgeEnvelope,
+  type BridgeRequest,
+  type BridgeResult,
+  type ShortcutMessage,
+} from './bridge-protocol';
 
-export const BRIDGE_CHANNEL = 'speedwatcher:bridge';
 export const BRIDGE_TIMEOUT_MS = 1500;
-
-/** Runtime message the bridge sends the background for demand:increment
- * (single-writer routing, lib-11#3); the background answers with the
- * updated DemandRecord. Same shape as the bridge request it carries. */
-interface DemandIncrementMessage {
-  type: 'demand:increment';
-  contentType: ContentType;
-}
-
-export function isDemandIncrementMessage(value: unknown): value is DemandIncrementMessage {
-  return isRecord(value) && value.type === 'demand:increment' && isContentType(value.contentType);
-}
-
-/** Runtime message the bridge sends the background for nudge:recordApply
- * (single-writer routing like demand:increment); the background answers
- * with the show flag. Same shape as the bridge request it carries. */
-interface NudgeRecordApplyMessage {
-  type: 'nudge:recordApply';
-  multiplier: number;
-}
-
-export function isNudgeRecordApply(value: unknown): value is NudgeRecordApplyMessage {
-  return (
-    isRecord(value) &&
-    value.type === 'nudge:recordApply' &&
-    isFiniteNumberIn(value.multiplier, MULTIPLIER_MIN, MULTIPLIER_MAX)
-  );
-}
-
-interface TimeSavedAccrueMessage {
-  type: 'timeSaved:accrue';
-  deltaSec: number;
-  multiplier: number;
-}
-
-/** Shape check for timeSaved:accrue crossing the postMessage boundary: the
- * delta must be a finite number (the store's (0, 1] bound is the accrue
- * authority) and the multiplier must sit in the SEC-3 log bounds. */
-export function isTimeSavedAccrueMessage(value: unknown): value is TimeSavedAccrueMessage {
-  return (
-    isRecord(value) &&
-    value.type === 'timeSaved:accrue' &&
-    typeof value.deltaSec === 'number' &&
-    Number.isFinite(value.deltaSec) &&
-    isFiniteNumberIn(value.multiplier, MULTIPLIER_MIN, MULTIPLIER_MAX)
-  );
-}
-
-/** Runtime message the bridge sends the background for nudge:dismiss —
- * 'Got it' (cooldown) or 'Don't show again' (permanent). */
-interface NudgeDismissMessage {
-  type: 'nudge:dismiss';
-  forever: boolean;
-}
-
-export function isNudgeDismiss(value: unknown): value is NudgeDismissMessage {
-  return isRecord(value) && value.type === 'nudge:dismiss' && typeof value.forever === 'boolean';
-}
-/** Runtime message the background sends the active tab on a keyboard
- * shortcut (chrome.commands, wxt.config.ts). The ISOLATED bridge receives
- * it and relays it to the MAIN-world script (see ShortcutEnvelope). */
-export const SHORTCUT_APPLY = 'speedwatcher:apply-shortcut';
-export const SHORTCUT_DISMISS = 'speedwatcher:dismiss-shortcut';
-
-export type ShortcutMessage =
-  | { type: typeof SHORTCUT_APPLY }
-  | { type: typeof SHORTCUT_DISMISS };
-
-export function isShortcutMessage(value: unknown): value is ShortcutMessage {
-  return isRecord(value) && (value.type === SHORTCUT_APPLY || value.type === SHORTCUT_DISMISS);
-}
-
-/** Window channel the ISOLATED bridge uses to relay a shortcut message to
- * the MAIN-world script (chrome.* is unavailable in the page world). */
-export const SHORTCUT_CHANNEL = 'speedwatcher:shortcut';
-
-export interface ShortcutEnvelope {
-  channel: typeof SHORTCUT_CHANNEL;
-  message: ShortcutMessage;
-}
-
-export function isShortcutEnvelope(value: unknown): value is ShortcutEnvelope {
-  return isRecord(value) && value.channel === SHORTCUT_CHANNEL && isShortcutMessage(value.message);
-}
-
-export type BridgeRequest =
-  | { type: 'settings:get' }
-  | { type: 'settings:set'; settings: Settings }
-  | { type: 'settings:seenFirstRun' }
-  | { type: 'log:append'; entry: Omit<OverrideLogEntry, 'ts'> }
-  | { type: 'channel:get'; channelKey: string }
-  | { type: 'channel:put'; channelKey: string; record: ChannelRecord }
-  | DemandIncrementMessage
-  | NudgeRecordApplyMessage
-  | NudgeDismissMessage
-  | TimeSavedAccrueMessage;
-
-export type BridgeResult<T extends BridgeRequest> = T extends { type: 'settings:get' }
-  ? Settings
-  : T extends { type: 'channel:get' }
-    ? ChannelRecord | null
-    : T extends { type: 'nudge:recordApply' }
-      ? { show: boolean }
-      : void;
-
-export interface BridgeEnvelope {
-  channel: typeof BRIDGE_CHANNEL;
-  direction: 'request' | 'response';
-  payload: Record<string, unknown>;
-}
-
-export function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null;
-}
 
 /** Runtime shape check for channel keys crossing the postMessage boundary:
  * non-empty and bounded (channelIds are ~24 chars; author-name fallbacks
  * are short display names). */
 function isChannelKey(value: unknown): value is string {
   return typeof value === 'string' && value.length > 0 && value.length <= CHANNEL_KEY_MAX_LENGTH;
-}
-
-export function isBridgeEnvelope(value: unknown): value is BridgeEnvelope {
-  return (
-    isRecord(value) &&
-    value.channel === BRIDGE_CHANNEL &&
-    (value.direction === 'request' || value.direction === 'response') &&
-    isRecord(value.payload)
-  );
 }
 
 /** postMessage/addEventListener('message') surface shared by Window
@@ -177,109 +66,10 @@ export interface BridgeDeps {
   settings: SettingsStore;
   log: OverrideLog;
   channels: ChannelMemory;
-  /** Forwards demand:increment to the background — the single writer. */
   forwardDemand: (contentType: ContentType) => Promise<unknown>;
-  /** Forwards nudge:recordApply to the background — the single writer. */
   forwardNudgeRecordApply: (multiplier: number) => Promise<unknown>;
-  /** Forwards nudge:dismiss to the background — the single writer. */
   forwardNudgeDismiss: (forever: boolean) => Promise<unknown>;
-  /** Forwards timeSaved:accrue to the background — the single writer. */
   forwardAccrue: (deltaSec: number, multiplier: number) => Promise<unknown>;
-}
-
-export function isFiniteNumberIn(value: unknown, min: number, max: number): boolean {
-  return typeof value === 'number' && Number.isFinite(value) && value >= min && value <= max;
-}
-
-function isSiteOverride(value: unknown): boolean {
-  if (!isRecord(value)) return false;
-  if (value.target !== undefined && !isFiniteNumberIn(value.target, TARGET_WPM_MIN, TARGET_WPM_MAX)) {
-    return false;
-  }
-  if (
-    value.platformMax !== undefined &&
-    !isFiniteNumberIn(value.platformMax, PLATFORM_MAX_MIN, PLATFORM_MAX_MAX)
-  ) {
-    return false;
-  }
-  if (
-    value.multiplierOverride !== undefined &&
-    (typeof value.multiplierOverride !== 'number' || !Number.isFinite(value.multiplierOverride))
-  ) {
-    return false;
-  }
-  if (value.contentType !== undefined && !isContentType(value.contentType)) return false;
-  return true;
-}
-
-function isContentTypePrefs(value: unknown): boolean {
-  return (
-    isRecord(value) &&
-    (value.target === undefined || isFiniteNumberIn(value.target, TARGET_WPM_MIN, TARGET_WPM_MAX))
-  );
-}
-
-/** Runtime shape check for the auto-apply prefs crossing the postMessage
- * boundary: master toggle boolean, contentTypes a record of booleans. */
-export function isAutoApplyPrefs(value: unknown): value is AutoApplyPrefs {
-  return (
-    isRecord(value) &&
-    typeof value.enabled === 'boolean' &&
-    isRecord(value.contentTypes) &&
-    Object.values(value.contentTypes).every((flag) => typeof flag === 'boolean')
-  );
-}
-
-// SEC-3 bounds for log:append entries: the pill recommends within
-// platformMax (<= 4) and no speech track runs above 1000 wpm, so anything
-// outside these ranges is forgery. Shared with lib/time-saved.ts, whose
-// accrue gate uses the same multiplier bounds.
-export const MULTIPLIER_MIN = 0.1;
-export const MULTIPLIER_MAX = 10;
-export const NATURAL_RATE_MIN = 1;
-export const NATURAL_RATE_MAX = 1000;
-const USER_ACTIONS = new Set(['apply', 'dismiss', 'adjust']);
-export const RECOMMENDATION_MODES = new Set(['recommend', 'warning', 'unreachable', 'music']);
-
-/** Runtime shape check for log:append payloads crossing the postMessage
- * boundary (SEC-3): a page can post arbitrary JSON, so every field the
- * habits report reads is validated before anything is appended. */
-export function isLogEntry(value: unknown): value is Omit<OverrideLogEntry, 'ts'> {
-  if (!isRecord(value)) return false;
-  if (!isContentType(value.contentType)) return false;
-  if (!isFiniteNumberIn(value.naturalRate, NATURAL_RATE_MIN, NATURAL_RATE_MAX)) return false;
-  if (!isFiniteNumberIn(value.multiplier, MULTIPLIER_MIN, MULTIPLIER_MAX)) return false;
-  if (typeof value.site !== 'string' || value.site.length === 0) return false;
-  if (typeof value.userAction !== 'string' || !USER_ACTIONS.has(value.userAction)) return false;
-  if (typeof value.mode !== 'string' || !RECOMMENDATION_MODES.has(value.mode)) return false;
-  if (value.videoId !== undefined && typeof value.videoId !== 'string') return false;
-  if (value.finalMultiplier !== undefined && !isFiniteNumberIn(value.finalMultiplier, MULTIPLIER_MIN, MULTIPLIER_MAX)) {
-    return false;
-  }
-  return true;
-}
-
-/** Runtime shape check for settings:set payloads crossing the postMessage
- * boundary — the type system cannot vouch for page-posted data. */
-export function isSettingsPayload(value: unknown): value is Settings {
-  if (!isRecord(value)) return false;
-  if (typeof value.conservative !== 'boolean') return false;
-  if (!isFiniteNumberIn(value.platformMax, PLATFORM_MAX_MIN, PLATFORM_MAX_MAX)) return false;
-  // Strict boolean: a forged (or stale, pre-Tier-4) payload without the
-  // provider toggle must not turn the measured-rate API on.
-  if (typeof value.externalApiEnabled !== 'boolean') return false;
-  if (value.target !== undefined && !isFiniteNumberIn(value.target, TARGET_WPM_MIN, TARGET_WPM_MAX)) {
-    return false;
-  }
-  if (value.contentType !== undefined && !isContentType(value.contentType)) return false;
-  if (!isRecord(value.sites) || !Object.values(value.sites).every(isSiteOverride)) return false;
-  if (!isRecord(value.contentTypes) || !Object.values(value.contentTypes).every(isContentTypePrefs)) {
-    return false;
-  }
-  // Optional-only: pre-auto-apply payloads (the e2e bridge write) stay
-  // valid; a present-but-malformed autoApply is rejected.
-  if (value.autoApply !== undefined && !isAutoApplyPrefs(value.autoApply)) return false;
-  return true;
 }
 
 /** Isolated-world side: resolves a request against the shared stores.
@@ -295,8 +85,8 @@ export async function handleBridgeRequest(
     case 'settings:get':
       return deps.settings.load();
     case 'settings:set':
-      // Forged payloads (out-of-range target/platformMax, wrong shapes) must
-      // not reach storage: reject instead of saving garbage.
+      // Forged payloads (out-of-range target/platformMax, wrong shapes)
+      // must not reach storage.
       if (!isSettingsPayload(request.settings)) {
         throw new Error('settings:set: invalid settings payload');
       }
@@ -318,7 +108,7 @@ export async function handleBridgeRequest(
       return undefined;
     case 'log:append':
       // SEC-3: forged entries (NaN multipliers, unknown content types) must
-      // not pollute the habits report; nothing is appended on rejection.
+      // not pollute the habits report.
       if (!isLogEntry(request.entry)) {
         throw new Error('log:append: invalid entry');
       }
@@ -331,27 +121,26 @@ export async function handleBridgeRequest(
       return deps.channels.get(request.channelKey);
     case 'channel:put':
       // SEC-3: forged records (out-of-range rates, oversized or empty
-      // keys) must not reach storage; nothing is written on rejection.
+      // keys) must not reach storage.
       if (!isChannelKey(request.channelKey) || !isChannelRecord(request.record)) {
         throw new Error('channel:put: invalid record');
       }
       await deps.channels.put(request.channelKey, request.record);
       return undefined;
     case 'demand:increment':
-      // Shape validation at the boundary: unknown content types are rejected
-      // here and never reach the background writer.
+      // Boundary validation: unknown content types never reach the
+      // background writer.
       if (!isContentType(request.contentType)) {
         throw new Error(`demand:increment: unknown content type ${request.contentType}`);
       }
       await deps.forwardDemand(request.contentType);
       return undefined;
     case 'nudge:recordApply':
-      // Shape validation at the boundary: out-of-range multipliers are
-      // rejected here and never reach the background writer.
+      // Boundary validation: out-of-range multipliers never reach the
+      // background writer.
       if (!isNudgeRecordApply(request)) {
         throw new Error('nudge:recordApply: invalid multiplier');
       }
-      // The background's show flag rides back on the response envelope.
       return deps.forwardNudgeRecordApply(request.multiplier);
     case 'nudge:dismiss':
       if (!isNudgeDismiss(request)) {
@@ -359,9 +148,9 @@ export async function handleBridgeRequest(
       }
       return deps.forwardNudgeDismiss(request.forever);
     case 'timeSaved:accrue':
-      // Shape validation at the boundary: out-of-range payloads are rejected
-      // here and never reach the background writer (the store re-checks the
-      // (0, 1] delta bound — the wire guard only proves finite numbers).
+      // Boundary validation: out-of-range payloads never reach the
+      // background writer (the store re-checks the (0, 1] delta bound —
+      // the wire guard only proves finite numbers).
       if (!isTimeSavedAccrueMessage(request)) {
         throw new Error('timeSaved:accrue: invalid accrue payload');
       }
@@ -412,8 +201,6 @@ export function createBridgeListener(
   };
 }
 
-/** MAIN-world side: posts a request envelope and awaits the matching
- * response envelope. */
 export interface BridgeClient {
   request<T extends BridgeRequest>(request: T): Promise<BridgeResult<T>>;
 }
