@@ -35,7 +35,7 @@ gh api "repos/$REPO/rulesets" --method POST --input <(cat <<'JSON'
   },
   "rules": [
     {
-      "type": "required_pull_request",
+      "type": "pull_request",
       "parameters": {
         "required_approving_review_count": 0,
         "dismiss_stale_reviews_on_push": false,
@@ -48,12 +48,13 @@ gh api "repos/$REPO/rulesets" --method POST --input <(cat <<'JSON'
       "type": "required_status_checks",
       "parameters": {
         "required_status_checks": [
-          { "context": "ci",               "strict_required_status_checks_policy": false },
-          { "context": "e2e-chromium",     "strict_required_status_checks_policy": false },
-          { "context": "e2e-chromium-cft", "strict_required_status_checks_policy": false },
-          { "context": "e2e-userscript",   "strict_required_status_checks_policy": false },
-          { "context": "e2e-firefox",      "strict_required_status_checks_policy": false }
-        ]
+          { "context": "ci" },
+          { "context": "e2e-chromium" },
+          { "context": "e2e-chromium-cft" },
+          { "context": "e2e-userscript" },
+          { "context": "e2e-firefox" }
+        ],
+        "strict_required_status_checks_policy": false
       }
     },
     { "type": "non_fast_forward" },
