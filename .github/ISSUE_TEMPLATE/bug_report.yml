@@ -1,0 +1,122 @@
+name: Bug report
+description: A recommendation was wrong, missing, or applied when it shouldn't have
+title: "[bug] "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        The more fields you fill, the faster the fix. Anything you don't know,
+        leave as "not sure" — a partial report beats a missing one.
+  - type: dropdown
+    id: browser
+    attributes:
+      label: Browser
+      options:
+        - Chrome
+        - Firefox
+        - Other / not sure
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Browser version
+      description: e.g. 126.0.6478.127. chrome://version or about:addons shows it.
+    validations:
+      required: false
+  - type: input
+    id: url
+    attributes:
+      label: Video URL
+      description: The watch page or embed page where the problem happened.
+    validations:
+      required: false
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Where did you see it?
+      options:
+        - YouTube (watch page)
+        - Embedded player (a video inside another site)
+        - Captionless estimate (no captions available)
+        - Userscript
+        - mpv
+    validations:
+      required: true
+  - type: dropdown
+    id: pill
+    attributes:
+      label: What did the pill do?
+      options:
+        - Hidden — the pill never appeared
+        - Shown, recommended a speed
+        - Shown, but I couldn't apply it
+        - Not applied — I applied manually and it fought me
+    validations:
+      required: true
+  - type: dropdown
+    id: captions
+    attributes:
+      label: Did the video have captions?
+      options:
+        - "Yes"
+        - "No"
+        - Not sure
+    validations:
+      required: true
+  - type: input
+    id: rate
+    attributes:
+      label: Measured rate shown on the pill
+      description: e.g. "≈ 210 wpm". If the pill didn't show a rate, leave blank.
+    validations:
+      required: false
+  - type: dropdown
+    id: tier
+    attributes:
+      label: Tier label on the pill
+      options:
+        - from captions (asr-word)
+        - from captions (asr-cue)
+        - from captions (manual-cue)
+        - estimated
+        - No label shown / not sure
+    validations:
+      required: false
+  - type: input
+    id: language
+    attributes:
+      label: Caption language
+      description: e.g. en, ja, ru. Shown next to the tier on the pill.
+    validations:
+      required: false
+  - type: dropdown
+    id: autoapply
+    attributes:
+      label: Auto-apply state
+      options:
+        - Off
+        - On
+        - On, but I overrode it for this video
+        - Not sure
+    validations:
+      required: true
+  - type: dropdown
+    id: failure
+    attributes:
+      label: What went wrong?
+      options:
+        - Apply did nothing — the speed never changed
+        - Wrong recommendation — the suggested speed was off
+        - Fought a manual override — my speed got reset
+        - Something else (describe below)
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: What did you do, and what happened instead of what you expected?
+    validations:
+      required: true

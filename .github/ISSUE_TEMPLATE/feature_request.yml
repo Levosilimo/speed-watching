@@ -1,0 +1,23 @@
+name: Feature request
+description: Something Speed Watcher should do but doesn't
+title: "[feature] "
+labels: [enhancement]
+body:
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Which surface should this apply to?
+      options:
+        - Extension (Chrome / Firefox)
+        - Userscript
+        - mpv
+      multiple: true
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: What should it do?
+      description: The behavior you want, and the problem it solves. Skip the implementation details — those are the maintainer's job.
+    validations:
+      required: true

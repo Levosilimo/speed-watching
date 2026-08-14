@@ -1,5 +1,8 @@
 # GitHub Release assets (zips + userscript) for v* tags. Independent from
 # publish.yml: this produces release assets, that submits to the stores.
+# The userscript dist is gitignored, so the Release download URL
+# (releases/latest/download/speed-watcher.user.js) is the userscript's only
+# install path.
 
 name: Release
 

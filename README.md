@@ -1,20 +1,70 @@
 # Speed Watcher
 
-WPM-based speed-watching extension for Chrome and Firefox. Reads the speech
-rate of a video's captions and recommends a playback multiplier that lands
-the effective rate in the 250–275 wpm range — a commonly cited comfortable
-listening target — instead of guessing from content type.
+![Watch page with the Speed Watcher pill: measured speech rate and the multiplier that lands you in the comfortable listening range](docs/watch-page.png)
 
-## Features
+Recommends the playback speed that lands speech in the 250–275 wpm
+comfortable listening range — measured from the video's own captions, not
+guessed from content type.
 
-- Measures the natural speech rate of word-timed captions (YouTube WEB and
-  ANDROID caption payloads, silence-corrected)
-- Recommends an exact playback multiplier to hit your target wpm
-- Floating pill on the video: apply or dismiss with one click
-- Pause-dilution warning when pause-heavy captions push speech past the range
-- Content-type presets (lecture/talk/podcast/music) and per-site overrides
-- Local-only habits report (recommendations applied, average multiplier)
-- Estimated-tier fallback when captions are unavailable
+[![License](https://img.shields.io/github/license/levosilimo/speed-watching)](https://github.com/levosilimo/speed-watching)
+[![Release](https://img.shields.io/github/v/release/levosilimo/speed-watching)](https://github.com/levosilimo/speed-watching/releases/latest)
+[![CI](https://github.com/levosilimo/speed-watching/actions/workflows/ci.yml/badge.svg)](https://github.com/levosilimo/speed-watching/actions/workflows/ci.yml)
+<!-- Add the CWS install-count badge here once the store listing is live. -->
+
+## Install
+
+| Surface | Where | Status |
+|---|---|---|
+| Chrome | [Chrome Web Store](https://chrome.google.com/webstore/detail/<storeId>) | filling at launch |
+| Firefox | [Firefox Add-ons](https://addons.mozilla.org/firefox/addon/speed-watcher/) | filling at launch |
+| Userscript | [speed-watcher.user.js](https://github.com/levosilimo/speed-watching/releases/latest/download/speed-watcher.user.js) — for Tampermonkey/Violentmonkey, no store needed | ready |
+| mpv | Clone the repo (or unpack the release source tarball), then follow the install steps in [`mpv/README.md`](mpv/README.md) | ready |
+
+## How it works
+
+1. Reads the word-timed captions the video already carries.
+2. Computes the natural speech rate and the multiplier that hits your target.
+3. Shows a pill on the video — one click applies, one click dismisses.
+
+![Options page: target rate, content-type presets, and the local habits report](docs/store-screenshot.png)
+
+## The science
+
+250–275 wpm is a commonly cited comfortable listening range, not a
+comprehension guarantee. Each language's rate is measured in its own unit —
+words, characters, syllables, morae:
+
+| Language | Target | Ceiling | Basis |
+|---|---|---|---|
+| English | 250 wpm | 275 wpm | measured |
+| Japanese | 470 morae/min | 495 morae/min | derived, corpus-anchored prior |
+| Chinese | 240 cpm | 258 cpm | derived; ceiling comprehension-measured |
+| Russian | 168 wpm | 180 wpm | derived, corpus-anchored prior |
+
+22 languages — [full model and sources](docs/languages.md).
+
+## Privacy
+
+Everything runs locally — the extension reads captions from the page's own
+context and makes no outbound requests. Full policy:
+[Privacy Policy](https://levosilimo.github.io/speed-watching/privacy-policy/).
+
+## Contributing
+
+Bugs and feature requests go through the issue templates; PRs carry the DoD
+checklist in [CONTRIBUTING.md](CONTRIBUTING.md). Free forever. If it saves
+you time, [Sponsor](https://github.com/sponsors/levosilimo).
+
+## FAQ
+
+**"YouTube already has a speed setting."** It is a fixed multiplier — you
+guess 1.5× and re-adjust. Speed Watcher shows the video's measured speech
+rate and the exact multiplier that lands you in range.
+
+**"What about YouTube Auto Speed?"** It needs Premium, runs on Android, and
+handles English only, and it sets a rate without showing you the speech
+rate. Speed Watcher is desktop, free, works without Premium, covers 22
+languages, and slows down fast talkers instead of only ever speeding up.
 
 ## Stack
 

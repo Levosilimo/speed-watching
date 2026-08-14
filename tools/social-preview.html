@@ -1,0 +1,60 @@
+<!doctype html>
+<!-- 1280x640 social preview card: the watch-page capture plus the wordmark.
+     Rendered to docs/social-preview.png by tools/capture-social-preview.mjs. -->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      html, body { width: 1280px; height: 640px; }
+      body {
+        display: flex;
+        background: #0f0f0f;
+        color: #e8eaed;
+        font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+        border: 1px solid #333;
+      }
+      .shot {
+        width: 795px;
+        height: 640px;
+        flex: none;
+        overflow: hidden;
+      }
+      .shot img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: right center;
+        display: block;
+      }
+      .panel {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 18px;
+        padding: 0 44px;
+      }
+      h1 { font-size: 56px; font-weight: 700; letter-spacing: -0.5px; }
+      .tagline { font-size: 22px; color: #9a9a9a; line-height: 1.4; max-width: 380px; }
+      .range {
+        align-self: flex-start;
+        font-size: 14px;
+        color: #2dd4bf;
+        border: 1px solid #2dd4bf;
+        border-radius: 999px;
+        padding: 5px 14px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="shot">
+      <img src="../docs/watch-page.png" alt="" />
+    </div>
+    <div class="panel">
+      <h1>Speed Watcher</h1>
+      <p class="tagline">Playback speed from the video's own speech rate</p>
+      <span class="range">250–275 wpm comfortable listening range</span>
+    </div>
+  </body>
+</html>
