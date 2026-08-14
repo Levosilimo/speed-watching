@@ -8,6 +8,7 @@
     "entrypoints/offscreen/main.ts",
     "entrypoints/options/*.ts",
     "ui/pill.ts",
+    "userscript/src/main.ts",
     "wxt.config.ts",
     "scripts/**/*.ts",
     "e2e/**/*.ts"

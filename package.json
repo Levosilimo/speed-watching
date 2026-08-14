@@ -17,10 +17,12 @@
     "knip": "knip",
     "ci": "bun run scripts/run-ci.ts",
     "build:firefox": "wxt build -b firefox",
+    "build:userscript": "bun run scripts/build-userscript.ts",
     "build:firefox:e2e": "wxt build -b firefox --mode e2e",
     "e2e:chromium": "playwright test -c playwright.config.chromium.ts",
     "e2e:cft": "playwright test -c playwright.config.chromium.cft.ts",
     "e2e:firefox": "bun run e2e/firefox/run.ts",
+    "e2e:userscript": "playwright test -c playwright.config.userscript.ts",
     "e2e": "bun run e2e:chromium && bun run e2e:firefox",
     "postinstall": "wxt prepare"
   },

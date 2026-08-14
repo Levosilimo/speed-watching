@@ -109,7 +109,7 @@ interface ExpectedStats {
 }
 
 /** The same tier selection the content script applies. */
-function expectedStats(fixture: string): ExpectedStats {
+export function expectedStats(fixture: string): ExpectedStats {
   const json = JSON.parse(readFileSync(join(fixtureRoot, fixture), 'utf8')) as unknown;
   const { words, cues } = parseYouTubeJson3(json);
   if (words.length >= 2) {
