@@ -1,7 +1,9 @@
 {
   "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
   "testRunner": "vitest",
-  "plugins": ["@stryker-mutator/vitest-runner"],
+  "plugins": [
+    "@stryker-mutator/vitest-runner"
+  ],
   "vitest": {
     "configFile": "vitest.config.ts",
     "related": true
@@ -14,11 +16,25 @@
     "lib/matcher.ts",
     "lib/recommend.ts"
   ],
-  "thresholds": { "high": 80, "low": 65, "break": 65 },
+  "thresholds": {
+    "high": 80,
+    "low": 65,
+    "break": 65
+  },
   "incremental": true,
   "ignoreStatic": true,
   "coverageAnalysis": "perTest",
-  "reporters": ["clear-text", "html", "progress"],
-  "htmlReporter": { "fileName": "reports/mutation/index.html" },
-  "ignorePatterns": ["dist", ".output", "e2e", "tests/fixtures"]
+  "reporters": [
+    "clear-text",
+    "html",
+    "progress"
+  ],
+  "htmlReporter": {
+    "fileName": "reports/mutation/index.html"
+  },
+  "ignorePatterns": [
+    "dist",
+    ".output",
+    "e2e"
+  ]
 }
