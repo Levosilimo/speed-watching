@@ -43,7 +43,7 @@ ubuntu-latest, Node 22 (actions/setup-node) + bun 1.3.14 (oven-sh/setup-bun),
 6. `bun run build` — production chrome-mv3 build (dead-code-eliminates
    the window test hooks; the SEC-2 CI step greps the output to prove it).
 7. Manifest-version gate — `.output/chrome-mv3/manifest.json` version must
-   equal `package.json` version (screenpipe pattern; both are `0.0.1`).
+   equal `package.json` version (screenpipe pattern; both are `0.0.3`).
 8. `bun run zip` + `actions/upload-artifact@v4` — the zip the publish
    workflow would upload.
 
