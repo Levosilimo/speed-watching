@@ -121,6 +121,90 @@ pin. The response to a breach is to tighten the tests or the code, not to
 raise the ceiling or exclude mutants. Adding a test that only passes under
 mutation (a tautology) is papering over.
 
+The operational form (wave 5): `stryker.conf.json` scopes the mutation run
+to the critical libs — caption-fetch, caption-trigger, transcript,
+rate-controller, matcher, recommend — with the vitest runner in related
+mode (only the specs that import a file run against its mutants).
+`thresholds { high: 80, low: 65, break: 65 }` makes the nightly job fail
+below 65 — the tripwire. `bun run mutation` runs it locally.
+
+#### Baseline (wave 5, 2026-08-15)
+
+| File | Score | Killed | Survived | No coverage |
+|------|------:|-------:|---------:|------------:|
+| All files | 76.7% | 789 | 213 | 28 |
+| recommend.ts | 91.2% | 114 | 11 | 0 |
+| matcher.ts | 88.7% | 55 | 7 | 0 |
+| transcript.ts | 88.2% | 134 | 17 | 1 |
+| caption-fetch.ts | 77.6% | 76 | 19 | 3 |
+| caption-trigger.ts | 70.5% | 151 | 63 | 2 |
+| rate-controller.ts | 68.7% | 259 | 96 | 22 |
+
+#### Survivor classification (wave 5)
+
+Every survivor of the baseline was reviewed and put in one of three classes:
+
+**(a) Fixed now — real test gaps.** The complementary case was missing:
+
+- `rate-controller.ts` had zero unit coverage (375 mutants, none killed).
+  `tests/rate-controller.test.ts` pins the render + auto-apply gate, the
+  apply choke point, the override guard, the live-rate line, the session
+  teardown, and the post-apply disarm discipline. The review also surfaced
+  a real behavior gap: `userApply` mutated `appliedSource` but never
+  re-rendered the pill, so the 'Auto ·' label and undo anchor stayed stale
+  after a user Apply click — fixed as a two-commit pair (test then fix).
+- `recommend.ts` boundary cases: the exact-1.5x rounding on a non-manual-cue
+  tier, the sub-clamp manual-cue miss, the exactly-at-ceiling and
+  exactly-at-target cases (the strict `<` / `>` comparisons).
+- `caption-trigger.ts` interaction gates: CC-already-on drive, the restore
+  guards against a player toggle between flip and restore, RU labels, the
+  hidden-row exclusion, the no-submenu / control-rows-only aborts, the
+  endonym track pick, and its unresolvable-endonym fallback.
+- `caption-fetch.ts` request leaves: `fmt=json3` handling and the ANDROID
+  POST client identity (the chain-model suite stubs fetch too coarsely to
+  see them).
+- `transcript.ts` identity guards: non-string API key, non-record context,
+  non-function `ytcfg.get`.
+- `matcher.ts` lifecycle: no leaked intervals/listeners after stop or SPA
+  element removal (timer-count assertions).
+
+**(b) Documented known tradeoffs — the assertion cannot observe them.**
+
+- The wait-loop deadline arithmetic in caption-trigger (`Date.now() + MS`
+  vs `-`, `>=` vs `>`): the 100ms polls never land on the exact boundary,
+  so the flip is unobservable with fake timers.
+- The cooldown prune boundary: the drive's internal settle time makes the
+  exact 30s unreachable in a fake-timer test.
+- The `pill === null` refresh guards in rate-controller: the pill mount
+  already gates the same state (no pill, no live/saved line).
+- `computeSavedSec` / `computeLiveRate` null-guard flips: a null video or
+  multiplier downstream makes the comparison false either way.
+
+**(c) False positives — equivalent or unreachable mutants.**
+
+- matcher: `lastActive !== null` with `includes(null)` always false;
+  `clearInterval(null)` is a no-op; the reassert guard's `&&` variant ≡
+  `||` (stop() nulls both fields together); the epsilon `<` vs `<=` float
+  boundary.
+- recommend: the module constants (`CONTENT_TYPE_CEILING_FACTOR`,
+  `ARTICULATORY_CEILING_WPM` math, `TIER_LABELS`) are pinned by the
+  "engine constants" test, but stryker's per-test coverage attribution does
+  not route module-init mutants to it — verified: the assertion kills the
+  mutant when run directly. Same for caption-fetch's ANDROID client
+  constants vs the POST-body test. The `floor === SLOW_DOWN_FLOOR` → true
+  mutant is unreachable (a platformMax below 0.5 caps the clamp below the
+  floor). The `articulatoryWpm !== null` → true variants are equivalent
+  (null × multiplier is NaN → the comparison stays false).
+- caption-trigger: `ccWasOn === false` → true is unreachable — `changed`
+  only becomes true by flipping CC on, which requires `ccWasOn === false`.
+- rate-controller: the `__E2E__` pill-hook branch is compiled out of the
+  test path.
+
+Breach protocol, restated for the nightly job: below 65 → the job fails and
+files an issue with the report; the response is the (a)/(b)/(c) review
+above — fix the (a) class with complementary tests, never raise the
+threshold, never exclude a mutant or a file.
+
 ### Human checkpoint
 
 > One pair of eyes on the golden-master diff per release — the only gate that
@@ -130,3 +214,41 @@ The golden-master diff is the recorded real-site baseline changing between
 releases. Every other gate can be automated; a judgment call about whether
 the new baseline is the product improving or drifting is not. One human
 review per release, with a sign-off line (see `docs/release-gate.md`).
+
+## Mutation spot-check runbook
+
+Every feature PR that touches behavior gets the per-PR mutation spot-check
+(the DoD item "a mutant on each touched function fails its test"): mutate
+the touched function by hand and prove the suite catches it. The nightly
+run is the tripwire; the spot-check is the daily discipline that keeps the
+nightly green.
+
+### When
+
+- Bug-fix PRs (both commits: the `test:` and the `fix:`).
+- Spec-behavior changes (a recommendation rule, a capture gate, an apply
+  path).
+- Not needed for pure refactors, renames, or doc-only changes — nothing
+  behavior-bearing was touched.
+
+### How (about two minutes per touched function)
+
+1. Pick the touched function from the diff.
+2. Apply a mutation by hand — flip a comparison (`>` → `<`), remove a
+   guard (`if (x) return` → dead), replace a constant — and save.
+3. Run the touched spec: `bunx vitest run tests/<spec>.test.ts`.
+4. It must fail. A passing spec is the mirror signature: the test reads the
+   code it asserts. Rewrite the assertion from the spec (the plan-v2 rule
+   text, the pill contract, the fixture), not from the implementation.
+5. Revert the mutation, keep the assertion, commit.
+
+### Classification
+
+A surviving mutant is one of three things; resolve it accordingly:
+
+- **Real gap** — the assertion misses the complementary case. Add it.
+- **Equivalent / unreachable** — the mutation cannot change observable
+  behavior (a null that short-circuits later, a branch the state machine
+  cannot enter). Document it in the PR body; the nightly run tolerates it.
+- **Mirror signature** — the test passes with the buggy code because it was
+  written from the code. Rewrite it from the spec.
