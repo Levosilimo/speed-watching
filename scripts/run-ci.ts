@@ -2,8 +2,8 @@
 // Local CI runner — the pre-remote safety net. Mirrors the GitHub Actions
 // `ci` job (minus SARIF upload/artifacts, which only make sense on GitHub):
 // lint → typecheck → knip → aislop gate → test → audit-disabled gate →
-// audit lanes → build → build:userscript → bundle test → mpv tests, in
-// order, with real exit codes. The first failing
+// audit lanes (strict) → build → build:userscript → bundle test → mpv tests,
+// in order, with real exit codes. The first failing
 // step stops the run. The mpv step is optional — it needs a lua5.1 or luajit
 // binary, which CI installs but local machines may not have; without one it
 // prints a skip note and continues.
@@ -20,6 +20,7 @@ import { spawnSync } from 'node:child_process';
 type Step = {
   name: string;
   args: readonly string[];
+  env?: NodeJS.ProcessEnv;
   optional?: boolean;
 };
 
@@ -30,7 +31,11 @@ const STEPS: Step[] = [
   { name: 'aislop gate', args: ['run', 'check'] },
   { name: 'test', args: ['run', 'test'] },
   { name: 'audit-disabled', args: ['run', 'scripts/audit-disabled-assertions.ts'] },
-  { name: 'audit lanes', args: ['run', 'scripts/audit-lanes.ts'] },
+  {
+    name: 'audit lanes (strict)',
+    args: ['run', 'scripts/audit-lanes.ts'],
+    env: { LCE_STRICT_MIRROR: '1', LCE_STRICT_COUNT: '1', LCE_STRICT_FIXTURES: '1' },
+  },
   { name: 'build', args: ['run', 'build'] },
   { name: 'build:userscript', args: ['run', 'build:userscript'] },
   { name: 'bundle test', args: ['run', 'test', '--', 'tests/userscript-bundle.test.ts'] },
@@ -51,7 +56,10 @@ for (const step of STEPS) {
     console.log(`ci: skipping ${step.name} (lua5.1/luajit not on PATH)`);
     continue;
   }
-  const result = spawnSync('bun', step.args, { stdio: 'inherit' });
+  const result = spawnSync('bun', step.args, {
+    stdio: 'inherit',
+    env: step.env ? { ...process.env, ...step.env } : process.env,
+  });
   if (result.status !== 0) {
     console.error(`\nci: FAILED at ${step.name} (exit ${result.status ?? 'signal'})`);
     process.exit(result.status ?? 1);
