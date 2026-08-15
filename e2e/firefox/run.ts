@@ -13,6 +13,12 @@
 //      0.37; see docs/ci-e2e.md if a version pair drifts apart)
 //   3. firefox / firefox-esr on PATH
 //
+// No trace-on-failure here: the W3C WebDriver protocol (geckodriver) has no
+// tracing API — no CDP Trace domain, no snapshot/screenshot capture on
+// failure like Playwright's `trace: 'retain-on-failure'`. The chromium
+// lanes carry that (playwright.config.chromium*.ts); this runner's failure
+// evidence is its thrown assertions plus the spec-level console output.
+//
 // Run: bun run e2e:firefox
 
 import { homedir, tmpdir } from 'node:os';

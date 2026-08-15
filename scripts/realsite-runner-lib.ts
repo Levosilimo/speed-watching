@@ -8,8 +8,7 @@
 
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { chromium, type BrowserContext } from 'playwright';
+import { join } from 'node:path';import { chromium, type BrowserContext } from 'playwright';
 import type { MeasureEventDetail } from '../lib/measure-hooks';
 import type { PillState } from '../ui/pill';
 import { dismissConsentIfPresent, pageErrorHint, readPlayerInfo } from './web-capture';
@@ -50,6 +49,8 @@ export interface RealsiteRecord {
   clearsControls: boolean;
   occludedAtCenter: boolean;
   consoleLines: string[];
+  /** Trace zip for the sampling run, or null when tracing could not start. */
+  tracePath: string | null;
   pass: boolean;
   reason: string | null;
 }
@@ -95,6 +96,7 @@ export function initRecord(spec: VideoSpec): RealsiteRecord {
     clearsControls: false,
     occludedAtCenter: false,
     consoleLines: [],
+    tracePath: null,
     pass: false,
     reason: null,
   };
@@ -274,11 +276,14 @@ export function evaluatePass(record: RealsiteRecord): void {
 }
 
 /** Sample one video in its own fresh browser; the deadline covers a frozen
- * chromium stalling a CDP call past every inner wait. */
+ * chromium stalling a CDP call past every inner wait. Each sampling run is
+ * wrapped in context tracing (screenshots + snapshots) so a failed video
+ * leaves a replayable trace next to results.jsonl. */
 export async function sampleVideo(
   headed: boolean,
   spec: VideoSpec,
   extensionDir: string,
+  traceDir: string,
 ): Promise<RealsiteRecord> {
   const record = initRecord(spec);
   // A churned chromium can die at launch, not just mid-page; that is a
@@ -292,6 +297,13 @@ export async function sampleVideo(
     return record;
   }
   try {
+    // A context that cannot trace must not fail the sample; the trace path
+    // stays null then.
+    await withTimeout(
+      fresh.context.tracing.start({ screenshots: true, snapshots: true }),
+      10_000,
+      undefined,
+    ).catch(() => undefined);
     const sampled = await withTimeout(
       sampleOnce(fresh.context, spec, record).catch((err) => {
         record.pass = false;
@@ -306,6 +318,16 @@ export async function sampleVideo(
     record.reason = 'video-deadline-exceeded';
     return record;
   } finally {
+    const tracePath = join(traceDir, `trace-${spec.videoId}.zip`);
+    // Stop before closing; a stop failure (no trace started, write error)
+    // must not mask the record, so the path stays null then.
+    record.tracePath = await withTimeout(
+      fresh.context.tracing.stop({ path: tracePath }),
+      15_000,
+      null,
+    )
+      .then(() => tracePath)
+      .catch(() => null);
     await withTimeout(fresh.close(), 10_000, undefined).catch(() => undefined);
   }
 }

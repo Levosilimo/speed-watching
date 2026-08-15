@@ -144,7 +144,7 @@ async function main(): Promise<void> {
   try {
     for (const video of videos) {
       process.stdout.write(`realsite ${video.videoId} [${video.category}/${video.kind}] ... `);
-      const record = await sampleVideo(headed, video, EXTENSION_DIR);
+      const record = await sampleVideo(headed, video, EXTENSION_DIR, OUT_DIR);
       appendRecord(record);
       console.log(recordLine(record));
       await new Promise((resolve) => setTimeout(resolve, PAGE_PACE_MS));
@@ -155,6 +155,8 @@ async function main(): Promise<void> {
 
   const ratio = summarize(records);
   console.log(`\nresults -> ${RESULTS_FILE} (${records.length} records)`);
+  const traces = records.filter((r) => r.tracePath !== null).length;
+  console.log(`traces -> ${traces}/${records.length} (${OUT_DIR}/trace-<videoId>.zip)`);
   if (ratio < threshold) {
     console.log(`VERDICT: FAIL — pass ratio ${(ratio * 100).toFixed(1)}% below ${(threshold * 100).toFixed(0)}%`);
     process.exit(1);
