@@ -207,6 +207,15 @@ function androidTrackOnlyResponse(fixture: string): string {
   });
 }
 
+/** The designed flaky-network delay constants (the capture wait's window is
+ * 15s — 10s lands inside it, 18s past it). The request may only pick one of
+ * these: the duration passed to the timer is the constant, never the request
+ * value (CodeQL user-controlled-duration gate). */
+const TIMEDTEXT_DELAYS = new Map<string, number>([
+  ['10000', 10_000],
+  ['18000', 18_000],
+]);
+
 interface FixtureServer {
   /** Base URL of this server, e.g. http://127.0.0.1:4319 */
   baseUrl: string;
@@ -369,11 +378,11 @@ export function createFixtureServer(port = FIXTURE_PORT): Promise<FixtureServer>
     }
 
     if (path === '/api/timedtext' && fixture !== null && FIXTURE_NAME.test(fixture)) {
-      const delayMs = Number(url.searchParams.get('delay'));
-      if (Number.isFinite(delayMs) && delayMs > 0) {
-        // timedtextDelay=<ms> variant (the flaky-network class): the
-        // response lands past the capture wait's window, so the chain must
-        // fall through instead of wedging on the capture stage.
+      // timedtextDelay=<ms> variant (the flaky-network class): the response
+      // lands past the capture wait's window, so the chain must fall through
+      // instead of wedging on the capture stage.
+      const delayMs = TIMEDTEXT_DELAYS.get(url.searchParams.get('delay') ?? '') ?? 0;
+      if (delayMs > 0) {
         await new Promise((resolve) => setTimeout(resolve, delayMs));
       }
       if (BLOCKED_FIXTURES.includes(fixture)) {
