@@ -167,14 +167,17 @@ Every survivor of the baseline was reviewed and put in one of three classes:
   non-function `ytcfg.get`.
 - `matcher.ts` lifecycle: no leaked intervals/listeners after stop or SPA
   element removal (timer-count assertions).
+- `caption-trigger.ts` wait-loop deadline arithmetic: the exact-boundary
+  fake-timer tests (advance to exactly the deadline, and to deadline−1)
+  pin the `>=` flip of `waitForVisible`/`waitForMenuRow` and
+  `waitForWordTimedCapture`'s timeout — re-classified from (b) in the
+  wave-fixb audit, which found the polls DO land on the boundary with an
+  exact advance. The same holds for the cooldown-prune boundary, already
+  pinned by the exact-30s test (wave 5) — both entries were misjudged
+  unreachable.
 
 **(b) Documented known tradeoffs — the assertion cannot observe them.**
 
-- The wait-loop deadline arithmetic in caption-trigger (`Date.now() + MS`
-  vs `-`, `>=` vs `>`): the 100ms polls never land on the exact boundary,
-  so the flip is unobservable with fake timers.
-- The cooldown prune boundary: the drive's internal settle time makes the
-  exact 30s unreachable in a fake-timer test.
 - The `pill === null` refresh guards in rate-controller: the pill mount
   already gates the same state (no pill, no live/saved line).
 - `computeSavedSec` / `computeLiveRate` null-guard flips: a null video or
