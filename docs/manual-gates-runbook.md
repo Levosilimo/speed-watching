@@ -1,11 +1,12 @@
 # Manual Gates Runbook
 
-Three verification gates need a machine the CI box cannot be: a residential
-IP (gate 1) and a real Chrome with real tab audio (gate 2). Gate 3 is an
-informational check. This runbook is written to be executed by an agent, not
-a human: numbered steps, exact commands, pass/fail criteria. The one
-exception is gate 2's toolbar click — browser chrome, which CDP cannot
-synthesize (see the gate's step 3).
+Four verification gates need a machine the CI box cannot be: a residential
+IP (gate 1), a real Chrome with real tab audio (gate 2), and the user's
+real Firefox environment (gate 4). Gate 3 is an informational check. This
+runbook is written to be executed by an agent, not a human: numbered steps,
+exact commands, pass/fail criteria. The exceptions are browser chrome an
+agent cannot drive — gate 2's toolbar click and gate 4's Firefox settings
+(see the gates' steps).
 
 What this box already proves is in `docs/phase0-offscreen-audio.md`,
 `docs/phase0-caption-wpm.md`, and `docs/ci-e2e.md`; this runbook only covers
@@ -44,7 +45,8 @@ agent-browser \
   `agent-browser get url` on that tab.
 - Gate 1 runs from the repo root of a checkout on this box (the WSL2
   machine on the residential Windows 11 line). Gates 2–3 run wherever a real
-  Chrome with audio output exists.
+  Chrome with audio output exists. Gate 4 runs on the Firefox Developer
+  Edition machine — the user's real environment.
 
 ---
 
@@ -324,6 +326,64 @@ agent-browser eval 'document.body.innerText.match(/WebGPU[^\n]*/)?.[0] ?? "WebGP
 Record all three values verbatim in the gate log. A SwiftShader
 (software) adapter is not a failure — it just removes WebGPU's speed
 advantage over the JS-only fallback.
+
+---
+
+## Gate 4 — RFP/ETP spot-check (Firefox Developer Edition)
+
+**What it validates:** the extension on the user's real environment —
+Firefox Developer Edition with fingerprinting protection (RFP) and strict
+Enhanced Tracking Protection. A Firefox bug report comes from this
+environment, so the release replays the three-class corpus on it before
+shipping. Box-gated on the user's machine, not CI: CI runs the fixture e2e
+only (`bun run e2e:firefox`).
+
+### Procedure
+
+```sh
+# 1. Build the diagnostic zip (any checkout):
+bun install --frozen-lockfile && bun run zip
+#    Load it: about:debugging → This Firefox → Load Temporary Add-on →
+#    select .output/speed-watcher-<version>-firefox.zip. The temporary
+#    add-on stays loaded until Firefox restarts.
+```
+
+```sh
+# 2. Enable the protections (browser chrome — the manual exception this
+#    gate shares with gate 2's toolbar click):
+#    - Settings → Privacy & Security → Enhanced Tracking Protection → Strict
+#    - about:config → privacy.resistFingerprinting = true
+```
+
+```sh
+# 3. Open the three-class videos, one at a time:
+open "https://www.youtube.com/watch?v=iG9CE55wbtY"   # speech, captions
+open "https://www.youtube.com/watch?v=ycPr5-27vSI"   # live
+open "https://www.youtube.com/watch?v=dQw4w9WgXcQ"   # music
+#    Read the pill on each watch page and record mode + tier label +
+#    caption source into the gate log.
+```
+
+### Pass criteria
+
+1. **Speech** — the pill renders with a measured rate and caption source
+   `capture`: the player-request interception survives the hardened
+   browser. A pill that fell to `estimated` (source `none`) is a hard fail:
+   strict ETP must not break the signed capture path.
+2. **Live** — pill mode `none`: live suppression fires.
+3. **Music** — pill mode `music`: the "speed not recommended" suppression
+   fires.
+4. **ETP cookie-blocking variant** — strict ETP blocks third-party storage,
+   and the content script's storage reads can throw `SecurityError` there
+   (the SponsorBlock evidence: cross-origin cookie access under strict ETP
+   throws). The pill must degrade to the estimated tier and the capture
+   bridge must survive — an uncaught `SecurityError` that kills the
+   postMessage bridge is a hard fail, not a graceful degrade. Read the
+   console for the error before judging.
+
+The verdict is recorded in the gate log (box-gated, not CI). A pass here
+means the user's Firefox environment measures the same classes the
+Chromium lanes do.
 
 ---
 
