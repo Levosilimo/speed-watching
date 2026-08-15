@@ -190,6 +190,13 @@ test.beforeAll(async () => {
     async readBrowserLanguage() {
       return page.evaluate(() => navigator.language);
     },
+    async readCcState() {
+      return page.evaluate(
+        () =>
+          document.querySelector('button.ytp-subtitles-button')?.getAttribute('aria-pressed') ??
+          null,
+      );
+    },
     async navigateToGeneric() {
       await page.goto(`${fixtureBase}/generic`);
     },

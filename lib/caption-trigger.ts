@@ -90,36 +90,55 @@ function closeMenus(): void {
   );
 }
 
-export async function triggerCcAutomation(): Promise<void> {
-  // 1 — CC on unless already on (aria-pressed mirrors the toggle state).
-  const ccButton = await waitForVisible('button.ytp-subtitles-button');
-  if (ccButton !== null && ccButton.getAttribute('aria-pressed') !== 'true') {
-    ccButton.click();
+/** Restores the pre-automation CC state after a capture attempt: turns CC
+ * back off when it was off before the trigger, and closes any menu the
+ * automation left open. Idempotent — safe on every exit path and after the
+ * retrigger. The re-picked ASR track persists (YouTube keeps the track);
+ * the CC-off restores the visual state. */
+export function restoreCcState(ccWasOn: boolean | null): void {
+  if (ccWasOn === false) {
+    const ccButton = document.querySelector<HTMLElement>('button.ytp-subtitles-button');
+    if (ccButton !== null && ccButton.getAttribute('aria-pressed') === 'true') {
+      ccButton.click();
+    }
   }
-
-  // 2 — settings (gear); the menu renders async.
-  const settingsButton = await waitForVisible('button.ytp-settings-button');
-  if (settingsButton === null) return;
-  settingsButton.click();
-  await sleep(MENU_SETTLE_MS);
-
-  // 3 — the "Subtitles/CC" submenu row.
-  const submenuRow = await waitForMenuRow(SUBTITLES_MENU_RE);
-  if (submenuRow === null) {
-    closeMenus();
-    return;
-  }
-  submenuRow.click();
-  await sleep(MENU_SETTLE_MS);
-
-  // 4 — the ASR track, else the UI language's track, else the first real
-  // track row. Picking the active track again is harmless (re-fetch).
-  const trackRow = pickTrackRow(menuItems());
-  if (trackRow !== null) trackRow.click();
-  await sleep(MENU_SETTLE_MS);
-
-  // 5 — close the menu stack.
   closeMenus();
+}
+
+export async function triggerCcAutomation(): Promise<boolean | null> {
+  // The prior CC state, captured before any click — the caller restores it
+  // after the capture attempt (null: no CC controls on this page).
+  const ccButton = await waitForVisible('button.ytp-subtitles-button');
+  const ccWasOn = ccButton === null ? null : ccButton.getAttribute('aria-pressed') === 'true';
+  try {
+    // 1 — CC on unless already on (aria-pressed mirrors the toggle state).
+    if (ccButton !== null && ccWasOn === false) {
+      ccButton.click();
+    }
+
+    // 2 — settings (gear); the menu renders async.
+    const settingsButton = await waitForVisible('button.ytp-settings-button');
+    if (settingsButton === null) return ccWasOn;
+    settingsButton.click();
+    await sleep(MENU_SETTLE_MS);
+
+    // 3 — the "Subtitles/CC" submenu row.
+    const submenuRow = await waitForMenuRow(SUBTITLES_MENU_RE);
+    if (submenuRow === null) return ccWasOn;
+    submenuRow.click();
+    await sleep(MENU_SETTLE_MS);
+
+    // 4 — the ASR track, else the UI language's track, else the first real
+    // track row. Picking the active track again is harmless (re-fetch).
+    const trackRow = pickTrackRow(menuItems());
+    if (trackRow !== null) trackRow.click();
+    await sleep(MENU_SETTLE_MS);
+
+    return ccWasOn;
+  } finally {
+    // Every exit path closes the menu stack (the Escape step).
+    closeMenus();
+  }
 }
 
 /** Polls pickWordTimed up to timeoutMs. Nudges the user once at

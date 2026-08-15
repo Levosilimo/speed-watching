@@ -1,6 +1,6 @@
 import type { CaptionTrack, PlayerResponse } from '@/lib/youtube';
 import type { TimedtextBuffer } from './caption-capture';
-import { triggerCcAutomation, waitForWordTimedCapture } from './caption-trigger';
+import { restoreCcState, triggerCcAutomation, waitForWordTimedCapture } from './caption-trigger';
 
 // ANDROID innertube fallback (plan-v3): the WEB timedtext endpoint returns
 // 200-with-empty-body / 400/403 from some IPs, while the ANDROID
@@ -76,14 +76,21 @@ export async function fetchCaptions(
   }
   const video = ctx.video;
   if (video !== null && (video.readyState >= 1 || !video.paused)) {
-    await triggerCcAutomation();
-    const nudge = (): void => {
-      video.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', bubbles: true }));
-    };
-    const captured = await waitForWordTimedCapture(ctx.buffer, videoId, nudge, 15000);
-    if (captured !== null) {
-      if (__E2E__) window.__speedwatcherCaptionSource = 'capture';
-      return JSON.parse(captured.body);
+    let ccWasOn: boolean | null = null;
+    try {
+      ccWasOn = await triggerCcAutomation();
+      const nudge = (): void => {
+        video.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', bubbles: true }));
+      };
+      const captured = await waitForWordTimedCapture(ctx.buffer, videoId, nudge, 15000);
+      if (captured !== null) {
+        if (__E2E__) window.__speedwatcherCaptionSource = 'capture';
+        return JSON.parse(captured.body);
+      }
+    } finally {
+      // The automation must not leave the subtitles on: restore the prior
+      // CC state and close any menu on success AND timeout/cancel alike.
+      restoreCcState(ccWasOn);
     }
   }
   const web = await fetchJson3(track.baseUrl);
