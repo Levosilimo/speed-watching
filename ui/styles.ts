@@ -84,10 +84,11 @@ export const DARK = {
 
 export type Theme = Record<keyof typeof LIGHT, string>;
 
-/** Overlay-host z-index (pill + nudge): near the 2147483647 cap so no page
- * stacking context outbids it — the pill rendered behind YouTube's
- * related-videos column on real Firefox. Applied in the shadow :host rule
- * AND inline on the host element: the inline style is page-visible and
- * survives page stylesheet overrides that could flatten the shadow rule. */
+/** Overlay-host z-index (pill + nudge): the host anchors absolutely inside
+ * the player, so the value only needs to top the player chrome (controls
+ * bar, captions) — kept near the 2147483647 cap as defense in depth.
+ * Applied in the shadow :host rule AND inline on the host element: the
+ * inline style is page-visible and survives page stylesheet overrides
+ * that could flatten the shadow rule. */
 export const OVERLAY_Z_INDEX = 2147483000;
 
