@@ -12,6 +12,9 @@ import type { RateTier, Recommendation } from './recommend';
 
 export type { CaptionStatus } from '../ui/pill';
 
+/** The empty pill state every reset/teardown shows (rate 0, no label). */
+export const NONE_PILL_STATE: PillState = { mode: 'none', rateWpm: 0, multiplier: 1, effectiveWpm: 0, label: '' };
+
 /** The current-video context; the content side extends it with the
  * videoId/language/target the wpm:get answer builder reads. */
 export interface RateCurrent {

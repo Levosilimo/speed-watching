@@ -7,6 +7,13 @@
 // step stops the run. The mpv step is optional — it needs a lua5.1 or luajit
 // binary, which CI installs but local machines may not have; without one it
 // prints a skip note and continues.
+//
+// The mutation suite deliberately has NO step here: it is the nightly's job
+// (.github/workflows/nightly.yml), not the pre-remote safety net's. A fresh
+// clone pays a 60s+ instrumented run that the local mirror would repeat on
+// every `bun run ci`; the mirror stays under a minute and the tripwire stays
+// scheduled (docs/testing-methodology.md → Stryker tripwire). Run it ad hoc
+// with `bun run mutation`.
 
 import { spawnSync } from 'node:child_process';
 

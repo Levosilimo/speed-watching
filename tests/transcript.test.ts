@@ -360,3 +360,62 @@ describe('fetchCaptions fallback chain', () => {
     expect(paths).toEqual(['/api/timedtext', '/youtubei/v1/player']);
   });
 });
+
+describe('fetchTranscriptViaEndpoint identity guards (wave-5)', () => {
+  it('bails on a non-string API key even when the context is a record', async () => {
+    window.ytcfg = {
+      get: (name: string) => (name === 'INNERTUBE_API_KEY' ? 42 : name === 'INNERTUBE_CONTEXT' ? { client: {} } : undefined),
+    };
+    const fetchMock = mockFetch(() => ({ ok: true, body: transcriptResponse() }));
+    expect(await fetchTranscriptViaEndpoint('abc123')).toBeNull();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('bails on a non-record context even when the API key is a string', async () => {
+    window.ytcfg = {
+      get: (name: string) => (name === 'INNERTUBE_API_KEY' ? 'FIXTURE_KEY' : name === 'INNERTUBE_CONTEXT' ? 'nope' : undefined),
+    };
+    const fetchMock = mockFetch(() => ({ ok: true, body: transcriptResponse() }));
+    expect(await fetchTranscriptViaEndpoint('abc123')).toBeNull();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('bails when ytcfg.get is not a function', async () => {
+    window.ytcfg = { get: 'not-a-function' as unknown as (name: string) => unknown };
+    const fetchMock = mockFetch(() => ({ ok: true, body: transcriptResponse() }));
+    expect(await fetchTranscriptViaEndpoint('abc123')).toBeNull();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('normalizes whitespace runs in multi-run snippets', async () => {
+    const response = {
+      actions: [
+        {
+          updateEngagementPanelAction: {
+            content: {
+              transcriptRenderer: {
+                content: {
+                  transcriptSearchPanelRenderer: {
+                    body: {
+                      transcriptSegmentListRenderer: {
+                        initialSegments: [
+                          {
+                            transcriptSegmentRenderer: {
+                              startMs: '1000',
+                              snippet: { runs: [{ text: 'a\t b ' }, { text: '  c' }] },
+                            },
+                          },
+                        ],
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      ],
+    };
+    expect(parseTranscriptSegments(response)).toEqual([{ text: 'a b c', startSec: 1 }]);
+  });
+});

@@ -258,3 +258,56 @@ describe('RateReapplier', () => {
     expect(loop.currentRateFor(true)).toBe(1);
   });
 });
+
+describe('RateReapplier lifecycle (wave-5)', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('start() while active replaces the old loop: exactly one timer survives', () => {
+    const video = new FakeVideo();
+    const loop = new RateReapplier();
+    loop.start(video, 1.5, 2);
+    loop.start(video, 1.75, 2);
+    expect(vi.getTimerCount()).toBe(1);
+    expect(loop.lastApplied).toBe(1.75);
+    loop.stop();
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('stop() detaches the listeners: media events after stop never re-assert', () => {
+    const video = new FakeVideo();
+    const loop = new RateReapplier();
+    loop.start(video, 1.5, 2);
+    loop.stop();
+    expect(vi.getTimerCount()).toBe(0);
+    video.fire('ratechange');
+    video.playbackRate = 1.5; // a stray reset would re-assert if the loop lived
+    expect(loop.active).toBe(false);
+    expect(loop.lastApplied).toBeNull();
+  });
+
+  it('drops the loop when the element leaves the DOM (SPA re-render)', () => {
+    const video = new FakeVideo();
+    const loop = new RateReapplier();
+    loop.start(video, 1.5, 2);
+    video.isConnected = false;
+    video.playbackRate = 1;
+    video.fire('ratechange');
+    expect(loop.active).toBe(false);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('a ratechange on a connected element at the reset sentinel re-asserts only the applied rate', () => {
+    const video = new FakeVideo();
+    const loop = new RateReapplier();
+    loop.start(video, 1.5, 2);
+    video.playbackRate = 1; // player re-init
+    video.fire('ratechange');
+    expect(video.playbackRate).toBe(1.5);
+  });
+});

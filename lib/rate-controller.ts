@@ -13,7 +13,7 @@ import type { ContentType } from './music';
 import { recommend, SAFE_ZONE_CEILING_WPM, TARGET_WPM, type RateTier } from './recommend';
 import { defaultSettings, resolvePlatformMax, resolveUserTarget, type Settings } from './settings';
 import { RATE_EPSILON, savedSeconds, TimeSavedTracker, type SavedTick } from './time-saved';
-import type { PillTestHook, RateControllerDeps, RateCurrent } from './rate-controller-types';
+import { NONE_PILL_STATE, type PillTestHook, type RateControllerDeps, type RateCurrent } from './rate-controller-types';
 
 export function createRateController<C extends RateCurrent>(deps: RateControllerDeps<C>) {
   const chapter = deps.chapter;
@@ -46,7 +46,6 @@ export function createRateController<C extends RateCurrent>(deps: RateController
 
   const measureRunner = new SerializedRunner();
 
-  const NONE_STATE: PillState = { mode: 'none', rateWpm: 0, multiplier: 1, effectiveWpm: 0, label: '' };
 
   /** E2E hook (SEC-2); showPill keeps its state in sync — the apply gate mirrors ui/pill.ts wireEvents (music/unreachable never touch the rate). */
   const pillHook: PillTestHook = {
@@ -91,6 +90,7 @@ export function createRateController<C extends RateCurrent>(deps: RateController
     appliedSource = 'user';
     preAutoRate = null;
     applyMultiplier(multiplier);
+    if (pillState !== null) showPill({ ...pillState, applied: 'user', undoRate: undefined });
   }
 
   const pillEvents: PillEvents = { onApply: userApply, onDismiss: dismissCurrent, onStopAuto: stopAutoForVideo };
@@ -123,7 +123,7 @@ export function createRateController<C extends RateCurrent>(deps: RateController
   }
 
   function showNone(): void {
-    showPill(NONE_STATE);
+    showPill(NONE_PILL_STATE);
   }
 
   function computeLiveRate(): LiveRate | null {
@@ -248,7 +248,7 @@ export function createRateController<C extends RateCurrent>(deps: RateController
     deps.skip.detach();
     if (wasAuto && preAutoRate !== null) restorePreAutoRate();
     preAutoRate = null;
-    showPill(NONE_STATE);
+    showPill(NONE_PILL_STATE);
     void logAction('dismiss', current.recommendation.multiplier);
   }
 
@@ -319,7 +319,7 @@ export function createRateController<C extends RateCurrent>(deps: RateController
     current = null;
     activeVideo = null;
     endSession();
-    showPill(NONE_STATE);
+    showPill(NONE_PILL_STATE);
     chapter?.onReset();
   }
 
@@ -332,7 +332,7 @@ export function createRateController<C extends RateCurrent>(deps: RateController
   /** The active video left the DOM: destroy the pill, drop the re-assert loop and the recommendation. */
   function onVideoRemoved(): void {
     if (pill !== null) {
-      pill.api.update(NONE_STATE);
+      pill.api.update(NONE_PILL_STATE);
       pill.api.destroy();
       pill = null;
     }
