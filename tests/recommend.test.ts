@@ -600,7 +600,7 @@ describe('recommend — boundary complements (wave-5)', () => {
       tier: 'asr-word',
       contentType: 'talk',
       platformMax: 2,
-      language: { target: 250, ceiling: 275, pauseShare: 0.5, unit: 'wpm' },
+      language: { ...LANGUAGES['en']!, pauseShare: 0.5 },
       articulatoryWpm: 440,
       timingCoverageOk: true,
     });

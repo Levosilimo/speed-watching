@@ -391,7 +391,7 @@ describe('pickTrackRow fallbacks (wave-5 batch B)', () => {
   }
 
   afterEach(() => {
-    delete document.documentElement.lang;
+    document.documentElement.removeAttribute('lang');
   });
 
   it('picks the UI-language track by its endonym when no ASR track exists', async () => {

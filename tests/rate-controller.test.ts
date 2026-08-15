@@ -99,8 +99,8 @@ function makeHarness(depsOverrides: Partial<RateControllerDeps<Ctx>> = {}): Harn
   };
 
   const deps: RateControllerDeps<Ctx> = {
-    bridge,
-    nudgeSurface: { reportApply: calls.reportApply, teardown: calls.teardown },
+    bridge: bridge as unknown as RateControllerDeps<Ctx>['bridge'],
+    nudgeSurface: { reportApply: calls.reportApply, teardown: calls.teardown, dismiss: vi.fn() },
     hostAnchor: () => anchor,
     applyRate: calls.applyRate,
     stopRateApplies: calls.stopRateApplies,
@@ -309,7 +309,7 @@ describe('markUserOverride', () => {
   it('skips the override check while the video is paused', () => {
     const h = makeHarness();
     h.render({ settings: autoOn() });
-    h.video.paused = true;
+    (h.video as { paused: boolean }).paused = true;
     fire(h, 1.9, false);
     expect(h.controller.pillState?.applied).toBe('auto');
   });
@@ -356,7 +356,7 @@ describe('live rate and saved time', () => {
     // Paused video: no live line.
     const paused = makeHarness();
     paused.render({ naturalRate: 200 });
-    paused.video.paused = true;
+    (paused.video as { paused: boolean }).paused = true;
     paused.video.playbackRate = 1.5;
     paused.video.dispatchEvent(new Event('timeupdate'));
     expect(liveElOf(paused.anchor)?.hidden).toBe(true);
