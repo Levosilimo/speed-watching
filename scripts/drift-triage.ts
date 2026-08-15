@@ -54,34 +54,20 @@ import {
   type RegistryPins,
   type RegistryRow,
 } from '../tests/fixtures/registry';
+import { countInTolerance, rateInTolerance, type DriftVerdict } from './drift-classify';
 
 const ROOT = fileURLToPath(new URL('.', import.meta.url));
 const DEFAULT_OUT_DIR = join(ROOT, '..', '.slim', 'drift-triage');
 
-type Verdict = 'identical' | 'benign' | 'breaking' | 'unreachable';
-
 export interface FixtureDiff {
   fixture: string;
   videoId: string | null;
-  verdict: Verdict;
+  verdict: DriftVerdict;
   reasons: string[];
   /** Re-captured pins, for the printed summary. */
   pins: RegistryPins | null;
   /** Re-captured layout fingerprint. */
   layout: RegistryLayout | null;
-}
-
-/** Within the semantic tolerance: counts shift at most max(1, rel*pinned)
- * — the truncation boundary (20th event) is the dominant legitimate noise
- * source, ASR re-segmentation the second. */
-function countInTolerance(pinned: number, current: number, rel: number): boolean {
-  return Math.abs(current - pinned) <= Math.max(1, Math.round(pinned * rel));
-}
-
-function rateInTolerance(pinned: number | null, current: number | null, rel: number): boolean {
-  if (pinned === null || current === null) return true;
-  if (pinned === 0) return current === 0;
-  return Math.abs(current - pinned) / Math.abs(pinned) <= rel;
 }
 
 export function classifyFixture(row: RegistryRow, truncated: unknown, kind: string | null): FixtureDiff {
@@ -236,7 +222,7 @@ async function captureVideo(
 }
 
 function printReport(diffs: FixtureDiff[]): void {
-  const counts: Record<Verdict, number> = { identical: 0, benign: 0, breaking: 0, unreachable: 0 };
+  const counts: Record<DriftVerdict, number> = { identical: 0, benign: 0, breaking: 0, unreachable: 0 };
   for (const diff of diffs) counts[diff.verdict] += 1;
   console.log(`\n=== DRIFT-TRIAGE SUMMARY (n=${diffs.length}) ===`);
   console.log(

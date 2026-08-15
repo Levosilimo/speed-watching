@@ -38,6 +38,9 @@ interface ChaosDriver {
   readPillState(timeoutMs?: number): Promise<PillState | null>;
   readCaptionSource(timeoutMs?: number): Promise<CaptionSource | null>;
   readMeasurement(timeoutMs?: number): Promise<Measurement | undefined>;
+  /** The source hook's current value without waiting — the no-track page
+   * never sets it (no fetch chain ran), and the cell asserts that absence. */
+  peekCaptionSource(): Promise<CaptionSource | null>;
 }
 let driver: ChaosDriver;
 
@@ -88,6 +91,11 @@ test.beforeAll(async () => {
       );
       return page.evaluate(() => window.__speedwatcherLastMeasure);
     },
+    async peekCaptionSource() {
+      return page.evaluate(
+        () => (window.__speedwatcherCaptionSource as CaptionSource | undefined) ?? null,
+      );
+    },
   };
 });
 
@@ -105,16 +113,19 @@ function tierOf(pill: PillState, measure: Measurement | undefined): RateTier {
 }
 
 /** Assert one cell's observable contract: the caption source plus the tier
- * derived from the measure payload and the pill label. */
+ * derived from the measure payload and the pill label. A null source
+ * expectation asserts the hook's absence — the no-track page never sets it
+ * (no fetch chain ran), so the read peeks instead of waiting. */
 async function assertCell(
-  expected: { source: CaptionSource; tier: RateTier },
+  expected: { source: CaptionSource | null; tier: RateTier },
   timeoutMs: number,
 ): Promise<void> {
   const pill = await driver.readPillState(timeoutMs);
-  const source = await driver.readCaptionSource(timeoutMs);
+  const source =
+    expected.source === null ? await driver.peekCaptionSource() : await driver.readCaptionSource(timeoutMs);
   if (pill === null || source !== expected.source) {
     throw new Error(
-      `cell ${expected.source}/${expected.tier}: pill=${pill === null ? 'null' : `mode ${pill.mode}`} ` +
+      `cell ${expected.source ?? 'no-source'}/${expected.tier}: pill=${pill === null ? 'null' : `mode ${pill.mode}`} ` +
         `source=${source} tierLabel=${pill?.tierLabel ?? 'undefined'}`,
     );
   }
@@ -134,7 +145,8 @@ interface MatrixCell {
   name: string;
   fixture: string;
   extra?: string;
-  source: CaptionSource;
+  /** Null asserts the source hook's absence (the no-track page). */
+  source: CaptionSource | null;
   tier: RateTier;
   /** Read timeout: the capture-miss cells render ~22s after navigation (the
    * 6s no-controls drive + the 15s capture window), the delayed ones later. */
@@ -208,9 +220,11 @@ const MATRIX: MatrixCell[] = [
     tier: 'estimated',
   },
   {
+    // No caption track: the fetch chain never runs, so the source hook
+    // stays unset — the cell asserts that absence plus the estimated pill.
     name: 'no caption track at all: the estimated tier',
     fixture: 'synthetic/no-tracks.json',
-    source: 'none',
+    source: null,
     tier: 'estimated',
   },
   {

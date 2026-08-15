@@ -4,7 +4,8 @@
 // and console.info lines are live) against real youtube.com videos and
 // records what the fixture suite cannot see: the rendered pill, the
 // POT-gated caption path, live/music suppression, real session state.
-// Split out so both files stay under the repo's 400-line cap.
+// Split out so both files stay under the repo's 400-line cap; the registry
+// field-diff lives in scripts/rate-field-diff.ts (same cap).
 
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -13,6 +14,7 @@ import type { MeasureEventDetail } from '../lib/measure-hooks';
 import type { PillState } from '../ui/pill';
 import { dismissConsentIfPresent, pageErrorHint, readPlayerInfo } from './web-capture';
 import { withTimeout } from './vk-probe-network';
+import type { RateFieldDiff } from './rate-field-diff';
 
 export type VideoKind = 'speech' | 'music' | 'live';
 
@@ -51,6 +53,12 @@ export interface RealsiteRecord {
   consoleLines: string[];
   /** Trace zip for the sampling run, or null when tracing could not start. */
   tracePath: string | null;
+  /** Field-diff vs the golden-master registry: the measured rate vs the
+   * row's recorded full-payload rate for the same metric class, within the
+   * pinned ratesRel band. Null when no anchor exists (no registry row, no
+   * recorded rate for the metric, or no measured rate). Report-only — the
+   * pass gate (evaluatePass) does not read it. */
+  rateDiff: RateFieldDiff | null;
   pass: boolean;
   reason: string | null;
 }
@@ -67,8 +75,9 @@ const PILL_WAIT_MS = 60_000;
 const LAUNCH_TIMEOUT_MS = 120_000;
 
 /** Best available measured rate — the pill math uses word-level for ASR and
- * cue-level for manual tracks, so prefer in that order. */
-function bestRate(stats: MeasureEventDetail['stats']): number | null {
+ * cue-level for manual tracks, so prefer in that order. Shared with the
+ * registry field-diff (scripts/rate-field-diff.ts). */
+export function bestRate(stats: MeasureEventDetail['stats']): number | null {
   const candidates = [stats.word, stats.cue, stats.corrected];
   for (const candidate of candidates) {
     if (typeof candidate === 'number' && Number.isFinite(candidate)) return candidate;
@@ -97,6 +106,7 @@ export function initRecord(spec: VideoSpec): RealsiteRecord {
     occludedAtCenter: false,
     consoleLines: [],
     tracePath: null,
+    rateDiff: null,
     pass: false,
     reason: null,
   };
@@ -338,8 +348,13 @@ export function recordLine(record: RealsiteRecord): string {
   const pill = record.pillRect === null ? 'pill=-' : `pill=${record.pillInsidePlayer ? 'inside' : 'OUTSIDE'}`;
   const clears = record.playerRect === null ? 'clears=-' : `clears=${record.clearsControls ? 'yes' : 'no'}`;
   const occ = record.pillRect === null ? 'occ=-' : `occ=${record.occludedAtCenter ? 'OCCLUDED' : 'no'}`;
+  const diff =
+    record.rateDiff === null
+      ? ''
+      : ` diff=${record.rateDiff.verdict}(${record.rateDiff.relDeltaPct >= 0 ? '+' : ''}${record.rateDiff.relDeltaPct.toFixed(1)}%)`;
   return `${record.pass ? 'PASS' : 'FAIL'} mode=${record.mode ?? '-'} tier=${record.tier ?? '-'} ` +
     `rate=${rate}${lang} source=${record.source ?? '-'} ${pill} ${clears} ${occ}` +
+    `${diff}` +
     `${record.reason ? ` (${record.reason})` : ''}`;
 }
 
@@ -374,5 +389,19 @@ export function summarize(records: RealsiteRecord[]): number {
   }
   const strata = [...byKind.entries()].map(([kind, e]) => `${kind}=${e.pass}/${e.n}`).join(', ');
   console.log(`\npass: ${passed}/${records.length} (${(ratio * 100).toFixed(1)}%) | ${strata}`);
+  const diffs = records.flatMap((r) => (r.rateDiff === null ? [] : [r.rateDiff]));
+  if (diffs.length > 0) {
+    console.log("\nfield-diff (measured vs the registry's recorded full-payload rate, same metric):");
+    for (const d of diffs) {
+      const delta = `${d.relDeltaPct >= 0 ? '+' : ''}${d.relDeltaPct.toFixed(1)}%`;
+      console.log(
+        `  ${d.videoId.padEnd(14)} ${d.metric.padEnd(9)} pinned=${d.pinnedWpm.toFixed(1)} ` +
+          `measured=${d.measuredWpm.toFixed(1)} ${delta.padEnd(8)} ${d.verdict.toUpperCase()}`,
+      );
+    }
+    const benign = diffs.filter((d) => d.verdict === 'benign').length;
+    const noPin = records.filter((r) => r.kind === 'speech' && r.rateDiff === null).length;
+    console.log(`field-diff: benign=${benign} breaking=${diffs.length - benign} no-pin=${noPin}`);
+  }
   return ratio;
 }

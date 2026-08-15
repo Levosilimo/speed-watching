@@ -16,6 +16,8 @@ import {
   type VideoKind,
   type VideoSpec,
 } from './realsite-runner-lib';
+import { loadRegistry } from '../tests/fixtures/registry';
+import { classifyRateFieldDiff } from './rate-field-diff';
 
 // Curated from scripts/data/web-rerun/rerun-results.jsonl (the 24-video
 // web-rerun corpus): 7 caption-bearing videos across registers, one music
@@ -125,6 +127,7 @@ async function main(): Promise<void> {
   console.log(`realsite-runner: ${videos.length} video(s), headed=${headed}, threshold=${threshold}`);
 
   const records: RealsiteRecord[] = [];
+  const registryRows = loadRegistry();
   let lastAppendAt = Date.now();
   const appendRecord = (record: RealsiteRecord): void => {
     records.push(record);
@@ -145,6 +148,7 @@ async function main(): Promise<void> {
     for (const video of videos) {
       process.stdout.write(`realsite ${video.videoId} [${video.category}/${video.kind}] ... `);
       const record = await sampleVideo(headed, video, EXTENSION_DIR, OUT_DIR);
+      record.rateDiff = classifyRateFieldDiff(record, registryRows);
       appendRecord(record);
       console.log(recordLine(record));
       await new Promise((resolve) => setTimeout(resolve, PAGE_PACE_MS));
