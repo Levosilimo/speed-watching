@@ -27,7 +27,8 @@
   "reporters": [
     "clear-text",
     "html",
-    "progress"
+    "progress",
+    "json"
   ],
   "htmlReporter": {
     "fileName": "reports/mutation/index.html"
