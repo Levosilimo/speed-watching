@@ -121,24 +121,67 @@ pin. The response to a breach is to tighten the tests or the code, not to
 raise the ceiling or exclude mutants. Adding a test that only passes under
 mutation (a tautology) is papering over.
 
-The operational form (wave 5): `stryker.conf.json` scopes the mutation run
-to the critical libs — caption-fetch, caption-trigger, transcript,
-rate-controller, matcher, recommend — with the vitest runner in related
-mode (only the specs that import a file run against its mutants).
-`thresholds { high: 80, low: 65, break: 65 }` makes the nightly job fail
-below 65 — the tripwire. `bun run mutation` runs it locally.
+The operational form (wave 5, re-scoped in the wave-fixb audit):
+`stryker.conf.json` mutates the whole behavior-bearing lib surface — every
+lib with a dedicated spec plus the audit's additions (music, live,
+auto-apply, override-log, settings, heuristics, youtube, messaging,
+bridge-protocol, wpm-provider) — with the vitest runner in related mode
+(only the specs that import a file run against its mutants). Two files are
+excluded: `measure-hooks.ts` (the E2E console/event hook — its dispatch is
+asserted by the e2e suites, no unit spec imports its runtime) and
+`recorder-worklet.ts` (an AudioWorkletProcessor that runs in the audio
+thread — not runnable under node). `thresholds { high: 80, low: 65,
+break: 65 }` makes the nightly job fail below 65 — the tripwire. `bun run
+mutation` runs it locally.
 
-#### Baseline (wave 5, 2026-08-15)
+#### Baseline (wave-fixb, 2026-08-15)
 
 | File | Score | Killed | Survived | No coverage |
 |------|------:|-------:|---------:|------------:|
-| All files | 76.7% | 789 | 213 | 28 |
+| All files | 74.97% | 3912 | 1197 | 119 |
+| auto-apply.ts | 100% | 35 | 0 | 0 |
+| live.ts | 100% | 12 | 0 | 0 |
+| override-log.ts | 100% | 29 | 0 | 0 |
+| wpm-provider.ts | 100% | 10 | 0 | 0 |
+| resampler.ts | 95.24% | 37 | 2 | 0 |
+| measure-guard.ts | 93.33% | 14 | 1 | 0 |
 | recommend.ts | 91.2% | 114 | 11 | 0 |
-| matcher.ts | 88.7% | 55 | 7 | 0 |
-| transcript.ts | 88.2% | 134 | 17 | 1 |
-| caption-fetch.ts | 77.6% | 76 | 19 | 3 |
-| caption-trigger.ts | 70.5% | 151 | 63 | 2 |
+| settings.ts | 90.99% | 101 | 10 | 0 |
+| audio-capture.ts | 90% | 54 | 6 | 0 |
+| messaging.ts | 90.24% | 145 | 12 | 4 |
+| matcher.ts | 88.71% | 55 | 7 | 0 |
+| nudge.ts | 88.78% | 87 | 11 | 0 |
+| channel-memory.ts | 88.75% | 71 | 9 | 0 |
+| transcript.ts | 88.16% | 134 | 17 | 1 |
+| wpm.ts | 87.83% | 166 | 23 | 0 |
+| wpm-protocol.ts | 86.4% | 107 | 16 | 1 |
+| skip-silence.ts | 86.25% | 135 | 19 | 3 |
+| audio-recorder.ts | 85.86% | 79 | 14 | 0 |
+| error-journal.ts | 85% | 68 | 12 | 0 |
+| heuristics.ts | 83.9% | 99 | 17 | 2 |
+| audio-probe.ts | 79.37% | 150 | 33 | 6 |
+| bridge-protocol.ts | 79.88% | 274 | 62 | 7 |
+| youtube.ts | 79.66% | 141 | 32 | 4 |
+| time-saved.ts | 78.48% | 62 | 17 | 0 |
+| chapter-scheduler.ts | 78.05% | 60 | 18 | 0 |
+| demand.ts | 77.92% | 120 | 34 | 0 |
+| captions.ts | 77.78% | 119 | 34 | 0 |
+| caption-fetch.ts | 77.55% | 76 | 19 | 3 |
+| captions-harvest.ts | 73.68% | 210 | 68 | 7 |
+| caption-capture.ts | 72.79% | 107 | 37 | 3 |
+| chapters.ts | 71.57% | 138 | 50 | 6 |
+| capture-orchestrator.ts | 70.77% | 183 | 64 | 12 |
+| tokenizer.ts | 70.94% | 82 | 30 | 4 |
 | rate-controller.ts | 68.7% | 259 | 96 | 22 |
+| music.ts | 67.5% | 27 | 13 | 0 |
+| model-store.ts | 52.17% | 36 | 1 | 32 |
+| languages.ts | 7.3% | 17 | 216 | 0 |
+
+`languages.ts` is the honest floor: the LANGUAGES table is data, and the
+specs pin its structure and the measured bands, not every derived number —
+the 216 survivors are literal-value mutants of the un-pinned entries. The
+tripwire (≥65) holds with that floor included; the nightly breach protocol
+below stays the response to any future drop.
 
 #### Survivor classification (wave 5)
 
