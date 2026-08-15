@@ -41,9 +41,51 @@ Flags:
 | `--kind=speech\|music\|live` | expected class for `--video` runs |
 | `--threshold=N` | pass-ratio bar, default 0.8 |
 | `--no-rebuild` | skip the staleness check — run the on-disk build as-is |
+| `--profile=PATH` | reuse the userDataDir at PATH (a real logged-in YouTube session); the anonymous mkdtemp default otherwise |
+| `--login` | one-time profile build: open youtube.com in `--profile`, wait for the session cookie, exit |
 
 Results: `scripts/data/realsite-run/results.jsonl`, appended live per video
 so a mid-run kill never loses completed samples.
+
+## Logged-in sessions (`--profile`)
+
+The logged-in session class (the S4 finding: it escapes every anonymous
+runner) is exercised by reusing a real profile dir: `--profile=<path>`
+launches the persistent context at that path as-is (no mkdtemp), so the
+extension runs inside the profile's own signed-in YouTube session. The
+anonymous default (no flag) keeps the fresh-mkdtemp + consent-cookie
+behavior.
+
+One-time profile build — headed, on the box with a display:
+
+```bash
+bun run scripts/realsite-runner.ts --profile ~/.speedwatcher-realsite --login
+```
+
+The runner opens youtube.com and waits for the session cookie (SID) to
+appear; complete the sign-in in the opened window. `--login` exits 0 when
+the session landed, 1 after 5 minutes without one. From then on, runs are
+plain:
+
+```bash
+bun run scripts/realsite-runner.ts --profile ~/.speedwatcher-realsite
+```
+
+**Signed-in assertion per run.** The record carries a `signedIn` field,
+true only when BOTH hold: the SID session cookie in the CDP cookie jar
+(SID is httpOnly — `document.cookie` cannot see it, so the assertion reads
+the cookie jar) and the signed-in avatar button (`#avatar-btn`) in the
+topbar. A profile whose session expired records `signedIn=false` — an
+honest 'anonymous' record, never a silent logged-in claim. The consent
+cookies are skipped for profile runs (the profile's own cookies are the
+point of those).
+
+**Staleness.** When the profile's cookie file
+(`Default/Network/Cookies` or `Default/Cookies`) was last written more
+than 14 days ago, the runner warns that the session may have expired and
+to re-run `--login` once — a warn, never a block (the same mtime pattern
+as the e2e-build staleness check). A missing profile dir also warns (a
+fresh profile would be created, signed out).
 
 ## What it does per video
 
@@ -61,8 +103,9 @@ so a mid-run kill never loses completed samples.
    hook shape).
 3. Records per video: pill `mode` + tier label, the best measured rate
    (word → cue → corrected, in the track language's unit), the caption
-   source (`web` / `android` / `none`), the `[speed-watcher]` console lines,
-   and the page title.
+   source (`web` / `android` / `none`), the signed-in assertion
+   (`signedIn`, see the `--profile` section), the `[speed-watcher]`
+   console lines, and the page title.
 4. Records the pill placement geometry: the `.pill` and `#movie_player`
    rects, whether the pill is fully inside the player (containment), how
    far its bottom sits above the player's bottom (clears ≥ 60px — clear of

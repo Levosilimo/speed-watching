@@ -9,7 +9,7 @@
 
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';import { chromium, type BrowserContext } from 'playwright';
+import { join } from 'node:path';import { chromium, type BrowserContext, type Page } from 'playwright';
 import type { MeasureEventDetail } from '../lib/measure-hooks';
 import type { PillState } from '../ui/pill';
 import { dismissConsentIfPresent, pageErrorHint, readPlayerInfo } from './web-capture';
@@ -38,6 +38,9 @@ export interface RealsiteRecord {
   category: string;
   kind: VideoKind;
   title: string | null;
+  /** Signed-in assertion: SID in the cookie jar AND the topbar avatar — a
+   * logged-out profile run records an honest 'anonymous' false. */
+  signedIn: boolean;
   pillRendered: boolean;
   mode: PillState['mode'] | null;
   tier: string | null;
@@ -92,6 +95,7 @@ export function initRecord(spec: VideoSpec): RealsiteRecord {
     category: spec.category,
     kind: spec.kind,
     title: null,
+    signedIn: false,
     pillRendered: false,
     mode: null,
     tier: null,
@@ -114,16 +118,19 @@ export function initRecord(spec: VideoSpec): RealsiteRecord {
 
 /** Launch a fresh persistent context with the built extension side-loaded.
  * One browser per video: chromium on this box intermittently freezes under
- * sustained page churn, so recycling caps a freeze to the video it hit. */
+ * sustained page churn, so recycling caps a freeze to the video it hit.
+ * A --profile run reuses that userDataDir as-is (the session cookies live
+ * there); the anonymous default stays a fresh mkdtemp. */
 export async function setupBrowser(
   headed: boolean,
   extensionDir: string,
+  profile?: string,
 ): Promise<{ context: BrowserContext; close(): Promise<void> }> {
   // probe for the CfT version so the UA matches the real Chrome build
   const probe = await chromium.launch({ headless: true, timeout: LAUNCH_TIMEOUT_MS });
   const version = probe.version();
   await probe.close();
-  const userDataDir = mkdtempSync(join(tmpdir(), 'speedwatcher-realsite-'));
+  const userDataDir = profile ?? mkdtempSync(join(tmpdir(), 'speedwatcher-realsite-'));
   const context = await chromium.launchPersistentContext(userDataDir, {
     channel: 'chromium',
     headless: !headed,
@@ -137,17 +144,33 @@ export async function setupBrowser(
     ],
   });
   // consent cookies: without them the default CC track is the manual
-  // transcript, not ASR (gate1-residential.ts parity)
-  await context.addCookies([
-    { name: 'CONSENT', value: 'YES+cb.20220301-01-p0.en+FX+000', domain: '.youtube.com', path: '/' },
-    { name: 'SOCS', value: 'CAISNQgDEitib3FfaWRlbnRpdHlmcm9udGVuZHVpc2VydmVyXzIwMjMwODI5LjA3X3AxGgJlbiACGgYIgLC_pwY', domain: '.youtube.com', path: '/' },
-  ]);
+  // transcript, not ASR (gate1-residential.ts parity). Skipped for profile
+  // runs — the profile's own cookies are the point of those.
+  if (profile === undefined) {
+    await context.addCookies([
+      { name: 'CONSENT', value: 'YES+cb.20220301-01-p0.en+FX+000', domain: '.youtube.com', path: '/' },
+      { name: 'SOCS', value: 'CAISNQgDEitib3FfaWRlbnRpdHlmcm9udGVuZHVpc2VydmVyXzIwMjMwODI5LjA3X3AxGgJlbiACGgYIgLC_pwY', domain: '.youtube.com', path: '/' },
+    ]);
+  }
   // the MV3 service worker must be up before navigation or the content
   // script is not injected (e2e.chromium pattern)
   if (context.serviceWorkers()[0] === undefined) {
     await context.waitForEvent('serviceworker', { timeout: 30_000 }).catch(() => undefined);
   }
   return { context, close: () => context.close() };
+}
+
+/** Signed-in assertion: the SID session cookie (httpOnly — read from the
+ * CDP cookie jar, not document.cookie) plus the signed-in avatar button in
+ * the topbar. Both must hold; a logged-out profile then records an honest
+ * signedIn=false. */
+export async function readSignedIn(context: BrowserContext, page: Page): Promise<boolean> {
+  const cookies = await context.cookies('https://www.youtube.com').catch(() => []);
+  const hasSid = cookies.some((c) => c.name === 'SID');
+  const avatar = await page
+    .evaluate(() => document.querySelector('#avatar-btn') !== null)
+    .catch(() => false);
+  return hasSid && avatar;
 }
 
 async function sampleOnce(
@@ -195,6 +218,7 @@ async function sampleOnce(
     record.rate = measure === null ? null : bestRate(measure.stats);
     record.lang = measure?.lang ?? null;
     record.source = source;
+    record.signedIn = await readSignedIn(context, page);
     record.consoleLines = consoleLines;
     // Pill placement geometry: the pill's rect vs the player's, and whether
     // the pill is the hit target at its center (elementFromPoint reports
@@ -294,13 +318,14 @@ export async function sampleVideo(
   spec: VideoSpec,
   extensionDir: string,
   traceDir: string,
+  profile?: string,
 ): Promise<RealsiteRecord> {
   const record = initRecord(spec);
   // A churned chromium can die at launch, not just mid-page; that is a
   // per-video error record, not a harness crash.
   let fresh: { context: BrowserContext; close(): Promise<void> };
   try {
-    fresh = await setupBrowser(headed, extensionDir);
+    fresh = await setupBrowser(headed, extensionDir, profile);
   } catch (err) {
     record.pass = false;
     record.reason = `browser-launch-failed: ${err instanceof Error && err.message ? err.message : String(err)}`;
@@ -353,7 +378,7 @@ export function recordLine(record: RealsiteRecord): string {
       ? ''
       : ` diff=${record.rateDiff.verdict}(${record.rateDiff.relDeltaPct >= 0 ? '+' : ''}${record.rateDiff.relDeltaPct.toFixed(1)}%)`;
   return `${record.pass ? 'PASS' : 'FAIL'} mode=${record.mode ?? '-'} tier=${record.tier ?? '-'} ` +
-    `rate=${rate}${lang} source=${record.source ?? '-'} ${pill} ${clears} ${occ}` +
+    `rate=${rate}${lang} source=${record.source ?? '-'} signedIn=${record.signedIn ? 'yes' : 'no'} ${pill} ${clears} ${occ}` +
     `${diff}` +
     `${record.reason ? ` (${record.reason})` : ''}`;
 }
