@@ -10,6 +10,9 @@ export const KIND_BY_FIXTURE: Record<string, string | undefined> = {
   'synthetic/music-lyrics.json': 'asr',
   'synthetic/chaptered.json': 'asr',
   'synthetic/pot-gated.json': 'asr',
+  'synthetic/late-controls.json': 'asr',
+  'synthetic/cooldown-expired.json': 'asr',
+  'synthetic/no-controls.json': 'asr',
   'synthetic/transcript-gated.json': 'asr',
   'real/manual-cue.json': undefined,
   'synthetic/cue-level-only.json': undefined,
@@ -40,7 +43,31 @@ export const BLOCKED_FIXTURES = ['synthetic/web-blocked.json'];
  * payload. The extension's capture-first path must measure from the player's
  * signed fetch, never from a bare re-fetch.
  */
-export const POT_GATED_FIXTURES = ['synthetic/pot-gated.json'];
+export const POT_GATED_FIXTURES = [
+  'synthetic/pot-gated.json',
+  // The caption-trigger bug-zoo fixtures live on the same signed-fetch page:
+  // cooldown-expired (controls present from the start) and late-controls
+  // (controls mount after a delay, see LATE_CONTROLS_FIXTURES).
+  'synthetic/cooldown-expired.json',
+  'synthetic/late-controls.json',
+];
+
+/**
+ * Fixtures whose stub player controls mount AFTER the extension's first
+ * drive attempt (the caption-trigger late-rendering class): the first drive
+ * times out, the same-attempt retrigger re-drives and finds them. The mount
+ * delay must exceed the drive's 3s visibility wait (lib/caption-trigger.ts
+ * STEP_WAIT_MS).
+ */
+export const LATE_CONTROLS_FIXTURES = ['synthetic/late-controls.json'];
+
+/**
+ * Fixtures served as a page with NO CC/settings controls at all — the
+ * capture drive must no-op cleanly ({ ccWasOn: null, changed: false }) and
+ * record no cooldown. This is the plain watch page: no control stub is
+ * injected, only the caption payload differs.
+ */
+export const NO_CONTROLS_FIXTURES = ['synthetic/no-controls.json'];
 
 /**
  * Fixtures whose caption payload the fixture server answers through the
