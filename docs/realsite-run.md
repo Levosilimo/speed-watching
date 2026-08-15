@@ -39,13 +39,17 @@ Flags:
 | `--limit N` | smoke run: sample the first N videos only |
 | `--video=ID` | sample one video (any id; defaults to `speech`) |
 | `--kind=speech\|music\|live` | expected class for `--video` runs |
-| `--threshold=N` | pass-ratio bar, default 0.8 |
+| `--threshold=N` | pass-ratio bar, default 0.8 — sets BOTH the overall bar and the speech-class floor |
+| `--speech-threshold=N` | the speech-class floor alone (overrides `--threshold` for that bar only) |
 | `--no-rebuild` | skip the staleness check — run the on-disk build as-is |
 | `--profile=PATH` | reuse the userDataDir at PATH (a real logged-in YouTube session); the anonymous mkdtemp default otherwise |
 | `--login` | one-time profile build: open youtube.com in `--profile`, wait for the session cookie, exit |
+| `--ignore-repeats` | skip the repeat-failure exit (the re-verification escape after a fix); the repeat list still prints |
 
 Results: `scripts/data/realsite-run/results.jsonl`, appended live per video
-so a mid-run kill never loses completed samples.
+so a mid-run kill never loses completed samples. Each run appends a marker
+line (`{"runStart": …}`) before its first record — the repeat check groups
+the history into runs by these markers.
 
 ## Logged-in sessions (`--profile`)
 
@@ -121,10 +125,20 @@ fresh profile would be created, signed out).
 | `music` (control) | pill mode `music` — the "speed not recommended" suppression |
 | `live` (control) | pill mode `none` — live suppression |
 
-Exit code **0** when the pass ratio over all sampled videos is ≥ the
-threshold (80% by default), **1** otherwise. The console table stratifies
-every failing video with its reason (`no-pill-render` / `bot-wall` /
-`live suppression: mode=…` / …).
+Exit codes — the verdict (scripts/realsite-verdict.ts), first failing gate
+wins:
+
+| Code | Gate |
+|---|---|
+| 0 | pass — all bars held |
+| 1 | overall pass ratio below `--threshold` |
+| 2 | usage error |
+| 3 | speech-class floor: the speech class held below the threshold separately — the overall ratio is the secondary bar |
+| 4 | repeat failure: a video failed with a classification it also failed with in the last 2 runs — a fix is forced regardless of the ratio; `--ignore-repeats` re-verifies without the exit |
+| 5 | signed-out `--profile` lane: a `--profile` run recorded `signedIn=false` — re-login and re-run |
+
+The console table stratifies every failing video with its reason
+(`no-pill-render` / `bot-wall` / `live suppression: mode=…` / …).
 
 ## When to run
 
