@@ -147,8 +147,11 @@ body:
         ## Maintainer reproduction
 
         ```sh
-        bun run scripts/realsite-runner.ts --video=<ID> --kind=speech|music|live
+        bun run scripts/realsite-runner.ts --video=<ID> --kind=speech|music|live [--profile=<path>]
         ```
 
         The runner drives the built extension against the real video on a
-        box; paste the failing `results.jsonl` entry into the thread.
+        box. The repro needs three fields from this report: the pill-reason
+        string, the extension version, and the video ID. Pass `--profile` to
+        replay under the signed-in lane when the reporter was signed in.
+        Paste the failing `results.jsonl` entry into the thread.
