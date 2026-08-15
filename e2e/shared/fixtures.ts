@@ -9,6 +9,7 @@ export const KIND_BY_FIXTURE: Record<string, string | undefined> = {
   'synthetic/word-level.json': 'asr',
   'synthetic/music-lyrics.json': 'asr',
   'synthetic/chaptered.json': 'asr',
+  'synthetic/pot-gated.json': 'asr',
   'real/manual-cue.json': undefined,
   'synthetic/cue-level-only.json': undefined,
   'synthetic/ja-captions.json': 'asr',
@@ -29,6 +30,16 @@ export const LANG_BY_FIXTURE: Record<string, string | undefined> = {
  * the file itself never needs to exist.
  */
 export const BLOCKED_FIXTURES = ['synthetic/web-blocked.json'];
+
+/**
+ * Fixtures whose /api/timedtext route reproduces the logged-in POT failure:
+ * a request WITHOUT the pot/potc proof-of-origin params gets HTTP 200 with
+ * an EMPTY body (the exact response a bare captionTracks baseUrl fetch gets
+ * on a signed-in page); only a signed request (pot present) is served the
+ * payload. The extension's capture-first path must measure from the player's
+ * signed fetch, never from a bare re-fetch.
+ */
+export const POT_GATED_FIXTURES = ['synthetic/pot-gated.json'];
 
 /**
  * Fixtures served as a watch page with no caption tracks at all — the

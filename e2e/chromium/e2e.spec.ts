@@ -66,8 +66,10 @@ async function routeFixtures(target: BrowserContext): Promise<void> {
       return;
     }
     if (url.pathname === '/api/timedtext') {
-      const fixture = url.searchParams.get('fixture');
-      const response = await fetch(`${fixtureBase}/api/timedtext?fixture=${fixture}`);
+      // All query params are forwarded (fixture + pot/potc/c/fmt): the
+      // pot-gated fixture's gate keys on the pot proof-of-origin params, so
+      // stripping them here would break the signed-request lane.
+      const response = await fetch(`${fixtureBase}/api/timedtext?${url.searchParams.toString()}`);
       await route.fulfill({
         status: response.status,
         contentType: 'application/json',

@@ -1,0 +1,487 @@
+{
+ "wireMagic": "pb3",
+ "pens": [
+  {}
+ ],
+ "wsWinStyles": [
+  {}
+ ],
+ "wpWinPositions": [
+  {}
+ ],
+ "events": [
+  {
+   "tStartMs": 0,
+   "dDurationMs": 2500,
+   "id": 1,
+   "wpWinPosId": 1,
+   "wsWinStyleId": 1,
+   "segs": [
+    {
+     "utf8": "alpha ",
+     "tOffsetMs": 0
+    },
+    {
+     "utf8": "bravo ",
+     "tOffsetMs": 250,
+     "acAsrConf": 0.9
+    },
+    {
+     "utf8": "charlie ",
+     "tOffsetMs": 500
+    },
+    {
+     "utf8": "delta ",
+     "tOffsetMs": 750,
+     "acAsrConf": 0.9
+    },
+    {
+     "utf8": "echo ",
+     "tOffsetMs": 1000
+    },
+    {
+     "utf8": "foxtrot ",
+     "tOffsetMs": 1250,
+     "acAsrConf": 0.9
+    },
+    {
+     "utf8": "golf ",
+     "tOffsetMs": 1500
+    },
+    {
+     "utf8": "hotel ",
+     "tOffsetMs": 1750,
+     "acAsrConf": 0.9
+    },
+    {
+     "utf8": "india ",
+     "tOffsetMs": 2000
+    }
+   ]
+  },
+  {
+   "tStartMs": 3000,
+   "dDurationMs": 2500,
+   "wWinId": 1,
+   "segs": [
+    {
+     "utf8": "juliet ",
+     "tOffsetMs": 0
+    },
+    {
+     "utf8": "kilo ",
+     "tOffsetMs": 250,
+     "acAsrConf": 0.9
+    },
+    {
+     "utf8": "lima ",
+     "tOffsetMs": 500
+    },
+    {
+     "utf8": "mike ",
+     "tOffsetMs": 750,
+     "acAsrConf": 0.9
+    },
+    {
+     "utf8": "november ",
+     "tOffsetMs": 1000
+    },
+    {
+     "utf8": "oscar ",
+     "tOffsetMs": 1250,
+     "acAsrConf": 0.9
+    },
+    {
+     "utf8": "papa ",
+     "tOffsetMs": 1500
+    },
+    {
+     "utf8": "quebec ",
+     "tOffsetMs": 1750,
+     "acAsrConf": 0.9
+    },
+    {
+     "utf8": "romeo ",
+     "tOffsetMs": 2000
+    }
+   ]
+  },
+  {
+   "tStartMs": 6000,
+   "dDurationMs": 2500,
+   "aAppend": 1,
+   "segs": [
+    {
+     "utf8": "sierra ",
+     "tOffsetMs": 0
+    },
+    {
+     "utf8": "tango ",
+     "tOffsetMs": 250,
+     "acAsrConf": 0.9
+    },
+    {
+     "utf8": "uniform ",
+     "tOffsetMs": 500
+    },
+    {
+     "utf8": "victor ",
+     "tOffsetMs": 750,
+     "acAsrConf": 0.9
+    },
+    {
+     "utf8": "whiskey ",
+     "tOffsetMs": 1000
+    },
+    {
+     "utf8": "xray ",
+     "tOffsetMs": 1250,
+     "acAsrConf": 0.9
+    },
+    {
+     "utf8": "yankee ",
+     "tOffsetMs": 1500
+    },
+    {
+     "utf8": "zulu ",
+     "tOffsetMs": 1750,
+     "acAsrConf": 0.9
+    },
+    {
+     "utf8": "alpha ",
+     "tOffsetMs": 2000
+    }
+   ]
+  },
+  {
+   "tStartMs": 9000,
+   "dDurationMs": 2500,
+   "aAppend": 1,
+   "segs": [
+    {
+     "utf8": "bravo ",
+     "tOffsetMs": 0
+    },
+    {
+     "utf8": "charlie ",
+     "tOffsetMs": 250,
+     "acAsrConf": 0.9
+    },
+    {
+     "utf8": "delta ",
+     "tOffsetMs": 500
+    },
+    {
+     "utf8": "echo ",
+     "tOffsetMs": 750,
+     "acAsrConf": 0.9
+    },
+    {
+     "utf8": "foxtrot ",
+     "tOffsetMs": 1000
+    },
+    {
+     "utf8": "golf ",
+     "tOffsetMs": 1250,
+     "acAsrConf": 0.9
+    },
+    {
+     "utf8": "hotel ",
+     "tOffsetMs": 1500
+    },
+    {
+     "utf8": "india ",
+     "tOffsetMs": 1750,
+     "acAsrConf": 0.9
+    },
+    {
+     "utf8": "juliet ",
+     "tOffsetMs": 2000
+    }
+   ]
+  },
+  {
+   "tStartMs": 12000,
+   "dDurationMs": 2500,
+   "aAppend": 1,
+   "segs": [
+    {
+     "utf8": "kilo ",
+     "tOffsetMs": 0
+    },
+    {
+     "utf8": "lima ",
+     "tOffsetMs": 250,
+     "acAsrConf": 0.9
+    },
+    {
+     "utf8": "mike ",
+     "tOffsetMs": 500
+    },
+    {
+     "utf8": "november ",
+     "tOffsetMs": 750,
+     "acAsrConf": 0.9
+    },
+    {
+     "utf8": "oscar ",
+     "tOffsetMs": 1000
+    },
+    {
+     "utf8": "papa ",
+     "tOffsetMs": 1250,
+     "acAsrConf": 0.9
+    },
+    {
+     "utf8": "quebec ",
+     "tOffsetMs": 1500
+    },
+    {
+     "utf8": "romeo ",
+     "tOffsetMs": 1750,
+     "acAsrConf": 0.9
+    },
+    {
+     "utf8": "sierra ",
+     "tOffsetMs": 2000
+    }
+   ]
+  },
+  {
+   "tStartMs": 15000,
+   "dDurationMs": 2500,
+   "aAppend": 1,
+   "segs": [
+    {
+     "utf8": "tango ",
+     "tOffsetMs": 0
+    },
+    {
+     "utf8": "uniform ",
+     "tOffsetMs": 250,
+     "acAsrConf": 0.9
+    },
+    {
+     "utf8": "victor ",
+     "tOffsetMs": 500
+    },
+    {
+     "utf8": "whiskey ",
+     "tOffsetMs": 750,
+     "acAsrConf": 0.9
+    },
+    {
+     "utf8": "xray ",
+     "tOffsetMs": 1000
+    },
+    {
+     "utf8": "yankee ",
+     "tOffsetMs": 1250,
+     "acAsrConf": 0.9
+    },
+    {
+     "utf8": "zulu ",
+     "tOffsetMs": 1500
+    },
+    {
+     "utf8": "alpha ",
+     "tOffsetMs": 1750,
+     "acAsrConf": 0.9
+    },
+    {
+     "utf8": "bravo ",
+     "tOffsetMs": 2000
+    }
+   ]
+  },
+  {
+   "tStartMs": 18000,
+   "dDurationMs": 2500,
+   "aAppend": 1,
+   "segs": [
+    {
+     "utf8": "charlie ",
+     "tOffsetMs": 0
+    },
+    {
+     "utf8": "delta ",
+     "tOffsetMs": 250,
+     "acAsrConf": 0.9
+    },
+    {
+     "utf8": "echo ",
+     "tOffsetMs": 500
+    },
+    {
+     "utf8": "foxtrot ",
+     "tOffsetMs": 750,
+     "acAsrConf": 0.9
+    },
+    {
+     "utf8": "golf ",
+     "tOffsetMs": 1000
+    },
+    {
+     "utf8": "hotel ",
+     "tOffsetMs": 1250,
+     "acAsrConf": 0.9
+    },
+    {
+     "utf8": "india ",
+     "tOffsetMs": 1500
+    },
+    {
+     "utf8": "juliet ",
+     "tOffsetMs": 1750,
+     "acAsrConf": 0.9
+    },
+    {
+     "utf8": "kilo ",
+     "tOffsetMs": 2000
+    }
+   ]
+  },
+  {
+   "tStartMs": 21000,
+   "dDurationMs": 2500,
+   "aAppend": 1,
+   "segs": [
+    {
+     "utf8": "lima ",
+     "tOffsetMs": 0
+    },
+    {
+     "utf8": "mike ",
+     "tOffsetMs": 250,
+     "acAsrConf": 0.9
+    },
+    {
+     "utf8": "november ",
+     "tOffsetMs": 500
+    },
+    {
+     "utf8": "oscar ",
+     "tOffsetMs": 750,
+     "acAsrConf": 0.9
+    },
+    {
+     "utf8": "papa ",
+     "tOffsetMs": 1000
+    },
+    {
+     "utf8": "quebec ",
+     "tOffsetMs": 1250,
+     "acAsrConf": 0.9
+    },
+    {
+     "utf8": "romeo ",
+     "tOffsetMs": 1500
+    },
+    {
+     "utf8": "sierra ",
+     "tOffsetMs": 1750,
+     "acAsrConf": 0.9
+    },
+    {
+     "utf8": "tango ",
+     "tOffsetMs": 2000
+    }
+   ]
+  },
+  {
+   "tStartMs": 24000,
+   "dDurationMs": 2500,
+   "aAppend": 1,
+   "segs": [
+    {
+     "utf8": "uniform ",
+     "tOffsetMs": 0
+    },
+    {
+     "utf8": "victor ",
+     "tOffsetMs": 250,
+     "acAsrConf": 0.9
+    },
+    {
+     "utf8": "whiskey ",
+     "tOffsetMs": 500
+    },
+    {
+     "utf8": "xray ",
+     "tOffsetMs": 750,
+     "acAsrConf": 0.9
+    },
+    {
+     "utf8": "yankee ",
+     "tOffsetMs": 1000
+    },
+    {
+     "utf8": "zulu ",
+     "tOffsetMs": 1250,
+     "acAsrConf": 0.9
+    },
+    {
+     "utf8": "alpha ",
+     "tOffsetMs": 1500
+    },
+    {
+     "utf8": "bravo ",
+     "tOffsetMs": 1750,
+     "acAsrConf": 0.9
+    },
+    {
+     "utf8": "charlie ",
+     "tOffsetMs": 2000
+    }
+   ]
+  },
+  {
+   "tStartMs": 27000,
+   "dDurationMs": 2500,
+   "aAppend": 1,
+   "segs": [
+    {
+     "utf8": "delta ",
+     "tOffsetMs": 0
+    },
+    {
+     "utf8": "echo ",
+     "tOffsetMs": 250,
+     "acAsrConf": 0.9
+    },
+    {
+     "utf8": "foxtrot ",
+     "tOffsetMs": 500
+    },
+    {
+     "utf8": "golf ",
+     "tOffsetMs": 750,
+     "acAsrConf": 0.9
+    },
+    {
+     "utf8": "hotel ",
+     "tOffsetMs": 1000
+    },
+    {
+     "utf8": "india ",
+     "tOffsetMs": 1250,
+     "acAsrConf": 0.9
+    },
+    {
+     "utf8": "juliet ",
+     "tOffsetMs": 1500
+    },
+    {
+     "utf8": "kilo ",
+     "tOffsetMs": 1750,
+     "acAsrConf": 0.9
+    },
+    {
+     "utf8": "lima ",
+     "tOffsetMs": 2000
+    }
+   ]
+  }
+ ],
+ "windows": []
+}
