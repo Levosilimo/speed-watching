@@ -1,12 +1,15 @@
 // Real-site extension runner — drives the BUILT e2e extension against real
 // youtube.com videos (docs/realsite-run.md). Box-gated manual tier: not CI.
 // Run: bun run scripts/realsite-runner.ts [--headless] [--limit=N] [--video=ID]
-//      [--kind=speech|music|live] [--threshold=N] [--no-rebuild]
-//      [--profile=PATH] [--login]
-// Results: scripts/data/realsite-run/results.jsonl (live-appended).
+//      [--kind=speech|music|live] [--threshold=N] [--speech-threshold=N]
+//      [--profile=PATH] [--login] [--ignore-repeats]
+// Results: scripts/data/realsite-run/results.jsonl (live-appended, run-marked).
+// Exit codes (the verdict, scripts/realsite-verdict.ts): 0 pass · 1 overall
+// ratio below --threshold · 2 usage · 3 speech-class floor · 4 repeat
+// failure · 5 signed-out --profile lane.
 
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
@@ -18,6 +21,7 @@ import {
   type VideoKind,
   type VideoSpec,
 } from './realsite-runner-lib';
+import { evaluateVerdict, previousRuns, VERDICT_EXIT } from './realsite-verdict';
 import { loadRegistry } from '../tests/fixtures/registry';
 import { classifyRateFieldDiff } from './rate-field-diff';
 
@@ -48,6 +52,9 @@ const WATCHDOG_IDLE_MS = 8 * 60_000;
 /** Profile sessions older than this are warned about, never blocked. */
 const PROFILE_COOKIE_TTL_DAYS = 14;
 const LOGIN_TIMEOUT_MS = 5 * 60_000;
+/** The repeat-failure lookback (release-gate.md §4: same classification
+ * twice in a row — within the last 2 runs — forces a fix). */
+const REPEAT_LOOKBACK_RUNS = 2;
 
 const CONTENT_JS = join(EXTENSION_DIR, 'content-scripts', 'content.js');
 
@@ -184,18 +191,33 @@ function selectVideos(
   return videos;
 }
 
-async function main(): Promise<void> {
+interface RunOptions {
+  headed: boolean;
+  videoArg: string | undefined;
+  kindArg: VideoKind | undefined;
+  limit: number | undefined;
+  threshold: number;
+  speechThreshold: number;
+  profileArg: string | undefined;
+  noRebuild: boolean;
+  login: boolean;
+  ignoreRepeats: boolean;
+}
+
+/** CLI parsing + validation; usage errors exit 2 (the usage code). */
+function parseArgs(): RunOptions {
   const args = process.argv.slice(2);
-  const headed = !args.includes('--headless');
   const videoArg = args.find((a) => a.startsWith('--video='))?.slice('--video='.length);
   const kindArg = args.find((a) => a.startsWith('--kind='))?.slice('--kind='.length) as VideoKind | undefined;
   const limitArg = args.find((a) => a.startsWith('--limit='))?.slice('--limit='.length);
   const thresholdArg = args.find((a) => a.startsWith('--threshold='))?.slice('--threshold='.length);
+  const speechThresholdArg = args.find((a) => a.startsWith('--speech-threshold='))?.slice('--speech-threshold='.length);
   const profileArg = args.find((a) => a.startsWith('--profile='))?.slice('--profile='.length);
-  const noRebuild = args.includes('--no-rebuild');
-  const login = args.includes('--login');
   const limit = limitArg === undefined ? undefined : Number(limitArg);
   const threshold = thresholdArg === undefined ? 0.8 : Number(thresholdArg);
+  // --threshold sets BOTH the overall bar and the speech-class floor;
+  // --speech-threshold moves only the floor.
+  const speechThreshold = speechThresholdArg === undefined ? threshold : Number(speechThresholdArg);
   if (limit !== undefined && !Number.isFinite(limit)) {
     console.error('--limit must be a number');
     process.exit(2);
@@ -204,10 +226,41 @@ async function main(): Promise<void> {
     console.error('--threshold must be a number in (0, 1]');
     process.exit(2);
   }
+  if (!Number.isFinite(speechThreshold) || speechThreshold <= 0 || speechThreshold > 1) {
+    console.error('--speech-threshold must be a number in (0, 1]');
+    process.exit(2);
+  }
   if (kindArg !== undefined && kindArg !== 'speech' && kindArg !== 'music' && kindArg !== 'live') {
     console.error('--kind must be speech|music|live');
     process.exit(2);
   }
+  return {
+    headed: !args.includes('--headless'),
+    videoArg,
+    kindArg,
+    limit,
+    threshold,
+    speechThreshold,
+    profileArg,
+    noRebuild: args.includes('--no-rebuild'),
+    login: args.includes('--login'),
+    ignoreRepeats: args.includes('--ignore-repeats'),
+  };
+}
+
+async function main(): Promise<void> {
+  const {
+    headed,
+    videoArg,
+    kindArg,
+    limit,
+    threshold,
+    speechThreshold,
+    profileArg,
+    noRebuild,
+    login,
+    ignoreRepeats,
+  } = parseArgs();
   if (login) {
     if (profileArg === undefined) {
       console.error('--login requires --profile=<path>');
@@ -220,7 +273,13 @@ async function main(): Promise<void> {
 
   const videos = selectVideos(videoArg, kindArg, limit);
   mkdirSync(OUT_DIR, { recursive: true });
-  console.log(`realsite-runner: ${videos.length} video(s), headed=${headed}, threshold=${threshold}`);
+  // Run marker: groups the history into runs for the repeat check — the
+  // next run reads it back from results.jsonl (release-gate.md §4).
+  writeFileSync(RESULTS_FILE, JSON.stringify({ runStart: new Date().toISOString() }) + '\n', { flag: 'a' });
+  console.log(
+    `realsite-runner: ${videos.length} video(s), headed=${headed}, threshold=${threshold}, ` +
+      `speech-threshold=${speechThreshold}`,
+  );
 
   const records: RealsiteRecord[] = [];
   const registryRows = loadRegistry();
@@ -253,16 +312,20 @@ async function main(): Promise<void> {
     clearInterval(watchdog);
   }
 
-  const ratio = summarize(records);
+  summarize(records);
   console.log(`\nresults -> ${RESULTS_FILE} (${records.length} records)`);
   const traces = records.filter((r) => r.tracePath !== null).length;
   console.log(`traces -> ${traces}/${records.length} (${OUT_DIR}/trace-<videoId>.zip)`);
-  if (ratio < threshold) {
-    console.log(`VERDICT: FAIL — pass ratio ${(ratio * 100).toFixed(1)}% below ${(threshold * 100).toFixed(0)}%`);
-    process.exit(1);
-  }
-  console.log(`VERDICT: PASS — pass ratio ${(ratio * 100).toFixed(1)}% ≥ ${(threshold * 100).toFixed(0)}%`);
-  process.exit(0);
+  const verdict = evaluateVerdict(records, previousRuns(readFileSync(RESULTS_FILE, 'utf8')), {
+    threshold,
+    speechThreshold,
+    signedInLane: profileArg !== undefined,
+    ignoreRepeats,
+    repeatLookbackRuns: REPEAT_LOOKBACK_RUNS,
+  });
+  const prefix = verdict.code === VERDICT_EXIT.PASS ? 'PASS — ' : 'FAIL — ';
+  console.log(`VERDICT: ${prefix}${verdict.line}`);
+  process.exit(verdict.code);
 }
 
 main().catch((err) => {

@@ -45,7 +45,9 @@ bun run scripts/realsite-runner.ts --profile=~/.speedwatcher-logged-in
 The signed-in assertion: the run records whether the session is signed in
 (the player response carries the signed context; a signed-out session shows
 LOGIN_REQUIRED on the ANDROID tail). A signed-out run is a lane failure, not
-a video failure — re-login and re-run.
+a video failure — the runner exits **5** when any record of a `--profile`
+run recorded `signedIn=false`; re-login and re-run. The anonymous
+(no-profile) lane never trips this gate.
 
 **Pass criteria:** every `exp=xpe`-class video in the corpus measures via
 the capture path — source `capture`, not `none`, not estimated. A video that
@@ -59,6 +61,13 @@ bun run scripts/realsite-runner.ts --headless
 ```
 
 - Pass ratio must be **≥80%** on this run. Below the bar does not ship.
+- The speech class — the product's core — must hold **≥80% separately**:
+  5/7 speech + 3/3 non-speech is 80% overall but 71% on the core class,
+  and that does not ship. The overall ratio is the secondary bar. Both bars
+  come from `--threshold`; `--speech-threshold` moves the class floor alone.
+- A failing run exits with the code of the first gate it trips: **5**
+  signed-out `--profile` lane, **4** repeat failure, **3** speech-class
+  floor, **1** overall ratio. The verdict line names the failing gate.
 - The run appends to `scripts/data/realsite-run/results.jsonl`. That file is
   the oracle — the only non-LLM artifact. Entries are **never edited or
   deleted** to make the ratio pass; a failed entry stays failed and is the
@@ -130,8 +139,11 @@ systemctl --user enable --now speedwatcher-realsite.timer
   line before reading the ratio.
 - Regression linkage: every scheduled run's records are compared against the
   previous run's — same corpus, same thresholds. A video that fails with the
-  same classification twice in a row forces a fix commit; it does not wait
-  for the next release to re-measure.
+  same classification in the last 2 runs forces a fix: the runner exits **4**
+  and lists the repeats. The recorded history (`results.jsonl`, run-marked)
+  is the comparison base, and the exit fires regardless of the ratio.
+  `--ignore-repeats` re-verifies without the exit after a fix lands — the
+  repeat list still prints.
 
 ## 5. Issue repro workflow
 

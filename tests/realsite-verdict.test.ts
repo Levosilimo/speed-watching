@@ -138,7 +138,7 @@ describe('run history parsing', () => {
     ].join('\n');
     const runs = parseRunHistory(text);
     expect(runs).toHaveLength(1);
-    expect(runs[0].map((r) => r.videoId)).toEqual(['a', 'c']);
+    expect(runs[0]?.map((r) => r.videoId)).toEqual(['a', 'c']);
   });
 });
 
@@ -240,9 +240,10 @@ describe('fix-on-repeat (same classification, last N=2 runs)', () => {
   });
 
   it('an empty history (first run ever) has no repeats', () => {
-    const current = [rec('fpbOEoRrHyU', 'speech', { pass: false, reason: 'no-pill-render' })];
+    // A music failure has no speech-floor effect, so the ratio gate decides.
+    const current = [rec('dQw4w9WgXcQ', 'music', { pass: false, reason: 'music suppression: mode=recommend' })];
     const verdict = evaluateVerdict(current, [], cfg());
-    expect(verdict.code).toBe(VERDICT_EXIT.PASS);
+    expect(verdict.code).toBe(VERDICT_EXIT.RATIO);
     expect(verdict.repeats).toEqual([]);
   });
 
