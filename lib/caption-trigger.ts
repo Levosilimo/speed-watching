@@ -9,9 +9,11 @@ import { type CapturedTimedtext, TimedtextBuffer } from './caption-capture';
 const STEP_WAIT_MS = 3000;
 const MENU_SETTLE_MS = 400;
 const POLL_MS = 100;
-/** Re-measures of the same video (the retrigger, navigation/play re-runs)
- * must not re-drive the CC controls within this window — real-user
- * feedback: the toggle flapped on/off several times per video. */
+/** Re-measures of the same video (navigation/play re-runs) must not re-drive
+ * the CC controls within this window — real-user feedback: the toggle flapped
+ * on/off several times per video. The capture attempt's internal retrigger
+ * bypasses this gate (it is the same attempt's recovery pass, not a new
+ * drive). */
 const CC_DRIVE_COOLDOWN_MS = 30_000;
 /** Drive completion per videoId. Pruned on every call, so the map only
  * ever holds videos driven within the cooldown window. */
@@ -126,12 +128,15 @@ export function restoreCcState(drive: CcDriveResult): void {
   closeMenus();
 }
 
-export async function triggerCcAutomation(videoId: string): Promise<CcDriveResult> {
+export async function triggerCcAutomation(
+  videoId: string,
+  options: { bypassCooldown?: boolean } = {},
+): Promise<CcDriveResult> {
   const now = Date.now();
   for (const [id, at] of lastDriveAt) {
     if (now - at >= CC_DRIVE_COOLDOWN_MS) lastDriveAt.delete(id);
   }
-  if (lastDriveAt.has(videoId)) {
+  if (!options.bypassCooldown && lastDriveAt.has(videoId)) {
     // Within the cooldown window: report the current state, touch nothing.
     // The caller's restore then leaves the button alone (changed: false).
     return { ccWasOn: ccPressed(), changed: false };
@@ -208,9 +213,12 @@ export async function waitForWordTimedCapture(
     }
     if (!retriggered && elapsed >= retriggerAt) {
       retriggered = true;
-      // Gated by the drive cooldown: a retrigger within the window reports
-      // without touching the controls (no CC flapping).
-      void triggerCcAutomation(videoId);
+      // Same-attempt recovery: the first pass may have raced the track list
+      // (~22s preview), the retrigger re-picks it — it must re-drive even
+      // inside the cooldown window (the gate only blocks NEW drives from
+      // navigation/play re-measures). Its drive still records the cooldown
+      // entry below, so a subsequent re-measure respects it.
+      void triggerCcAutomation(videoId, { bypassCooldown: true });
     }
     await sleep(pollIntervalMs);
   }
