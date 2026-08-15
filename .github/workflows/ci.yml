@@ -42,6 +42,11 @@ jobs:
         with:
           sarif_file: aislop.sarif
 
+      # The userscript bundle test (tests/userscript-bundle.test.ts) skips
+      # when userscript/dist is absent; build before vitest so the ci lane
+      # always asserts the real bundle (same build the e2e-userscript job
+      # uses).
+      - run: bun run build:userscript
       - run: bun run test
       - name: Install Lua 5.1 for mpv tests
         run: sudo apt-get update -qq && sudo apt-get install -y lua5.1
