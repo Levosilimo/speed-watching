@@ -75,13 +75,20 @@ export interface CaptionFetchContext {
   buffer: TimedtextBuffer;
   /** The current player element — capture driving needs a ready video. */
   video: HTMLVideoElement | null;
+  /** The WEB playerResponse: its transcript-panel engagementPanels carry the
+   * getTranscriptEndpoint params that back the final cue-level resort —
+   * reachable even when the ANDROID POST answers LOGIN_REQUIRED (asbplayer
+   * #978) and carries no params of its own. */
+  playerResponse: PlayerResponse | null;
 }
 
 /** Capture-first caption fetch: the buffer's word-timed capture (the
  * player's signed fetch — POT-gated pages pay only those) wins; otherwise
  * a ready player is driven through the CC controls once and awaited before
  * the bare WEB fetch (which 200-empties on signed-in pages); ANDROID
- * innertube last. Returns the parsed json3 payload or null. */
+ * innertube next; the WEB response's own transcript-panel params back the
+ * final cue-level get_transcript resort. Returns the parsed json3 payload
+ * or null. */
 export async function fetchCaptions(
   track: CaptionTrack,
   videoId: string,
@@ -117,5 +124,13 @@ export async function fetchCaptions(
   if (web !== null) return { json: web, source: 'web' };
   const android = await fetchAndroidCaptions(videoId);
   if (android !== null) return { json: android, source: 'android' };
+  // The logged-in ANDROID tail can die without params (LOGIN_REQUIRED), so
+  // the WEB response's own transcript panel params back this final resort —
+  // cue-level only, the same innertube POST fetchAndroidCaptions uses.
+  const params = getTranscriptParams(ctx.playerResponse);
+  if (params !== null) {
+    const transcript = await fetchTranscriptViaEndpoint(params);
+    if (transcript !== null) return { json: transcript, source: 'android' };
+  }
   return { json: null, source: 'none' };
 }

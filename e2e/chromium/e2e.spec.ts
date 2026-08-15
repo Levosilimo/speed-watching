@@ -30,6 +30,7 @@ import {
   runPillSpecs,
   runSkipSpecs,
   runTranscriptSpecs,
+  runLoginRequiredSpecs,
   type CaptionSource,
   type E2EDriver,
 } from '../shared/specs';
@@ -124,8 +125,9 @@ async function routeFixtures(target: BrowserContext): Promise<void> {
     const straybadge = url.searchParams.get('straybadge');
     const playersize = url.searchParams.get('playersize');
     const fullscreen = url.searchParams.get('fullscreen');
+    const loginrequired = url.searchParams.get('loginrequired');
     const response = await fetch(
-      `${fixtureBase}/watch?fixture=${fixture}&multi=${multi ?? ''}&live=${live ?? ''}&straybadge=${straybadge ?? ''}&playersize=${playersize ?? ''}&fullscreen=${fullscreen ?? ''}`,
+      `${fixtureBase}/watch?fixture=${fixture}&multi=${multi ?? ''}&live=${live ?? ''}&straybadge=${straybadge ?? ''}&playersize=${playersize ?? ''}&fullscreen=${fullscreen ?? ''}&loginrequired=${loginrequired ?? ''}`,
     );
     await route.fulfill({
       status: response.status,
@@ -390,6 +392,7 @@ test('pot-gated fixture: bare timedtext 200-empties; the capture path measures f
 
 test('transcript-gated fixture: the ANDROID tail lands on get_transcript', async () => {
   await runTranscriptSpecs(driver);
+  await runLoginRequiredSpecs(driver);
 });
 
 /** Wait until the pill renders in recommend mode AND its mode-transition

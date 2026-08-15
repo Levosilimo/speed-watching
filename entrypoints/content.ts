@@ -238,6 +238,7 @@ async function fetchAndParseCaptions(
   const result = await fetchCaptions(track, videoId, {
     buffer: captureBuffer,
     video: controller.activeVideo ?? document.querySelector<HTMLVideoElement>('video'),
+    playerResponse: response,
   });
   // The lib returns the source: its own hook write would leak into the SEC-2-gated store bundle.
   if (__E2E__) window.__speedwatcherCaptionSource = result.source;

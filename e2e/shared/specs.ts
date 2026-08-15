@@ -540,6 +540,45 @@ export async function runTranscriptSpecs(driver: E2EDriver): Promise<void> {
   }
 }
 
+/**
+ * The logged-in ANDROID failure lane (asbplayer #978): the fixture server's
+ * loginrequired=1 variant answers the ANDROID innertube POST with a
+ * LOGIN_REQUIRED body — no caption tracks, no transcript params — so the
+ * chain can only land on get_transcript through the WEB playerResponse's
+ * own engagement-panel params (lib/caption-fetch.ts fetchCaptions). The
+ * fail-without-fix lane: before the WEB-params wiring the chain died at
+ * 'none' and the pill fell to estimated.
+ */
+export async function runLoginRequiredSpecs(driver: E2EDriver): Promise<void> {
+  const fixture = 'synthetic/transcript-gated.json';
+  const attemptsBefore = await driver.readTranscriptAttempts();
+
+  // The ANDROID POST answers LOGIN_REQUIRED; the WEB response carries the
+  // transcript panel — the measure must come from the WEB-params
+  // get_transcript POST.
+  await driver.navigateToWatch(fixture, 'loginrequired=1');
+  const state = expectState(await driver.readPillState(), fixture);
+  const source = await driver.readCaptionSource();
+  if (source !== 'android') {
+    throw new Error(`${fixture}: loginrequired=1 caption source ${source}, expected android`);
+  }
+  const measurement = await driver.readMeasurement();
+  if (measurement === undefined) {
+    throw new Error(`${fixture}: no speedwatcher:measure payload`);
+  }
+  const json = JSON.parse(readFileSync(join(fixtureRoot, fixture), 'utf8')) as unknown;
+  const segments = parseTranscriptSegments(json);
+  assertClose(measurement.stats.cue, cueLevelWpm(segments), `${fixture} transcript cue-level`);
+  if (state.tierLabel !== 'from captions') {
+    throw new Error(`${fixture}: pill tierLabel ${state.tierLabel}, expected from captions`);
+  }
+  // The WEB-params get_transcript POST fired for this navigation (not just
+  // the earlier ANDROID-tail one).
+  if ((await driver.readTranscriptAttempts()) <= attemptsBefore) {
+    throw new Error(`${fixture}: loginrequired=1 get_transcript POST never fired`);
+  }
+}
+
 /** The recommendation the generic matcher must produce from the talk
  * fixture: harvest the HLS subtitle track, measure the manual-cue rate,
  * recommend with default settings (mirror of entrypoints/generic.content.ts). */

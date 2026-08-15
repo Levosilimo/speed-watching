@@ -1,6 +1,8 @@
 // @vitest-environment happy-dom
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { fetchAndroidCaptions } from '../lib/caption-fetch';
+import { TimedtextBuffer } from '../lib/caption-capture';
+import { fetchAndroidCaptions, fetchCaptions } from '../lib/caption-fetch';
+import type { PlayerResponse } from '../lib/youtube';
 import {
   fetchTranscriptViaEndpoint,
   getTranscriptParams,
@@ -94,6 +96,31 @@ function androidResponse(params?: string): unknown {
   };
 }
 
+/** The WEB playerResponse of a transcript-gated page: the caption track plus
+ * the engagement panel carrying the getTranscriptEndpoint params — the same
+ * panel shape the ANDROID response uses. */
+function webResponse(params?: string): PlayerResponse {
+  return {
+    captions: {
+      playerCaptionsTracklistRenderer: {
+        captionTracks: [{ baseUrl: '/api/timedtext?fmt=json3' }],
+      },
+    },
+    ...(params === undefined ? {} : { engagementPanels: [panelWithParams(params)] }),
+  };
+}
+
+/** The logged-in ANDROID failure mode (asbplayer #978): the innertube
+ * player POST answers LOGIN_REQUIRED with no caption tracks. */
+function loginRequiredResponse(): unknown {
+  return {
+    playabilityStatus: {
+      status: 'LOGIN_REQUIRED',
+      reason: "Sign in to confirm you're not a bot",
+    },
+  };
+}
+
 function mockFetch(byUrl: (url: URL) => { ok: boolean; body: unknown } | 'throw'): ReturnType<typeof vi.fn> {
   const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
     const url = new URL(String(input));
@@ -115,6 +142,10 @@ afterEach(() => {
 describe('getTranscriptParams', () => {
   it('finds the params in the transcript panel footer button command', () => {
     expect(getTranscriptParams({ engagementPanels: [panelWithParams('abc123')] })).toBe('abc123');
+  });
+
+  it('extracts the params from the WEB playerResponse engagement panel (the fixture shape)', () => {
+    expect(getTranscriptParams(webResponse('WEB_PARAMS'))).toBe('WEB_PARAMS');
   });
 
   it('bails to null without a transcript panel, empty params, or garbage', () => {
@@ -261,5 +292,71 @@ describe('fetchAndroidCaptions fallback ordering', () => {
     const fetchMock = mockFetch(() => ({ ok: false, body: {} }));
     expect(await fetchAndroidCaptions('vid')).toBeNull();
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('fetchCaptions fallback chain', () => {
+  const track = { baseUrl: '/api/timedtext?fmt=json3' };
+  const emptyCtx = {
+    buffer: new TimedtextBuffer(),
+    video: null,
+    playerResponse: webResponse('WEB_PARAMS'),
+  };
+
+  function innertubeYtcfg(): void {
+    window.ytcfg = {
+      get: (name: string) =>
+        name === 'INNERTUBE_API_KEY'
+          ? 'FIXTURE_KEY'
+          : name === 'INNERTUBE_CONTEXT'
+            ? { client: { clientName: 'WEB' } }
+            : undefined,
+    };
+  }
+
+  it('fires get_transcript from the WEB response params when the ANDROID POST fails', async () => {
+    innertubeYtcfg();
+    const fetchMock = mockFetch((url) => {
+      if (url.pathname === '/api/timedtext') return { ok: false, body: {} };
+      if (url.pathname === '/youtubei/v1/player') return 'throw';
+      if (url.pathname === '/youtubei/v1/get_transcript') return { ok: true, body: transcriptResponse() };
+      return { ok: true, body: json3Payload };
+    });
+    const result = await fetchCaptions(track, 'vid', emptyCtx);
+    expect(result.source).toBe('android');
+    expect((result.json as { windows: unknown[] }).windows).toHaveLength(3);
+    const paths = fetchMock.mock.calls.map(([input]) => new URL(String(input)).pathname);
+    expect(paths).toEqual(['/api/timedtext', '/youtubei/v1/player', '/youtubei/v1/get_transcript']);
+  });
+
+  it('lands on get_transcript when the ANDROID response is LOGIN_REQUIRED-shaped', async () => {
+    innertubeYtcfg();
+    const fetchMock = mockFetch((url) => {
+      if (url.pathname === '/api/timedtext') return { ok: false, body: {} };
+      if (url.pathname === '/youtubei/v1/player') return { ok: true, body: loginRequiredResponse() };
+      if (url.pathname === '/youtubei/v1/get_transcript') return { ok: true, body: transcriptResponse() };
+      return { ok: true, body: json3Payload };
+    });
+    const result = await fetchCaptions(track, 'vid', emptyCtx);
+    expect(result.source).toBe('android');
+    expect((result.json as { windows: unknown[] }).windows).toHaveLength(3);
+    const paths = fetchMock.mock.calls.map(([input]) => new URL(String(input)).pathname);
+    expect(paths).toEqual(['/api/timedtext', '/youtubei/v1/player', '/youtubei/v1/get_transcript']);
+  });
+
+  it('ends at none without WEB params: no get_transcript POST fires', async () => {
+    innertubeYtcfg();
+    const fetchMock = mockFetch((url) => {
+      if (url.pathname === '/api/timedtext') return { ok: false, body: {} };
+      if (url.pathname === '/youtubei/v1/player') return { ok: true, body: loginRequiredResponse() };
+      return { ok: true, body: json3Payload };
+    });
+    const result = await fetchCaptions(track, 'vid', {
+      ...emptyCtx,
+      playerResponse: webResponse(),
+    });
+    expect(result).toEqual({ json: null, source: 'none' });
+    const paths = fetchMock.mock.calls.map(([input]) => new URL(String(input)).pathname);
+    expect(paths).toEqual(['/api/timedtext', '/youtubei/v1/player']);
   });
 });
