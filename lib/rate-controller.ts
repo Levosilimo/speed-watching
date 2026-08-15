@@ -5,7 +5,7 @@
 // the current-video context.
 
 import { createPill, type AppliedSource, type LiveRate, type PillApi, type PillEvents, type PillState } from '../ui/pill';
-import { OVERLAY_Z_INDEX } from '../ui/styles';
+import { OVERLAY_Z_INDEX, ensureAutohideCouplingCss } from '../ui/styles';
 import { shouldAutoApply } from './auto-apply';
 import type { LanguageModel, RateRange } from './languages';
 import { SerializedRunner } from './measure-guard';
@@ -83,8 +83,8 @@ export function createRateController<C extends RateCurrent>(deps: RateController
     const wrapper = document.createElement('div');
     wrapper.className = 'speedwatcher-pill-host';
     wrapper.style.zIndex = String(OVERLAY_Z_INDEX);
-    anchor.appendChild(wrapper);
-    return wrapper;
+    ensureAutohideCouplingCss(wrapper.ownerDocument);
+    return anchor.appendChild(wrapper) as HTMLElement;
   }
 
   /** User-initiated apply (pill button, shortcut): auto stops, source user. */

@@ -619,6 +619,54 @@ test('pill anchors inside the player control zone: containment, occlusion, scrol
   }
 });
 
+test('autohide coupling: the pill host hides with the player controls and returns when they show', async () => {
+  await driver.navigateToWatch('real/manual-cue.json');
+  await driver.readPillState();
+  await settlePill(page);
+
+  const readHost = (): Promise<{ visibility: string; opacity: string } | null> =>
+    page.evaluate(() => {
+      const host = document.querySelector<HTMLElement>('.speedwatcher-pill-host');
+      if (host === null) return null;
+      const cs = getComputedStyle(host);
+      return { visibility: cs.visibility, opacity: cs.opacity };
+    });
+
+  // Controls shown: the pill host is visible (the coupling must NOT hide
+  // the pill while the controls are up).
+  expect(await readHost()).toEqual({ visibility: 'visible', opacity: '1' });
+
+  // Controls autohidden (.ytp-autohide on #movie_player): the host hides
+  // with them — the fail-without-fix lane: without the coupling rule the
+  // host stays visible.
+  await page.evaluate(() => document.querySelector('#movie_player')?.classList.add('ytp-autohide'));
+  await page.waitForFunction(() => {
+    const host = document.querySelector<HTMLElement>('.speedwatcher-pill-host');
+    return host !== null && getComputedStyle(host).visibility === 'hidden';
+  });
+  expect((await readHost())?.opacity).toBe('0');
+
+  // The nudge host is covered by the same rule.
+  await page.evaluate(() => {
+    const anchor = document.querySelector('#movie_player');
+    const nudge = document.createElement('div');
+    nudge.className = 'speedwatcher-nudge-host';
+    anchor?.appendChild(nudge);
+  });
+  const nudgeVisibility = await page.evaluate(
+    () => getComputedStyle(document.querySelector('.speedwatcher-nudge-host') as HTMLElement).visibility,
+  );
+  expect(nudgeVisibility).toBe('hidden');
+
+  // Controls back: the pill host returns.
+  await page.evaluate(() => document.querySelector('#movie_player')?.classList.remove('ytp-autohide'));
+  await page.waitForFunction(() => {
+    const host = document.querySelector<HTMLElement>('.speedwatcher-pill-host');
+    return host !== null && getComputedStyle(host).visibility === 'visible';
+  });
+  expect((await readHost())?.opacity).toBe('1');
+});
+
 test('estimated renders increment the local demand counter (zero egress)', async () => {
   // The shared specs assert tierLabel 'estimated' in both browsers; the
   // counter itself lives in chrome.storage.local, reachable only from the
