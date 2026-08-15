@@ -86,8 +86,10 @@ async function routeFixtures(target: BrowserContext): Promise<void> {
     const multi = url.searchParams.get('multi');
     const live = url.searchParams.get('live');
     const straybadge = url.searchParams.get('straybadge');
+    const playersize = url.searchParams.get('playersize');
+    const fullscreen = url.searchParams.get('fullscreen');
     const response = await fetch(
-      `${fixtureBase}/watch?fixture=${fixture}&multi=${multi ?? ''}&live=${live ?? ''}&straybadge=${straybadge ?? ''}`,
+      `${fixtureBase}/watch?fixture=${fixture}&multi=${multi ?? ''}&live=${live ?? ''}&straybadge=${straybadge ?? ''}&playersize=${playersize ?? ''}&fullscreen=${fullscreen ?? ''}`,
     );
     await route.fulfill({
       status: response.status,

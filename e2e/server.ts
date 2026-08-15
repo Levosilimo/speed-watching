@@ -199,6 +199,8 @@ export function createFixtureServer(port = FIXTURE_PORT): Promise<FixtureServer>
     }
     const trackKind = KIND_BY_FIXTURE[fixture];
     const live = url.searchParams.get('live') === '1';
+    const playerSize = url.searchParams.get('playersize');
+    const fullscreen = url.searchParams.get('fullscreen') === '1';
     const playerResponse = {
       videoDetails: {
         videoId: 'e2e-fixture',
@@ -245,6 +247,13 @@ export function createFixtureServer(port = FIXTURE_PORT): Promise<FixtureServer>
         '__STRAY_BADGE__',
         url.searchParams.get('straybadge') === '1' ? '<div class="ytp-live-badge"></div>' : '',
       )
+      // playersize=mini|theater swaps #player's width/height (body class);
+      // fullscreen=1 marks #movie_player as the fullscreen element.
+      .replace(
+        '__BODY_CLASS__',
+        playerSize === 'mini' ? 'sw-mini' : playerSize === 'theater' ? 'sw-theater' : '',
+      )
+      .replace('__FULLSCREEN__', fullscreen ? ' ytp-fullscreen' : '')
       // The pot-gated variant: stub player controls + signed-fetch behavior
       // (see the __POT_GATED__ block in watch.html). Injected for that
       // fixture only — the other pages keep their bare <video>.

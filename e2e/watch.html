@@ -2,17 +2,53 @@
 <!-- E2E stub of the YouTube watch page: minimal structural mimic (a
      div#movie_player.html5-video-player wrapping the video — real YouTube's
      shape — plus a player response) and the measurement-event listener the
-     content script's E2E hook dispatches. The player response JSON and the
-     stray-badge variant are injected by e2e/server.ts. -->
+     content script's E2E hook dispatches. The player response JSON, the
+     stray-badge variant, the player-size variant, and the fullscreen
+     variant are injected by e2e/server.ts. The layout CSS gives the player
+     real geometry (position:relative containing block, sized 640x360) so
+     the anchored pill has a player to sit in; the .ytp-chrome-bottom and
+     .ytp-caption-window-container skeletons mirror the real player chrome
+     the control-zone assertions measure against. -->
 <html lang="en">
   <head>
     <meta charset="utf-8" />
     <title>Fixture watch page</title>
+    <style>
+      body { margin: 0; }
+      #player { position: relative; width: 640px; height: 360px; }
+      #movie_player { position: relative; width: 100%; height: 100%; overflow: visible; }
+      #movie_player video { position: absolute; inset: 0; width: 100%; height: 100%; }
+      .ytp-chrome-bottom {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 36px;
+        background: rgba(0, 0, 0, 0.4);
+      }
+      .ytp-caption-window-container {
+        position: absolute;
+        bottom: 56px;
+        left: 0;
+        right: 0;
+        height: 40px;
+        pointer-events: none;
+      }
+      /* fullscreen=1 variant: the player container becomes the fullscreen
+         element (real YouTube's .ytp-fullscreen state). */
+      #movie_player.ytp-fullscreen { position: fixed; inset: 0; }
+      /* playersize variant: swap #player's width/height. mini stays wide
+         enough to contain the pill's 420px max-width. */
+      body.sw-mini #player { width: 480px; height: 270px; }
+      body.sw-theater #player { width: 1280px; height: 720px; }
+    </style>
   </head>
-  <body>
+  <body class="__BODY_CLASS__">
     <div id="player">
-      <div id="movie_player" class="html5-video-player">
+      <div id="movie_player" class="html5-video-player__FULLSCREEN__">
         <video></video>
+        <div class="ytp-chrome-bottom"></div>
+        <div class="ytp-caption-window-container"></div>
         __EXTRA_VIDEO__
       </div>
     </div>
