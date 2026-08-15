@@ -11,6 +11,7 @@ import { fetchAndroidCaptions, fetchJson3 } from '@/lib/caption-fetch';
 import { parseYouTubeJson3, type Segment } from '@/lib/captions';
 import { cueSignal, detectContentType, priorMidpoint } from '@/lib/heuristics';
 import { normalizeLanguageCode, resolveLanguage, UNIT_LABELS, type LanguageModel, type RateRange } from '@/lib/languages';
+import { hasVisiblePlayerBadge } from '@/lib/live';
 import { logWpm, waitForPlayerResponse } from '@/lib/measure-hooks';
 import { buildWpmResponse, type MeasurementContext } from '@/lib/wpm-provider';
 import { createBridgeClient, isShortcutEnvelope, SHORTCUT_APPLY } from '@/lib/messaging';
@@ -202,8 +203,7 @@ function isLive(response?: PlayerResponse): boolean {
   if (response?.videoDetails?.isLiveBroadcast === true) return true;
   const video = controller.activeVideo ?? document.querySelector<HTMLVideoElement>('video');
   if (video?.duration === Infinity) return true;
-  const badge = video?.closest('.html5-video-player')?.querySelector<HTMLElement>('.ytp-live-badge');
-  return badge != null && badge.offsetParent !== null;
+  return hasVisiblePlayerBadge(video);
 }
 
 /** Track resolution + web/android fetch + json3 parse. On failure carries
