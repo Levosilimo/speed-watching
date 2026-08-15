@@ -27,6 +27,7 @@ import type { PillState } from '../../ui/pill';
 import type { RateTier } from '../../lib/recommend';
 import {
   runBridgeSpecs,
+  runCaptureSpecs,
   runGenericSpecs,
   runLiveSuppressionSpecs,
   runMeasurementSpecs,
@@ -183,6 +184,16 @@ async function main(): Promise<void> {
         }
         return null;
       },
+      async readBareTimedtext(fixture) {
+        const value = await driver.executeAsyncScript(
+          'const done = arguments[arguments.length - 1];' +
+            'fetch("/api/timedtext?fixture=" + arguments[0])' +
+            '.then(async (r) => done({ status: r.status, body: await r.text() }))' +
+            '.catch((e) => done({ status: 0, body: String(e) }));',
+          fixture,
+        );
+        return value as unknown as { status: number; body: string };
+      },
       async readBrowserLanguage() {
         return driver.executeScript('return navigator.language') as unknown as Promise<string>;
       },
@@ -308,6 +319,7 @@ async function main(): Promise<void> {
     };
     await runMeasurementSpecs(e2e);
     await runPillSpecs(e2e);
+    await runCaptureSpecs(e2e);
     await runBridgeSpecs(e2e);
     await runGenericSpecs(e2e);
     await runMultiVideoSpecs(e2e);

@@ -7,7 +7,8 @@
 // shortcut/wpm relays.
 
 import { defineContentScript } from 'wxt/utils/define-content-script';
-import { fetchAndroidCaptions, fetchJson3 } from '@/lib/caption-fetch';
+import { installCaptionCapture, TimedtextBuffer } from '@/lib/caption-capture';
+import { fetchCaptions } from '@/lib/caption-fetch';
 import { parseYouTubeJson3, type Segment } from '@/lib/captions';
 import { cueSignal, detectContentType, priorMidpoint } from '@/lib/heuristics';
 import { normalizeLanguageCode, resolveLanguage, UNIT_LABELS, type LanguageModel, type RateRange } from '@/lib/languages';
@@ -46,6 +47,10 @@ type Current = MeasurementContext & {
 };
 
 const bridge = createBridgeClient(window);
+
+// Player-side timedtext capture (lib/caption-capture.ts): the signed
+// requests the POT gate pays payloads to, keyed by video id.
+const captureBuffer = new TimedtextBuffer();
 
 // Chapter feature state (content-only): the per-chapter rate plan, the
 // session-scoped consent, and the scheduler that applies boundary steps.
@@ -112,7 +117,7 @@ const controller = createRateController<Current>({
 declare global {
   interface Window {
     __speedwatcherPill?: PillTestHook;
-    __speedwatcherCaptionSource?: 'web' | 'android' | 'none';
+    __speedwatcherCaptionSource?: 'web' | 'android' | 'capture' | 'none';
     // E2E hook: settings write through the bridge (same path the options
     // page uses) — the shared specs exercise the bridge in both browsers.
     __speedwatcherSettings?: { set(settings: Settings): Promise<void> };
@@ -134,6 +139,11 @@ export default defineContentScript({
   world: 'MAIN',
   main() {
     if (!location.pathname.startsWith('/watch')) return;
+    // Patched once per document — the guard flag makes re-runs no-ops.
+    installCaptionCapture((capture) => {
+      const videoId = new URLSearchParams(location.search).get('v');
+      if (videoId !== null) captureBuffer.add(videoId, capture);
+    });
     document.addEventListener('play', controller.onMediaEvent, true);
     document.addEventListener('playing', controller.onMediaEvent, true);
     document.addEventListener('timeupdate', controller.onMediaEvent, true);
@@ -187,9 +197,13 @@ export default defineContentScript({
       };
     }
     void measure();
-    // SPA navigation: invalidate the old video's recommendation before the
-    // next measure lands, so a fast Apply cannot use the previous multiplier.
-    document.addEventListener('yt-navigate-start', controller.reset);
+    // SPA navigation: reset the old video's context (a fast Apply must not
+    // use the previous multiplier) and clear its stale timedtext captures.
+    document.addEventListener('yt-navigate-start', () => {
+      controller.reset();
+      const videoId = new URLSearchParams(location.search).get('v');
+      if (videoId !== null) captureBuffer.clear(videoId);
+    });
     document.addEventListener('yt-navigate-finish', () => void measure());
   },
 });
@@ -222,7 +236,10 @@ async function fetchAndParseCaptions(
     if (__E2E__) console.info('[speed-watcher] wpm: no caption tracks for this video — estimated');
     return { ok: false, language: undefined };
   }
-  const json = await fetchCaptions(track, videoId);
+  const json = await fetchCaptions(track, videoId, {
+    buffer: captureBuffer,
+    video: controller.activeVideo ?? document.querySelector<HTMLVideoElement>('video'),
+  });
   if (json === null) {
     if (__E2E__) console.info('[speed-watcher] wpm: caption fetch failed — estimated');
     return { ok: false, language };
@@ -365,23 +382,6 @@ function attachSkip(video: HTMLVideoElement, applied: number): void {
     const state = controller.pillState;
     if (state !== null) controller.showPill({ ...state, skipSlowed: inGap });
   });
-}
-
-// ── Caption fetch: WEB primary, ANDROID innertube fallback ────────────────
-
-async function fetchCaptions(track: CaptionTrack, videoId: string): Promise<unknown | null> {
-  const web = await fetchJson3(track.baseUrl);
-  if (web !== null) {
-    if (__E2E__) window.__speedwatcherCaptionSource = 'web';
-    return web;
-  }
-  const android = await fetchAndroidCaptions(videoId);
-  if (android !== null) {
-    if (__E2E__) window.__speedwatcherCaptionSource = 'android';
-    return android;
-  }
-  if (__E2E__) window.__speedwatcherCaptionSource = 'none';
-  return null;
 }
 
 /** The scheduler's status for the pill line: paused after a manual rate,

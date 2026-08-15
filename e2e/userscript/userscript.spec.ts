@@ -25,7 +25,7 @@ declare global {
       dismiss(): void;
       stopAuto?(): void;
     };
-    __speedwatcherCaptionSource?: 'web' | 'android' | 'none';
+    __speedwatcherCaptionSource?: 'web' | 'android' | 'capture' | 'none';
     /** Absent in plain chromium — the no-storage fallback relies on that. */
     GM_setValue?: unknown;
   }

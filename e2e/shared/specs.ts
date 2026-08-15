@@ -43,7 +43,7 @@ import type { MeasureEventDetail } from '../../lib/measure-hooks';
 
 export type Measurement = MeasureEventDetail;
 
-export type CaptionSource = 'web' | 'android' | 'none';
+export type CaptionSource = 'web' | 'android' | 'capture' | 'none';
 
 declare global {
   interface Window {
@@ -91,8 +91,12 @@ export interface E2EDriver {
   /** The page's <video> playbackRate (index picks the element on
    * multi-video pages), or null when no video element exists. */
   readPlaybackRate(index?: number): Promise<number | null>;
-  /** Which caption path served the page: 'web', 'android', or 'none'. */
+  /** Which caption path served the page: 'web', 'android', 'capture', or 'none'. */
   readCaptionSource(): Promise<CaptionSource | null>;
+  /** Bare /api/timedtext fetch from the page (no pot params) — the
+   * pot-gated fixture's gate is asserted through the same route the
+   * content script's fetchJson3 used. */
+  readBareTimedtext(fixture: string): Promise<{ status: number; body: string }>;
   /** The page's browser UI language (navigator.language) — the estimated
    * tier's UI-locale language fallback reads it, so the spec mirror needs
    * the same input the content script uses. */
@@ -390,6 +394,65 @@ export async function runPillSpecs(driver: E2EDriver): Promise<void> {
     if (state.label !== rec.label) {
       throw new Error(`${fixture}: pill label "${state.label}" !== expected "${rec.label}"`);
     }
+  }
+}
+
+/**
+ * Pot-gated caption e2e (the logged-in POT failure): the fixture server
+ * pays payloads only to signed timedtext requests (pot/potc params); a bare
+ * fetch 200-empties. (a) proves the gate is real through the harness route;
+ * (b) proves the capture-first path measures from the player's signed
+ * fetch — the fail-without-fix lane: before the content-script wiring, the
+ * bare fetch 200-empties and the pill lands on the estimated tier.
+ */
+export async function runCaptureSpecs(driver: E2EDriver): Promise<void> {
+  const fixture = 'synthetic/pot-gated.json';
+
+  // (a) The gate is real in the harness: a bare timedtext fetch (the old
+  // fetchJson3 shape, no pot) is HTTP 200 with an empty body. Runs from the
+  // watch page so the relative fetch resolves against the youtube origin.
+  await driver.navigateToWatch(fixture);
+  const bare = await driver.readBareTimedtext(fixture);
+  if (bare.status !== 200 || bare.body !== '') {
+    throw new Error(
+      `pot-gated: bare timedtext returned ${bare.status}/${JSON.stringify(bare.body.slice(0, 40))}, expected 200/empty`,
+    );
+  }
+
+  // (b) Fresh navigation: the capture path below must measure from scratch.
+  await driver.navigateToWatch(fixture);
+  const state = expectState(await driver.readPillState(), fixture);
+  const source = await driver.readCaptionSource();
+  if (source !== 'capture') {
+    throw new Error(`${fixture}: caption source ${source}, expected capture`);
+  }
+  const { rec, naturalRate } = expectedRecommendation(fixture);
+  if (state.mode !== rec.mode) {
+    throw new Error(`${fixture}: pill mode ${state.mode} !== expected ${rec.mode}`);
+  }
+  if (state.tierLabel !== rec.tierLabel) {
+    throw new Error(`${fixture}: pill tierLabel ${state.tierLabel} !== expected ${rec.tierLabel}`);
+  }
+  if (Math.abs(state.rateWpm - naturalRate) > WPM_TOLERANCE) {
+    throw new Error(`${fixture}: pill rateWpm ${state.rateWpm} outside tolerance of ${naturalRate}`);
+  }
+  if (Math.abs(state.multiplier - rec.multiplier) > 1e-9) {
+    throw new Error(
+      `${fixture}: pill multiplier ${state.multiplier} !== expected ${rec.multiplier}`,
+    );
+  }
+  // The word-timed measurement itself (not just the pill): the captured
+  // payload must have produced the word-level rate of the fixture.
+  const measurement = await driver.readMeasurement();
+  if (measurement === undefined) {
+    throw new Error(`${fixture}: no speedwatcher:measure payload`);
+  }
+  const expected = expectedStats(fixture);
+  assertClose(measurement.stats.word, expected.word, `${fixture} captured word-level`);
+  if (measurement.stats.nWords !== expected.nWords) {
+    throw new Error(
+      `${fixture}: nWords ${measurement.stats.nWords} !== expected ${expected.nWords}`,
+    );
   }
 }
 

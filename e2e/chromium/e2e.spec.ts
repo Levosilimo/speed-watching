@@ -21,6 +21,7 @@ import {
   runAutoSpecs,
   runBridgeSpecs,
   runChapterSpecs,
+  runCaptureSpecs,
   runGenericSpecs,
   runLiveSuppressionSpecs,
   runMeasurementSpecs,
@@ -66,8 +67,10 @@ async function routeFixtures(target: BrowserContext): Promise<void> {
       return;
     }
     if (url.pathname === '/api/timedtext') {
-      const fixture = url.searchParams.get('fixture');
-      const response = await fetch(`${fixtureBase}/api/timedtext?fixture=${fixture}`);
+      // All query params are forwarded (fixture + pot/potc/c/fmt): the
+      // pot-gated fixture's gate keys on the pot proof-of-origin params, so
+      // stripping them here would break the signed-request lane.
+      const response = await fetch(`${fixtureBase}/api/timedtext?${url.searchParams.toString()}`);
       await route.fulfill({
         status: response.status,
         contentType: 'application/json',
@@ -177,6 +180,12 @@ test.beforeAll(async () => {
       return page.evaluate(
         () => (window.__speedwatcherCaptionSource as CaptionSource) ?? null,
       );
+    },
+    async readBareTimedtext(fixture) {
+      return page.evaluate(async (f) => {
+        const response = await fetch(`/api/timedtext?fixture=${f}`);
+        return { status: response.status, body: await response.text() };
+      }, fixture);
     },
     async readBrowserLanguage() {
       return page.evaluate(() => navigator.language);
@@ -325,6 +334,10 @@ test('pill renders, applies, dismisses; music/unreachable suppress Apply; WEB-bl
   // Network-layer proof the ANDROID innertube fallback actually fired: the
   // web-blocked fixture must have produced one youtubei/v1/player POST.
   expect(androidPosts).toBeGreaterThan(0);
+});
+
+test('pot-gated fixture: bare timedtext 200-empties; the capture path measures from the signed response', async () => {
+  await runCaptureSpecs(driver);
 });
 
 test('pill really paints: shadow root populated, non-zero geometry, in the layout tree', async () => {

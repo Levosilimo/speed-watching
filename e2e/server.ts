@@ -21,6 +21,7 @@ import {
   KIND_BY_FIXTURE,
   LANG_BY_FIXTURE,
   NO_TRACK_FIXTURES,
+  POT_GATED_FIXTURES,
 } from './shared/fixtures';
 
 export const FIXTURE_PORT = 4319;
@@ -48,6 +49,43 @@ const CONTENT_TYPE_BY_EXT: Record<string, string> = {
   srt: 'text/plain',
   webm: 'video/webm',
 };
+
+/** The pot-gated watch-page variant (see the __POT_GATED__ slot in
+ * watch.html): player-control DOM plus a stub player that answers the CC
+ * toggle and the ASR track re-pick with a SIGNED timedtext fetch (pot +
+ * potc params) — the only requests the fixture server pays payloads to.
+ * Injected into the MAIN world, so the extension's capture wrappers see
+ * the fetch. The signed URL is the track's baseUrl (already carrying the
+ * fixture param) plus the pot params, mirroring the real player. */
+const potGatedStub = `<script>
+(() => {
+  const video = document.querySelector('video');
+  if (video === null) return;
+  // The capture-first path only drives the CC controls on a ready player;
+  // the stub reports the metadata loaded state.
+  Object.defineProperty(video, 'readyState', { value: 4, configurable: true });
+  const panel = document.createElement('div');
+  panel.innerHTML =
+    '<button class="ytp-subtitles-button" aria-pressed="false"></button>' +
+    '<button class="ytp-settings-button"></button>' +
+    '<div class="ytp-panel-menu"><div class="ytp-menuitem"><div class="ytp-menuitem-label">Subtitles/CC</div></div></div>' +
+    '<div class="ytp-panel-menu"><div class="ytp-menuitem"><div class="ytp-menuitem-label">English (auto-generated)</div></div></div>';
+  document.body.appendChild(panel);
+  const baseUrl = window.ytInitialPlayerResponse?.captions?.playerCaptionsTracklistRenderer?.captionTracks?.[0]?.baseUrl;
+  const signed = () => {
+    if (typeof baseUrl !== 'string') return;
+    void fetch(baseUrl + '&pot=FIXTURE_POT&potc=1&c=WEB&fmt=json3');
+  };
+  panel.querySelector('.ytp-subtitles-button')?.addEventListener('click', (event) => {
+    const button = event.currentTarget;
+    button.setAttribute('aria-pressed', button.getAttribute('aria-pressed') === 'true' ? 'false' : 'true');
+    signed();
+  });
+  panel.querySelectorAll('.ytp-menuitem').forEach((item) => {
+    item.addEventListener('click', signed);
+  });
+})();` +
+  '</script>';
 
 interface FixtureServer {
   /** Base URL of this server, e.g. http://127.0.0.1:4319 */
@@ -137,6 +175,13 @@ export function createFixtureServer(port = FIXTURE_PORT): Promise<FixtureServer>
         res.end('blocked');
         return;
       }
+      if (POT_GATED_FIXTURES.includes(fixture) && !url.searchParams.has('pot') && !url.searchParams.has('potc')) {
+        // The logged-in POT failure mode: HTTP 200 with an empty body. A
+        // bare captionTracks fetch must NOT get the payload.
+        res.statusCode = 200;
+        res.end();
+        return;
+      }
       // Caption payload: served on the youtube.com origin (same-origin for
       // the content script's fetch — avoids CORS and Private Network Access).
       res.setHeader('Content-Type', 'application/json');
@@ -199,7 +244,11 @@ export function createFixtureServer(port = FIXTURE_PORT): Promise<FixtureServer>
       .replace(
         '__STRAY_BADGE__',
         url.searchParams.get('straybadge') === '1' ? '<div class="ytp-live-badge"></div>' : '',
-      );
+      )
+      // The pot-gated variant: stub player controls + signed-fetch behavior
+      // (see the __POT_GATED__ block in watch.html). Injected for that
+      // fixture only — the other pages keep their bare <video>.
+      .replace('__POT_GATED__', POT_GATED_FIXTURES.includes(fixture) ? potGatedStub : '');
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.end(page);
   });

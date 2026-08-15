@@ -16,9 +16,6 @@
   "project": [
     "**/*.ts"
   ],
-  // New modules awaiting entrypoint wiring (caption-capture lane part 2);
-  // drop these entries when content.ts imports them.
-  "ignore": ["lib/caption-capture.ts", "lib/caption-trigger.ts"],
   "ignoreDependencies": [
     "block-no-verify",
     "@ast-grep/cli",
