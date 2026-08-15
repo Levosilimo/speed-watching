@@ -11,6 +11,7 @@ import { fetchAndroidCaptions, fetchJson3 } from '../../lib/caption-fetch';
 import { parseYouTubeJson3 } from '../../lib/captions';
 import { cueSignal, detectContentType, priorMidpoint } from '../../lib/heuristics';
 import { resolveLanguage, UNIT_LABELS, type LanguageModel } from '../../lib/languages';
+import { hasVisiblePlayerBadge } from '../../lib/live';
 import { SerializedRunner } from '../../lib/measure-guard';
 import { waitForPlayerResponse, type MeasureEventDetail } from '../../lib/measure-hooks';
 import { detectMusic, type ContentType } from '../../lib/music';
@@ -92,10 +93,7 @@ function isLive(response?: PlayerResponse): boolean {
   if (response?.videoDetails?.isLiveBroadcast === true) return true;
   const video = activeVideo ?? document.querySelector<HTMLVideoElement>('video');
   if (video?.duration === Infinity) return true;
-  // Scoped to the active player and visible-only: a stray page-level badge
-  // (e.g. in a related video's preview) must not suppress a normal VOD.
-  const badge = video?.closest('.html5-video-player')?.querySelector<HTMLElement>('.ytp-live-badge');
-  return badge != null && badge.offsetParent !== null;
+  return hasVisiblePlayerBadge(video);
 }
 
 function measure(): void {
