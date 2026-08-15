@@ -2,7 +2,7 @@
 // ui/pill.ts to keep the component file under the aislop file-size
 // budget (complexity/file-too-large).
 
-import { TOKENS, OVERLAY_Z_INDEX, type Theme } from './styles';
+import { TOKENS, OVERLAY_Z_INDEX, HOST_BOTTOM_OFFSET_PX, PILL_COMPACT_MAX_WIDTH, type Theme } from './styles';
 
 export function pillCss(t: Theme): string {
   return `
@@ -12,7 +12,7 @@ export function pillCss(t: Theme): string {
       all: initial;
       display: block;
       position: absolute;
-      bottom: 44px;
+      bottom: ${HOST_BOTTOM_OFFSET_PX}px;
       right: 12px;
       z-index: ${OVERLAY_Z_INDEX};
       font-family: ${TOKENS.fontSans};
@@ -34,7 +34,8 @@ export function pillCss(t: Theme): string {
       box-shadow: ${t.shadowMd};
       backdrop-filter: blur(8px);
       -webkit-backdrop-filter: blur(8px);
-      max-width: 420px;
+      max-width: ${PILL_COMPACT_MAX_WIDTH}px;
+      white-space: nowrap;
       transition: opacity ${TOKENS.durationNorm} ${TOKENS.easeOut},
                   transform ${TOKENS.durationNorm} ${TOKENS.easeOut};
     }
@@ -67,6 +68,50 @@ export function pillCss(t: Theme): string {
       display: flex;
       flex-direction: column;
       gap: 1px;
+    }
+
+    /* Compact recommend mode: one line — the label + tier inline with the
+       actions. The live-rate, saved-time, and chapter-status lines stay out
+       of the resting box and reveal on hover/focus-within (the box grows
+       upward from its 68px anchor, never into the control band). The
+       first-run explainer keeps a second line only when it is needed; the
+       multi-line copy resets the pill's nowrap. */
+    .pill[data-mode="recommend"] .main-text {
+      flex-direction: row;
+      flex-wrap: wrap;
+      align-items: baseline;
+      column-gap: ${TOKENS.sp2};
+      row-gap: ${TOKENS.sp1};
+    }
+
+    .pill[data-mode="recommend"] .label {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .pill[data-mode="recommend"] .first-run {
+      flex-basis: 100%;
+    }
+
+    .pill[data-mode="recommend"] .live-rate,
+    .pill[data-mode="recommend"] .saved-time,
+    .pill[data-mode="recommend"] .chapter-status {
+      display: none;
+    }
+
+    .pill[data-mode="recommend"]:hover .live-rate,
+    .pill[data-mode="recommend"]:hover .saved-time,
+    .pill[data-mode="recommend"]:hover .chapter-status,
+    .pill[data-mode="recommend"]:focus-within .live-rate,
+    .pill[data-mode="recommend"]:focus-within .saved-time,
+    .pill[data-mode="recommend"]:focus-within .chapter-status {
+      display: block;
+      flex-basis: 100%;
+    }
+
+    .pill .warning-note,
+    .pill .first-run {
+      white-space: normal;
     }
 
     .label {

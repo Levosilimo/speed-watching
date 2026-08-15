@@ -20,10 +20,13 @@
       #movie_player video { position: absolute; inset: 0; width: 100%; height: 100%; }
       .ytp-chrome-bottom {
         position: absolute;
-        bottom: 0;
+        /* The real 2026 player's right-cluster control buttons (settings/
+           fullscreen) span 12–60px above the player bottom (48px button +
+           12px top margin) — the band the pill must clear. */
+        bottom: 12px;
         left: 0;
         right: 0;
-        height: 36px;
+        height: 48px;
         background: rgba(0, 0, 0, 0.4);
       }
       .ytp-caption-window-container {
@@ -38,7 +41,7 @@
          element (real YouTube's .ytp-fullscreen state). */
       #movie_player.ytp-fullscreen { position: fixed; inset: 0; }
       /* playersize variant: swap #player's width/height. mini stays wide
-         enough to contain the pill's 420px max-width. */
+         enough to contain the pill's 300px max-width. */
       body.sw-mini #player { width: 480px; height: 270px; }
       body.sw-theater #player { width: 1280px; height: 720px; }
     </style>

@@ -455,6 +455,9 @@ async function readControlZone(page: Page): Promise<{
   atCenter: { tag: string; cls: string; isHost: boolean };
   shadowInPill: boolean;
   atControls: { tag: string; cls: string; isHost: boolean };
+  /** Probe inside the right-cluster control-button band (12–60px above the
+   * player bottom) — the pill must never capture clicks there. */
+  atBand: { tag: string; cls: string; isHost: boolean };
   oldAnchor: { x: number; y: number };
   atOldCorner: { tag: string; cls: string; isHost: boolean };
   atOldAnchor: { tag: string; cls: string; isHost: boolean };
@@ -475,6 +478,7 @@ async function readControlZone(page: Page): Promise<{
     const atCenter = document.elementFromPoint(cx, cy);
     const atCenterShadow = root.elementFromPoint(cx, cy);
     const atControls = document.elementFromPoint(playerRect.right - 40, playerRect.bottom - 18);
+    const atBand = document.elementFromPoint(playerRect.right - 40, playerRect.bottom - 52);
     const atOldCorner = document.elementFromPoint(window.innerWidth - 20, window.innerHeight - 20);
     // The old viewport-fixed pill's would-be center (bottom/right 18px
     // insets): where the pill used to sit, page content must now be
@@ -510,6 +514,7 @@ async function readControlZone(page: Page): Promise<{
       atCenter: describe(atCenter),
       shadowInPill: atCenterShadow !== null && (atCenterShadow === pill || pill.contains(atCenterShadow)),
       atControls: describe(atControls),
+      atBand: describe(atBand),
       atOldCorner: describe(atOldCorner),
       atOldAnchor: describe(atOldAnchor),
     };
@@ -532,23 +537,29 @@ function assertControlZone(
   expect(pill.top).toBeGreaterThanOrEqual(player.top);
   expect(pill.right).toBeLessThanOrEqual(player.right);
   expect(pill.bottom).toBeLessThanOrEqual(player.bottom);
-  // CONTROL-ZONE: bottom-right corner of the player, above the controls bar.
-  // The left-edge band is not asserted: the pill renders up to its 420px
-  // max-width (label + tier + actions), which can exceed a 200px band and
-  // still be right-anchored — the right-edge anchor plus containment pin
-  // the placement.
-  expect(pill.right).toBeGreaterThanOrEqual(player.right - 120);
-  expect(pill.bottom).toBeLessThanOrEqual(player.bottom - 40);
-  // BOUNDING-BOX-FILL: the configured insets hold (not clipped by overflow)
-  expect(player.right - pill.right).toBeGreaterThanOrEqual(12);
-  expect(player.bottom - pill.bottom).toBeGreaterThanOrEqual(40);
   // OCLUSION: the pill is the hit target at its center (elementFromPoint
   // reports the host for shadow content; the shadow-root probe confirms
-  // the .pill itself), and the controls bar is NOT covered by the pill
+  // the .pill itself), and neither the controls bar nor the right-cluster
+  // button band (12–60px above the bottom, where settings/fullscreen sit)
+  // is covered by the pill. Asserted before the clearance numbers so a
+  // regression to a low placement fails on the click-stealing property
+  // first.
   expect(geometry.atCenter.isHost).toBe(true);
   expect(geometry.shadowInPill).toBe(true);
   expect(geometry.atControls.cls).toContain('ytp-chrome-bottom');
   expect(geometry.atControls.isHost).toBe(false);
+  expect(geometry.atBand.cls).toContain('ytp-chrome-bottom');
+  expect(geometry.atBand.isHost).toBe(false);
+  // CONTROL-ZONE: bottom-right corner of the player, above the controls
+  // bar. The left-edge band is not asserted: the pill renders up to its
+  // 300px max-width (label + tier + actions), which can exceed a 200px
+  // band and still be right-anchored — the right-edge anchor plus
+  // containment pin the placement.
+  expect(pill.right).toBeGreaterThanOrEqual(player.right - 120);
+  expect(pill.bottom).toBeLessThanOrEqual(player.bottom - 60);
+  // BOUNDING-BOX-FILL: the configured insets hold (not clipped by overflow)
+  expect(player.right - pill.right).toBeGreaterThanOrEqual(12);
+  expect(player.bottom - pill.bottom).toBeGreaterThanOrEqual(60);
   // NO-ESCAPE: the old viewport-corner anchor points are free of the pill.
   // Skipped when the player covers the old anchor (theater/fullscreen): the
   // pill legitimately sits near the viewport corner there, so the probe is
@@ -606,6 +617,54 @@ test('pill anchors inside the player control zone: containment, occlusion, scrol
     await settlePill(page);
     await assertControlZone(await readControlZone(page), extra);
   }
+});
+
+test('autohide coupling: the pill host hides with the player controls and returns when they show', async () => {
+  await driver.navigateToWatch('real/manual-cue.json');
+  await driver.readPillState();
+  await settlePill(page);
+
+  const readHost = (): Promise<{ visibility: string; opacity: string } | null> =>
+    page.evaluate(() => {
+      const host = document.querySelector<HTMLElement>('.speedwatcher-pill-host');
+      if (host === null) return null;
+      const cs = getComputedStyle(host);
+      return { visibility: cs.visibility, opacity: cs.opacity };
+    });
+
+  // Controls shown: the pill host is visible (the coupling must NOT hide
+  // the pill while the controls are up).
+  expect(await readHost()).toEqual({ visibility: 'visible', opacity: '1' });
+
+  // Controls autohidden (.ytp-autohide on #movie_player): the host hides
+  // with them — the fail-without-fix lane: without the coupling rule the
+  // host stays visible.
+  await page.evaluate(() => document.querySelector('#movie_player')?.classList.add('ytp-autohide'));
+  await page.waitForFunction(() => {
+    const host = document.querySelector<HTMLElement>('.speedwatcher-pill-host');
+    return host !== null && getComputedStyle(host).visibility === 'hidden';
+  });
+  expect((await readHost())?.opacity).toBe('0');
+
+  // The nudge host is covered by the same rule.
+  await page.evaluate(() => {
+    const anchor = document.querySelector('#movie_player');
+    const nudge = document.createElement('div');
+    nudge.className = 'speedwatcher-nudge-host';
+    anchor?.appendChild(nudge);
+  });
+  const nudgeVisibility = await page.evaluate(
+    () => getComputedStyle(document.querySelector('.speedwatcher-nudge-host') as HTMLElement).visibility,
+  );
+  expect(nudgeVisibility).toBe('hidden');
+
+  // Controls back: the pill host returns.
+  await page.evaluate(() => document.querySelector('#movie_player')?.classList.remove('ytp-autohide'));
+  await page.waitForFunction(() => {
+    const host = document.querySelector<HTMLElement>('.speedwatcher-pill-host');
+    return host !== null && getComputedStyle(host).visibility === 'visible';
+  });
+  expect((await readHost())?.opacity).toBe('1');
 });
 
 test('estimated renders increment the local demand counter (zero egress)', async () => {

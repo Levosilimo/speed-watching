@@ -92,3 +92,35 @@ export type Theme = Record<keyof typeof LIGHT, string>;
  * that could flatten the shadow rule. */
 export const OVERLAY_Z_INDEX = 2147483000;
 
+/** Overlay-host bottom inset (pill + nudge): the hosts anchor this far
+ * above the player's bottom edge to clear the right-cluster control
+ * buttons (settings/fullscreen), which the 2026 player places 12–60px
+ * above the bottom (48px button + 12px top margin). */
+export const HOST_BOTTOM_OFFSET_PX = 68;
+
+/** Compact single-line pill cap (recommend mode): the label + tier + the
+ * Apply/Dismiss buttons fit one line at this width. */
+export const PILL_COMPACT_MAX_WIDTH = 300;
+
+/** The player's .ytp-autohide state hides the overlay hosts with the
+ * controls (VSC-style coupling). Page-level rule: the hosts live in the
+ * page's light DOM inside #movie_player, so the shadow :host rule cannot
+ * reach the ancestor state. visibility+opacity hide the shadow content
+ * with the controls; the hosts stay visible while the controls show. */
+const AUTOHIDE_RULE = `
+  #movie_player.ytp-autohide .speedwatcher-pill-host,
+  #movie_player.ytp-autohide .speedwatcher-nudge-host {
+    visibility: hidden;
+    opacity: 0;
+  }
+`;
+
+/** Injects the autohide coupling rule once per document. */
+export function ensureAutohideCouplingCss(doc: Document): void {
+  if (doc.getElementById('speedwatcher-autohide-css') !== null) return;
+  const style = doc.createElement('style');
+  style.id = 'speedwatcher-autohide-css';
+  style.textContent = AUTOHIDE_RULE;
+  (doc.head ?? doc.documentElement).appendChild(style);
+}
+
