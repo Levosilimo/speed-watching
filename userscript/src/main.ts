@@ -87,10 +87,15 @@ function onMediaEvent(event: Event): void {
   refreshLiveRate();
 }
 
-function isLive(): boolean {
+function isLive(response?: PlayerResponse): boolean {
+  if (response?.videoDetails?.isLiveContent === true) return true;
+  if (response?.videoDetails?.isLiveBroadcast === true) return true;
   const video = activeVideo ?? document.querySelector<HTMLVideoElement>('video');
   if (video?.duration === Infinity) return true;
-  return document.querySelector('.ytp-live-badge') !== null;
+  // Scoped to the active player and visible-only: a stray page-level badge
+  // (e.g. in a related video's preview) must not suppress a normal VOD.
+  const badge = video?.closest('.html5-video-player')?.querySelector<HTMLElement>('.ytp-live-badge');
+  return badge != null && badge.offsetParent !== null;
 }
 
 function measure(): void {
@@ -122,7 +127,7 @@ function logMeasure(
 async function measureOnce(): Promise<void> {
   const response = await waitForPlayerResponse();
   if (response === undefined) return;
-  if (isLive()) {
+  if (isLive(response)) {
     showPill(NONE_STATE);
     return;
   }
