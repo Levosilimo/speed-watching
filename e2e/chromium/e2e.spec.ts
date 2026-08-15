@@ -343,6 +343,7 @@ test('pill really paints: shadow root populated, non-zero geometry, in the layou
       x: rect.x,
       y: rect.y,
       hasOffsetParent: pill.offsetParent !== null,
+      hostZIndex: host === null || host === undefined ? -1 : Number(getComputedStyle(host).zIndex),
       viewport: { width: window.innerWidth, height: window.innerHeight },
     };
   });
@@ -368,6 +369,10 @@ test('pill really paints: shadow root populated, non-zero geometry, in the layou
   expect(bottom).toBeLessThanOrEqual(render.viewport.height);
   expect(right).toBeGreaterThan(render.viewport.width / 2);
   expect(bottom).toBeGreaterThan(render.viewport.height / 2);
+  // (e) the host sits at the top of the stacking chart — the user-verified
+  // fix for the pill painting behind YouTube's related-videos column (the
+  // computed value reads the inline style on the page-visible host).
+  expect(render.hostZIndex).toBeGreaterThanOrEqual(2147483000);
 });
 
 test('estimated renders increment the local demand counter (zero egress)', async () => {

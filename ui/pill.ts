@@ -8,7 +8,7 @@
 // not license to grow further.
 // aislop-ignore-file file-too-large
 
-import { DARK, LIGHT, type Theme } from './styles';
+import { DARK, LIGHT, OVERLAY_Z_INDEX, type Theme } from './styles';
 import { pillCss } from './pill-css';
 import { createBridgeClient } from '../lib/messaging';
 import type { RateRange } from '../lib/languages';
@@ -583,6 +583,9 @@ function watchTheme(
 }
 
 export function createPill(host: HTMLElement, events?: PillEvents, opts?: PillOptions): PillApi {
+  // Inline z-index: the shadow :host rule is capped by the player's
+  // stacking context; the page-visible inline value tops the chart.
+  host.style.zIndex = String(OVERLAY_Z_INDEX);
   const shadow = host.attachShadow({ mode: 'open' });
   let mounted = false;
   let destroyed = false;
@@ -603,14 +606,12 @@ export function createPill(host: HTMLElement, events?: PillEvents, opts?: PillOp
     if (currentState !== null) render(dom, currentState, liveRate, savedSec, locale, destroyed);
   });
 
-  // Detect theme from host's document or system
   const doc = host.ownerDocument;
   let dark = doc.defaultView?.matchMedia?.('(prefers-color-scheme: dark)')?.matches ?? false;
   const theme = (): Theme => (dark ? DARK : LIGHT);
 
   const dom = buildDom();
 
-  // Inject styles
   const style = doc.createElement('style');
   style.textContent = pillCss(theme());
   shadow.append(style, dom.pill);

@@ -4,7 +4,7 @@
 // are the i18n layer (display strings) and the bridge client it uses to
 // resolve the UI language.
 
-import { DARK, LIGHT, type Theme } from './styles';
+import { DARK, LIGHT, OVERLAY_Z_INDEX, type Theme } from './styles';
 import { nudgeCss } from './nudge-css';
 import { createBridgeClient } from '../lib/messaging';
 import { resolveUiLanguage, t, unitLabel, type UiLocale } from '../lib/i18n';
@@ -143,6 +143,9 @@ async function resolveNudgeLocale(win: Window | null): Promise<UiLocale> {
 }
 
 export function createNudge(host: HTMLElement, events?: NudgeEvents, opts?: NudgeOptions): NudgeApi {
+  // Inline z-index: the shadow :host rule is capped by the player's
+  // stacking context; the page-visible inline value tops the chart.
+  host.style.zIndex = String(OVERLAY_Z_INDEX);
   const shadow = host.attachShadow({ mode: 'open' });
   let destroyed = false;
   let shown = false;
