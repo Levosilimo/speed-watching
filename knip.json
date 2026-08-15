@@ -20,7 +20,6 @@
     "block-no-verify",
     "@ast-grep/cli",
     "@cws-check/cli",
-    "vitest-chrome",
     "@huggingface/transformers",
     "sharp"
   ],

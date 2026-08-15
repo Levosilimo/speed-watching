@@ -1,25 +1,43 @@
-import { vi } from 'vitest';
+import { vi, type Mock } from 'vitest';
+import { fakeBrowser } from 'wxt/testing/fake-browser';
 
-// Minimal chrome mock for the background glue test. vitest-chrome 0.1.0
-// cannot load under vitest 3: its CJS build require()s the ESM-only vitest
-// entry. Same shape as the Bitwarden pattern — a global `chrome` of vi.fn()s.
+// fakeBrowser (wxt/testing/fake-browser → @webext-core/fake-browser 2.0.1)
+// ships real in-memory implementations for storage, runtime messaging,
+// tabs, and action events. Members it models are exposed as vi.fn()s
+// wrapping the fake's implementation: tests keep the vitest surface
+// (mockResolvedValue, mock.calls, toHaveBeenCalledWith) while unstubbed
+// calls hit the fake's semantics instead of hand-rolled stubs. The rest —
+// tabCapture, offscreen, tabs.sendMessage, runtime.getContexts,
+// commands, contextMenus — are not modeled by the fake (it throws
+// MockNotImplementedError), so they stay bare vi.fn()s. The overloaded
+// fake members (sendMessage, query, session.get) need a signature cast so
+// vi.fn picks the promise-returning overload, not the callback one.
+const wrap = <Args extends unknown[], R>(fn: (...args: Args) => R): Mock<(...args: Args) => R> =>
+  vi.fn(fn) as Mock<(...args: Args) => R>;
+
 export const chromeMock = {
   runtime: {
-    getURL: vi.fn(),
-    sendMessage: vi.fn(),
+    getURL: wrap(fakeBrowser.runtime.getURL),
+    sendMessage: wrap(
+      fakeBrowser.runtime.sendMessage as (message: unknown, options?: unknown) => Promise<unknown>,
+    ),
     getContexts: vi.fn(),
-    onMessage: { addListener: vi.fn() },
+    onMessage: { addListener: wrap(fakeBrowser.runtime.onMessage.addListener) },
     onMessageExternal: { addListener: vi.fn() },
   },
   tabs: {
-    query: vi.fn(),
+    query: wrap(
+      fakeBrowser.tabs.query as (
+        info: { active?: boolean; currentWindow?: boolean },
+      ) => Promise<unknown[]>,
+    ),
     sendMessage: vi.fn(),
-    create: vi.fn(),
-    onActivated: { addListener: vi.fn() },
-    onRemoved: { addListener: vi.fn() },
+    create: wrap(fakeBrowser.tabs.create),
+    onActivated: { addListener: wrap(fakeBrowser.tabs.onActivated.addListener) },
+    onRemoved: { addListener: wrap(fakeBrowser.tabs.onRemoved.addListener) },
   },
   tabCapture: { getMediaStreamId: vi.fn() },
-  action: { onClicked: { addListener: vi.fn() } },
+  action: { onClicked: { addListener: wrap(fakeBrowser.action.onClicked.addListener) } },
   commands: { onCommand: { addListener: vi.fn() } },
   offscreen: { createDocument: vi.fn() },
   contextMenus: {
@@ -27,17 +45,17 @@ export const chromeMock = {
     onClicked: { addListener: vi.fn(), hasListener: vi.fn() },
   },
   storage: {
-    session: { get: vi.fn(), set: vi.fn(), remove: vi.fn() },
-    // Default get/set implementations: a vi.fn() with no implementation
-    // returns undefined, and the options harness's module re-imports (the
-    // vitest module-cache quirk documented in options-a11y.test.ts) can
-    // float a dev.ts refreshDemand past vi.restoreAllMocks() at teardown —
-    // a bare get() then throws on raw[this.key] as an unhandled rejection
-    // and fails the run. Returning {} keeps the floating call harmless.
+    session: {
+      get: wrap(
+        fakeBrowser.storage.session.get as (keys: string | null) => Promise<Record<string, unknown>>,
+      ),
+      set: wrap(fakeBrowser.storage.session.set),
+      remove: wrap(fakeBrowser.storage.session.remove),
+    },
     local: {
-      get: vi.fn(async (..._args: never[]) => ({})),
-      set: vi.fn(async (..._args: never[]) => {}),
-      onChanged: { addListener: vi.fn() },
+      get: wrap(fakeBrowser.storage.local.get as (keys: never) => Promise<unknown>),
+      set: wrap(fakeBrowser.storage.local.set),
+      onChanged: { addListener: wrap(fakeBrowser.storage.local.onChanged.addListener) },
     },
   },
 };
