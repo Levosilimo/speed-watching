@@ -538,6 +538,7 @@ export async function runTranscriptSpecs(driver: E2EDriver): Promise<void> {
   // (b) Fresh navigation: WEB 200-empties and no capture stub on the page,
   // so the ANDROID tail must land on get_transcript — the bare baseUrl
   // re-fetch would 200-empty too, and the lane fails without the fallback.
+  const attemptsBefore = await driver.readTranscriptAttempts();
   await driver.navigateToWatch(fixture);
   const state = expectState(await driver.readPillState(), fixture);
   const source = await driver.readCaptionSource();
@@ -577,8 +578,9 @@ export async function runTranscriptSpecs(driver: E2EDriver): Promise<void> {
     );
   }
 
-  // (c) Network-level: the get_transcript POST fired.
-  if ((await driver.readTranscriptAttempts()) === 0) {
+  // (c) Network-level: the get_transcript POST fired for this navigation
+  // (delta form — an earlier test's POST must not satisfy the assertion).
+  if ((await driver.readTranscriptAttempts()) <= attemptsBefore) {
     throw new Error(`${fixture}: get_transcript POST never fired`);
   }
 }
