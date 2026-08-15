@@ -206,6 +206,19 @@ describe('createPill', () => {
     expect(host.shadowRoot).toBe(root);
   });
 
+  it('mounts exactly a style and the pill surface in the shadow root', () => {
+    const host = shadowHost();
+    const pill = createPill(host, {}, { locale: 'en' });
+    pill.mount();
+    const root = rootOf(host);
+    // Browser equivalent of `:scope > *` count === 2 (happy-dom has no
+    // :scope): a relocation bug would orphan the style or the surface.
+    expect(root.children).toHaveLength(2);
+    const [style, surface] = [...root.children] as [HTMLElement, HTMLElement];
+    expect(style.tagName).toBe('STYLE');
+    expect(surface.classList.contains('pill')).toBe(true);
+  });
+
   it('keeps the live region on the text and off the action buttons', () => {
     const host = shadowHost();
     const pill = createPill(host, {}, { locale: 'en' });
