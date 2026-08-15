@@ -236,3 +236,140 @@ describe('restoreCcState restore discipline', () => {
     expect(cc.getAttribute('aria-pressed')).toBe('false');
   });
 });
+
+describe('triggerCcAutomation interaction gates (wave-5 complementary)', () => {
+  it('does not click the CC button when CC is already on (the player/user owns it)', async () => {
+    const { triggerCcAutomation } = await freshTrigger();
+    const { cc, ccClicks, settingsClicks } = stubPlayerControls();
+    cc.setAttribute('aria-pressed', 'true');
+    const drive = triggerCcAutomation('v1');
+    await vi.advanceTimersByTimeAsync(2000);
+    const result = await drive;
+    expect(result).toEqual({ ccWasOn: true, changed: false });
+    expect(ccClicks()).toBe(0);
+    expect(cc.getAttribute('aria-pressed')).toBe('true');
+    expect(settingsClicks()).toBe(1); // the drive still walks the menu
+  });
+
+  it('restore never toggles off a CC the user turned on after a suppressed call', async () => {
+    // The suppressed drive recorded ccWasOn:false (CC was off when it ran);
+    // the user turned CC on before the restore — the restore must not flip it.
+    const { restoreCcState } = await freshTrigger();
+    const { cc } = stubPlayerControls();
+    cc.setAttribute('aria-pressed', 'true');
+    restoreCcState({ ccWasOn: false, changed: false });
+    expect(cc.getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('restore does not click when the player toggled CC off after our flip', async () => {
+    // The drive flipped CC on (changed:true, ccWasOn:false) but the player
+    // reset the button before the restore ran — a click would turn CC back on.
+    const { restoreCcState } = await freshTrigger();
+    const { cc } = stubPlayerControls();
+    restoreCcState({ ccWasOn: false, changed: true });
+    expect(cc.getAttribute('aria-pressed')).toBe('false');
+  });
+
+  it('picks the RU auto track row and skips the RU control rows', async () => {
+    const { triggerCcAutomation } = await freshTrigger();
+    const { cc } = stubPlayerControls();
+    // Replace the English track row with RU labels: the auto row carries
+    // "автоматически созданные", and the picker also has the Off row.
+    const trackMenu = document.querySelector<HTMLElement>('.ytp-panel-menu:nth-of-type(2)');
+    trackMenu?.replaceChildren();
+    const autoRow = document.createElement('div');
+    autoRow.className = 'ytp-menuitem';
+    const autoLabel = document.createElement('div');
+    autoLabel.className = 'ytp-menuitem-label';
+    autoLabel.textContent = 'Русский (автоматически созданные)';
+    autoRow.appendChild(autoLabel);
+    Object.defineProperty(autoRow, 'offsetParent', { value: document.body, configurable: true });
+    trackMenu?.append(autoRow);
+    const offRow = document.createElement('div');
+    offRow.className = 'ytp-menuitem';
+    const offLabel = document.createElement('div');
+    offLabel.className = 'ytp-menuitem-label';
+    offLabel.textContent = 'Выключить';
+    offRow.appendChild(offLabel);
+    Object.defineProperty(offRow, 'offsetParent', { value: document.body, configurable: true });
+    trackMenu?.append(offRow);
+
+    const drive = triggerCcAutomation('v1');
+    await vi.advanceTimersByTimeAsync(2000);
+    const result = await drive;
+    expect(result.changed).toBe(true);
+    expect(cc.getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('excludes hidden rows (display:none sibling panels) from the menu scan', async () => {
+    const { triggerCcAutomation } = await freshTrigger();
+    const { cc } = stubPlayerControls();
+    // A hidden "Subtitles/CC" row from the settings panel: without the
+    // visibility filter the picker would re-enter the wrong menu.
+    const hidden = document.createElement('div');
+    hidden.className = 'ytp-menuitem';
+    const hiddenLabel = document.createElement('div');
+    hiddenLabel.className = 'ytp-menuitem-label';
+    hiddenLabel.textContent = 'Subtitles/CC';
+    hidden.appendChild(hiddenLabel);
+    Object.defineProperty(hidden, 'offsetParent', { value: null, configurable: true });
+    document.body.append(hidden);
+
+    const drive = triggerCcAutomation('v1');
+    await vi.advanceTimersByTimeAsync(2000);
+    const result = await drive;
+    expect(result.changed).toBe(true);
+    expect(cc.getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('aborts after the settings menu without a Subtitles row, and still closes the menu', async () => {
+    const { triggerCcAutomation } = await freshTrigger();
+    const { cc } = stubPlayerControls();
+    const submenu = document.querySelector<HTMLElement>('.ytp-panel-menu');
+    submenu?.replaceChildren(); // no Subtitles/CC row
+    const escapeSpy = vi.spyOn(document, 'dispatchEvent');
+
+    const drive = triggerCcAutomation('v1');
+    await vi.advanceTimersByTimeAsync(4000); // the 3s row wait times out
+    const result = await drive;
+    expect(result.changed).toBe(true); // CC flip recorded
+    expect(escapeSpy).toHaveBeenCalledWith(expect.objectContaining({ type: 'keydown', key: 'Escape' }));
+  });
+
+  it('aborts on a track picker with only control rows, and still closes the menu', async () => {
+    const { triggerCcAutomation } = await freshTrigger();
+    const { cc } = stubPlayerControls();
+    const trackMenu = document.querySelector<HTMLElement>('.ytp-panel-menu:nth-of-type(2)');
+    trackMenu?.replaceChildren();
+    for (const label of ['Off', 'Options']) {
+      const row = document.createElement('div');
+      row.className = 'ytp-menuitem';
+      const rowLabel = document.createElement('div');
+      rowLabel.className = 'ytp-menuitem-label';
+      rowLabel.textContent = label;
+      row.appendChild(rowLabel);
+      Object.defineProperty(row, 'offsetParent', { value: document.body, configurable: true });
+      trackMenu?.append(row);
+    }
+    const escapeSpy = vi.spyOn(document, 'dispatchEvent');
+
+    const drive = triggerCcAutomation('v1');
+    await vi.advanceTimersByTimeAsync(2000);
+    const result = await drive;
+    expect(result.changed).toBe(true);
+    expect(escapeSpy).toHaveBeenCalledWith(expect.objectContaining({ type: 'keydown', key: 'Escape' }));
+  });
+
+  it('prunes the cooldown entry exactly at the 30s boundary', async () => {
+    const { triggerCcAutomation } = await freshTrigger();
+    const { settingsClicks } = stubPlayerControls();
+    await driveToCompletion(triggerCcAutomation, 'v1');
+    // Advance to exactly 30_000ms past the record — the prune is >=, so the
+    // entry expires and the drive runs again.
+    await vi.advanceTimersByTimeAsync(30_000);
+    const drive = triggerCcAutomation('v1');
+    await vi.advanceTimersByTimeAsync(2000);
+    await drive;
+    expect(settingsClicks()).toBe(2);
+  });
+});

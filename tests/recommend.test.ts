@@ -548,3 +548,61 @@ describe('recommend — multimedia ceiling modulation', () => {
     expect(r.mode).toBe('warning');
   });
 });
+
+describe('recommend — boundary complements (wave-5)', () => {
+  it('a non-manual-cue tier whose rounding lands exactly on the 1.5 clamp stays uncapped', () => {
+    // asr-cue at 1.5x must not trip the manual-cue clamp detection: the
+    // clamp is a manual-cue rule, not a rate value.
+    const r = recommend({ naturalRate: 160, tier: 'asr-cue', contentType: 'talk', platformMax: 2, userTarget: 240 });
+    expect(r.multiplier).toBeCloseTo(1.5, 6);
+    expect(r.mode).toBe('recommend');
+    expect(r.reason).toBeNull();
+  });
+
+  it('a manual-cue rate below the clamp with a missed target stays a plain recommend', () => {
+    const r = recommend({ naturalRate: 170, tier: 'manual-cue', contentType: 'talk', platformMax: 2 });
+    expect(r.multiplier).toBeCloseTo(1.45, 6); // 250/170, under the 1.5 clamp
+    expect(r.effectiveWpm).toBeLessThan(250);
+    expect(r.mode).toBe('recommend'); // no clamp engaged → no capped-below
+    expect(r.reason).toBeNull();
+  });
+
+  it('a near-missed target below the zone without a clamp stays recommend', () => {
+    const r = recommend({ naturalRate: 160, tier: 'asr-cue', contentType: 'talk', platformMax: 2, userTarget: 275 });
+    expect(r.multiplier).toBeCloseTo(1.7, 6);
+    expect(r.effectiveWpm).toBeLessThan(275);
+    expect(r.mode).toBe('recommend');
+  });
+
+  it('an effective rate exactly on the comprehension ceiling stays in the zone', () => {
+    // 275.0 exactly: the warning fires strictly above the ceiling.
+    const r = recommend({ naturalRate: 250, tier: 'asr-cue', contentType: 'talk', platformMax: 2, userTarget: 275 });
+    expect(r.effectiveWpm).toBeCloseTo(275, 6);
+    expect(r.mode).toBe('recommend');
+    expect(r.reason).toBeNull();
+  });
+
+  it('a slow-down floor landing exactly on the target stays recommend', () => {
+    const r = recommend({ naturalRate: 500, tier: 'asr-cue', contentType: 'talk', platformMax: 2 });
+    expect(r.multiplier).toBe(SLOW_DOWN_FLOOR);
+    expect(r.effectiveWpm).toBeCloseTo(250, 6); // exactly the target
+    expect(r.mode).toBe('recommend');
+    expect(r.reason).toBeNull();
+  });
+
+  it('an articulatory rate exactly on its ceiling stays recommend (strict >)', () => {
+    // pauseShare 0.5 → articulatory ceiling 275/0.5 = 550; 1.25 × 440 = 550 exactly.
+    const r = recommend({
+      naturalRate: 200,
+      tier: 'asr-word',
+      contentType: 'talk',
+      platformMax: 2,
+      language: { target: 250, ceiling: 275, pauseShare: 0.5, unit: 'wpm' },
+      articulatoryWpm: 440,
+      timingCoverageOk: true,
+    });
+    expect(r.multiplier).toBeCloseTo(1.25, 6);
+    expect(r.mode).toBe('recommend');
+    expect(r.reason).toBeNull();
+  });
+});
