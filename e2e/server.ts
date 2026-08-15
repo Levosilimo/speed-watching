@@ -187,6 +187,26 @@ function loginRequiredAndroidResponse(): string {
   });
 }
 
+/** The ANDROID player response with a caption track but no transcript
+ * panel (androidnoparams=1): the innertube fallback then bails to the bare
+ * baseUrl fetch, which 200-empties under the POT gate — the chain must
+ * fall through to the WEB response's own panel params. */
+function androidTrackOnlyResponse(fixture: string): string {
+  return JSON.stringify({
+    captions: {
+      playerCaptionsTracklistRenderer: {
+        captionTracks: [
+          {
+            baseUrl: `/api/timedtext?fixture=${fixture}`,
+            kind: 'asr',
+            languageCode: 'en',
+          },
+        ],
+      },
+    },
+  });
+}
+
 interface FixtureServer {
   /** Base URL of this server, e.g. http://127.0.0.1:4319 */
   baseUrl: string;
@@ -207,10 +227,19 @@ export function createFixtureServer(port = FIXTURE_PORT): Promise<FixtureServer>
   /** The last watch page served — the ANDROID response the innertube
    * fallback gets depends on the page's fixture. */
   let lastWatchFixture: string | null = null;
-  /** Whether the last watch page asked for the loginrequired=1 variant —
-   * the ANDROID response then answers LOGIN_REQUIRED (no caption tracks). */
-  let lastWatchLoginRequired = false;
-  const server: Server = createServer((req, res) => {
+  /** The variant flags of the last watch page served (loginrequired=1,
+   * android429=1, androidnoparams=1, androidtrack=1, webnopanel=1,
+   * transcriptfail=1) — they reshape the ANDROID/WEB/transcript responses
+   * the chain's fallbacks get. */
+  let lastWatchVariants: {
+    loginRequired: boolean;
+    android429: boolean;
+    androidNoParams: boolean;
+    androidTrack: boolean;
+    webNoPanel: boolean;
+    transcriptFail: boolean;
+  } | null = null;
+  const server: Server = createServer(async (req, res) => {
     const url = new URL(req.url ?? '/', `http://127.0.0.1:${actualPort}`);
     const path = url.pathname;
     const fixture = url.searchParams.get('fixture');
@@ -223,16 +252,30 @@ export function createFixtureServer(port = FIXTURE_PORT): Promise<FixtureServer>
     if (req.method === 'POST' && path === '/youtubei/v1/player') {
       // The content script's ANDROID innertube fallback (same-origin POST).
       androidPosts += 1;
-      if (lastWatchFixture !== null && TRANSCRIPT_GATED_FIXTURES.includes(lastWatchFixture)) {
+      const v = lastWatchVariants;
+      const servedFixture = lastWatchFixture;
+      const servesAndroid =
+        servedFixture !== null &&
+        (TRANSCRIPT_GATED_FIXTURES.includes(servedFixture) || v?.androidTrack === true);
+      if (servesAndroid) {
         res.setHeader('Content-Type', 'application/json');
-        if (lastWatchLoginRequired) {
+        if (v?.android429) {
+          // The flaky-network class: the POST answers 429 — the chain must
+          // fall through to the WEB response's panel params.
+          res.statusCode = 429;
+          res.end('rate limited');
+        } else if (v?.loginRequired) {
           // loginrequired=1 variant: the logged-in failure mode — the chain
           // must then land on get_transcript via the WEB response's params.
           res.end(loginRequiredAndroidResponse());
+        } else if (v?.androidNoParams) {
+          // androidnoparams=1 variant: a track without transcript params —
+          // the bare baseUrl re-fetch is the ANDROID tail's only move.
+          res.end(androidTrackOnlyResponse(servedFixture));
         } else {
           // The transcript-gated fixture's ANDROID response carries the
           // transcript panel params — the fallback must land on get_transcript.
-          res.end(androidTranscriptResponse(lastWatchFixture));
+          res.end(androidTranscriptResponse(servedFixture));
         }
       } else {
         res.statusCode = 400;
@@ -245,6 +288,13 @@ export function createFixtureServer(port = FIXTURE_PORT): Promise<FixtureServer>
       // The ANDROID-tail transcript fallback (lib/transcript.ts). Serves
       // the cue payload only when the POST carries params (the fixture
       // stub's INNERTUBE identity); a param-less POST is the bail lane.
+      if (lastWatchVariants?.transcriptFail === true) {
+        // transcriptfail=1 variant: the endpoint answers 500 — every
+        // transcript resort dies and the chain lands on none.
+        res.statusCode = 500;
+        res.end('transcript unavailable');
+        return;
+      }
       let body = '';
       req.on('data', (chunk: Buffer) => {
         body += chunk.toString();
@@ -319,6 +369,13 @@ export function createFixtureServer(port = FIXTURE_PORT): Promise<FixtureServer>
     }
 
     if (path === '/api/timedtext' && fixture !== null && FIXTURE_NAME.test(fixture)) {
+      const delayMs = Number(url.searchParams.get('delay'));
+      if (Number.isFinite(delayMs) && delayMs > 0) {
+        // timedtextDelay=<ms> variant (the flaky-network class): the
+        // response lands past the capture wait's window, so the chain must
+        // fall through instead of wedging on the capture stage.
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+      }
       if (BLOCKED_FIXTURES.includes(fixture)) {
         // Forces the ANDROID innertube fallback in the content script.
         res.statusCode = 403;
@@ -352,7 +409,14 @@ export function createFixtureServer(port = FIXTURE_PORT): Promise<FixtureServer>
       return;
     }
     lastWatchFixture = fixture;
-    lastWatchLoginRequired = url.searchParams.get('loginrequired') === '1';
+    lastWatchVariants = {
+      loginRequired: url.searchParams.get('loginrequired') === '1',
+      android429: url.searchParams.get('android429') === '1',
+      androidNoParams: url.searchParams.get('androidnoparams') === '1',
+      androidTrack: url.searchParams.get('androidtrack') === '1',
+      webNoPanel: url.searchParams.get('webnopanel') === '1',
+      transcriptFail: url.searchParams.get('transcriptfail') === '1',
+    };
     const trackKind = KIND_BY_FIXTURE[fixture];
     const live = url.searchParams.get('live') === '1';
     const playerSize = url.searchParams.get('playersize');
@@ -376,7 +440,13 @@ export function createFixtureServer(port = FIXTURE_PORT): Promise<FixtureServer>
                   {
                     // Same-origin path: the content script resolves it against the
                     // page URL, so the fetch never leaves the youtube.com origin.
-                    baseUrl: `/api/timedtext?fixture=${fixture}`,
+                    // timedtextDelay rides the baseUrl so both the player's
+                    // signed fetch and the extension's bare fetch get delayed.
+                    baseUrl: `/api/timedtext?fixture=${fixture}${
+                      url.searchParams.get('timedtextDelay') === null
+                        ? ''
+                        : `&delay=${url.searchParams.get('timedtextDelay')}`
+                    }`,
                     ...(trackKind === undefined ? {} : { kind: trackKind }),
                     languageCode: LANG_BY_FIXTURE[fixture] ?? 'en',
                   },
@@ -388,7 +458,10 @@ export function createFixtureServer(port = FIXTURE_PORT): Promise<FixtureServer>
       // transcript panel as the ANDROID one: the WEB params back the final
       // get_transcript resort when the ANDROID POST answers LOGIN_REQUIRED
       // (lib/caption-fetch.ts fetchCaptions).
-      ...(TRANSCRIPT_GATED_FIXTURES.includes(fixture)
+      // webnopanel=1 drops the panel: with the ANDROID params absent too,
+      // the chain has no transcript resort left and lands on none.
+      ...(TRANSCRIPT_GATED_FIXTURES.includes(fixture) &&
+      url.searchParams.get('webnopanel') !== '1'
         ? { engagementPanels: [transcriptPanel()] }
         : {}),
     };
@@ -431,8 +504,15 @@ export function createFixtureServer(port = FIXTURE_PORT): Promise<FixtureServer>
             : '',
       )
       // The transcript-gated variant: the ytcfg stub the get_transcript
-      // POST is built from (INNERTUBE identity). Other pages keep no ytcfg.
-      .replace('__YTCFG__', TRANSCRIPT_GATED_FIXTURES.includes(fixture) ? ytcfgStub : '');
+      // POST is built from (INNERTUBE identity). androidtrack=1 gets it too:
+      // the synthesized ANDROID response's panel params need the identity
+      // when the variant rides a web-ok fixture (the chain-order cell).
+      .replace(
+        '__YTCFG__',
+        TRANSCRIPT_GATED_FIXTURES.includes(fixture) || url.searchParams.get('androidtrack') === '1'
+          ? ytcfgStub
+          : '',
+      );
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.end(page);
   });
