@@ -9,6 +9,13 @@ import { type CapturedTimedtext, TimedtextBuffer } from './caption-capture';
 const STEP_WAIT_MS = 3000;
 const MENU_SETTLE_MS = 400;
 const POLL_MS = 100;
+/** Re-measures of the same video (the retrigger, navigation/play re-runs)
+ * must not re-drive the CC controls within this window — real-user
+ * feedback: the toggle flapped on/off several times per video. */
+const CC_DRIVE_COOLDOWN_MS = 30_000;
+/** Drive completion per videoId. Pruned on every call, so the map only
+ * ever holds videos driven within the cooldown window. */
+const lastDriveAt = new Map<string, number>();
 
 // ASR track labels: EN "auto-generated", RU "автоматически…", or the
 // explicit "(asr)" marker. The RU tokens are included because the
@@ -90,41 +97,73 @@ function closeMenus(): void {
   );
 }
 
+/** What a drive did to the player — the caller's restore is built from it. */
+export interface CcDriveResult {
+  /** CC state before the drive (null: no CC controls on this page). */
+  ccWasOn: boolean | null;
+  /** True only when this drive actually flipped the CC button. */
+  changed: boolean;
+}
+
+/** The CC button's pressed state, or null without a button. */
+function ccPressed(): boolean | null {
+  const button = document.querySelector<HTMLElement>('button.ytp-subtitles-button');
+  if (button === null) return null;
+  return button.getAttribute('aria-pressed') === 'true';
+}
+
 /** Restores the pre-automation CC state after a capture attempt: turns CC
- * back off when it was off before the trigger, and closes any menu the
- * automation left open. Idempotent — safe on every exit path and after the
- * retrigger. The re-picked ASR track persists (YouTube keeps the track);
- * the CC-off restores the visual state. */
-export function restoreCcState(ccWasOn: boolean | null): void {
-  if (ccWasOn === false) {
-    const ccButton = document.querySelector<HTMLElement>('button.ytp-subtitles-button');
-    if (ccButton !== null && ccButton.getAttribute('aria-pressed') === 'true') {
-      ccButton.click();
-    }
+ * back off when this drive flipped it on, and closes any menu the
+ * automation left open. Idempotent — safe on every exit path. A CC state
+ * the player or the user owns (changed: false — no flip by this drive, or
+ * a suppressed cooldown call) is never toggled off. The re-picked ASR
+ * track persists (YouTube keeps the track); the CC-off restores the
+ * visual state. */
+export function restoreCcState(drive: CcDriveResult): void {
+  if (drive.changed && drive.ccWasOn === false && ccPressed() === true) {
+    document.querySelector<HTMLElement>('button.ytp-subtitles-button')?.click();
   }
   closeMenus();
 }
 
-export async function triggerCcAutomation(): Promise<boolean | null> {
+export async function triggerCcAutomation(videoId: string): Promise<CcDriveResult> {
+  const now = Date.now();
+  for (const [id, at] of lastDriveAt) {
+    if (now - at >= CC_DRIVE_COOLDOWN_MS) lastDriveAt.delete(id);
+  }
+  if (lastDriveAt.has(videoId)) {
+    // Within the cooldown window: report the current state, touch nothing.
+    // The caller's restore then leaves the button alone (changed: false).
+    return { ccWasOn: ccPressed(), changed: false };
+  }
+  // The cooldown records only drives that actually touched the controls —
+  // a drive that found no CC/settings button must not block a retry.
+  let drove = false;
   // The prior CC state, captured before any click — the caller restores it
   // after the capture attempt (null: no CC controls on this page).
   const ccButton = await waitForVisible('button.ytp-subtitles-button');
   const ccWasOn = ccButton === null ? null : ccButton.getAttribute('aria-pressed') === 'true';
   try {
+    let changed = false;
     // 1 — CC on unless already on (aria-pressed mirrors the toggle state).
     if (ccButton !== null && ccWasOn === false) {
       ccButton.click();
+      drove = true;
+      // The restore only reverses a flip this drive made — a click that
+      // did not land must not later be toggled off.
+      changed = ccButton.getAttribute('aria-pressed') === 'true';
     }
 
     // 2 — settings (gear); the menu renders async.
     const settingsButton = await waitForVisible('button.ytp-settings-button');
-    if (settingsButton === null) return ccWasOn;
+    if (settingsButton === null) return { ccWasOn, changed };
     settingsButton.click();
+    drove = true;
     await sleep(MENU_SETTLE_MS);
 
     // 3 — the "Subtitles/CC" submenu row.
     const submenuRow = await waitForMenuRow(SUBTITLES_MENU_RE);
-    if (submenuRow === null) return ccWasOn;
+    if (submenuRow === null) return { ccWasOn, changed };
     submenuRow.click();
     await sleep(MENU_SETTLE_MS);
 
@@ -134,10 +173,11 @@ export async function triggerCcAutomation(): Promise<boolean | null> {
     if (trackRow !== null) trackRow.click();
     await sleep(MENU_SETTLE_MS);
 
-    return ccWasOn;
+    return { ccWasOn, changed };
   } finally {
     // Every exit path closes the menu stack (the Escape step).
     closeMenus();
+    if (drove) lastDriveAt.set(videoId, Date.now());
   }
 }
 
@@ -168,7 +208,9 @@ export async function waitForWordTimedCapture(
     }
     if (!retriggered && elapsed >= retriggerAt) {
       retriggered = true;
-      void triggerCcAutomation();
+      // Gated by the drive cooldown: a retrigger within the window reports
+      // without touching the controls (no CC flapping).
+      void triggerCcAutomation(videoId);
     }
     await sleep(pollIntervalMs);
   }

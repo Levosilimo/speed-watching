@@ -1,6 +1,6 @@
 import type { CaptionTrack, PlayerResponse } from '@/lib/youtube';
 import type { TimedtextBuffer } from './caption-capture';
-import { restoreCcState, triggerCcAutomation, waitForWordTimedCapture } from './caption-trigger';
+import { restoreCcState, triggerCcAutomation, waitForWordTimedCapture, type CcDriveResult } from './caption-trigger';
 import { fetchTranscriptViaEndpoint, getTranscriptParams } from './transcript';
 
 // ANDROID innertube fallback (plan-v3): the WEB timedtext endpoint returns
@@ -96,9 +96,9 @@ export async function fetchCaptions(
   }
   const video = ctx.video;
   if (video !== null && (video.readyState >= 1 || !video.paused)) {
-    let ccWasOn: boolean | null = null;
+    let drive: CcDriveResult = { ccWasOn: null, changed: false };
     try {
-      ccWasOn = await triggerCcAutomation();
+      drive = await triggerCcAutomation(videoId);
       const nudge = (): void => {
         video.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', bubbles: true }));
       };
@@ -108,8 +108,9 @@ export async function fetchCaptions(
       }
     } finally {
       // The automation must not leave the subtitles on: restore the prior
-      // CC state and close any menu on success AND timeout/cancel alike.
-      restoreCcState(ccWasOn);
+      // CC state (only when this drive flipped it) and close any menu on
+      // success AND timeout/cancel alike.
+      restoreCcState(drive);
     }
   }
   const web = await fetchJson3(track.baseUrl);
