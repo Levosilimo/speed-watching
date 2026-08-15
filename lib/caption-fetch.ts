@@ -3,17 +3,6 @@ import type { TimedtextBuffer } from './caption-capture';
 import { restoreCcState, triggerCcAutomation, waitForWordTimedCapture } from './caption-trigger';
 import { fetchTranscriptViaEndpoint, getTranscriptParams } from './transcript';
 
-/** E2E hook gate. The userscript bundle builds with __E2E__ defined false,
- * so the runtime flag carries the gate there (userscript/src/main.ts uses
- * the same combination); production extension builds have neither. */
-const e2eHooks = __E2E__ || window.__speedwatcherE2E === true;
-
-declare global {
-  interface Window {
-    __speedwatcherE2E?: boolean;
-  }
-}
-
 // ANDROID innertube fallback (plan-v3): the WEB timedtext endpoint returns
 // 200-with-empty-body / 400/403 from some IPs, while the ANDROID
 // youtubei/v1/player POST returns real caption tracks (proven from hostile
@@ -71,6 +60,16 @@ export async function fetchAndroidCaptions(videoId: string): Promise<unknown | n
   }
 }
 
+export type CaptionSource = 'web' | 'android' | 'capture' | 'none';
+
+export interface CaptionFetchResult {
+  json: unknown | null;
+  /** Which chain produced the payload — the caller reports it through its
+   * own e2e hook gate (the lib must not reference window test hooks: the
+   * SEC-2 store-bundle gate greps them out of production builds). */
+  source: CaptionSource;
+}
+
 export interface CaptionFetchContext {
   /** The capture buffer of the player's signed timedtext responses. */
   buffer: TimedtextBuffer;
@@ -87,14 +86,13 @@ export async function fetchCaptions(
   track: CaptionTrack,
   videoId: string,
   ctx: CaptionFetchContext,
-): Promise<unknown | null> {
+): Promise<CaptionFetchResult> {
   // The buffer also holds this extension's own web fetches; a previous
   // measure's capture must not masquerade as this measure's.
   ctx.buffer.clear(videoId);
   const capture = ctx.buffer.pickWordTimed(videoId);
   if (capture !== null) {
-    if (e2eHooks) window.__speedwatcherCaptionSource = 'capture';
-    return JSON.parse(capture.body);
+    return { json: JSON.parse(capture.body), source: 'capture' };
   }
   const video = ctx.video;
   if (video !== null && (video.readyState >= 1 || !video.paused)) {
@@ -106,8 +104,7 @@ export async function fetchCaptions(
       };
       const captured = await waitForWordTimedCapture(ctx.buffer, videoId, nudge, 15000);
       if (captured !== null) {
-        if (e2eHooks) window.__speedwatcherCaptionSource = 'capture';
-        return JSON.parse(captured.body);
+        return { json: JSON.parse(captured.body), source: 'capture' };
       }
     } finally {
       // The automation must not leave the subtitles on: restore the prior
@@ -116,15 +113,8 @@ export async function fetchCaptions(
     }
   }
   const web = await fetchJson3(track.baseUrl);
-  if (web !== null) {
-    if (e2eHooks) window.__speedwatcherCaptionSource = 'web';
-    return web;
-  }
+  if (web !== null) return { json: web, source: 'web' };
   const android = await fetchAndroidCaptions(videoId);
-  if (android !== null) {
-    if (e2eHooks) window.__speedwatcherCaptionSource = 'android';
-    return android;
-  }
-  if (e2eHooks) window.__speedwatcherCaptionSource = 'none';
-  return null;
+  if (android !== null) return { json: android, source: 'android' };
+  return { json: null, source: 'none' };
 }

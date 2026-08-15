@@ -252,12 +252,15 @@ const captureBuffer = new TimedtextBuffer();
 
 async function fetchCaptions(track: CaptionTrack, videoId: string): Promise<unknown | null> {
   // The extension's capture-first order (lib/caption-fetch.ts fetchCaptions):
-  // buffer pick → CC drive + word-timed wait → WEB → ANDROID. The lib sets
-  // window.__speedwatcherCaptionSource under its own e2e gate.
-  return fetchCaptionsWithContext(track, videoId, {
+  // buffer pick → CC drive + word-timed wait → WEB → ANDROID. The lib
+  // returns the source; the runtime e2e gate (the bundle builds with
+  // __E2E__ false) reports it here.
+  const result = await fetchCaptionsWithContext(track, videoId, {
     buffer: captureBuffer,
     video: activeVideo ?? document.querySelector<HTMLVideoElement>('video'),
   });
+  if (e2e) window.__speedwatcherCaptionSource = result.source;
+  return result.json;
 }
 
 // ── Pill wiring ───────────────────────────────────────────────────────────
