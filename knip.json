@@ -20,8 +20,8 @@
     "block-no-verify",
     "@ast-grep/cli",
     "@cws-check/cli",
-    "vitest-chrome",
     "@huggingface/transformers",
+    "@types/chrome",
     "sharp"
   ],
   "ignoreBinaries": ["ffmpeg", "yt-dlp"],

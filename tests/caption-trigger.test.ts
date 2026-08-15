@@ -30,7 +30,9 @@ interface StubControls {
   ccClicks(): number;
 }
 
-/** The pot-gated stub player controls, mounted into the document. */
+/** The pot-gated stub player controls, mounted into the document. Mirrors
+ * the e2e fixture pages (synthetic/pot-gated.json and the bug-zoo variants
+ * in tests/fixtures/BUG_ZOO.md). */
 function stubPlayerControls(ccTogglesOnClick = true): StubControls {
   const cc = document.createElement('button');
   cc.className = 'ytp-subtitles-button';

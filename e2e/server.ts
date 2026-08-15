@@ -20,6 +20,7 @@ import {
   chapteredInitialData,
   KIND_BY_FIXTURE,
   LANG_BY_FIXTURE,
+  LATE_CONTROLS_FIXTURES,
   NO_TRACK_FIXTURES,
   POT_GATED_FIXTURES,
   TRANSCRIPT_GATED_FIXTURES,
@@ -57,36 +58,54 @@ const CONTENT_TYPE_BY_EXT: Record<string, string> = {
  * potc params) — the only requests the fixture server pays payloads to.
  * Injected into the MAIN world, so the extension's capture wrappers see
  * the fetch. The signed URL is the track's baseUrl (already carrying the
- * fixture param) plus the pot params, mirroring the real player. */
-const potGatedStub = `<script>
+ * fixture param) plus the pot params, mirroring the real player. With a
+ * non-null mountDelay the controls append late (the late-controls bug-zoo
+ * fixture): the first capture drive times out, the same-attempt retrigger
+ * re-drives and finds them. */
+function potGatedStub(mountDelay: number | null): string {
+  const mount = mountDelay === null
+    ? 'panel.mount();'
+    : `setTimeout(() => { panel.mount(); }, ${mountDelay});`;
+  return `<script>
 (() => {
   const video = document.querySelector('video');
   if (video === null) return;
   // The capture-first path only drives the CC controls on a ready player;
   // the stub reports the metadata loaded state.
   Object.defineProperty(video, 'readyState', { value: 4, configurable: true });
-  const panel = document.createElement('div');
-  panel.innerHTML =
-    '<button class="ytp-subtitles-button" aria-pressed="false"></button>' +
-    '<button class="ytp-settings-button"></button>' +
-    '<div class="ytp-panel-menu"><div class="ytp-menuitem"><div class="ytp-menuitem-label">Subtitles/CC</div></div></div>' +
-    '<div class="ytp-panel-menu"><div class="ytp-menuitem"><div class="ytp-menuitem-label">English (auto-generated)</div></div></div>';
-  document.body.appendChild(panel);
-  const baseUrl = window.ytInitialPlayerResponse?.captions?.playerCaptionsTracklistRenderer?.captionTracks?.[0]?.baseUrl;
-  const signed = () => {
-    if (typeof baseUrl !== 'string') return;
-    void fetch(baseUrl + '&pot=FIXTURE_POT&potc=1&c=WEB&fmt=json3');
+  const panel = {
+    mount() {
+      const el = document.createElement('div');
+      el.innerHTML =
+        '<button class="ytp-subtitles-button" aria-pressed="false"></button>' +
+        '<button class="ytp-settings-button"></button>' +
+        '<div class="ytp-panel-menu"><div class="ytp-menuitem"><div class="ytp-menuitem-label">Subtitles/CC</div></div></div>' +
+        '<div class="ytp-panel-menu"><div class="ytp-menuitem"><div class="ytp-menuitem-label">English (auto-generated)</div></div></div>';
+      document.body.appendChild(el);
+      const baseUrl = window.ytInitialPlayerResponse?.captions?.playerCaptionsTracklistRenderer?.captionTracks?.[0]?.baseUrl;
+      const signed = () => {
+        if (typeof baseUrl !== 'string') return;
+        void fetch(baseUrl + '&pot=FIXTURE_POT&potc=1&c=WEB&fmt=json3');
+      };
+      el.querySelector('.ytp-subtitles-button')?.addEventListener('click', (event) => {
+        const button = event.currentTarget;
+        button.setAttribute('aria-pressed', button.getAttribute('aria-pressed') === 'true' ? 'false' : 'true');
+        signed();
+      });
+      el.querySelectorAll('.ytp-menuitem').forEach((item) => {
+        item.addEventListener('click', signed);
+      });
+    },
   };
-  panel.querySelector('.ytp-subtitles-button')?.addEventListener('click', (event) => {
-    const button = event.currentTarget;
-    button.setAttribute('aria-pressed', button.getAttribute('aria-pressed') === 'true' ? 'false' : 'true');
-    signed();
-  });
-  panel.querySelectorAll('.ytp-menuitem').forEach((item) => {
-    item.addEventListener('click', signed);
-  });
+  ${mount}
 })();` +
   '</script>';
+}
+
+/** Controls mount 1s past the drive's 3s visibility wait: the first drive
+ * misses them, the retrigger (timeout/2 of the capture poll) re-drives. */
+const lateControlsStub = potGatedStub(4000);
+const immediateControlsStub = potGatedStub(null);
 
 /** The ytcfg stub for the transcript-gated fixture: the innertube identity
  * the get_transcript POST is built from (lib/transcript.ts reads
@@ -399,9 +418,18 @@ export function createFixtureServer(port = FIXTURE_PORT): Promise<FixtureServer>
       )
       .replace('__FULLSCREEN__', fullscreen ? ' ytp-fullscreen' : '')
       // The pot-gated variant: stub player controls + signed-fetch behavior
-      // (see the __POT_GATED__ block in watch.html). Injected for that
-      // fixture only — the other pages keep their bare <video>.
-      .replace('__POT_GATED__', POT_GATED_FIXTURES.includes(fixture) ? potGatedStub : '')
+      // (see the __POT_GATED__ block in watch.html). Injected for the
+      // control-bearing fixtures only — late-controls mounts them late, the
+      // others from page load; the remaining pages keep their bare <video>
+      // (the missing-controls no-op fixture's page).
+      .replace(
+        '__POT_GATED__',
+        LATE_CONTROLS_FIXTURES.includes(fixture)
+          ? lateControlsStub
+          : POT_GATED_FIXTURES.includes(fixture)
+            ? immediateControlsStub
+            : '',
+      )
       // The transcript-gated variant: the ytcfg stub the get_transcript
       // POST is built from (INNERTUBE identity). Other pages keep no ytcfg.
       .replace('__YTCFG__', TRANSCRIPT_GATED_FIXTURES.includes(fixture) ? ytcfgStub : '');

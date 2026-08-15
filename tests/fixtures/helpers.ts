@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { fakeBrowser } from 'wxt/testing/fake-browser';
 import type { StorageLike } from '../../lib/settings';
 
 export function readFixture(path: string): unknown {
@@ -8,16 +9,19 @@ export function readFixture(path: string): unknown {
   return JSON.parse(readFileSync(join(fixtureRoot, path), 'utf8')) as unknown;
 }
 
-/** In-memory chrome.storage.local stand-in, same get/set shape. */
+/** In-memory chrome.storage.local via fakeBrowser, same get/set shape. Each
+ * call clears the shared fake storage first, so instances stay isolated like
+ * the Map stand-in they replaced (several tests build multiple stores per
+ * test, each seeded independently). */
 export function mockStorage(initial: Record<string, unknown> = {}): StorageLike {
-  let data = { ...initial };
+  void fakeBrowser.storage.local.clear();
+  void fakeBrowser.storage.local.set(initial);
   return {
     async get(keys: string | null) {
-      if (keys === null) return { ...data };
-      return { [keys]: data[keys] };
+      return fakeBrowser.storage.local.get(keys);
     },
     async set(items: Record<string, unknown>) {
-      data = { ...data, ...items };
+      await fakeBrowser.storage.local.set(items);
     },
   };
 }
