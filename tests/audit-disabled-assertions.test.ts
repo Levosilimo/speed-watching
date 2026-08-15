@@ -17,7 +17,7 @@ describe('audit-disabled-assertions', () => {
     for (let i = 1; i < sampleLines.length - 1; i++) {
       const sample = sampleLines[i]!.trim();
       if (sample.includes('skipIf')) continue; // negative control, asserted below
-      const hit = findings.find((f) => f.text.includes(sample));
+      const hit = findings.find((f) => f.message.includes(sample));
       expect(hit, `sample: ${sample}`).toBeDefined();
       expect(hit?.line).toBe(templateLine + i);
     }
@@ -26,7 +26,7 @@ describe('audit-disabled-assertions', () => {
 
   it('does not flag skipIf conditionals', () => {
     const findings = scanDisabledAssertions([corpusPath]);
-    expect(findings.some((f) => f.text.includes('skipIf'))).toBe(false);
+    expect(findings.some((f) => f.message.includes('skipIf'))).toBe(false);
   });
 
   it('leaves clean files alone', () => {

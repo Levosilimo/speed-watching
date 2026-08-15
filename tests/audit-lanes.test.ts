@@ -19,8 +19,8 @@ describe('audit-mirror-scan', () => {
   it('flags literals repeated from the lib internals', () => {
     const findings = scanMirrorScan([mirrorTest]);
     const messages = findings.map((f) => f.message);
-    expect(messages.some((m) => m.includes(`'${copycat.retryMs}'`))).toBe(true);
-    expect(messages.some((m) => m.includes(`'${copycat.key}'`))).toBe(true);
+    expect(messages.some((m) => m.includes(`number ${copycat.retryMs} mirrors`))).toBe(true);
+    expect(messages.some((m) => m.includes(`string '${copycat.key}' mirrors`))).toBe(true);
     expect(findings.every((f) => f.message.includes(mirrorLib))).toBe(true);
   });
 

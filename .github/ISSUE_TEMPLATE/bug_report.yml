@@ -26,10 +26,24 @@ body:
     validations:
       required: false
   - type: input
+    id: extensionVersion
+    attributes:
+      label: Extension version
+      description: e.g. 0.0.3. chrome://extensions → Details → Version (about:addons on Firefox).
+    validations:
+      required: false
+  - type: input
     id: url
     attributes:
       label: Video URL
       description: The watch page or embed page where the problem happened.
+    validations:
+      required: false
+  - type: input
+    id: videoId
+    attributes:
+      label: Video ID
+      description: The 11-character YouTube ID — the part of the URL after watch?v= (or in the embed src). Lets maintainers replay the exact video through the real-site runner.
     validations:
       required: false
   - type: dropdown
@@ -55,6 +69,13 @@ body:
         - Not applied — I applied manually and it fought me
     validations:
       required: true
+  - type: input
+    id: pillReason
+    attributes:
+      label: Pill reason line
+      description: Copy the pill's reason line verbatim (the small text under the pill's rate), e.g. "caption source=none; rate=n/a outside 100-600".
+    validations:
+      required: false
   - type: dropdown
     id: captions
     attributes:
@@ -120,3 +141,14 @@ body:
       description: What did you do, and what happened instead of what you expected?
     validations:
       required: true
+  - type: markdown
+    attributes:
+      value: |
+        ## Maintainer reproduction
+
+        ```sh
+        bun run scripts/realsite-runner.ts --video=<ID> --kind=speech|music|live
+        ```
+
+        The runner drives the built extension against the real video on a
+        box; paste the failing `results.jsonl` entry into the thread.
