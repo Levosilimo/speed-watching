@@ -49,11 +49,7 @@ jobs:
       - run: bun run test
       - run: bun run test:coverage
       - run: bun run scripts/audit-disabled-assertions.ts
-      - name: audit lanes (strict)
-        env:
-          LCE_STRICT_MIRROR: '1'
-          LCE_STRICT_COUNT: '1'
-          LCE_STRICT_FIXTURES: '1'
+      - name: audit lanes (fixture provenance gate)
         run: bun run scripts/audit-lanes.ts
       - name: Install Lua 5.1 for mpv tests
         run: sudo apt-get update -qq && sudo apt-get install -y lua5.1

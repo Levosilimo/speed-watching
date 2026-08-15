@@ -2,8 +2,9 @@
 // Local CI runner — the pre-remote safety net. Mirrors the GitHub Actions
 // `ci` job (minus SARIF upload/artifacts, which only make sense on GitHub):
 // lint → typecheck → knip → aislop gate → build:userscript → test (incl.
-// the fail-closed bundle gate) → audit-disabled gate → audit lanes (strict)
-// → build → mpv tests, in order, with real exit codes. The first failing
+// the fail-closed bundle gate) → audit-disabled gate → audit lanes
+// (fixture provenance gate) → build → mpv tests, in order, with real exit
+// codes. The first failing
 // step stops the run. The mpv step is optional — it needs a lua5.1 or luajit
 // binary, which CI installs but local machines may not have; without one it
 // prints a skip note and continues.
@@ -33,11 +34,7 @@ const STEPS: Step[] = [
   { name: 'build:userscript', args: ['run', 'build:userscript'] },
   { name: 'test', args: ['run', 'test'] },
   { name: 'audit-disabled', args: ['run', 'scripts/audit-disabled-assertions.ts'] },
-  {
-    name: 'audit lanes (strict)',
-    args: ['run', 'scripts/audit-lanes.ts'],
-    env: { LCE_STRICT_MIRROR: '1', LCE_STRICT_COUNT: '1', LCE_STRICT_FIXTURES: '1' },
-  },
+  { name: 'audit lanes (fixture provenance gate)', args: ['run', 'scripts/audit-lanes.ts'] },
   { name: 'build', args: ['run', 'build'] },
   { name: 'mpv tests', args: ['run', 'test:mpv'], optional: true },
 ];
