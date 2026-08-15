@@ -1,0 +1,279 @@
+// Real-site extension runner — per-video sampling machinery
+// (scripts/realsite-runner.ts drives it, docs/realsite-run.md is the runbook).
+// Drives the BUILT e2e extension (.output/chrome-mv3-e2e — the __E2E__ hooks
+// and console.info lines are live) against real youtube.com videos and
+// records what the fixture suite cannot see: the rendered pill, the
+// POT-gated caption path, live/music suppression, real session state.
+// Split out so both files stay under the repo's 400-line cap.
+
+import { mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { chromium, type BrowserContext } from 'playwright';
+import type { MeasureEventDetail } from '../lib/measure-hooks';
+import type { PillState } from '../ui/pill';
+import { dismissConsentIfPresent, pageErrorHint, readPlayerInfo } from './web-capture';
+import { withTimeout } from './vk-probe-network';
+
+export type VideoKind = 'speech' | 'music' | 'live';
+
+export interface VideoSpec {
+  videoId: string;
+  category: string;
+  kind: VideoKind;
+}
+
+export interface RealsiteRecord {
+  videoId: string;
+  url: string;
+  category: string;
+  kind: VideoKind;
+  title: string | null;
+  pillRendered: boolean;
+  mode: PillState['mode'] | null;
+  tier: string | null;
+  rate: number | null;
+  lang: string | null;
+  source: 'web' | 'android' | 'none' | null;
+  measure: MeasureEventDetail | null;
+  consoleLines: string[];
+  pass: boolean;
+  reason: string | null;
+}
+
+declare global {
+  interface Window {
+    /** The runner's mirror of the userscript hook (scripts/build-userscript.ts). */
+    __speedwatcherLastMeasure?: MeasureEventDetail;
+  }
+}
+
+const VIDEO_DEADLINE_MS = 3 * 60_000;
+const PILL_WAIT_MS = 60_000;
+const LAUNCH_TIMEOUT_MS = 120_000;
+
+/** Best available measured rate — the pill math uses word-level for ASR and
+ * cue-level for manual tracks, so prefer in that order. */
+function bestRate(stats: MeasureEventDetail['stats']): number | null {
+  const candidates = [stats.word, stats.cue, stats.corrected];
+  for (const candidate of candidates) {
+    if (typeof candidate === 'number' && Number.isFinite(candidate)) return candidate;
+  }
+  return null;
+}
+
+export function initRecord(spec: VideoSpec): RealsiteRecord {
+  return {
+    videoId: spec.videoId,
+    url: `https://www.youtube.com/watch?v=${spec.videoId}`,
+    category: spec.category,
+    kind: spec.kind,
+    title: null,
+    pillRendered: false,
+    mode: null,
+    tier: null,
+    rate: null,
+    lang: null,
+    source: null,
+    measure: null,
+    consoleLines: [],
+    pass: false,
+    reason: null,
+  };
+}
+
+/** Launch a fresh persistent context with the built extension side-loaded.
+ * One browser per video: chromium on this box intermittently freezes under
+ * sustained page churn, so recycling caps a freeze to the video it hit. */
+export async function setupBrowser(
+  headed: boolean,
+  extensionDir: string,
+): Promise<{ context: BrowserContext; close(): Promise<void> }> {
+  // probe for the CfT version so the UA matches the real Chrome build
+  const probe = await chromium.launch({ headless: true, timeout: LAUNCH_TIMEOUT_MS });
+  const version = probe.version();
+  await probe.close();
+  const userDataDir = mkdtempSync(join(tmpdir(), 'speedwatcher-realsite-'));
+  const context = await chromium.launchPersistentContext(userDataDir, {
+    channel: 'chromium',
+    headless: !headed,
+    timeout: LAUNCH_TIMEOUT_MS,
+    userAgent: `Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${version} Safari/537.36`,
+    viewport: { width: 1280, height: 800 },
+    args: [
+      '--disable-blink-features=AutomationControlled',
+      `--disable-extensions-except=${extensionDir}`,
+      `--load-extension=${extensionDir}`,
+    ],
+  });
+  // consent cookies: without them the default CC track is the manual
+  // transcript, not ASR (gate1-residential.ts parity)
+  await context.addCookies([
+    { name: 'CONSENT', value: 'YES+cb.20220301-01-p0.en+FX+000', domain: '.youtube.com', path: '/' },
+    { name: 'SOCS', value: 'CAISNQgDEitib3FfaWRlbnRpdHlmcm9udGVuZHVpc2VydmVyXzIwMjMwODI5LjA3X3AxGgJlbiACGgYIgLC_pwY', domain: '.youtube.com', path: '/' },
+  ]);
+  // the MV3 service worker must be up before navigation or the content
+  // script is not injected (e2e.chromium pattern)
+  if (context.serviceWorkers()[0] === undefined) {
+    await context.waitForEvent('serviceworker', { timeout: 30_000 }).catch(() => undefined);
+  }
+  return { context, close: () => context.close() };
+}
+
+async function sampleOnce(
+  context: BrowserContext,
+  spec: VideoSpec,
+  record: RealsiteRecord,
+): Promise<RealsiteRecord> {
+  const page = await context.newPage();
+  const consoleLines: string[] = [];
+  page.on('console', (message) => {
+    const text = message.text();
+    if (text.includes('[speed-watcher]')) consoleLines.push(text);
+  });
+  // The extension dispatches speedwatcher:measure on window; the init script
+  // mirrors the userscript hook so the runner can read the last payload
+  // after the pill renders.
+  await page.addInitScript(() => {
+    window.addEventListener('speedwatcher:measure', (event: Event) => {
+      window.__speedwatcherLastMeasure = (event as CustomEvent<MeasureEventDetail>).detail;
+    });
+  });
+  try {
+    await page.goto(record.url, { waitUntil: 'domcontentloaded', timeout: 60_000 });
+    await dismissConsentIfPresent(page);
+    // The hook mounts with the content script; the state renders once
+    // measureOnce finishes (measured or estimated) — live/music included.
+    await page
+      .waitForFunction(() => window.__speedwatcherPill?.state != null, undefined, { timeout: PILL_WAIT_MS })
+      .catch(() => undefined);
+    const info = await readPlayerInfo(page).catch(() => null);
+    record.title = info?.title ?? null;
+    const pill = await page
+      .evaluate(() => window.__speedwatcherPill?.state ?? null)
+      .catch(() => null);
+    const measure = await page
+      .evaluate(() => window.__speedwatcherLastMeasure ?? null)
+      .catch(() => null);
+    const source = await page
+      .evaluate(() => window.__speedwatcherCaptionSource ?? null)
+      .catch(() => null);
+    record.pillRendered = pill !== null;
+    record.mode = pill?.mode ?? null;
+    record.tier = pill?.tierLabel ?? null;
+    record.measure = measure;
+    record.rate = measure === null ? null : bestRate(measure.stats);
+    record.lang = measure?.lang ?? null;
+    record.source = source;
+    record.consoleLines = consoleLines;
+    if (!record.pillRendered) {
+      const hint = await pageErrorHint(page);
+      record.reason = hint === null ? 'no-pill-render' : `no-pill-render (${hint})`;
+    }
+    evaluatePass(record);
+  } catch (err) {
+    record.pass = false;
+    record.reason = err instanceof Error && err.message ? err.message : String(err);
+  } finally {
+    await page.close().catch(() => undefined);
+  }
+  return record;
+}
+
+/** Per-class pass rule: speech needs the pill + a caption source + a sane
+ * measured rate; music and live need their designed suppression. */
+export function evaluatePass(record: RealsiteRecord): void {
+  const failures: string[] = [];
+  if (!record.pillRendered || record.mode === null) {
+    failures.push('no-pill-render');
+  } else if (record.kind === 'live') {
+    if (record.mode !== 'none') failures.push(`live suppression: mode=${record.mode}`);
+  } else if (record.kind === 'music') {
+    if (record.mode !== 'music') failures.push(`music suppression: mode=${record.mode}`);
+  } else {
+    if (record.mode === 'none') failures.push('pill suppressed');
+    if (record.source === null || record.source === 'none') {
+      failures.push(`caption source=${record.source ?? 'missing'}`);
+    }
+    if (record.rate === null || record.rate < 100 || record.rate > 600) {
+      failures.push(`rate=${record.rate === null ? 'n/a' : record.rate.toFixed(1)} outside 100-600`);
+    }
+  }
+  record.pass = failures.length === 0;
+  record.reason = failures.length === 0 ? null : failures.join('; ');
+}
+
+/** Sample one video in its own fresh browser; the deadline covers a frozen
+ * chromium stalling a CDP call past every inner wait. */
+export async function sampleVideo(
+  headed: boolean,
+  spec: VideoSpec,
+  extensionDir: string,
+): Promise<RealsiteRecord> {
+  const record = initRecord(spec);
+  // A churned chromium can die at launch, not just mid-page; that is a
+  // per-video error record, not a harness crash.
+  let fresh: { context: BrowserContext; close(): Promise<void> };
+  try {
+    fresh = await setupBrowser(headed, extensionDir);
+  } catch (err) {
+    record.pass = false;
+    record.reason = `browser-launch-failed: ${err instanceof Error && err.message ? err.message : String(err)}`;
+    return record;
+  }
+  try {
+    const sampled = await withTimeout(
+      sampleOnce(fresh.context, spec, record).catch((err) => {
+        record.pass = false;
+        record.reason = err instanceof Error && err.message ? err.message : String(err);
+        return record;
+      }),
+      VIDEO_DEADLINE_MS,
+      null,
+    );
+    if (sampled !== null) return sampled;
+    record.pass = false;
+    record.reason = 'video-deadline-exceeded';
+    return record;
+  } finally {
+    await withTimeout(fresh.close(), 10_000, undefined).catch(() => undefined);
+  }
+}
+
+export function recordLine(record: RealsiteRecord): string {
+  const rate = record.rate === null ? '-' : record.rate.toFixed(1);
+  const lang = record.lang === null ? '' : ` lang=${record.lang}`;
+  return `${record.pass ? 'PASS' : 'FAIL'} mode=${record.mode ?? '-'} tier=${record.tier ?? '-'} ` +
+    `rate=${rate}${lang} source=${record.source ?? '-'}${record.reason ? ` (${record.reason})` : ''}`;
+}
+
+export function summarize(records: RealsiteRecord[]): number {
+  const passed = records.filter((r) => r.pass).length;
+  const ratio = records.length === 0 ? 0 : passed / records.length;
+  const header = ['videoId', 'category', 'kind', 'mode', 'rate', 'source', 'pass', 'reason'];
+  const rows = records.map((r) => [
+    r.videoId,
+    r.category,
+    r.kind,
+    r.mode ?? '-',
+    r.rate === null ? '-' : r.rate.toFixed(1),
+    r.source ?? '-',
+    r.pass ? 'PASS' : 'FAIL',
+    (r.reason ?? '').slice(0, 60),
+  ]);
+  const widths = header.map((h, i) => Math.max(h.length, ...rows.map((row) => (row[i] ?? '').length)));
+  const printRow = (cells: string[]): string => cells.map((cell, i) => cell.padEnd(widths[i] ?? 0)).join('  ');
+  console.log('\n' + printRow(header));
+  console.log(widths.map((w) => '-'.repeat(w)).join('  '));
+  for (const row of rows) console.log(printRow(row));
+  const byKind = new Map<VideoKind, { n: number; pass: number }>();
+  for (const r of records) {
+    const entry = byKind.get(r.kind) ?? { n: 0, pass: 0 };
+    entry.n += 1;
+    if (r.pass) entry.pass += 1;
+    byKind.set(r.kind, entry);
+  }
+  const strata = [...byKind.entries()].map(([kind, e]) => `${kind}=${e.pass}/${e.n}`).join(', ');
+  console.log(`\npass: ${passed}/${records.length} (${(ratio * 100).toFixed(1)}%) | ${strata}`);
+  return ratio;
+}
