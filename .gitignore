@@ -62,3 +62,7 @@ scripts/data/ru-corpus/ru-corpus.jsonl
 scripts/data/stt-battery/audio/
 scripts/data/stt-battery/refs/
 scripts/data/stt-battery/clips/
+
+# Stryker mutation output
+reports/
+.stryker-temp/

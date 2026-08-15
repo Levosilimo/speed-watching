@@ -18,6 +18,7 @@
     "check": "bunx aislop scan . --format sarif | bun run scripts/aislop-gate.ts",
     "check:cws": "sh scripts/cws-check.sh",
     "knip": "knip",
+    "mutation": "stryker run --incremental",
     "ci": "bun run scripts/run-ci.ts",
     "build:firefox": "wxt build -b firefox",
     "build:userscript": "bun run scripts/build-userscript.ts",
@@ -35,6 +36,8 @@
     "@cws-check/cli": "^0.1.0",
     "@huggingface/transformers": "^4.2.0",
     "@playwright/test": "^1.62.1",
+    "@stryker-mutator/core": "10.0.0",
+    "@stryker-mutator/vitest-runner": "10.0.0",
     "@types/chrome": "^0.0.114",
     "@types/selenium-webdriver": "^4.35.6",
     "aislop": "^0.14.1",
@@ -63,6 +66,7 @@
   "overrides": {
     "adm-zip": "0.6.0",
     "sharp": "0.35.3",
-    "onnxruntime-web": "1.23.0"
+    "onnxruntime-web": "1.23.0",
+    "qs": "6.15.3"
   }
 }
