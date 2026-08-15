@@ -1,0 +1,398 @@
+{
+ "fixture": "windows-asr-arj7oStGLkU-trunc.json",
+ "provenance": {
+  "source": "real",
+  "videoId": "arj7oStGLkU",
+  "captureDate": "2026-08-12",
+  "captureMethod": "player-signed intercept (page.on('response'), CC toggled on)",
+  "truncation": "first 20 events + first 12 top-level windows (tests/fixtures/README.md)",
+  "backs": "word timing parsing (words > 0 on a real WEB payload); windows==segs cue parity",
+  "notes": []
+ },
+ "layout": {
+  "events": 20,
+  "windows": 0,
+  "segOffsets": 57,
+  "windowTexts": 0
+ },
+ "kind": "asr",
+ "parse": {
+  "words": [
+   {
+    "text": " in",
+    "startSec": 12.759,
+    "durSec": 2.600999999999999
+   },
+   {
+    "text": " I",
+    "startSec": 15.36,
+    "durSec": 0.08000000000000007
+   },
+   {
+    "text": " was",
+    "startSec": 15.44,
+    "durSec": 0.1590000000000007
+   },
+   {
+    "text": " a",
+    "startSec": 15.599,
+    "durSec": 0.11999999999999922
+   },
+   {
+    "text": " government",
+    "startSec": 15.719,
+    "durSec": 0.4410000000000007
+   },
+   {
+    "text": " major",
+    "startSec": 16.16,
+    "durSec": 0.7600000000000016
+   },
+   {
+    "text": " which",
+    "startSec": 16.92,
+    "durSec": 0.3999999999999986
+   },
+   {
+    "text": " I",
+    "startSec": 17.32,
+    "durSec": 0.11899999999999977
+   },
+   {
+    "text": " had",
+    "startSec": 17.439,
+    "durSec": 0.12099999999999866
+   },
+   {
+    "text": " to",
+    "startSec": 17.56,
+    "durSec": 0.16000000000000014
+   },
+   {
+    "text": " write",
+    "startSec": 17.72,
+    "durSec": 0.16000000000000014
+   },
+   {
+    "text": " a",
+    "startSec": 17.88,
+    "durSec": 0.120000000000001
+   },
+   {
+    "text": " lot",
+    "startSec": 18,
+    "durSec": 0.11899999999999977
+   },
+   {
+    "text": " of",
+    "startSec": 18.119,
+    "durSec": 0.3200000000000003
+   },
+   {
+    "text": " papers",
+    "startSec": 18.439,
+    "durSec": 1
+   },
+   {
+    "text": " now",
+    "startSec": 19.439,
+    "durSec": 0.3210000000000015
+   },
+   {
+    "text": " a",
+    "startSec": 19.76,
+    "durSec": 0.0799999999999983
+   },
+   {
+    "text": " normal",
+    "startSec": 19.84,
+    "durSec": 0.2789999999999999
+   },
+   {
+    "text": " student",
+    "startSec": 20.119,
+    "durSec": 0.2809999999999988
+   },
+   {
+    "text": " writes",
+    "startSec": 20.4,
+    "durSec": 0.20000000000000284
+   },
+   {
+    "text": " a",
+    "startSec": 20.6,
+    "durSec": 0.0799999999999983
+   },
+   {
+    "text": " paper",
+    "startSec": 20.68,
+    "durSec": 0.3200000000000003
+   },
+   {
+    "text": " might",
+    "startSec": 21,
+    "durSec": 0.16000000000000014
+   },
+   {
+    "text": " spread",
+    "startSec": 21.16,
+    "durSec": 0.23999999999999844
+   },
+   {
+    "text": " the",
+    "startSec": 21.4,
+    "durSec": 0.11899999999999977
+   },
+   {
+    "text": " work",
+    "startSec": 21.519,
+    "durSec": 0.16100000000000136
+   },
+   {
+    "text": " out",
+    "startSec": 21.68,
+    "durSec": 0.16000000000000014
+   },
+   {
+    "text": " a",
+    "startSec": 21.84,
+    "durSec": 0.08000000000000185
+   },
+   {
+    "text": " little",
+    "startSec": 21.92,
+    "durSec": 0.7999999999999972
+   },
+   {
+    "text": " this",
+    "startSec": 22.72,
+    "durSec": 1
+   },
+   {
+    "text": " so",
+    "startSec": 23.72,
+    "durSec": 0.28000000000000114
+   },
+   {
+    "text": " you",
+    "startSec": 24,
+    "durSec": 2.960000000000001
+   },
+   {
+    "text": " you",
+    "startSec": 26.96,
+    "durSec": 0.15899999999999892
+   },
+   {
+    "text": " get",
+    "startSec": 27.119,
+    "durSec": 0.16000000000000014
+   },
+   {
+    "text": " started",
+    "startSec": 27.279,
+    "durSec": 0.3200000000000003
+   },
+   {
+    "text": " maybe",
+    "startSec": 27.599,
+    "durSec": 0.16100000000000136
+   },
+   {
+    "text": " a",
+    "startSec": 27.76,
+    "durSec": 0.0799999999999983
+   },
+   {
+    "text": " little",
+    "startSec": 27.84,
+    "durSec": 0.5190000000000019
+   },
+   {
+    "text": " but",
+    "startSec": 28.359,
+    "durSec": 0.0799999999999983
+   },
+   {
+    "text": " you",
+    "startSec": 28.439,
+    "durSec": 0.12099999999999866
+   },
+   {
+    "text": " get",
+    "startSec": 28.56,
+    "durSec": 0.16000000000000014
+   },
+   {
+    "text": " enough",
+    "startSec": 28.72,
+    "durSec": 0.20000000000000284
+   },
+   {
+    "text": " done",
+    "startSec": 28.92,
+    "durSec": 0.1599999999999966
+   },
+   {
+    "text": " in",
+    "startSec": 29.08,
+    "durSec": 0.11900000000000333
+   },
+   {
+    "text": " the",
+    "startSec": 29.199,
+    "durSec": 0.3609999999999971
+   },
+   {
+    "text": " week",
+    "startSec": 29.56,
+    "durSec": 0.28000000000000114
+   },
+   {
+    "text": " that",
+    "startSec": 29.84,
+    "durSec": 0.19900000000000162
+   },
+   {
+    "text": " that",
+    "startSec": 30.039,
+    "durSec": 0.2809999999999988
+   },
+   {
+    "text": " with",
+    "startSec": 30.32,
+    "durSec": 0.16000000000000014
+   },
+   {
+    "text": " some",
+    "startSec": 30.48,
+    "durSec": 0.16000000000000014
+   },
+   {
+    "text": " heavier",
+    "startSec": 30.64,
+    "durSec": 0.559000000000001
+   },
+   {
+    "text": " later",
+    "startSec": 31.199,
+    "durSec": 0.23999999999999844
+   },
+   {
+    "text": " on",
+    "startSec": 31.439,
+    "durSec": 0.8400000000000034
+   },
+   {
+    "text": " everything",
+    "startSec": 32.279,
+    "durSec": 0.3199999999999932
+   },
+   {
+    "text": " gets",
+    "startSec": 32.599,
+    "durSec": 0.24100000000000676
+   },
+   {
+    "text": " done",
+    "startSec": 32.84,
+    "durSec": 0.1599999999999966
+   },
+   {
+    "text": " and",
+    "startSec": 33
+   }
+  ],
+  "cues": [
+   {
+    "text": "so in",
+    "startSec": 12.559,
+    "durSec": 4.48
+   },
+   {
+    "text": "college I was a government major which",
+    "startSec": 14.36,
+    "durSec": 5.28
+   },
+   {
+    "text": "means I had to write a lot of papers now",
+    "startSec": 17.039,
+    "durSec": 3.881
+   },
+   {
+    "text": "when a normal student writes a paper",
+    "startSec": 19.64,
+    "durSec": 2.479
+   },
+   {
+    "text": "they might spread the work out a little",
+    "startSec": 20.92,
+    "durSec": 5.04
+   },
+   {
+    "text": "like this so you",
+    "startSec": 22.119,
+    "durSec": 5.881
+   },
+   {
+    "text": "know you get started maybe a little",
+    "startSec": 25.96,
+    "durSec": 3.399
+   },
+   {
+    "text": "slowly but you get enough done in the",
+    "startSec": 28,
+    "durSec": 2.96
+   },
+   {
+    "text": "first week that that with some heavier",
+    "startSec": 29.359,
+    "durSec": 3.801
+   },
+   {
+    "text": "days later on everything gets done and",
+    "startSec": 30.96,
+    "durSec": 3.96
+   }
+  ]
+ },
+ "pins": {
+  "tier": "asr-word",
+  "wordCount": 57,
+  "cueCount": 10,
+  "tokenCount": 67,
+  "spanSec": 22.361000000000004,
+  "speechDurationSec": 12.68,
+  "pauseBiasPct": -45.11829652996848,
+  "timingCoverageOk": true,
+  "rates": {
+   "wordLevelWpm": 168.96398399288574,
+   "cueLevelWpm": 179.77729081883632,
+   "correctedCueLevelWpm": 179.77729081883632,
+   "manualCueRate": 179.77729081883632,
+   "unifiedWpm": 218.46638769632082,
+   "articulatoryWpm": 317.0347003154574
+  },
+  "tolerance": {
+   "countsRel": 0.25,
+   "ratesRel": 0.15
+  }
+ },
+ "recorded": {
+  "sourceFiles": [
+   "scripts/data/sample-results.jsonl",
+   "scripts/data/web-rerun/rerun-results.jsonl"
+  ],
+  "fields": {
+   "kind": "asr",
+   "nCues": 335,
+   "nWordsTimed": 1921,
+   "textTokens": 2256,
+   "coveragePct": 85.15070921985816,
+   "spanSec": 830.72,
+   "unifiedRate": 170.56492533707052,
+   "wordAccurateRate": 268.6666006957393,
+   "pauseBiasPct": -57.515737872132966
+  }
+ }
+}

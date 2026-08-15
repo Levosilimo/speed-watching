@@ -1,0 +1,72 @@
+{
+ "fixture": "gapped.json",
+ "provenance": {
+  "source": "synthetic",
+  "videoId": "e2e-fixture",
+  "captureDate": "2026-08-12",
+  "captureMethod": "authored (synthetic): the skip-silence gap lane",
+  "truncation": "first 20 events + first 12 top-level windows (tests/fixtures/README.md)",
+  "backs": "gapped cue timeline with an inter-cue gap (e2e/shared/specs.ts runSkipSpecs); track kind absent = manual per KIND_BY_FIXTURE",
+  "notes": []
+ },
+ "layout": {
+  "events": 5,
+  "windows": 0,
+  "segOffsets": 0,
+  "windowTexts": 0
+ },
+ "kind": null,
+ "parse": {
+  "words": [],
+  "cues": [
+   {
+    "text": "This is the first line",
+    "startSec": 0,
+    "durSec": 1.2
+   },
+   {
+    "text": "and then the second",
+    "startSec": 1.2,
+    "durSec": 1.2
+   },
+   {
+    "text": "now comes the third",
+    "startSec": 2.7,
+    "durSec": 1.2
+   },
+   {
+    "text": "and a fourth",
+    "startSec": 3.9,
+    "durSec": 1.2
+   },
+   {
+    "text": "final phrase",
+    "startSec": 5.1,
+    "durSec": 1.2
+   }
+  ]
+ },
+ "pins": {
+  "tier": "manual-cue",
+  "wordCount": 0,
+  "cueCount": 5,
+  "tokenCount": 18,
+  "spanSec": 6.3,
+  "speechDurationSec": null,
+  "pauseBiasPct": null,
+  "timingCoverageOk": null,
+  "rates": {
+   "wordLevelWpm": null,
+   "cueLevelWpm": 171.42857142857144,
+   "correctedCueLevelWpm": 180,
+   "manualCueRate": 180,
+   "unifiedWpm": 211.76470588235296,
+   "articulatoryWpm": null
+  },
+  "tolerance": {
+   "countsRel": 0.25,
+   "ratesRel": 0.15
+  }
+ },
+ "recorded": null
+}

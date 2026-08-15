@@ -1,0 +1,162 @@
+{
+ "fixture": "manual-cue.json",
+ "provenance": {
+  "source": "real",
+  "videoId": "qp0HIF3SfI4",
+  "captureDate": "2026-08-11",
+  "captureMethod": "ANDROID innertube control fetch (phase-0 harness androidControl)",
+  "truncation": "first 20 events + first 12 top-level windows (tests/fixtures/README.md)",
+  "backs": "manual-cue parsing (kind=manual); legacy manual-cue slot (tests/fixtures/README.md FIXTURE_SLOTS)",
+  "notes": []
+ },
+ "layout": {
+  "events": 20,
+  "windows": 0,
+  "segOffsets": 0,
+  "windowTexts": 0
+ },
+ "kind": null,
+ "parse": {
+  "words": [],
+  "cues": [
+   {
+    "text": "How do you explain when things don't go as we assume?",
+    "startSec": 16.257,
+    "durSec": 3.966
+   },
+   {
+    "text": "Or better, how do you explain",
+    "startSec": 20.257,
+    "durSec": 2.966
+   },
+   {
+    "text": "when others are able to achieve things that seem to defy all of the assumptions?",
+    "startSec": 23.257,
+    "durSec": 3.966
+   },
+   {
+    "text": "For example:",
+    "startSec": 27.257,
+    "durSec": 1.966
+   },
+   {
+    "text": "Why is Apple so innovative?",
+    "startSec": 29.257,
+    "durSec": 1.966
+   },
+   {
+    "text": "Year after year, after year,",
+    "startSec": 31.257,
+    "durSec": 1.966
+   },
+   {
+    "text": "they're more innovative than all their competition.",
+    "startSec": 33.257,
+    "durSec": 2.966
+   },
+   {
+    "text": "And yet, they're just a computer company.",
+    "startSec": 36.257,
+    "durSec": 1.966
+   },
+   {
+    "text": "They're just like everyone else.",
+    "startSec": 38.257,
+    "durSec": 1.966
+   },
+   {
+    "text": "They have the same access to the same talent,",
+    "startSec": 40.257,
+    "durSec": 2.2
+   },
+   {
+    "text": "the same agencies,",
+    "startSec": 42.457,
+    "durSec": 1
+   },
+   {
+    "text": "the same consultants, the same media.",
+    "startSec": 43.49,
+    "durSec": 1.867
+   },
+   {
+    "text": "Then why is it that they seem to have something different?",
+    "startSec": 45.39,
+    "durSec": 3.433
+   },
+   {
+    "text": "Why is it that Martin Luther King led the Civil Rights Movement?",
+    "startSec": 50.257,
+    "durSec": 3.966
+   },
+   {
+    "text": "He wasn't the only man who suffered in pre-civil rights America,",
+    "startSec": 54.257,
+    "durSec": 3.966
+   },
+   {
+    "text": "and he certainly wasn't the only great orator of the day.",
+    "startSec": 58.257,
+    "durSec": 2.733
+   },
+   {
+    "text": "Why him?",
+    "startSec": 61.023,
+    "durSec": 1.2
+   },
+   {
+    "text": "And why is it that the Wright brothers",
+    "startSec": 62.257,
+    "durSec": 2.966
+   },
+   {
+    "text": "were able to figure out controlled, powered man flight",
+    "startSec": 65.257,
+    "durSec": 2.966
+   },
+   {
+    "text": "when there were certainly other teams",
+    "startSec": 68.257,
+    "durSec": 2.166
+   }
+  ]
+ },
+ "pins": {
+  "tier": "manual-cue",
+  "wordCount": 0,
+  "cueCount": 20,
+  "tokenCount": 158,
+  "spanSec": 54.166,
+  "speechDurationSec": null,
+  "pauseBiasPct": null,
+  "timingCoverageOk": null,
+  "rates": {
+   "wordLevelWpm": null,
+   "cueLevelWpm": 167.26359709042572,
+   "correctedCueLevelWpm": 173.70630979542534,
+   "manualCueRate": 181.75892018329273,
+   "unifiedWpm": 182.3076923076923,
+   "articulatoryWpm": null
+  },
+  "tolerance": {
+   "countsRel": 0.25,
+   "ratesRel": 0.15
+  }
+ },
+ "recorded": {
+  "sourceFiles": [
+   "scripts/data/sample-results.jsonl"
+  ],
+  "fields": {
+   "kind": "manual",
+   "nCues": 382,
+   "nWordsTimed": 0,
+   "textTokens": 3015,
+   "coveragePct": 0,
+   "spanSec": 1062.9999999999998,
+   "speechEstSec": 995.8720000000005,
+   "cueWpm": 170.1787394167451,
+   "cueWpmCorrected": 181.64985058320738
+  }
+ }
+}

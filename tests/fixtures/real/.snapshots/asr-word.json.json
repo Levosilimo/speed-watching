@@ -1,0 +1,347 @@
+{
+ "fixture": "asr-word.json",
+ "provenance": {
+  "source": "real",
+  "videoId": "iG9CE55wbtY",
+  "captureDate": "2026-08-11",
+  "captureMethod": "ANDROID innertube control fetch (phase-0 harness androidControl)",
+  "truncation": "first 20 events + first 12 top-level windows (tests/fixtures/README.md)",
+  "backs": "word timing parsing (words > 0 on a real ANDROID payload); legacy asr-word slot (tests/fixtures/README.md FIXTURE_SLOTS)",
+  "notes": []
+ },
+ "layout": {
+  "events": 20,
+  "windows": 0,
+  "segOffsets": 46,
+  "windowTexts": 0
+ },
+ "kind": "asr",
+ "parse": {
+  "words": [
+   {
+    "text": " morning",
+    "startSec": 26.72,
+    "durSec": 1.9200000000000017
+   },
+   {
+    "text": " are",
+    "startSec": 28.64,
+    "durSec": 0.1999999999999993
+   },
+   {
+    "text": " you",
+    "startSec": 28.84,
+    "durSec": 1.879999999999999
+   },
+   {
+    "text": " it's",
+    "startSec": 30.72,
+    "durSec": 0.16000000000000014
+   },
+   {
+    "text": " been",
+    "startSec": 30.88,
+    "durSec": 0.15900000000000247
+   },
+   {
+    "text": " great",
+    "startSec": 31.039,
+    "durSec": 0.23999999999999844
+   },
+   {
+    "text": " hasn't",
+    "startSec": 31.279,
+    "durSec": 0.23999999999999844
+   },
+   {
+    "text": " it",
+    "startSec": 31.519,
+    "durSec": 1.6810000000000045
+   },
+   {
+    "text": " been",
+    "startSec": 33.2,
+    "durSec": 0.23999999999999488
+   },
+   {
+    "text": " i've",
+    "startSec": 33.44,
+    "durSec": 0.3200000000000003
+   },
+   {
+    "text": " been",
+    "startSec": 33.76,
+    "durSec": 0.1600000000000037
+   },
+   {
+    "text": " blown",
+    "startSec": 33.92,
+    "durSec": 0.23999999999999488
+   },
+   {
+    "text": " away",
+    "startSec": 34.16,
+    "durSec": 0.23900000000000432
+   },
+   {
+    "text": " by",
+    "startSec": 34.399,
+    "durSec": 0.1599999999999966
+   },
+   {
+    "text": " the",
+    "startSec": 34.559,
+    "durSec": 0.24099999999999966
+   },
+   {
+    "text": " thing",
+    "startSec": 34.8,
+    "durSec": 0.5600000000000023
+   },
+   {
+    "text": " in",
+    "startSec": 35.36,
+    "durSec": 0.1600000000000037
+   },
+   {
+    "text": " fact",
+    "startSec": 35.52,
+    "durSec": 0.23999999999999488
+   },
+   {
+    "text": " i'm",
+    "startSec": 35.76,
+    "durSec": 0.0800000000000054
+   },
+   {
+    "text": " leaving",
+    "startSec": 35.84,
+    "durSec": 6.959999999999994
+   },
+   {
+    "text": " there",
+    "startSec": 42.8,
+    "durSec": 0.1600000000000037
+   },
+   {
+    "text": " have",
+    "startSec": 42.96,
+    "durSec": 0.0799999999999983
+   },
+   {
+    "text": " been",
+    "startSec": 43.04,
+    "durSec": 0.240000000000002
+   },
+   {
+    "text": " three",
+    "startSec": 43.28,
+    "durSec": 0.240000000000002
+   },
+   {
+    "text": " themes",
+    "startSec": 43.52,
+    "durSec": 0.3200000000000003
+   },
+   {
+    "text": " haven't",
+    "startSec": 43.84,
+    "durSec": 0.3989999999999938
+   },
+   {
+    "text": " running",
+    "startSec": 44.239,
+    "durSec": 0.3200000000000003
+   },
+   {
+    "text": " through",
+    "startSec": 44.559,
+    "durSec": 0.1600000000000037
+   },
+   {
+    "text": " the",
+    "startSec": 44.719,
+    "durSec": 0.08099999999999596
+   },
+   {
+    "text": " conference",
+    "startSec": 44.8,
+    "durSec": 1.5990000000000038
+   },
+   {
+    "text": " which",
+    "startSec": 46.399,
+    "durSec": 0.24099999999999966
+   },
+   {
+    "text": " are",
+    "startSec": 46.64,
+    "durSec": 0.07900000000000063
+   },
+   {
+    "text": " rather",
+    "startSec": 46.719,
+    "durSec": 0.40099999999999625
+   },
+   {
+    "text": " relevant",
+    "startSec": 47.12,
+    "durSec": 0.3200000000000003
+   },
+   {
+    "text": " to",
+    "startSec": 47.44,
+    "durSec": 0.1600000000000037
+   },
+   {
+    "text": " what",
+    "startSec": 47.6,
+    "durSec": 0.0799999999999983
+   },
+   {
+    "text": " i",
+    "startSec": 47.68,
+    "durSec": 0.1600000000000037
+   },
+   {
+    "text": " to",
+    "startSec": 47.84,
+    "durSec": 0.1599999999999966
+   },
+   {
+    "text": " talk",
+    "startSec": 48,
+    "durSec": 0.1599999999999966
+   },
+   {
+    "text": " about",
+    "startSec": 48.16,
+    "durSec": 0.23900000000000432
+   },
+   {
+    "text": " one",
+    "startSec": 48.399,
+    "durSec": 0.24099999999999966
+   },
+   {
+    "text": " is",
+    "startSec": 48.64,
+    "durSec": 0.1599999999999966
+   },
+   {
+    "text": " the",
+    "startSec": 48.8,
+    "durSec": 2.0790000000000006
+   },
+   {
+    "text": " evidence",
+    "startSec": 50.879,
+    "durSec": 0.48100000000000165
+   },
+   {
+    "text": " of",
+    "startSec": 51.36,
+    "durSec": 0.0799999999999983
+   },
+   {
+    "text": " human",
+    "startSec": 51.44
+   }
+  ],
+  "cues": [
+   {
+    "text": "[Music]",
+    "startSec": 6.26,
+    "durSec": 3.88
+   },
+   {
+    "text": "good morning",
+    "startSec": 26.56,
+    "durSec": 6.4
+   },
+   {
+    "text": "how are you it's been great hasn't it",
+    "startSec": 28.4,
+    "durSec": 6.24
+   },
+   {
+    "text": "it's been i've been blown away by the",
+    "startSec": 32.96,
+    "durSec": 5.2
+   },
+   {
+    "text": "whole thing in fact i'm leaving",
+    "startSec": 34.64,
+    "durSec": 3.52
+   },
+   {
+    "text": "um there have been three themes haven't",
+    "startSec": 40.399,
+    "durSec": 5.521
+   },
+   {
+    "text": "they running through the conference",
+    "startSec": 44.079,
+    "durSec": 3.681
+   },
+   {
+    "text": "uh which are rather relevant to what i",
+    "startSec": 45.92,
+    "durSec": 3.479
+   },
+   {
+    "text": "want to talk about one is the",
+    "startSec": 47.76,
+    "durSec": 4
+   },
+   {
+    "text": "extraordinary evidence of human",
+    "startSec": 49.399,
+    "durSec": 3.721
+   }
+  ]
+ },
+ "pins": {
+  "tier": "asr-word",
+  "wordCount": 46,
+  "cueCount": 10,
+  "tokenCount": 62,
+  "spanSec": 46.86000000000001,
+  "speechDurationSec": 8.600999999999996,
+  "pauseBiasPct": -165.53889082664827,
+  "timingCoverageOk": true,
+  "rates": {
+   "wordLevelWpm": 111.6504854368932,
+   "cueLevelWpm": 71.70294494238155,
+   "correctedCueLevelWpm": 73.61640594189562,
+   "manualCueRate": 137.80120481927707,
+   "unifiedWpm": 160.25220018389595,
+   "articulatoryWpm": 425.5319148936173
+  },
+  "tolerance": {
+   "countsRel": 0.25,
+   "ratesRel": 0.15
+  }
+ },
+ "recorded": {
+  "sourceFiles": [
+   "scripts/data/sample-results.jsonl",
+   "scripts/data/web-rerun/rerun-results.jsonl"
+  ],
+  "fields": {
+   "kind": "asr",
+   "nCues": 584,
+   "nWordsTimed": 2753,
+   "textTokens": 3337,
+   "coveragePct": 82.4992508240935,
+   "spanSec": 1199.02,
+   "speechEstSec": 1199.02,
+   "wordWpm": 140.5117560992208,
+   "cueWpm": 166.98637220396657,
+   "cueWpmCorrected": 166.98637220396657,
+   "unifiedRate": 178.52004110996913,
+   "wordAccurateRate": 312.77901241422336,
+   "pauseBiasPct": -75.20666613646482
+  }
+ }
+}

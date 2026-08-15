@@ -1,0 +1,547 @@
+{
+ "fixture": "pot-gated.json",
+ "provenance": {
+  "source": "synthetic",
+  "videoId": "e2e-fixture",
+  "captureDate": "2026-08-12",
+  "captureMethod": "authored (synthetic): the POT-gated signed-fetch e2e lane",
+  "truncation": "first 20 events + first 12 top-level windows (tests/fixtures/README.md)",
+  "backs": "POT_GATED_FIXTURES: only a signed /api/timedtext request is served the payload (e2e/shared/fixtures.ts)",
+  "notes": []
+ },
+ "layout": {
+  "events": 10,
+  "windows": 0,
+  "segOffsets": 90,
+  "windowTexts": 0
+ },
+ "kind": "asr",
+ "parse": {
+  "words": [
+   {
+    "text": "alpha ",
+    "startSec": 0,
+    "durSec": 0.25
+   },
+   {
+    "text": "bravo ",
+    "startSec": 0.25,
+    "durSec": 0.25
+   },
+   {
+    "text": "charlie ",
+    "startSec": 0.5,
+    "durSec": 0.25
+   },
+   {
+    "text": "delta ",
+    "startSec": 0.75,
+    "durSec": 0.25
+   },
+   {
+    "text": "echo ",
+    "startSec": 1,
+    "durSec": 0.25
+   },
+   {
+    "text": "foxtrot ",
+    "startSec": 1.25,
+    "durSec": 0.25
+   },
+   {
+    "text": "golf ",
+    "startSec": 1.5,
+    "durSec": 0.25
+   },
+   {
+    "text": "hotel ",
+    "startSec": 1.75,
+    "durSec": 0.25
+   },
+   {
+    "text": "india ",
+    "startSec": 2,
+    "durSec": 1
+   },
+   {
+    "text": "juliet ",
+    "startSec": 3,
+    "durSec": 0.25
+   },
+   {
+    "text": "kilo ",
+    "startSec": 3.25,
+    "durSec": 0.25
+   },
+   {
+    "text": "lima ",
+    "startSec": 3.5,
+    "durSec": 0.25
+   },
+   {
+    "text": "mike ",
+    "startSec": 3.75,
+    "durSec": 0.25
+   },
+   {
+    "text": "november ",
+    "startSec": 4,
+    "durSec": 0.25
+   },
+   {
+    "text": "oscar ",
+    "startSec": 4.25,
+    "durSec": 0.25
+   },
+   {
+    "text": "papa ",
+    "startSec": 4.5,
+    "durSec": 0.25
+   },
+   {
+    "text": "quebec ",
+    "startSec": 4.75,
+    "durSec": 0.25
+   },
+   {
+    "text": "romeo ",
+    "startSec": 5,
+    "durSec": 1
+   },
+   {
+    "text": "sierra ",
+    "startSec": 6,
+    "durSec": 0.25
+   },
+   {
+    "text": "tango ",
+    "startSec": 6.25,
+    "durSec": 0.25
+   },
+   {
+    "text": "uniform ",
+    "startSec": 6.5,
+    "durSec": 0.25
+   },
+   {
+    "text": "victor ",
+    "startSec": 6.75,
+    "durSec": 0.25
+   },
+   {
+    "text": "whiskey ",
+    "startSec": 7,
+    "durSec": 0.25
+   },
+   {
+    "text": "xray ",
+    "startSec": 7.25,
+    "durSec": 0.25
+   },
+   {
+    "text": "yankee ",
+    "startSec": 7.5,
+    "durSec": 0.25
+   },
+   {
+    "text": "zulu ",
+    "startSec": 7.75,
+    "durSec": 0.25
+   },
+   {
+    "text": "alpha ",
+    "startSec": 8,
+    "durSec": 1
+   },
+   {
+    "text": "bravo ",
+    "startSec": 9,
+    "durSec": 0.25
+   },
+   {
+    "text": "charlie ",
+    "startSec": 9.25,
+    "durSec": 0.25
+   },
+   {
+    "text": "delta ",
+    "startSec": 9.5,
+    "durSec": 0.25
+   },
+   {
+    "text": "echo ",
+    "startSec": 9.75,
+    "durSec": 0.25
+   },
+   {
+    "text": "foxtrot ",
+    "startSec": 10,
+    "durSec": 0.25
+   },
+   {
+    "text": "golf ",
+    "startSec": 10.25,
+    "durSec": 0.25
+   },
+   {
+    "text": "hotel ",
+    "startSec": 10.5,
+    "durSec": 0.25
+   },
+   {
+    "text": "india ",
+    "startSec": 10.75,
+    "durSec": 0.25
+   },
+   {
+    "text": "juliet ",
+    "startSec": 11,
+    "durSec": 1
+   },
+   {
+    "text": "kilo ",
+    "startSec": 12,
+    "durSec": 0.25
+   },
+   {
+    "text": "lima ",
+    "startSec": 12.25,
+    "durSec": 0.25
+   },
+   {
+    "text": "mike ",
+    "startSec": 12.5,
+    "durSec": 0.25
+   },
+   {
+    "text": "november ",
+    "startSec": 12.75,
+    "durSec": 0.25
+   },
+   {
+    "text": "oscar ",
+    "startSec": 13,
+    "durSec": 0.25
+   },
+   {
+    "text": "papa ",
+    "startSec": 13.25,
+    "durSec": 0.25
+   },
+   {
+    "text": "quebec ",
+    "startSec": 13.5,
+    "durSec": 0.25
+   },
+   {
+    "text": "romeo ",
+    "startSec": 13.75,
+    "durSec": 0.25
+   },
+   {
+    "text": "sierra ",
+    "startSec": 14,
+    "durSec": 1
+   },
+   {
+    "text": "tango ",
+    "startSec": 15,
+    "durSec": 0.25
+   },
+   {
+    "text": "uniform ",
+    "startSec": 15.25,
+    "durSec": 0.25
+   },
+   {
+    "text": "victor ",
+    "startSec": 15.5,
+    "durSec": 0.25
+   },
+   {
+    "text": "whiskey ",
+    "startSec": 15.75,
+    "durSec": 0.25
+   },
+   {
+    "text": "xray ",
+    "startSec": 16,
+    "durSec": 0.25
+   },
+   {
+    "text": "yankee ",
+    "startSec": 16.25,
+    "durSec": 0.25
+   },
+   {
+    "text": "zulu ",
+    "startSec": 16.5,
+    "durSec": 0.25
+   },
+   {
+    "text": "alpha ",
+    "startSec": 16.75,
+    "durSec": 0.25
+   },
+   {
+    "text": "bravo ",
+    "startSec": 17,
+    "durSec": 1
+   },
+   {
+    "text": "charlie ",
+    "startSec": 18,
+    "durSec": 0.25
+   },
+   {
+    "text": "delta ",
+    "startSec": 18.25,
+    "durSec": 0.25
+   },
+   {
+    "text": "echo ",
+    "startSec": 18.5,
+    "durSec": 0.25
+   },
+   {
+    "text": "foxtrot ",
+    "startSec": 18.75,
+    "durSec": 0.25
+   },
+   {
+    "text": "golf ",
+    "startSec": 19,
+    "durSec": 0.25
+   },
+   {
+    "text": "hotel ",
+    "startSec": 19.25,
+    "durSec": 0.25
+   },
+   {
+    "text": "india ",
+    "startSec": 19.5,
+    "durSec": 0.25
+   },
+   {
+    "text": "juliet ",
+    "startSec": 19.75,
+    "durSec": 0.25
+   },
+   {
+    "text": "kilo ",
+    "startSec": 20,
+    "durSec": 1
+   },
+   {
+    "text": "lima ",
+    "startSec": 21,
+    "durSec": 0.25
+   },
+   {
+    "text": "mike ",
+    "startSec": 21.25,
+    "durSec": 0.25
+   },
+   {
+    "text": "november ",
+    "startSec": 21.5,
+    "durSec": 0.25
+   },
+   {
+    "text": "oscar ",
+    "startSec": 21.75,
+    "durSec": 0.25
+   },
+   {
+    "text": "papa ",
+    "startSec": 22,
+    "durSec": 0.25
+   },
+   {
+    "text": "quebec ",
+    "startSec": 22.25,
+    "durSec": 0.25
+   },
+   {
+    "text": "romeo ",
+    "startSec": 22.5,
+    "durSec": 0.25
+   },
+   {
+    "text": "sierra ",
+    "startSec": 22.75,
+    "durSec": 0.25
+   },
+   {
+    "text": "tango ",
+    "startSec": 23,
+    "durSec": 1
+   },
+   {
+    "text": "uniform ",
+    "startSec": 24,
+    "durSec": 0.25
+   },
+   {
+    "text": "victor ",
+    "startSec": 24.25,
+    "durSec": 0.25
+   },
+   {
+    "text": "whiskey ",
+    "startSec": 24.5,
+    "durSec": 0.25
+   },
+   {
+    "text": "xray ",
+    "startSec": 24.75,
+    "durSec": 0.25
+   },
+   {
+    "text": "yankee ",
+    "startSec": 25,
+    "durSec": 0.25
+   },
+   {
+    "text": "zulu ",
+    "startSec": 25.25,
+    "durSec": 0.25
+   },
+   {
+    "text": "alpha ",
+    "startSec": 25.5,
+    "durSec": 0.25
+   },
+   {
+    "text": "bravo ",
+    "startSec": 25.75,
+    "durSec": 0.25
+   },
+   {
+    "text": "charlie ",
+    "startSec": 26,
+    "durSec": 1
+   },
+   {
+    "text": "delta ",
+    "startSec": 27,
+    "durSec": 0.25
+   },
+   {
+    "text": "echo ",
+    "startSec": 27.25,
+    "durSec": 0.25
+   },
+   {
+    "text": "foxtrot ",
+    "startSec": 27.5,
+    "durSec": 0.25
+   },
+   {
+    "text": "golf ",
+    "startSec": 27.75,
+    "durSec": 0.25
+   },
+   {
+    "text": "hotel ",
+    "startSec": 28,
+    "durSec": 0.25
+   },
+   {
+    "text": "india ",
+    "startSec": 28.25,
+    "durSec": 0.25
+   },
+   {
+    "text": "juliet ",
+    "startSec": 28.5,
+    "durSec": 0.25
+   },
+   {
+    "text": "kilo ",
+    "startSec": 28.75,
+    "durSec": 0.25
+   },
+   {
+    "text": "lima ",
+    "startSec": 29
+   }
+  ],
+  "cues": [
+   {
+    "text": "alpha bravo charlie delta echo foxtrot golf hotel india",
+    "startSec": 0,
+    "durSec": 2.5
+   },
+   {
+    "text": "juliet kilo lima mike november oscar papa quebec romeo",
+    "startSec": 3,
+    "durSec": 2.5
+   },
+   {
+    "text": "sierra tango uniform victor whiskey xray yankee zulu alpha",
+    "startSec": 6,
+    "durSec": 2.5
+   },
+   {
+    "text": "bravo charlie delta echo foxtrot golf hotel india juliet",
+    "startSec": 9,
+    "durSec": 2.5
+   },
+   {
+    "text": "kilo lima mike november oscar papa quebec romeo sierra",
+    "startSec": 12,
+    "durSec": 2.5
+   },
+   {
+    "text": "tango uniform victor whiskey xray yankee zulu alpha bravo",
+    "startSec": 15,
+    "durSec": 2.5
+   },
+   {
+    "text": "charlie delta echo foxtrot golf hotel india juliet kilo",
+    "startSec": 18,
+    "durSec": 2.5
+   },
+   {
+    "text": "lima mike november oscar papa quebec romeo sierra tango",
+    "startSec": 21,
+    "durSec": 2.5
+   },
+   {
+    "text": "uniform victor whiskey xray yankee zulu alpha bravo charlie",
+    "startSec": 24,
+    "durSec": 2.5
+   },
+   {
+    "text": "delta echo foxtrot golf hotel india juliet kilo lima",
+    "startSec": 27,
+    "durSec": 2.5
+   }
+  ]
+ },
+ "pins": {
+  "tier": "asr-word",
+  "wordCount": 90,
+  "cueCount": 10,
+  "tokenCount": 90,
+  "spanSec": 29.5,
+  "speechDurationSec": 20,
+  "pauseBiasPct": -35,
+  "timingCoverageOk": true,
+  "rates": {
+   "wordLevelWpm": 186.20689655172413,
+   "cueLevelWpm": 183.0508474576271,
+   "correctedCueLevelWpm": 216,
+   "manualCueRate": 216,
+   "unifiedWpm": 200,
+   "articulatoryWpm": 270
+  },
+  "tolerance": {
+   "countsRel": 0.25,
+   "ratesRel": 0.15
+  }
+ },
+ "recorded": null
+}
