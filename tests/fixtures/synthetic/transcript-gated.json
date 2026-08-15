@@ -1,0 +1,155 @@
+{
+ "responseContext": {
+  "serviceTrackingParams": []
+ },
+ "actions": [
+  {
+   "updateEngagementPanelAction": {
+    "content": {
+     "transcriptRenderer": {
+      "content": {
+       "transcriptSearchPanelRenderer": {
+        "body": {
+         "transcriptSegmentListRenderer": {
+          "initialSegments": [
+           {
+            "transcriptSegmentRenderer": {
+             "startMs": "0",
+             "endMs": "3000",
+             "snippet": {
+              "runs": [
+               {
+                "text": "alpha bravo charlie delta echo"
+               }
+              ]
+             }
+            }
+           },
+           {
+            "transcriptSegmentRenderer": {
+             "startMs": "3000",
+             "endMs": "6000",
+             "snippet": {
+              "runs": [
+               {
+                "text": "foxtrot golf hotel india juliet"
+               }
+              ]
+             }
+            }
+           },
+           {
+            "transcriptSegmentRenderer": {
+             "startMs": "6000",
+             "endMs": "9000",
+             "snippet": {
+              "runs": [
+               {
+                "text": "kilo lima mike november oscar"
+               }
+              ]
+             }
+            }
+           },
+           {
+            "transcriptSegmentRenderer": {
+             "startMs": "9000",
+             "endMs": "12000",
+             "snippet": {
+              "runs": [
+               {
+                "text": "papa quebec romeo sierra tango"
+               }
+              ]
+             }
+            }
+           },
+           {
+            "transcriptSegmentRenderer": {
+             "startMs": "12000",
+             "endMs": "15000",
+             "snippet": {
+              "runs": [
+               {
+                "text": "uniform victor whiskey xray yankee"
+               }
+              ]
+             }
+            }
+           },
+           {
+            "transcriptSegmentRenderer": {
+             "startMs": "15000",
+             "endMs": "18000",
+             "snippet": {
+              "runs": [
+               {
+                "text": "zulu alpha bravo charlie delta"
+               }
+              ]
+             }
+            }
+           },
+           {
+            "transcriptSegmentRenderer": {
+             "startMs": "18000",
+             "endMs": "21000",
+             "snippet": {
+              "runs": [
+               {
+                "text": "echo foxtrot golf hotel india"
+               }
+              ]
+             }
+            }
+           },
+           {
+            "transcriptSegmentRenderer": {
+             "startMs": "21000",
+             "endMs": "24000",
+             "snippet": {
+              "runs": [
+               {
+                "text": "juliet kilo lima mike november"
+               }
+              ]
+             }
+            }
+           },
+           {
+            "transcriptSegmentRenderer": {
+             "startMs": "24000",
+             "endMs": "27000",
+             "snippet": {
+              "runs": [
+               {
+                "text": "oscar papa quebec romeo sierra"
+               }
+              ]
+             }
+            }
+           },
+           {
+            "transcriptSegmentRenderer": {
+             "startMs": "27000",
+             "endMs": "30000",
+             "snippet": {
+              "runs": [
+               {
+                "text": "tango uniform victor whiskey xray"
+               }
+              ]
+             }
+            }
+           }
+          ]
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  }
+ ]
+}

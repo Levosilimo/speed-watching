@@ -29,6 +29,7 @@ import {
   runMultiVideoSpecs,
   runPillSpecs,
   runSkipSpecs,
+  runTranscriptSpecs,
   type CaptionSource,
   type E2EDriver,
 } from '../shared/specs';
@@ -47,6 +48,9 @@ let page: Page;
 const consoleLines: string[] = [];
 /** ANDROID innertube fallback POSTs seen by the route interceptor. */
 let androidPosts = 0;
+/** get_transcript POSTs (the ANDROID-tail transcript fallback) seen by the
+ * route interceptor. */
+let transcriptPosts = 0;
 let driver: E2EDriver;
 
 /** Dark Reader pattern: youtube.com pages are fulfilled from the fixture
@@ -60,11 +64,42 @@ async function routeFixtures(target: BrowserContext): Promise<void> {
   await target.route('**://www.youtube.com/**', async (route) => {
     const request = route.request();
     const url = new URL(request.url());
-    // The content script's ANDROID innertube fallback POST: record it, then
-    // drop it (no real YouTube traffic).
+    // The content script's ANDROID innertube fallback POST: record it and
+    // forward to the fixture server — it answers the transcript-gated
+    // fixture with the transcript-panel player response and every other
+    // fixture with its 400.
     if (url.pathname === '/youtubei/v1/player') {
       androidPosts += 1;
-      await route.abort();
+      const response = await fetch(`${fixtureBase}/youtubei/v1/player`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: route.request().postData(),
+      });
+      await route.fulfill({
+        status: response.status,
+        contentType: 'application/json',
+        body: await response.text(),
+      });
+      return;
+    }
+    // The ANDROID-tail transcript fallback POST (lib/transcript.ts): record
+    // and forward — the fixture server serves the cue payload only to a
+    // POST carrying the transcript params.
+    if (url.pathname === '/youtubei/v1/get_transcript') {
+      transcriptPosts += 1;
+      const response = await fetch(
+        `${fixtureBase}/youtubei/v1/get_transcript?${url.searchParams.toString()}`,
+        {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: route.request().postData(),
+        },
+      );
+      await route.fulfill({
+        status: response.status,
+        contentType: 'application/json',
+        body: await response.text(),
+      });
       return;
     }
     if (url.pathname === '/api/timedtext') {
@@ -189,6 +224,9 @@ test.beforeAll(async () => {
         const response = await fetch(`/api/timedtext?fixture=${f}`);
         return { status: response.status, body: await response.text() };
       }, fixture);
+    },
+    async readTranscriptAttempts() {
+      return transcriptPosts;
     },
     async readBrowserLanguage() {
       return page.evaluate(() => navigator.language);
@@ -348,6 +386,10 @@ test('pill renders, applies, dismisses; music/unreachable suppress Apply; WEB-bl
 
 test('pot-gated fixture: bare timedtext 200-empties; the capture path measures from the signed response', async () => {
   await runCaptureSpecs(driver);
+});
+
+test('transcript-gated fixture: the ANDROID tail lands on get_transcript', async () => {
+  await runTranscriptSpecs(driver);
 });
 
 /** Wait until the pill renders in recommend mode AND its mode-transition

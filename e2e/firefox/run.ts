@@ -33,6 +33,7 @@ import {
   runMeasurementSpecs,
   runMultiVideoSpecs,
   runPillSpecs,
+  runTranscriptSpecs,
   type CaptionSource,
   type E2EDriver,
   type Measurement,
@@ -194,6 +195,9 @@ async function main(): Promise<void> {
         );
         return value as unknown as { status: number; body: string };
       },
+      async readTranscriptAttempts() {
+        return server.transcriptPosts();
+      },
       async readBrowserLanguage() {
         return driver.executeScript('return navigator.language') as unknown as Promise<string>;
       },
@@ -326,6 +330,7 @@ async function main(): Promise<void> {
     await runMeasurementSpecs(e2e);
     await runPillSpecs(e2e);
     await runCaptureSpecs(e2e);
+    await runTranscriptSpecs(e2e);
     await runBridgeSpecs(e2e);
     await runGenericSpecs(e2e);
     await runMultiVideoSpecs(e2e);

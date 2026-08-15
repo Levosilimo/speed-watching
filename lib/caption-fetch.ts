@@ -1,6 +1,7 @@
 import type { CaptionTrack, PlayerResponse } from '@/lib/youtube';
 import type { TimedtextBuffer } from './caption-capture';
 import { restoreCcState, triggerCcAutomation, waitForWordTimedCapture } from './caption-trigger';
+import { fetchTranscriptViaEndpoint, getTranscriptParams } from './transcript';
 
 /** E2E hook gate. The userscript bundle builds with __E2E__ defined false,
  * so the runtime flag carries the gate there (userscript/src/main.ts uses
@@ -54,6 +55,16 @@ export async function fetchAndroidCaptions(videoId: string): Promise<unknown | n
     const data = (await response.json()) as PlayerResponse;
     const track = data.captions?.playerCaptionsTracklistRenderer?.captionTracks?.[0];
     if (track === undefined) return null;
+    // The transcript panel of the ANDROID response carries the
+    // getTranscriptEndpoint params (lib/transcript.ts): the innertube
+    // transcript POST beats the bare baseUrl fetch, which 200-empties
+    // under the POT gate. Only when the params are absent or the POST
+    // fails does the bare fetch run as the last resort.
+    const params = getTranscriptParams(data);
+    if (params !== null) {
+      const transcript = await fetchTranscriptViaEndpoint(params);
+      if (transcript !== null) return transcript;
+    }
     return fetchJson3(track.baseUrl);
   } catch {
     return null;

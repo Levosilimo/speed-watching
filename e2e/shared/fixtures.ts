@@ -10,6 +10,7 @@ export const KIND_BY_FIXTURE: Record<string, string | undefined> = {
   'synthetic/music-lyrics.json': 'asr',
   'synthetic/chaptered.json': 'asr',
   'synthetic/pot-gated.json': 'asr',
+  'synthetic/transcript-gated.json': 'asr',
   'real/manual-cue.json': undefined,
   'synthetic/cue-level-only.json': undefined,
   'synthetic/ja-captions.json': 'asr',
@@ -40,6 +41,17 @@ export const BLOCKED_FIXTURES = ['synthetic/web-blocked.json'];
  * signed fetch, never from a bare re-fetch.
  */
 export const POT_GATED_FIXTURES = ['synthetic/pot-gated.json'];
+
+/**
+ * Fixtures whose caption payload the fixture server answers through the
+ * ANDROID-tail get_transcript fallback: the bare /api/timedtext route
+ * 200-empties them (POT gate), and the synthesized ANDROID player response
+ * carries the transcript-panel getTranscriptEndpoint params, so the
+ * extension must land on /youtubei/v1/get_transcript (lib/transcript.ts).
+ * The stub CC controls stay OFF these pages — the capture path must not
+ * fire, or the lane would measure from a capture instead of the transcript.
+ */
+export const TRANSCRIPT_GATED_FIXTURES = ['synthetic/transcript-gated.json'];
 
 /**
  * Fixtures served as a watch page with no caption tracks at all — the

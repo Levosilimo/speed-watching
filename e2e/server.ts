@@ -22,6 +22,7 @@ import {
   LANG_BY_FIXTURE,
   NO_TRACK_FIXTURES,
   POT_GATED_FIXTURES,
+  TRANSCRIPT_GATED_FIXTURES,
 } from './shared/fixtures';
 
 export const FIXTURE_PORT = 4319;
@@ -87,6 +88,68 @@ const potGatedStub = `<script>
 })();` +
   '</script>';
 
+/** The ytcfg stub for the transcript-gated fixture: the innertube identity
+ * the get_transcript POST is built from (lib/transcript.ts reads
+ * INNERTUBE_API_KEY + INNERTUBE_CONTEXT). Real pages set these via
+ * ytcfg.set; the stub mirrors the get() contract only. */
+const ytcfgStub = `<script>
+window.ytcfg = {
+  get(name) {
+    if (name === 'INNERTUBE_API_KEY') return 'FIXTURE_INNERTUBE_KEY';
+    if (name === 'INNERTUBE_CONTEXT') {
+      return { client: { clientName: 'WEB', clientVersion: '2.20240101.00.00', hl: 'en', gl: 'US' } };
+    }
+    return undefined;
+  },
+};
+</script>`;
+
+/** The ANDROID player response for the transcript-gated fixture: a caption
+ * track (whose bare baseUrl 200-empties under the POT gate) plus the
+ * transcript panel whose footer button carries the getTranscriptEndpoint
+ * params — the real ANDROID-response shape lib/transcript.ts digs. */
+function androidTranscriptResponse(fixture: string): string {
+  return JSON.stringify({
+    captions: {
+      playerCaptionsTracklistRenderer: {
+        captionTracks: [
+          {
+            baseUrl: `/api/timedtext?fixture=${fixture}`,
+            kind: 'asr',
+            languageCode: 'en',
+          },
+        ],
+      },
+    },
+    engagementPanels: [
+      {
+        engagementPanelSectionListRenderer: {
+          targetId: 'engagement-panel-searchable-transcript',
+          content: {
+            transcriptRenderer: {
+              content: {
+                transcriptSearchPanelRenderer: {
+                  footer: {
+                    transcriptFooterRenderer: {
+                      primaryButton: {
+                        buttonRenderer: {
+                          command: {
+                            getTranscriptEndpoint: { params: 'FIXTURE_TRANSCRIPT_PARAMS' },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    ],
+  });
+}
+
 interface FixtureServer {
   /** Base URL of this server, e.g. http://127.0.0.1:4319 */
   baseUrl: string;
@@ -94,12 +157,19 @@ interface FixtureServer {
   watchUrl(fixture: string): string;
   /** ANDROID innertube fallback attempts observed at the network layer. */
   androidPosts(): number;
+  /** get_transcript POSTs observed at the network layer (the ANDROID-tail
+   * fallback, lib/transcript.ts). */
+  transcriptPosts(): number;
   close(): Promise<void>;
 }
 
 export function createFixtureServer(port = FIXTURE_PORT): Promise<FixtureServer> {
   let actualPort = port;
   let androidPosts = 0;
+  let transcriptPosts = 0;
+  /** The last watch page served — the ANDROID response the innertube
+   * fallback gets depends on the page's fixture. */
+  let lastWatchFixture: string | null = null;
   const server: Server = createServer((req, res) => {
     const url = new URL(req.url ?? '/', `http://127.0.0.1:${actualPort}`);
     const path = url.pathname;
@@ -113,8 +183,42 @@ export function createFixtureServer(port = FIXTURE_PORT): Promise<FixtureServer>
     if (req.method === 'POST' && path === '/youtubei/v1/player') {
       // The content script's ANDROID innertube fallback (same-origin POST).
       androidPosts += 1;
-      res.statusCode = 400;
-      res.end('no player');
+      if (lastWatchFixture !== null && TRANSCRIPT_GATED_FIXTURES.includes(lastWatchFixture)) {
+        // The transcript-gated fixture's ANDROID response carries the
+        // transcript panel params — the fallback must land on get_transcript.
+        res.setHeader('Content-Type', 'application/json');
+        res.end(androidTranscriptResponse(lastWatchFixture));
+      } else {
+        res.statusCode = 400;
+        res.end('no player');
+      }
+      return;
+    }
+
+    if (req.method === 'POST' && path === '/youtubei/v1/get_transcript') {
+      // The ANDROID-tail transcript fallback (lib/transcript.ts). Serves
+      // the cue payload only when the POST carries params (the fixture
+      // stub's INNERTUBE identity); a param-less POST is the bail lane.
+      let body = '';
+      req.on('data', (chunk: Buffer) => {
+        body += chunk.toString();
+      });
+      req.on('end', () => {
+        let params: unknown;
+        try {
+          params = (JSON.parse(body) as { params?: unknown }).params;
+        } catch {
+          params = undefined;
+        }
+        if (typeof params !== 'string' || params === '') {
+          res.statusCode = 400;
+          res.end('no params');
+          return;
+        }
+        transcriptPosts += 1;
+        res.setHeader('Content-Type', 'application/json');
+        res.end(readFileSync(join(fixtureRoot, 'synthetic/transcript-gated.json')));
+      });
       return;
     }
 
@@ -175,7 +279,11 @@ export function createFixtureServer(port = FIXTURE_PORT): Promise<FixtureServer>
         res.end('blocked');
         return;
       }
-      if (POT_GATED_FIXTURES.includes(fixture) && !url.searchParams.has('pot') && !url.searchParams.has('potc')) {
+      if (
+        (POT_GATED_FIXTURES.includes(fixture) || TRANSCRIPT_GATED_FIXTURES.includes(fixture)) &&
+        !url.searchParams.has('pot') &&
+        !url.searchParams.has('potc')
+      ) {
         // The logged-in POT failure mode: HTTP 200 with an empty body. A
         // bare captionTracks fetch must NOT get the payload.
         res.statusCode = 200;
@@ -197,6 +305,7 @@ export function createFixtureServer(port = FIXTURE_PORT): Promise<FixtureServer>
       res.end('bad fixture name');
       return;
     }
+    lastWatchFixture = fixture;
     const trackKind = KIND_BY_FIXTURE[fixture];
     const live = url.searchParams.get('live') === '1';
     const playerSize = url.searchParams.get('playersize');
@@ -257,7 +366,10 @@ export function createFixtureServer(port = FIXTURE_PORT): Promise<FixtureServer>
       // The pot-gated variant: stub player controls + signed-fetch behavior
       // (see the __POT_GATED__ block in watch.html). Injected for that
       // fixture only — the other pages keep their bare <video>.
-      .replace('__POT_GATED__', POT_GATED_FIXTURES.includes(fixture) ? potGatedStub : '');
+      .replace('__POT_GATED__', POT_GATED_FIXTURES.includes(fixture) ? potGatedStub : '')
+      // The transcript-gated variant: the ytcfg stub the get_transcript
+      // POST is built from (INNERTUBE identity). Other pages keep no ytcfg.
+      .replace('__YTCFG__', TRANSCRIPT_GATED_FIXTURES.includes(fixture) ? ytcfgStub : '');
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.end(page);
   });
@@ -272,6 +384,7 @@ export function createFixtureServer(port = FIXTURE_PORT): Promise<FixtureServer>
         baseUrl,
         watchUrl: (fixture) => `${baseUrl}/watch?fixture=${fixture}`,
         androidPosts: () => androidPosts,
+        transcriptPosts: () => transcriptPosts,
         close: () =>
           new Promise((done) => {
             server.close(() => done());
