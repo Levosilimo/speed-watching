@@ -2,7 +2,7 @@
 // ui/pill.ts to keep the component file under the aislop file-size
 // budget (complexity/file-too-large).
 
-import { TOKENS, type Theme } from './styles';
+import { TOKENS, OVERLAY_Z_INDEX, type Theme } from './styles';
 
 export function pillCss(t: Theme): string {
   return `
@@ -14,7 +14,7 @@ export function pillCss(t: Theme): string {
       position: fixed;
       bottom: 18px;
       right: 18px;
-      z-index: 999999;
+      z-index: ${OVERLAY_Z_INDEX};
       font-family: ${TOKENS.fontSans};
       font-size: ${TOKENS.textBase};
       line-height: 1.45;

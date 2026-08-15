@@ -5,6 +5,7 @@
 // the current-video context.
 
 import { createPill, type AppliedSource, type LiveRate, type PillApi, type PillEvents, type PillState } from '../ui/pill';
+import { OVERLAY_Z_INDEX } from '../ui/styles';
 import { shouldAutoApply } from './auto-apply';
 import type { LanguageModel, RateRange } from './languages';
 import { SerializedRunner } from './measure-guard';
@@ -81,7 +82,7 @@ export function createRateController<C extends RateCurrent>(deps: RateController
     if (existing !== null) return existing;
     const wrapper = document.createElement('div');
     wrapper.className = 'speedwatcher-pill-host';
-    // No inline styles: they would override the shadow :host fixed anchoring.
+    wrapper.style.zIndex = String(OVERLAY_Z_INDEX);
     anchor.appendChild(wrapper);
     return wrapper;
   }
@@ -214,7 +215,6 @@ export function createRateController<C extends RateCurrent>(deps: RateController
     // recommend() already clamps to platformMax; min() re-states the invariant.
     const applied = Math.min(multiplier, current.platformMax);
     deps.applyRate(video, applied, current.platformMax);
-    // Time-saved session: count wall time at the applied rate from now on.
     savedSec = 0;
     savedMultiplier = applied;
     savedTracker.attach(video, applied, flushSavedTick);

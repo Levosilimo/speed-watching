@@ -4,6 +4,7 @@
 // bridge calls; ui/nudge.ts owns the component.
 
 import { createNudge, type NudgeApi } from './nudge';
+import { OVERLAY_Z_INDEX } from './styles';
 import type { BridgeClient } from '../lib/messaging';
 import type { RateRange } from '../lib/languages';
 
@@ -26,7 +27,8 @@ function nudgeHost(): HTMLElement {
   if (existing !== null) return existing;
   const wrapper = document.createElement('div');
   wrapper.className = 'speedwatcher-nudge-host';
-  // No inline styles: they would override the shadow :host fixed anchoring.
+  // Inline z-index only — positioning stays in the shadow :host rule.
+  wrapper.style.zIndex = String(OVERLAY_Z_INDEX);
   anchor.appendChild(wrapper);
   return wrapper;
 }

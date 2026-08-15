@@ -2,7 +2,7 @@
 // ui/nudge.ts to keep the component file under the aislop file-size budget
 // (complexity/file-too-large), mirroring ui/pill-css.ts.
 
-import { TOKENS, type Theme } from './styles';
+import { TOKENS, OVERLAY_Z_INDEX, type Theme } from './styles';
 
 export function nudgeCss(t: Theme): string {
   return `
@@ -15,7 +15,7 @@ export function nudgeCss(t: Theme): string {
       bottom: 18px;
       left: 50%;
       transform: translateX(-50%);
-      z-index: 999999;
+      z-index: ${OVERLAY_Z_INDEX};
       font-family: ${TOKENS.fontSans};
       font-size: ${TOKENS.textBase};
       line-height: 1.45;

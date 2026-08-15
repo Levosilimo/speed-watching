@@ -16,6 +16,7 @@ import { mkdtempSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import {
+  expectedEstimatedPill,
   expectedRecommendation,
   runAutoSpecs,
   runBridgeSpecs,
@@ -46,28 +47,15 @@ const consoleLines: string[] = [];
 let androidPosts = 0;
 let driver: E2EDriver;
 
-test.beforeAll(async () => {
-  if (!existsSync(join(extensionPath, 'manifest.json'))) {
-    throw new Error(
-      `built extension not found at ${extensionPath} — run \`bun run build:e2e\` first (the e2e build keeps the window test hooks)`,
-    );
-  }
-  const userDataDir = mkdtempSync(join(tmpdir(), 'speedwatcher-e2e-'));
-  context = await chromium.launchPersistentContext(userDataDir, {
-    channel: 'chromium',
-    headless: true,
-    args: [
-      `--disable-extensions-except=${extensionPath}`,
-      `--load-extension=${extensionPath}`,
-    ],
-  });
-  // Dark Reader pattern: youtube.com pages are fulfilled from the fixture
-  // server; non-document requests (favicon etc.) are dropped. The pattern
-  // covers both schemes because Chrome's HSTS preload rewrites the http
-  // navigation to https before the request reaches the network layer. The
-  // caption fetch (/api/timedtext) is same-origin and served from fixtures
-  // too, so no CORS or Private Network Access rules apply.
-  await context.route('**://www.youtube.com/**', async (route) => {
+/** Dark Reader pattern: youtube.com pages are fulfilled from the fixture
+ * server; non-document requests (favicon etc.) are dropped. The pattern
+ * covers both schemes because Chrome's HSTS preload rewrites the http
+ * navigation to https before the request reaches the network layer. The
+ * caption fetch (/api/timedtext) is same-origin and served from fixtures
+ * too, so no CORS or Private Network Access rules apply. Shared with the
+ * ru-locale context (the estimated-language regression suite). */
+async function routeFixtures(target: BrowserContext): Promise<void> {
+  await target.route('**://www.youtube.com/**', async (route) => {
     const request = route.request();
     const url = new URL(request.url());
     // The content script's ANDROID innertube fallback POST: record it, then
@@ -104,6 +92,24 @@ test.beforeAll(async () => {
       body: await response.text(),
     });
   });
+}
+
+test.beforeAll(async () => {
+  if (!existsSync(join(extensionPath, 'manifest.json'))) {
+    throw new Error(
+      `built extension not found at ${extensionPath} — run \`bun run build:e2e\` first (the e2e build keeps the window test hooks)`,
+    );
+  }
+  const userDataDir = mkdtempSync(join(tmpdir(), 'speedwatcher-e2e-'));
+  context = await chromium.launchPersistentContext(userDataDir, {
+    channel: 'chromium',
+    headless: true,
+    args: [
+      `--disable-extensions-except=${extensionPath}`,
+      `--load-extension=${extensionPath}`,
+    ],
+  });
+  await routeFixtures(context);
   serviceWorker =
     context.serviceWorkers()[0] ??
     (await context.waitForEvent('serviceworker', { timeout: 30_000 }));
@@ -171,6 +177,9 @@ test.beforeAll(async () => {
       return page.evaluate(
         () => (window.__speedwatcherCaptionSource as CaptionSource) ?? null,
       );
+    },
+    async readBrowserLanguage() {
+      return page.evaluate(() => navigator.language);
     },
     async navigateToGeneric() {
       await page.goto(`${fixtureBase}/generic`);
@@ -343,6 +352,7 @@ test('pill really paints: shadow root populated, non-zero geometry, in the layou
       x: rect.x,
       y: rect.y,
       hasOffsetParent: pill.offsetParent !== null,
+      hostZIndex: host === null || host === undefined ? -1 : Number(getComputedStyle(host).zIndex),
       viewport: { width: window.innerWidth, height: window.innerHeight },
     };
   });
@@ -368,6 +378,10 @@ test('pill really paints: shadow root populated, non-zero geometry, in the layou
   expect(bottom).toBeLessThanOrEqual(render.viewport.height);
   expect(right).toBeGreaterThan(render.viewport.width / 2);
   expect(bottom).toBeGreaterThan(render.viewport.height / 2);
+  // (e) the host sits at the top of the stacking chart — the user-verified
+  // fix for the pill painting behind YouTube's related-videos column (the
+  // computed value reads the inline style on the page-visible host).
+  expect(render.hostZIndex).toBeGreaterThanOrEqual(2147483000);
 });
 
 test('estimated renders increment the local demand counter (zero egress)', async () => {
@@ -396,6 +410,47 @@ test('estimated renders increment the local demand counter (zero egress)', async
   const after = await readDemand();
   expect(after?.estimatedCount).toBe((before?.estimatedCount ?? 0) + 1);
   expect(after?.byContentType?.generic).toBe((before?.byContentType?.generic ?? 0) + 1);
+});
+
+test('ru UI locale: the estimated tier targets the ru model (168 wpm) and shows the ru range', async () => {
+  // Fail-without-fix regression for the estimated-tier language split: a ru
+  // browser with no caption tracks used to compute the multiplier against
+  // the en 250 target (1.55x → 248 wpm) while displaying the ru range. The
+  // UI-locale fallback must drive BOTH — ru target 168 over the en generic
+  // prior midpoint 160 → 1.05x ≈ 168 wpm, inside the ru 168–180 zone. The
+  // shared context cannot change locale mid-run, so a second persistent
+  // context side-loads the same extension with a ru-RU locale.
+  const ruDir = mkdtempSync(join(tmpdir(), 'speedwatcher-e2e-ru-'));
+  const ruContext = await chromium.launchPersistentContext(ruDir, {
+    channel: 'chromium',
+    headless: true,
+    locale: 'ru-RU',
+    args: [
+      `--disable-extensions-except=${extensionPath}`,
+      `--load-extension=${extensionPath}`,
+    ],
+  });
+  try {
+    await routeFixtures(ruContext);
+    const ruPage = ruContext.pages()[0] ?? (await ruContext.newPage());
+    await ruPage.goto(watchUrl('synthetic/no-tracks.json'));
+    await ruPage.waitForFunction(
+      () => window.__speedwatcherPill?.state?.tierLabel === 'estimated',
+      undefined,
+      { timeout: 15_000 },
+    );
+    const state = await ruPage.evaluate(() => window.__speedwatcherPill?.state);
+    expect(state?.tierLabel).toBe('estimated');
+    const { rec } = expectedEstimatedPill('ru-RU');
+    expect(state?.mode).toBe(rec.mode);
+    expect(state?.multiplier).toBe(rec.multiplier);
+    expect(state?.multiplier).toBeCloseTo(1.05, 2);
+    expect(state?.label).toBe(rec.label);
+    expect(state?.range?.lo).toBe(168);
+    expect(state?.range?.hi).toBe(180);
+  } finally {
+    await ruContext.close();
+  }
 });
 
 test('content script measures fixture wpm; console hook agrees with event hook', async () => {

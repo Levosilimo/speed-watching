@@ -23,7 +23,7 @@ import { parseYouTubeJson3 } from '../../lib/captions';
 import { chapteredInitialData, KIND_BY_FIXTURE, LANG_BY_FIXTURE } from './fixtures';
 import { segmentRates, type RateSegment } from '../../lib/chapters';
 import { priorMidpoint } from '../../lib/heuristics';
-import { resolveLanguage } from '../../lib/languages';
+import { normalizeLanguageCode, resolveLanguage } from '../../lib/languages';
 import { detectMusic } from '../../lib/music';
 import { recommend, type RateTier, type Recommendation } from '../../lib/recommend';
 import { defaultSettings, resolveUserTarget, type Settings } from '../../lib/settings';
@@ -93,6 +93,10 @@ export interface E2EDriver {
   readPlaybackRate(index?: number): Promise<number | null>;
   /** Which caption path served the page: 'web', 'android', or 'none'. */
   readCaptionSource(): Promise<CaptionSource | null>;
+  /** The page's browser UI language (navigator.language) — the estimated
+   * tier's UI-locale language fallback reads it, so the spec mirror needs
+   * the same input the content script uses. */
+  readBrowserLanguage(): Promise<string>;
   /** Navigate to the generic player fixture page (non-YouTube origin). */
   navigateToGeneric(): Promise<void>;
   /** Navigate to the Dzen-shaped track-src fixture page. */
@@ -189,11 +193,16 @@ const WPM_TOLERANCE = 0.5;
 const RATE_TOLERANCE = 0.01;
 
 /** The estimated-tier pill the content script must render when captions are
- * unavailable: generic-prior midpoint (no content-type signal in fixtures). */
-function expectedEstimatedPill(): { rec: Recommendation; naturalRate: number } {
+ * unavailable: generic-prior midpoint (no content-type signal in fixtures),
+ * with the UI-locale language fallback mirroring entrypoints/content.ts —
+ * no track language → navigator.language's model drives the math and the
+ * displayed range. The e2e browsers run en-US, so the en fixtures stay
+ * byte-identical. */
+export function expectedEstimatedPill(browserLanguage: string): { rec: Recommendation; naturalRate: number } {
   const naturalRate = priorMidpoint('generic');
+  const language = resolveLanguage(normalizeLanguageCode(browserLanguage) ?? undefined) ?? undefined;
   return {
-    rec: recommend({ naturalRate, tier: 'estimated', contentType: 'generic', platformMax: 2 }),
+    rec: recommend({ naturalRate, tier: 'estimated', contentType: 'generic', platformMax: 2, language }),
     naturalRate,
   };
 }
@@ -349,7 +358,7 @@ export async function runPillSpecs(driver: E2EDriver): Promise<void> {
       throw new Error(`${fixture}: caption source ${source}, expected none (WEB blocked)`);
     }
     const state = expectState(await driver.readPillState(), fixture);
-    const { rec, naturalRate } = expectedEstimatedPill();
+    const { rec, naturalRate } = expectedEstimatedPill(await driver.readBrowserLanguage());
     if (state.mode !== rec.mode || state.tierLabel !== rec.tierLabel) {
       throw new Error(
         `${fixture}: pill ${state.mode}/${state.tierLabel}, expected ${rec.mode}/${rec.tierLabel}`,
@@ -368,7 +377,7 @@ export async function runPillSpecs(driver: E2EDriver): Promise<void> {
     const fixture = 'synthetic/no-tracks.json';
     await driver.navigateToWatch(fixture);
     const state = expectState(await driver.readPillState(), fixture);
-    const { rec, naturalRate } = expectedEstimatedPill();
+    const { rec, naturalRate } = expectedEstimatedPill(await driver.readBrowserLanguage());
     if (state.mode !== 'recommend') {
       throw new Error(`${fixture}: pill mode ${state.mode}, expected recommend`);
     }

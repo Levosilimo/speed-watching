@@ -33,8 +33,8 @@ declare global {
 
 const bundlePath = resolve('userscript/dist/speed-watcher.user.js');
 const fixtureBase = `http://127.0.0.1:${FIXTURE_PORT}`;
-const watchUrl = (fixture: string): string =>
-  `http://www.youtube.com/watch?v=e2e-fixture&fixture=${fixture}`;
+const watchUrl = (fixture: string, extra?: string): string =>
+  `http://www.youtube.com/watch?v=e2e-fixture&fixture=${fixture}${extra === undefined ? '' : `&${extra}`}`;
 
 let browser: Browser;
 let context: BrowserContext;
@@ -75,7 +75,11 @@ test.beforeAll(async () => {
       return;
     }
     const fixture = url.searchParams.get('fixture');
-    const response = await fetch(`${fixtureBase}/watch?fixture=${fixture}`);
+    const live = url.searchParams.get('live');
+    const straybadge = url.searchParams.get('straybadge');
+    const response = await fetch(
+      `${fixtureBase}/watch?fixture=${fixture}&live=${live ?? ''}&straybadge=${straybadge ?? ''}`,
+    );
     await route.fulfill({
       status: response.status,
       contentType: 'text/html',
@@ -89,8 +93,8 @@ test.afterAll(async () => {
   await browser?.close();
 });
 
-async function loadBundle(fixture: string): Promise<void> {
-  await page.goto(watchUrl(fixture));
+async function loadBundle(fixture: string, extra?: string): Promise<void> {
+  await page.goto(watchUrl(fixture, extra));
   await page.addScriptTag({ path: bundlePath });
 }
 
@@ -220,4 +224,24 @@ test('WEB blocked → ANDROID fallback fails → estimated (no storage)', async 
   expect(state.tierLabel).toBe('estimated');
   const naturalRate = priorMidpoint('generic');
   expect(Math.abs(state.rateWpm - naturalRate)).toBeLessThanOrEqual(0.5);
+});
+
+test('live suppression: a stray page-level badge must not suppress; isLiveContent does', async () => {
+  // Fail-without-fix pin for the ported scoped-badge fix (mirror of the
+  // extension's runLiveSuppressionSpecs): the document-wide .ytp-live-badge
+  // query used to suppress the pill on a normal VOD with any stray badge
+  // anywhere in the page. The fixture injects the badge OUTSIDE the player.
+  await loadBundle('real/manual-cue.json', 'straybadge=1');
+  const state = await readPill();
+  expect(state.mode).toBe('recommend');
+
+  // The player response's authoritative isLiveContent flag suppresses even
+  // with no badge anywhere in the DOM.
+  await loadBundle('real/manual-cue.json', 'live=1');
+  await page.waitForFunction(
+    () => window.__speedwatcherPill?.state != null,
+    undefined,
+    { timeout: 15_000 },
+  );
+  expect((await readPill()).mode).toBe('none');
 });
