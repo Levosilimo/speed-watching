@@ -221,7 +221,10 @@ async function sampleOnce(
         pill.top >= player.top &&
         pill.right <= player.right &&
         pill.bottom <= player.bottom;
-      record.clearsControls = player.bottom - pill.bottom >= 40;
+      // The pill must clear the right-cluster control buttons — the 2026
+      // player's band spans 12–60px above the bottom (48px button + 12px
+      // top margin), so the pill's bottom edge needs ≥ 60px clearance.
+      record.clearsControls = player.bottom - pill.bottom >= 60;
       record.occludedAtCenter = !geometry.atCenterIsHost;
     }
     if (!record.pillRendered) {

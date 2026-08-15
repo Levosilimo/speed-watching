@@ -455,6 +455,9 @@ async function readControlZone(page: Page): Promise<{
   atCenter: { tag: string; cls: string; isHost: boolean };
   shadowInPill: boolean;
   atControls: { tag: string; cls: string; isHost: boolean };
+  /** Probe inside the right-cluster control-button band (12–60px above the
+   * player bottom) — the pill must never capture clicks there. */
+  atBand: { tag: string; cls: string; isHost: boolean };
   oldAnchor: { x: number; y: number };
   atOldCorner: { tag: string; cls: string; isHost: boolean };
   atOldAnchor: { tag: string; cls: string; isHost: boolean };
@@ -475,6 +478,7 @@ async function readControlZone(page: Page): Promise<{
     const atCenter = document.elementFromPoint(cx, cy);
     const atCenterShadow = root.elementFromPoint(cx, cy);
     const atControls = document.elementFromPoint(playerRect.right - 40, playerRect.bottom - 18);
+    const atBand = document.elementFromPoint(playerRect.right - 40, playerRect.bottom - 52);
     const atOldCorner = document.elementFromPoint(window.innerWidth - 20, window.innerHeight - 20);
     // The old viewport-fixed pill's would-be center (bottom/right 18px
     // insets): where the pill used to sit, page content must now be
@@ -510,6 +514,7 @@ async function readControlZone(page: Page): Promise<{
       atCenter: describe(atCenter),
       shadowInPill: atCenterShadow !== null && (atCenterShadow === pill || pill.contains(atCenterShadow)),
       atControls: describe(atControls),
+      atBand: describe(atBand),
       atOldCorner: describe(atOldCorner),
       atOldAnchor: describe(atOldAnchor),
     };
@@ -532,23 +537,29 @@ function assertControlZone(
   expect(pill.top).toBeGreaterThanOrEqual(player.top);
   expect(pill.right).toBeLessThanOrEqual(player.right);
   expect(pill.bottom).toBeLessThanOrEqual(player.bottom);
-  // CONTROL-ZONE: bottom-right corner of the player, above the controls bar.
-  // The left-edge band is not asserted: the pill renders up to its 420px
-  // max-width (label + tier + actions), which can exceed a 200px band and
-  // still be right-anchored — the right-edge anchor plus containment pin
-  // the placement.
-  expect(pill.right).toBeGreaterThanOrEqual(player.right - 120);
-  expect(pill.bottom).toBeLessThanOrEqual(player.bottom - 40);
-  // BOUNDING-BOX-FILL: the configured insets hold (not clipped by overflow)
-  expect(player.right - pill.right).toBeGreaterThanOrEqual(12);
-  expect(player.bottom - pill.bottom).toBeGreaterThanOrEqual(40);
   // OCLUSION: the pill is the hit target at its center (elementFromPoint
   // reports the host for shadow content; the shadow-root probe confirms
-  // the .pill itself), and the controls bar is NOT covered by the pill
+  // the .pill itself), and neither the controls bar nor the right-cluster
+  // button band (12–60px above the bottom, where settings/fullscreen sit)
+  // is covered by the pill. Asserted before the clearance numbers so a
+  // regression to a low placement fails on the click-stealing property
+  // first.
   expect(geometry.atCenter.isHost).toBe(true);
   expect(geometry.shadowInPill).toBe(true);
   expect(geometry.atControls.cls).toContain('ytp-chrome-bottom');
   expect(geometry.atControls.isHost).toBe(false);
+  expect(geometry.atBand.cls).toContain('ytp-chrome-bottom');
+  expect(geometry.atBand.isHost).toBe(false);
+  // CONTROL-ZONE: bottom-right corner of the player, above the controls
+  // bar. The left-edge band is not asserted: the pill renders up to its
+  // 300px max-width (label + tier + actions), which can exceed a 200px
+  // band and still be right-anchored — the right-edge anchor plus
+  // containment pin the placement.
+  expect(pill.right).toBeGreaterThanOrEqual(player.right - 120);
+  expect(pill.bottom).toBeLessThanOrEqual(player.bottom - 60);
+  // BOUNDING-BOX-FILL: the configured insets hold (not clipped by overflow)
+  expect(player.right - pill.right).toBeGreaterThanOrEqual(12);
+  expect(player.bottom - pill.bottom).toBeGreaterThanOrEqual(60);
   // NO-ESCAPE: the old viewport-corner anchor points are free of the pill.
   // Skipped when the player covers the old anchor (theater/fullscreen): the
   // pill legitimately sits near the viewport corner there, so the probe is

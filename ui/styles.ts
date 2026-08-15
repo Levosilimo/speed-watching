@@ -92,3 +92,13 @@ export type Theme = Record<keyof typeof LIGHT, string>;
  * that could flatten the shadow rule. */
 export const OVERLAY_Z_INDEX = 2147483000;
 
+/** Overlay-host bottom inset (pill + nudge): the hosts anchor this far
+ * above the player's bottom edge to clear the right-cluster control
+ * buttons (settings/fullscreen), which the 2026 player places 12–60px
+ * above the bottom (48px button + 12px top margin). */
+export const HOST_BOTTOM_OFFSET_PX = 68;
+
+/** Compact single-line pill cap (recommend mode): the label + tier + the
+ * Apply/Dismiss buttons fit one line at this width. */
+export const PILL_COMPACT_MAX_WIDTH = 300;
+

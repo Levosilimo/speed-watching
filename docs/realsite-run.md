@@ -65,15 +65,16 @@ so a mid-run kill never loses completed samples.
    and the page title.
 4. Records the pill placement geometry: the `.pill` and `#movie_player`
    rects, whether the pill is fully inside the player (containment), how
-   far its bottom sits above the player's bottom (clears ≥ 40px — the
-   controls-bar clearance), and whether the pill is the hit target at its
+   far its bottom sits above the player's bottom (clears ≥ 60px — clear of
+   the right-cluster control buttons, which the 2026 player places 12–60px
+   above the bottom), and whether the pill is the hit target at its
    center (`elementFromPoint` — anything else means something covers it).
 
 ## Pass criteria
 
 | Video class | Must hold |
 |---|---|
-| `speech` (talks, lectures, podcasts, explainers) | pill rendered (`mode != none`), caption source `web` or `android` (not `none`), measured rate in 100–600 in the language's unit, pill fully inside the player (containment), ≥ 40px above the player's bottom (clears the controls bar), and the hit target at its center (not occluded) |
+| `speech` (talks, lectures, podcasts, explainers) | pill rendered (`mode != none`), caption source `web` or `android` (not `none`), measured rate in 100–600 in the language's unit, pill fully inside the player (containment), ≥ 60px above the player's bottom (clear of the control-button band), and the hit target at its center (not occluded) |
 | `music` (control) | pill mode `music` — the "speed not recommended" suppression |
 | `live` (control) | pill mode `none` — live suppression |
 

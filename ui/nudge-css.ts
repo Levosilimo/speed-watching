@@ -2,7 +2,7 @@
 // ui/nudge.ts to keep the component file under the aislop file-size budget
 // (complexity/file-too-large), mirroring ui/pill-css.ts.
 
-import { TOKENS, OVERLAY_Z_INDEX, type Theme } from './styles';
+import { TOKENS, OVERLAY_Z_INDEX, HOST_BOTTOM_OFFSET_PX, type Theme } from './styles';
 
 export function nudgeCss(t: Theme): string {
   return `
@@ -12,7 +12,7 @@ export function nudgeCss(t: Theme): string {
       all: initial;
       display: block;
       position: absolute;
-      bottom: 44px;
+      bottom: ${HOST_BOTTOM_OFFSET_PX}px;
       left: 50%;
       transform: translateX(-50%);
       z-index: ${OVERLAY_Z_INDEX};

@@ -9,10 +9,10 @@
 // to none) before the shutter, mirroring settlePill in the main suite.
 //
 // The golden is the COARSE visual pin: maxDiffPixelRatio 0.02 absorbs the
-// antialiasing noise but cannot catch a 1-2px inset drift (a 420px-wide
-// pill moved by 2px shifts ~0.3% of the crop). The EXACT insets are pinned
+// antialiasing noise but cannot catch a 1-2px inset drift (a 300px-wide
+// pill moved by 2px shifts ~0.4% of the crop). The EXACT insets are pinned
 // by the control-zone geometry lane (e2e.spec.ts assertControlZone: the
-// right >= 12px and bottom >= 40px bounding-box checks, plus containment
+// right >= 12px and bottom >= 60px bounding-box checks, plus containment
 // and occlusion), which measures layout numbers, not pixels. This spec
 // proves the pill still LOOKS right (colors, shape, spacing) within its
 // region; the geometry lane proves it sits exactly there.
