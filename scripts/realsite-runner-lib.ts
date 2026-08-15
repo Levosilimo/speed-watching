@@ -23,6 +23,14 @@ export interface VideoSpec {
   kind: VideoKind;
 }
 
+/** A serialized getBoundingClientRect. */
+export interface RectRecord {
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
+}
+
 export interface RealsiteRecord {
   videoId: string;
   url: string;
@@ -36,6 +44,11 @@ export interface RealsiteRecord {
   lang: string | null;
   source: 'web' | 'android' | 'capture' | 'none' | null;
   measure: MeasureEventDetail | null;
+  pillRect: RectRecord | null;
+  playerRect: RectRecord | null;
+  pillInsidePlayer: boolean;
+  clearsControls: boolean;
+  occludedAtCenter: boolean;
   consoleLines: string[];
   pass: boolean;
   reason: string | null;
@@ -76,6 +89,11 @@ export function initRecord(spec: VideoSpec): RealsiteRecord {
     lang: null,
     source: null,
     measure: null,
+    pillRect: null,
+    playerRect: null,
+    pillInsidePlayer: false,
+    clearsControls: false,
+    occludedAtCenter: false,
     consoleLines: [],
     pass: false,
     reason: null,
@@ -166,6 +184,46 @@ async function sampleOnce(
     record.lang = measure?.lang ?? null;
     record.source = source;
     record.consoleLines = consoleLines;
+    // Pill placement geometry: the pill's rect vs the player's, and whether
+    // the pill is the hit target at its center (elementFromPoint reports
+    // the host for shadow content — anything else means occlusion).
+    const geometry = await page
+      .evaluate(() => {
+        const host = document.querySelector<HTMLElement>('.speedwatcher-pill-host');
+        const player = document.querySelector<HTMLElement>('#movie_player');
+        const pill = host?.shadowRoot?.querySelector<HTMLElement>('.pill');
+        if (host === null || player === null || pill === null || pill === undefined) return null;
+        const pillRect = pill.getBoundingClientRect();
+        const playerRect = player.getBoundingClientRect();
+        const atCenter = document.elementFromPoint(
+          pillRect.left + pillRect.width / 2,
+          pillRect.top + pillRect.height / 2,
+        );
+        const rect = (r: DOMRect): RectRecord => ({
+          left: r.left,
+          top: r.top,
+          right: r.right,
+          bottom: r.bottom,
+        });
+        return {
+          pill: rect(pillRect),
+          player: rect(playerRect),
+          atCenterIsHost: atCenter === host,
+        };
+      })
+      .catch(() => null);
+    if (geometry !== null) {
+      record.pillRect = geometry.pill;
+      record.playerRect = geometry.player;
+      const { pill, player } = geometry;
+      record.pillInsidePlayer =
+        pill.left >= player.left &&
+        pill.top >= player.top &&
+        pill.right <= player.right &&
+        pill.bottom <= player.bottom;
+      record.clearsControls = player.bottom - pill.bottom >= 40;
+      record.occludedAtCenter = !geometry.atCenterIsHost;
+    }
     if (!record.pillRendered) {
       const hint = await pageErrorHint(page);
       record.reason = hint === null ? 'no-pill-render' : `no-pill-render (${hint})`;
@@ -197,6 +255,15 @@ export function evaluatePass(record: RealsiteRecord): void {
     }
     if (record.rate === null || record.rate < 100 || record.rate > 600) {
       failures.push(`rate=${record.rate === null ? 'n/a' : record.rate.toFixed(1)} outside 100-600`);
+    }
+    // Placement gates: the pill must sit inside the player, clear the
+    // controls bar, and be the hit target at its center.
+    if (record.pillRect === null || record.playerRect === null) {
+      failures.push('no-pill-geometry');
+    } else {
+      if (!record.pillInsidePlayer) failures.push('pill-outside-player');
+      if (!record.clearsControls) failures.push('pill-not-above-controls');
+      if (record.occludedAtCenter) failures.push('pill-occluded');
     }
   }
   record.pass = failures.length === 0;
@@ -243,14 +310,18 @@ export async function sampleVideo(
 export function recordLine(record: RealsiteRecord): string {
   const rate = record.rate === null ? '-' : record.rate.toFixed(1);
   const lang = record.lang === null ? '' : ` lang=${record.lang}`;
+  const pill = record.pillRect === null ? 'pill=-' : `pill=${record.pillInsidePlayer ? 'inside' : 'OUTSIDE'}`;
+  const clears = record.playerRect === null ? 'clears=-' : `clears=${record.clearsControls ? 'yes' : 'no'}`;
+  const occ = record.pillRect === null ? 'occ=-' : `occ=${record.occludedAtCenter ? 'OCCLUDED' : 'no'}`;
   return `${record.pass ? 'PASS' : 'FAIL'} mode=${record.mode ?? '-'} tier=${record.tier ?? '-'} ` +
-    `rate=${rate}${lang} source=${record.source ?? '-'}${record.reason ? ` (${record.reason})` : ''}`;
+    `rate=${rate}${lang} source=${record.source ?? '-'} ${pill} ${clears} ${occ}` +
+    `${record.reason ? ` (${record.reason})` : ''}`;
 }
 
 export function summarize(records: RealsiteRecord[]): number {
   const passed = records.filter((r) => r.pass).length;
   const ratio = records.length === 0 ? 0 : passed / records.length;
-  const header = ['videoId', 'category', 'kind', 'mode', 'rate', 'source', 'pass', 'reason'];
+  const header = ['videoId', 'category', 'kind', 'mode', 'rate', 'source', 'pill', 'clears', 'occ', 'pass', 'reason'];
   const rows = records.map((r) => [
     r.videoId,
     r.category,
@@ -258,6 +329,9 @@ export function summarize(records: RealsiteRecord[]): number {
     r.mode ?? '-',
     r.rate === null ? '-' : r.rate.toFixed(1),
     r.source ?? '-',
+    r.pillRect === null ? '-' : r.pillInsidePlayer ? 'inside' : 'OUT',
+    r.playerRect === null ? '-' : r.clearsControls ? 'yes' : 'no',
+    r.pillRect === null ? '-' : r.occludedAtCenter ? 'yes' : 'no',
     r.pass ? 'PASS' : 'FAIL',
     (r.reason ?? '').slice(0, 60),
   ]);
