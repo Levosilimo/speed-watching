@@ -43,10 +43,8 @@ jobs:
         with:
           sarif_file: aislop.sarif
 
-      # The userscript bundle test (tests/userscript-bundle.test.ts) skips
-      # when userscript/dist is absent; build before vitest so the ci lane
-      # always asserts the real bundle (same build the e2e-userscript job
-      # uses).
+      # The userscript bundle test is fail-closed (no skipIf), so the
+      # bundle must exist before the suite runs.
       - run: bun run build:userscript
       - run: bun run test
       - run: bun run test:coverage

@@ -16,17 +16,11 @@ describe('audit-disabled-assertions', () => {
     const sampleLines = CORPUS.split('\n');
     for (let i = 1; i < sampleLines.length - 1; i++) {
       const sample = sampleLines[i]!.trim();
-      if (sample.includes('skipIf')) continue; // negative control, asserted below
       const hit = findings.find((f) => f.message.includes(sample));
       expect(hit, `sample: ${sample}`).toBeDefined();
       expect(hit?.line).toBe(templateLine + i);
     }
-    expect(findings).toHaveLength(7);
-  });
-
-  it('does not flag skipIf conditionals', () => {
-    const findings = scanDisabledAssertions([corpusPath]);
-    expect(findings.some((f) => f.message.includes('skipIf'))).toBe(false);
+    expect(findings).toHaveLength(11);
   });
 
   it('leaves clean files alone', () => {
