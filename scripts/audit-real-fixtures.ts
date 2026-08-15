@@ -1,31 +1,31 @@
 #!/usr/bin/env bun
 /**
- * audit-real-fixtures — advisory lane: synthetic fixtures derive from a real
- * captured payload, not from invention (AGENTS.md: External truth; the
- * scripts/data results.jsonl oracle).
+ * audit-real-fixtures — hard lane: synthetic fixtures trace to a captured
+ * payload or the e2e lane they were authored for (AGENTS.md: External
+ * truth, Fixture provenance gate).
  *
- * Flags a fixture file when it contains neither a videoId recorded in any
- * scripts/data jsonl file nor a scripts/data reference — no traceable
- * provenance. Only fixture data files (*.json/*.vtt/*.srt) are considered.
+ * Every fixture data file under tests/fixtures/synthetic/ (*.json/*.vtt/
+ * *.srt) must be named in tests/fixtures/README.md with its derivation
+ * lineage. A fixture the README does not name is a finding — a recorded
+ * videoId inside the payload buys no exemption, because provenance is the
+ * doc line, not a greppable token.
  *
- * Exit 1 under LCE_STRICT_FIXTURES=1 when findings exist; advisory
- * otherwise. Paths on argv override the default tests/fixtures/synthetic
- * discovery.
+ * Exit 1 whenever findings exist (the gate is hard — no env escape). Paths
+ * on argv override the default synthetic discovery; the provenance doc and
+ * fixtures root are parameters so the audit specs can drive corpus inputs.
  */
 
-import { readFileSync, readdirSync } from 'node:fs';
-import { join } from 'node:path';
+import { readdirSync } from 'node:fs';
+import { join, relative } from 'node:path';
 
 export interface ScanFinding {
   file: string;
-  line?: number;
   message: string;
 }
 
 const FIXTURE_EXT = /\.(json|vtt|srt)$/;
-const VIDEO_ID = /[A-Za-z0-9_-]{11}/g;
-const RECORDED_ID = /"videoId"\s*:\s*"([A-Za-z0-9_-]{11})"/g;
-const DATA_REF = /scripts\/data|results\.jsonl/;
+/** Provenance doc names: fixture paths like `synthetic/word-level.json`. */
+const NAME_IN_DOC = /[A-Za-z0-9_./-]+\.(json|vtt|srt)/g;
 
 export function discoverSyntheticFixtures(root: string): string[] {
   const files: string[] = [];
@@ -42,30 +42,21 @@ export function discoverSyntheticFixtures(root: string): string[] {
   return files.sort();
 }
 
-function recordedVideoIds(root: string): Set<string> {
-  const ids = new Set<string>();
-  const walk = (dir: string): void => {
-    for (const entry of readdirSync(dir, { withFileTypes: true })) {
-      if (entry.isDirectory()) {
-        walk(join(dir, entry.name));
-      } else if (entry.name.endsWith('.jsonl')) {
-        for (const m of readFileSync(join(dir, entry.name), 'utf8').matchAll(RECORDED_ID)) ids.add(m[1]!);
-      }
-    }
-  };
-  walk(join(root, 'scripts', 'data'));
-  return ids;
-}
-
-export function scanSyntheticFixtures(files: string[], root = process.cwd()): ScanFinding[] {
-  const ids = recordedVideoIds(root);
+export function scanFixtureProvenance(
+  files: string[],
+  provenanceDoc: string,
+  fixturesRoot: string,
+): ScanFinding[] {
+  const named = new Set([...provenanceDoc.matchAll(NAME_IN_DOC)].map((m) => m[0]!));
   const findings: ScanFinding[] = [];
   for (const file of files) {
     if (!FIXTURE_EXT.test(file)) continue;
-    const content = readFileSync(file, 'utf8');
-    const hasRecordedId = [...content.matchAll(VIDEO_ID)].some((m) => ids.has(m[0]!));
-    if (!hasRecordedId && !DATA_REF.test(content)) {
-      findings.push({ file, message: 'no scripts/data videoId and no results.jsonl reference' });
+    const name = relative(fixturesRoot, file);
+    if (!named.has(name)) {
+      findings.push({
+        file,
+        message: 'not named in tests/fixtures/README.md (synthetic fixtures table)',
+      });
     }
   }
   return findings;

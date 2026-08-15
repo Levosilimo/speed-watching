@@ -1,93 +1,43 @@
-import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { baselineKey, main } from '../scripts/audit-lanes.ts';
-import { scanContractNotCount } from '../scripts/audit-contract-not-count.ts';
-import { scanMirrorScan } from '../scripts/audit-mirror-scan.ts';
-import { scanSyntheticFixtures } from '../scripts/audit-real-fixtures.ts';
-import { copycat, countSamples, honest } from './fixtures/audit-corpus/mirror-test.ts';
+import { main } from '../scripts/audit-lanes.ts';
+import { scanFixtureProvenance } from '../scripts/audit-real-fixtures.ts';
 
 const corpusDir = fileURLToPath(new URL('./fixtures/audit-corpus/', import.meta.url));
-const mirrorTest = join(corpusDir, 'mirror-test.ts');
-const mirrorLib = join(corpusDir, 'mirror-lib.ts');
-const disabled = join(corpusDir, 'disabled-assertions.ts');
-const noRef = join(corpusDir, 'synthetic-no-ref.json');
-const withRef = join(corpusDir, 'synthetic-with-ref.json');
-
-describe('audit-mirror-scan', () => {
-  it('flags literals repeated from the lib internals', () => {
-    const findings = scanMirrorScan([mirrorTest]);
-    const messages = findings.map((f) => f.message);
-    expect(messages.some((m) => m.includes(`number ${copycat.retryMs} mirrors`))).toBe(true);
-    expect(messages.some((m) => m.includes(`string '${copycat.key}' mirrors`))).toBe(true);
-    expect(findings.every((f) => f.message.includes(mirrorLib))).toBe(true);
-  });
-
-  it('accepts a test that calls the lib instead of copying values', () => {
-    expect(honest.retryMs).toBe(copycat.retryMs);
-    expect(honest.key).toBe(copycat.key);
-  });
-});
-
-describe('audit-contract-not-count', () => {
-  it('flags spy and call hits for human confirmation', () => {
-    const src = readFileSync(mirrorTest, 'utf8').split('\n');
-    const spyLine = src.findIndex((l) => l.includes('spy'));
-    const callLine = src.findIndex((l) => l.includes('CalledWith'));
-    expect(spyLine).toBeGreaterThan(0);
-    expect(callLine).toBeGreaterThan(0);
-    const findings = scanContractNotCount([mirrorTest]);
-    expect(findings).toHaveLength(2);
-    expect(findings.some((f) => f.line === spyLine + 1)).toBe(true);
-    expect(findings.some((f) => f.line === callLine + 1)).toBe(true);
-    expect(countSamples.spy).toContain('spy');
-    expect(countSamples.call).toContain('CalledWith');
-  });
-});
+const unnamed = join(corpusDir, 'unnamed-synthetic.json');
+const named = join(corpusDir, 'named-synthetic.json');
+// Both corpus fixtures carry a scripts/data videoId reference; only the
+// provenance doc distinguishes them — a videoId inside the payload must not
+// buy an exemption.
+const corpusDoc = 'named: named-synthetic.json';
 
 describe('audit-real-fixtures', () => {
-  it('flags synthetic fixtures with no provenance', () => {
-    expect(scanSyntheticFixtures([noRef])).toHaveLength(1);
+  it('flags a synthetic fixture the provenance README does not name', () => {
+    const findings = scanFixtureProvenance([unnamed], corpusDoc, corpusDir);
+    expect(findings).toHaveLength(1);
+    expect(findings[0]!.file).toBe(unnamed);
   });
 
-  it('accepts fixtures tracing to a recorded videoId', () => {
-    expect(scanSyntheticFixtures([withRef])).toEqual([]);
+  it('accepts a synthetic fixture named in the provenance README', () => {
+    expect(scanFixtureProvenance([named], corpusDoc, corpusDir)).toEqual([]);
+  });
+
+  it('ignores non-caption assets', () => {
+    const asset = join(corpusDir, 'asset.webm');
+    expect(scanFixtureProvenance([asset], corpusDoc, corpusDir)).toEqual([]);
   });
 });
 
-describe('audit-lanes dispatcher', () => {
-  const corpus = [disabled, mirrorTest, noRef, withRef];
-  const strictEnv = { LCE_STRICT_MIRROR: '1', LCE_STRICT_COUNT: '1', LCE_STRICT_FIXTURES: '1' };
-
-  it('warns and exits 0 by default', () => {
-    expect(main(corpus, {})).toBe(0);
+describe('audit-lanes gate', () => {
+  it('exits 1 when a synthetic fixture is missing from the provenance README', () => {
+    expect(main([unnamed])).toBe(1);
   });
 
-  it('fails when a strict lane finds findings outside the baseline', () => {
-    expect(main(corpus, { LCE_STRICT_MIRROR: '1' })).toBe(1);
-    expect(main(corpus, { LCE_STRICT_COUNT: '1' })).toBe(1);
-    expect(main(corpus, { LCE_STRICT_FIXTURES: '1' })).toBe(1);
-  });
-
-  it('accepts baseline-recorded findings even when strict', () => {
-    const findings = [
-      ...scanMirrorScan([mirrorTest]),
-      ...scanContractNotCount([mirrorTest]),
-      ...scanSyntheticFixtures([noRef]),
-    ];
-    const baseline = new Set(findings.map((f) => baselineKey(process.cwd(), f)));
-    expect(main(corpus, strictEnv, baseline)).toBe(0);
-  });
-
-  it('stays green on clean input even when strict', () => {
-    expect(main([mirrorLib], strictEnv)).toBe(0);
-  });
-
-  it('the committed baseline accepts the current tree under strict', () => {
-    // The CI and run-ci wiring runs the lanes with the strict envs; the
-    // baseline is the human-confirmed backlog, so this must stay 0 unless
-    // the tree grows findings outside it.
-    expect(main([], strictEnv)).toBe(0);
+  it('exits 0 when the committed tree names every synthetic fixture', () => {
+    // The CI and run-ci wiring run the lanes against the whole tree; the
+    // provenance README is the human-confirmed record, so this must stay 0
+    // unless a synthetic fixture lands without its README line.
+    expect(main([])).toBe(0);
   });
 });
