@@ -373,3 +373,75 @@ describe('triggerCcAutomation interaction gates (wave-5 complementary)', () => {
     expect(settingsClicks()).toBe(2);
   });
 });
+
+describe('pickTrackRow fallbacks (wave-5 batch B)', () => {
+  function trackPickerRows(labels: string[]): void {
+    const trackMenu = document.querySelector<HTMLElement>('.ytp-panel-menu:nth-of-type(2)');
+    trackMenu?.replaceChildren();
+    for (const label of labels) {
+      const row = document.createElement('div');
+      row.className = 'ytp-menuitem';
+      const rowLabel = document.createElement('div');
+      rowLabel.className = 'ytp-menuitem-label';
+      rowLabel.textContent = label;
+      row.appendChild(rowLabel);
+      Object.defineProperty(row, 'offsetParent', { value: document.body, configurable: true });
+      trackMenu?.append(row);
+    }
+  }
+
+  afterEach(() => {
+    delete document.documentElement.lang;
+  });
+
+  it('picks the UI-language track by its endonym when no ASR track exists', async () => {
+    const { triggerCcAutomation } = await freshTrigger();
+    const { cc } = stubPlayerControls();
+    document.documentElement.lang = 'de';
+    trackPickerRows(['Deutsch', 'Off']);
+    const drive = triggerCcAutomation('v1');
+    await vi.advanceTimersByTimeAsync(2000);
+    const result = await drive;
+    expect(result.changed).toBe(true);
+    expect(cc.getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('falls back to the first non-control row when the endonym is unresolvable', async () => {
+    const { triggerCcAutomation } = await freshTrigger();
+    const { cc } = stubPlayerControls();
+    document.documentElement.lang = 'zz'; // Intl.DisplayNames throws → null endonym
+    trackPickerRows(['Türkçe', 'Off', 'Options']);
+    const drive = triggerCcAutomation('v1');
+    await vi.advanceTimersByTimeAsync(2000);
+    const result = await drive;
+    expect(result.changed).toBe(true);
+    expect(cc.getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('rowLabel falls back to the row text when the label element is absent', async () => {
+    const { triggerCcAutomation } = await freshTrigger();
+    const { cc } = stubPlayerControls();
+    const trackMenu = document.querySelector<HTMLElement>('.ytp-panel-menu:nth-of-type(2)');
+    trackMenu?.replaceChildren();
+    const row = document.createElement('div');
+    row.className = 'ytp-menuitem';
+    row.textContent = 'English (auto-generated)'; // no .ytp-menuitem-label child
+    Object.defineProperty(row, 'offsetParent', { value: document.body, configurable: true });
+    trackMenu?.append(row);
+    const drive = triggerCcAutomation('v1');
+    await vi.advanceTimersByTimeAsync(2000);
+    const result = await drive;
+    expect(result.changed).toBe(true);
+    expect(cc.getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('restore closes the menu stack with a cancelable Escape', async () => {
+    const { restoreCcState } = await freshTrigger();
+    stubPlayerControls();
+    const escapeSpy = vi.spyOn(document, 'dispatchEvent');
+    restoreCcState({ ccWasOn: false, changed: false });
+    expect(escapeSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'keydown', key: 'Escape', bubbles: true, cancelable: true }),
+    );
+  });
+});

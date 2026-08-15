@@ -439,3 +439,132 @@ describe('settings and serialization', () => {
     expect(order).toEqual(['start-1', 'done-1', 'start-2', 'done-2']);
   });
 });
+
+describe('post-apply discipline (wave-5 batch B)', () => {
+  it('a user apply disarms auto: the next measure with auto on does not re-apply', () => {
+    const h = makeHarness();
+    h.render({ settings: autoOn() });
+    h.controller.userApply(1.5);
+    h.calls.applyRate.mockClear();
+    h.render({ settings: autoOn() });
+    expect(h.calls.applyRate).not.toHaveBeenCalled();
+    expect(h.controller.pillState?.applied).toBe('user'); // still the user's source, not auto
+  });
+
+  it('an override disarms auto: the next measure with auto on does not re-apply', () => {
+    const h = makeHarness();
+    h.render({ settings: autoOn() });
+    h.video.playbackRate = 1.5;
+    h.video.dispatchEvent(new Event('ratechange'));
+    expect(h.controller.pillState?.applied).toBe('user');
+    h.calls.applyRate.mockClear();
+    h.render({ settings: autoOn() });
+    expect(h.calls.applyRate).not.toHaveBeenCalled();
+  });
+
+  it('survives a no-video page: stopAutoForVideo after a render with no player element', () => {
+    const h = makeHarness();
+    h.video.remove(); // the player never mounted
+    h.render({ settings: autoOn() });
+    expect(() => h.controller.stopAutoForVideo()).not.toThrow();
+  });
+
+  it('applyMultiplier and applyAdjust before any measure are no-ops', () => {
+    const h = makeHarness();
+    expect(() => h.controller.applyMultiplier(1.5)).not.toThrow();
+    expect(() => h.controller.applyAdjust(1.5)).not.toThrow();
+    expect(h.calls.applyRate).not.toHaveBeenCalled();
+  });
+
+  it('onVideoRemoved before any measure is a no-op', () => {
+    const h = makeHarness();
+    expect(() => h.controller.onVideoRemoved()).not.toThrow();
+  });
+
+  it('a non-auto render carries no undo anchor', () => {
+    const h = makeHarness();
+    h.render();
+    expect(h.controller.pillState?.undoRate).toBeUndefined();
+    expect(h.controller.pillState?.applied).toBe('none');
+    expect(h.controller.current?.unit).toBe('wpm');
+  });
+
+  it('the auto apply logs userAction apply through the choke point', () => {
+    const h = makeHarness();
+    h.render({ settings: autoOn() });
+    expect(h.calls.logAppend).toHaveBeenCalledWith(
+      expect.objectContaining({ entry: expect.objectContaining({ userAction: 'apply' }) }),
+    );
+  });
+
+  it('a dismissed session stops accruing: later media events never reach the store', async () => {
+    const h = makeHarness();
+    h.render({ settings: autoOn() });
+    h.controller.dismissCurrent();
+    h.calls.accrue.mockClear();
+    h.video.dispatchEvent(new Event('timeupdate'));
+    await vi.waitFor(() => expect(h.calls.accrue).not.toHaveBeenCalled());
+  });
+
+  it('a media event on the already-active video does not re-run the swap teardown', () => {
+    const h = makeHarness({ onVideoSwap: (end) => end() });
+    h.render({ settings: autoOn() });
+    h.video.dispatchEvent(new Event('timeupdate')); // first event adopts the element
+    expect(h.calls.teardown).toHaveBeenCalledTimes(1);
+    h.calls.teardown.mockClear();
+    h.video.dispatchEvent(new Event('timeupdate')); // same element again
+    expect(h.calls.teardown).not.toHaveBeenCalled();
+  });
+});
+
+describe('pillHook and chapter wiring (wave-5 batch B)', () => {
+  it('pillHook.apply applies the recommendation and respects the music gate', () => {
+    const h = makeHarness();
+    h.render();
+    h.controller.pillHook.apply();
+    expect(h.calls.applyRate).toHaveBeenCalledWith(h.video, 1.25, 2);
+
+    const music = makeHarness();
+    music.render({ naturalRate: 38, contentType: 'music' });
+    music.controller.pillHook.apply();
+    expect(music.calls.applyRate).not.toHaveBeenCalled();
+  });
+
+  it('pillHook.dismiss and pillHook.stopAuto route to the controller actions', () => {
+    const h = makeHarness();
+    h.render({ settings: autoOn() });
+    h.controller.pillHook.stopAuto?.();
+    expect(h.video.playbackRate).toBe(1);
+    h.controller.pillHook.dismiss();
+    expect(h.controller.pillState?.mode).toBe('none');
+  });
+
+  it('the chapter extras ride the pill render', () => {
+    const chapter = {
+      extras: () => ({ chaptersAvailable: true, autoAdjust: true, chapterStatus: 'active' as const }),
+      onConsent: () => undefined,
+      onReset: () => undefined,
+    };
+    const h = makeHarness({ chapter });
+    h.render({ settings: autoOn() });
+    expect(h.controller.pillState?.chapterStatus).toBe('active');
+    expect(h.controller.pillState?.autoAdjust).toBe(true);
+  });
+
+  it('refreshChapterStatus only re-renders when the scheduler status changed', () => {
+    let status: 'active' | 'yielded' | undefined = 'active';
+    const chapter = {
+      extras: () => ({ chaptersAvailable: true, autoAdjust: true, chapterStatus: status }),
+      onConsent: () => undefined,
+      onReset: () => undefined,
+    };
+    const h = makeHarness({ chapter });
+    h.render();
+    const before = h.controller.pillState;
+    h.controller.refreshChapterStatus();
+    expect(h.controller.pillState).toBe(before); // unchanged status → no re-render
+    status = 'yielded';
+    h.controller.refreshChapterStatus();
+    expect(h.controller.pillState?.chapterStatus).toBe('yielded');
+  });
+});

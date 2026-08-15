@@ -552,9 +552,12 @@ describe('recommend — multimedia ceiling modulation', () => {
 describe('recommend — boundary complements (wave-5)', () => {
   it('a non-manual-cue tier whose rounding lands exactly on the 1.5 clamp stays uncapped', () => {
     // asr-cue at 1.5x must not trip the manual-cue clamp detection: the
-    // clamp is a manual-cue rule, not a rate value.
-    const r = recommend({ naturalRate: 160, tier: 'asr-cue', contentType: 'talk', platformMax: 2, userTarget: 240 });
+    // clamp is a manual-cue rule, not a rate value. Target 242 keeps the
+    // multiplier at exactly 1.5 while the effective rate misses the target
+    // — the only case that distinguishes the clamp rule from the value.
+    const r = recommend({ naturalRate: 160, tier: 'asr-cue', contentType: 'talk', platformMax: 2, userTarget: 242 });
     expect(r.multiplier).toBeCloseTo(1.5, 6);
+    expect(r.effectiveWpm).toBe(240);
     expect(r.mode).toBe('recommend');
     expect(r.reason).toBeNull();
   });
