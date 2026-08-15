@@ -830,6 +830,178 @@ export async function runAutoSpecs(driver: E2EDriver): Promise<void> {
 }
 
 /**
+ * The journey lane: ONE scripted session across the extension's state
+ * machine — measure → recommend pill → apply → dismiss → re-navigation
+ * (the fresh pill for the new video) → auto-apply → user override (a manual
+ * rate relabels the source 'user' on the playing generic video and detaches
+ * the re-assert loop) → stop-auto (pre-auto rate restored). Every stage
+ * asserts a real pill/rate transition through the existing hooks, so the
+ * lane fails the moment any stage stops transitioning. The auto stages
+ * follow the runAutoSpecs pattern — the auto lane is chromium-only in the
+ * existing wiring, so the journey rides the chromium runner too.
+ */
+export async function runJourneySpecs(driver: E2EDriver): Promise<void> {
+  const fixtureA = 'real/manual-cue.json';
+  const fixtureB = 'synthetic/ja-captions.json';
+
+  // (a) Measure + recommend pill on fixture A.
+  await driver.navigateToWatch(fixtureA);
+  const measurement = await driver.readMeasurement();
+  if (measurement === undefined) throw new Error(`${fixtureA}: journey never measured`);
+  assertClose(measurement.stats.cue, expectedStats(fixtureA).cue, `${fixtureA} journey cue-level`);
+  const pill = expectState(await driver.readPillState(), fixtureA);
+  const { rec, naturalRate } = expectedRecommendation(fixtureA);
+  if (pill.mode !== 'recommend') {
+    throw new Error(`${fixtureA}: journey pill mode ${pill.mode}, expected recommend`);
+  }
+  if (pill.label !== rec.label) {
+    throw new Error(`${fixtureA}: journey pill label "${pill.label}" !== "${rec.label}"`);
+  }
+  if (Math.abs(pill.rateWpm - naturalRate) > WPM_TOLERANCE) {
+    throw new Error(`${fixtureA}: journey pill rateWpm ${pill.rateWpm}, expected ${naturalRate}`);
+  }
+  if (Math.abs(pill.multiplier - rec.multiplier) > 1e-9) {
+    throw new Error(`${fixtureA}: journey pill multiplier ${pill.multiplier} !== ${rec.multiplier}`);
+  }
+  if (pill.applied !== 'none') {
+    throw new Error(`${fixtureA}: journey pill applied ${pill.applied}, expected none`);
+  }
+  const idle = await driver.readPlaybackRate();
+  if (idle === null || Math.abs(idle - 1) > RATE_TOLERANCE) {
+    throw new Error(`${fixtureA}: journey playbackRate ${idle}, expected 1 before apply`);
+  }
+
+  // (b) Apply sets the rate.
+  await driver.applyPill();
+  const applied = await driver.readPlaybackRate();
+  if (applied === null || Math.abs(applied - pill.multiplier) > RATE_TOLERANCE) {
+    throw new Error(
+      `${fixtureA}: journey playbackRate ${applied} after apply, expected ${pill.multiplier} ± ${RATE_TOLERANCE}`,
+    );
+  }
+
+  // (c) Dismiss hides the pill; a manual apply is not undone.
+  await driver.dismissPill();
+  const dismissed = expectState(await driver.readPillState(), fixtureA);
+  if (dismissed.mode !== 'none') {
+    throw new Error(`${fixtureA}: journey pill still ${dismissed.mode} after dismiss`);
+  }
+  const afterDismiss = await driver.readPlaybackRate();
+  if (afterDismiss === null || Math.abs(afterDismiss - pill.multiplier) > RATE_TOLERANCE) {
+    throw new Error(`${fixtureA}: journey dismiss undid the manual rate (${afterDismiss})`);
+  }
+
+  // (d) Re-navigation to fixture B: re-measure, the fresh pill is B's (the
+  // ja language model drives the unit label and a diverging multiplier).
+  await driver.navigateToWatch(fixtureB);
+  const reMeasured = await driver.readMeasurement();
+  if (reMeasured === undefined) throw new Error(`${fixtureB}: journey never re-measured`);
+  if (reMeasured.lang !== 'ja') {
+    throw new Error(`${fixtureB}: journey measurement lang ${reMeasured.lang}, expected ja`);
+  }
+  assertClose(reMeasured.stats.word, expectedStats(fixtureB).word, `${fixtureB} journey word-level`);
+  const bExpected = expectedRecommendation(fixtureB);
+  const fresh = expectState(await driver.readPillState(), fixtureB);
+  if (fresh.mode !== bExpected.rec.mode) {
+    throw new Error(`${fixtureB}: journey pill mode ${fresh.mode}, expected ${bExpected.rec.mode}`);
+  }
+  if (!fresh.label.includes('morae/min')) {
+    throw new Error(`${fixtureB}: journey pill label "${fresh.label}" missing the morae/min unit`);
+  }
+  if (Math.abs(fresh.multiplier - bExpected.rec.multiplier) > 1e-9) {
+    throw new Error(`${fixtureB}: journey pill multiplier ${fresh.multiplier} !== ${bExpected.rec.multiplier}`);
+  }
+  if (fresh.applied !== 'none') {
+    throw new Error(`${fixtureB}: journey pill applied ${fresh.applied}, expected none`);
+  }
+  if (Math.abs(fresh.multiplier - pill.multiplier) < 0.1) {
+    throw new Error('journey: the fresh pill did not change for the new video');
+  }
+
+  // (e)–(g) The auto lane (runAutoSpecs pattern): opt-in settings force the
+  // recommend-mode fixture to apply itself, a manual rate on the playing
+  // generic video relabels the source 'user' and detaches the loop, and
+  // stop-auto restores the pre-auto rate.
+  try {
+    await driver.writeSettings({
+      ...defaultSettings(),
+      contentType: 'talk',
+      autoApply: { enabled: true, contentTypes: {} },
+    });
+    await driver.navigateToWatch(fixtureA);
+    const auto = expectState(await driver.readPillState(), fixtureA);
+    if (auto.applied !== 'auto') {
+      throw new Error(`${fixtureA}: journey pill applied ${auto.applied}, expected auto`);
+    }
+    const autoRate = await driver.readPlaybackRate();
+    if (autoRate === null || Math.abs(autoRate - auto.multiplier) > RATE_TOLERANCE) {
+      throw new Error(
+        `${fixtureA}: journey playbackRate ${autoRate} without Apply, expected ${auto.multiplier} ± ${RATE_TOLERANCE}`,
+      );
+    }
+
+    await driver.navigateToGeneric();
+    const g = expectState(await driver.readPillState(), 'journey-generic');
+    if (g.applied !== 'auto') {
+      throw new Error(`journey-generic: pill applied ${g.applied}, expected auto`);
+    }
+    await driver.setPlaybackRate(1.25);
+    await driver.sleep(3500); // > one re-check interval (2s)
+    const manual = await driver.readPlaybackRate();
+    if (manual === null || Math.abs(manual - 1.25) > RATE_TOLERANCE) {
+      throw new Error(
+        `journey-generic: playbackRate ${manual} after manual 1.25, expected 1.25 (loop must not fight the user)`,
+      );
+    }
+    const overridden = expectState(await driver.readPillState(), 'journey-generic');
+    if (overridden.applied !== 'user') {
+      throw new Error(
+        `journey-generic: pill applied ${overridden.applied}, expected user after the manual override`,
+      );
+    }
+    await driver.resetPlaybackRate();
+    await driver.sleep(3500); // > one re-check interval (2s)
+    const afterOverride = await driver.readPlaybackRate();
+    if (afterOverride === null || Math.abs(afterOverride - 1) > RATE_TOLERANCE) {
+      throw new Error(
+        `journey-generic: playbackRate ${afterOverride} after override + reset, expected 1 (loop detached)`,
+      );
+    }
+
+    await driver.navigateToGeneric();
+    const rearmed = expectState(await driver.readPillState(), 'journey-generic');
+    if (rearmed.applied !== 'auto') {
+      throw new Error(`journey-generic: auto did not re-arm on the next video (${rearmed.applied})`);
+    }
+    await driver.stopAuto();
+    const stopped = expectState(await driver.readPillState(), 'journey-generic');
+    if (stopped.applied !== 'none') {
+      throw new Error(`journey-generic: pill applied ${stopped.applied}, expected none after stop-auto`);
+    }
+    const stoppedRate = await driver.readPlaybackRate();
+    if (stoppedRate === null || Math.abs(stoppedRate - 1) > RATE_TOLERANCE) {
+      throw new Error(
+        `journey-generic: playbackRate ${stoppedRate} after stop-auto, expected 1 (pre-auto rate restored)`,
+      );
+    }
+    await driver.resetPlaybackRate();
+    await driver.sleep(3500); // > one re-check interval (2s)
+    const afterStop = await driver.readPlaybackRate();
+    if (afterStop === null || Math.abs(afterStop - 1) > RATE_TOLERANCE) {
+      throw new Error(
+        `journey-generic: playbackRate ${afterStop} after stop-auto + reset, expected 1 (loop detached)`,
+      );
+    }
+  } finally {
+    // The settings hook lives on youtube pages only — land back there before
+    // restoring, whatever page the last stage ended on.
+    await driver.navigateToWatch(fixtureA);
+    expectState(await driver.readPillState(), fixtureA);
+    await driver.writeSettings(defaultSettings());
+  }
+}
+
+/**
  * Chaptered-fixture e2e: the consent toggle arms the scheduler, boundary
  * steps land the segment multipliers, and a manual rate yields until the
  * next boundary. Expected rates are recomputed from the same pure lib
