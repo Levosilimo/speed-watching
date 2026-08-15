@@ -4,6 +4,10 @@
  *
  * Scans the test globs (tests and e2e: *.test.ts, *.spec.ts) for:
  *   - skipped/todo assertions: it|describe|test|spec .skip/.todo, xit, xdescribe
+ *   - runtime conditionals: .skipIf/.runIf — a conditional disable is still
+ *     a disable: the test silently stops running when the condition flips
+ *   - .only(): narrows the suite, hiding every other test
+ *   - the { skip: true } object form
  *   - happy-dom holes: "cannot/can't" or "skipped/unsupported/not supported"
  *     tied to happy-dom on the same line — comments that excuse a missing
  *     assertion instead of making it
@@ -27,6 +31,9 @@ export interface ScanFinding {
 }
 
 const SKIP_OR_TODO = /\b(it|describe|test|spec)\.(skip|todo)\b/;
+const RUNTIME_CONDITIONAL = /\b(it|describe|test|spec)\.(skipIf|runIf)\b/;
+const ONLY = /\b(it|describe|test|spec)\.only\s*\(/;
+const SKIP_OBJECT = /\bskip\s*:\s*true\b/;
 const XIT = /^\s*(xit|xdescribe)\b/;
 const HAPPY_DOM_HOLE = /happy-dom[^\n]{0,100}\b(cannot|can't|skipped|unsupported|not supported)\b/i;
 
@@ -53,7 +60,14 @@ export function scanDisabledAssertions(files: string[]): ScanFinding[] {
     const lines = readFileSync(file, 'utf8').split('\n');
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i] ?? '';
-      if (SKIP_OR_TODO.test(line) || XIT.test(line) || HAPPY_DOM_HOLE.test(line)) {
+      if (
+        SKIP_OR_TODO.test(line) ||
+        RUNTIME_CONDITIONAL.test(line) ||
+        ONLY.test(line) ||
+        SKIP_OBJECT.test(line) ||
+        XIT.test(line) ||
+        HAPPY_DOM_HOLE.test(line)
+      ) {
         findings.push({ file, line: i + 1, message: line.trim() });
       }
     }

@@ -34,13 +34,17 @@ jobs:
       - run: bun install --frozen-lockfile
 
       # The tripwire: stryker exits 1 when the total score drops below the
-      # break threshold (65, stryker.conf.json). --incremental reuses the
-      # cache between nights so only changed files re-run. continue-on-error
-      # keeps the report upload and the breach issue on the failure path.
+      # break threshold (65, stryker.conf.json). The incremental cache lives
+      # in .stryker-tmp, which a fresh checkout never has and no action
+      # persists here — so --incremental would be a no-op anyway and the
+      # comment claiming changed-files-only runs was false. The run is full
+      # by construction, which is what the score gate needs; local runs keep
+      # --incremental (bun run mutation). continue-on-error keeps the report
+      # upload and the breach issue on the failure path.
       - name: 'Mutation run (break: 65)'
         id: mutation
         continue-on-error: true
-        run: bunx stryker run --incremental
+        run: bunx stryker run
 
       # The report is the review material for the breach issue — always
       # uploaded so a passing night's diff can be inspected too.

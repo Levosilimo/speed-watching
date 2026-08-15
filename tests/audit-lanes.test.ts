@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { main } from '../scripts/audit-lanes.ts';
+import { baselineKey, main } from '../scripts/audit-lanes.ts';
 import { scanContractNotCount } from '../scripts/audit-contract-not-count.ts';
 import { scanMirrorScan } from '../scripts/audit-mirror-scan.ts';
 import { scanSyntheticFixtures } from '../scripts/audit-real-fixtures.ts';
@@ -58,19 +58,36 @@ describe('audit-real-fixtures', () => {
 
 describe('audit-lanes dispatcher', () => {
   const corpus = [disabled, mirrorTest, noRef, withRef];
+  const strictEnv = { LCE_STRICT_MIRROR: '1', LCE_STRICT_COUNT: '1', LCE_STRICT_FIXTURES: '1' };
 
   it('warns and exits 0 by default', () => {
     expect(main(corpus, {})).toBe(0);
   });
 
-  it('fails when a lane is strict', () => {
+  it('fails when a strict lane finds findings outside the baseline', () => {
     expect(main(corpus, { LCE_STRICT_MIRROR: '1' })).toBe(1);
     expect(main(corpus, { LCE_STRICT_COUNT: '1' })).toBe(1);
     expect(main(corpus, { LCE_STRICT_FIXTURES: '1' })).toBe(1);
   });
 
+  it('accepts baseline-recorded findings even when strict', () => {
+    const findings = [
+      ...scanMirrorScan([mirrorTest]),
+      ...scanContractNotCount([mirrorTest]),
+      ...scanSyntheticFixtures([noRef]),
+    ];
+    const baseline = new Set(findings.map((f) => baselineKey(process.cwd(), f)));
+    expect(main(corpus, strictEnv, baseline)).toBe(0);
+  });
+
   it('stays green on clean input even when strict', () => {
-    const env = { LCE_STRICT_MIRROR: '1', LCE_STRICT_COUNT: '1', LCE_STRICT_FIXTURES: '1' };
-    expect(main([mirrorLib], env)).toBe(0);
+    expect(main([mirrorLib], strictEnv)).toBe(0);
+  });
+
+  it('the committed baseline accepts the current tree under strict', () => {
+    // The CI and run-ci wiring runs the lanes with the strict envs; the
+    // baseline is the human-confirmed backlog, so this must stay 0 unless
+    // the tree grows findings outside it.
+    expect(main([], strictEnv)).toBe(0);
   });
 });

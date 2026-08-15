@@ -36,19 +36,25 @@ jobs:
 
       - name: aislop gate (SARIF)
         run: |
+          set -o pipefail
           bunx aislop scan . --format sarif | tee aislop.sarif | bun run scripts/aislop-gate.ts
       - if: always()
         uses: github/codeql-action/upload-sarif@f3712979fa5f215279b101dd0a2e3bdfb4353324 # v3
         with:
           sarif_file: aislop.sarif
 
-      # The userscript bundle test (tests/userscript-bundle.test.ts) skips
-      # when userscript/dist is absent; build before vitest so the ci lane
-      # always asserts the real bundle (same build the e2e-userscript job
-      # uses).
+      # The userscript bundle test is fail-closed (no skipIf), so the
+      # bundle must exist before the suite runs.
       - run: bun run build:userscript
       - run: bun run test
       - run: bun run test:coverage
+      - run: bun run scripts/audit-disabled-assertions.ts
+      - name: audit lanes (strict)
+        env:
+          LCE_STRICT_MIRROR: '1'
+          LCE_STRICT_COUNT: '1'
+          LCE_STRICT_FIXTURES: '1'
+        run: bun run scripts/audit-lanes.ts
       - name: Install Lua 5.1 for mpv tests
         run: sudo apt-get update -qq && sudo apt-get install -y lua5.1
       - run: bun run test:mpv

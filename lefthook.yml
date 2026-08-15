@@ -3,10 +3,17 @@ pre-commit:
   parallel: true
   commands:
     aislop:
-      run: (bunx aislop scan . --format sarif || true) | bun run scripts/aislop-gate.ts
+      run: bunx aislop scan . --format sarif | bun run scripts/aislop-gate.ts
     ast-grep:
       run: bun run scripts/run-ast-grep-checks.ts
     audit-disabled:
       run: bun run scripts/audit-disabled-assertions.ts
     audit-lanes:
       run: bun run scripts/audit-lanes.ts
+
+# Push-time backstop: a --no-verify commit skips pre-commit, so the hard gate
+# re-runs here — disabled assertions cannot reach the remote either way.
+pre-push:
+  commands:
+    audit-disabled:
+      run: bun run scripts/audit-disabled-assertions.ts

@@ -1,0 +1,160 @@
+{"file":"tests/audio-capture.test.ts","message":"expect(analyser.getFloatTimeDomainData).toHaveBeenCalled();"}
+{"file":"tests/audio-capture.test.ts","message":"expect(context.close).toHaveBeenCalled(); // teardown completed"}
+{"file":"tests/audio-capture.test.ts","message":"expect(env.getUserMedia).toHaveBeenCalledTimes(2);"}
+{"file":"tests/audio-capture.test.ts","message":"expect(env.getUserMedia).toHaveBeenCalledWith({"}
+{"file":"tests/audio-capture.test.ts","message":"expect(hooks.onError).not.toHaveBeenCalled();"}
+{"file":"tests/audio-capture.test.ts","message":"expect(hooks.onError).toHaveBeenCalledWith('permission denied');"}
+{"file":"tests/audio-capture.test.ts","message":"expect(hooks.onLevel).not.toHaveBeenCalled();"}
+{"file":"tests/audio-capture.test.ts","message":"expect(hooks.onLevel).toHaveBeenCalledWith(0.5);"}
+{"file":"tests/audio-capture.test.ts","message":"expect(hooks.onStarted).not.toHaveBeenCalled();"}
+{"file":"tests/audio-capture.test.ts","message":"expect(hooks.onStarted).toHaveBeenCalledTimes(1); // only the first capture started"}
+{"file":"tests/audio-capture.test.ts","message":"expect(hooks.onStarted).toHaveBeenCalledTimes(2);"}
+{"file":"tests/audio-capture.test.ts","message":"expect(hooks.onStopped).not.toHaveBeenCalled();"}
+{"file":"tests/audio-capture.test.ts","message":"expect(hooks.onStopped).toHaveBeenCalled(); // stopped reported"}
+{"file":"tests/audio-capture.test.ts","message":"expect(hooks.onStopped).toHaveBeenCalledTimes(1);"}
+{"file":"tests/audio-capture.test.ts","message":"expect(source.connect).toHaveBeenCalledWith(analyser);"}
+{"file":"tests/audio-capture.test.ts","message":"expect(track.removeEventListener).toHaveBeenCalledWith('ended', expect.any(Function));"}
+{"file":"tests/audio-recorder.test.ts","message":"expect(context.audioWorklet.addModule).toHaveBeenCalledWith('blob:mock-worklet');"}
+{"file":"tests/audio-recorder.test.ts","message":"expect(context.close).toHaveBeenCalledTimes(1);"}
+{"file":"tests/audio-recorder.test.ts","message":"expect(env.AudioWorkletNodeCtor).toHaveBeenCalledWith(context, RECORDER_PROCESSOR, {"}
+{"file":"tests/audio-recorder.test.ts","message":"expect(hooks.onError).not.toHaveBeenCalled();"}
+{"file":"tests/audio-recorder.test.ts","message":"expect(hooks.onError).toHaveBeenCalledWith('module not found');"}
+{"file":"tests/audio-recorder.test.ts","message":"expect(hooks.onStarted).not.toHaveBeenCalled();"}
+{"file":"tests/audio-recorder.test.ts","message":"expect(hooks.onStarted).toHaveBeenCalledTimes(2);"}
+{"file":"tests/audio-recorder.test.ts","message":"expect(hooks.onStopped).not.toHaveBeenCalled();"}
+{"file":"tests/audio-recorder.test.ts","message":"expect(hooks.onStopped).toHaveBeenCalledTimes(1);"}
+{"file":"tests/audio-recorder.test.ts","message":"expect(source.connect).toHaveBeenCalledWith(node);"}
+{"file":"tests/audit-disabled-assertions.test.ts","message":"number 0 mirrors scripts/audit-disabled-assertions.ts's non-exported internals"}
+{"file":"tests/background-glue.test.ts","message":"expect(chromeMock.contextMenus.create).not.toHaveBeenCalled();"}
+{"file":"tests/background-glue.test.ts","message":"expect(chromeMock.contextMenus.create).toHaveBeenCalledWith({"}
+{"file":"tests/background-glue.test.ts","message":"expect(chromeMock.contextMenus.onClicked.addListener).toHaveBeenCalledTimes(1);"}
+{"file":"tests/background-glue.test.ts","message":"expect(chromeMock.offscreen.createDocument).toHaveBeenCalledWith({"}
+{"file":"tests/background-glue.test.ts","message":"expect(chromeMock.runtime.sendMessage).toHaveBeenCalledWith({ kind: 'offscreen-stop' });"}
+{"file":"tests/background-glue.test.ts","message":"expect(chromeMock.runtime.sendMessage).toHaveBeenCalledWith({"}
+{"file":"tests/background-glue.test.ts","message":"expect(chromeMock.storage.session.remove).toHaveBeenCalledWith('probeCapture');"}
+{"file":"tests/background-glue.test.ts","message":"expect(chromeMock.tabCapture.getMediaStreamId).not.toHaveBeenCalled();"}
+{"file":"tests/background-glue.test.ts","message":"expect(chromeMock.tabCapture.getMediaStreamId).toHaveBeenCalledWith({ targetTabId: 5 });"}
+{"file":"tests/background-glue.test.ts","message":"expect(chromeMock.tabCapture.getMediaStreamId).toHaveBeenCalledWith({ targetTabId: 9 });"}
+{"file":"tests/background-glue.test.ts","message":"expect(chromeMock.tabs.create).not.toHaveBeenCalled();"}
+{"file":"tests/background-glue.test.ts","message":"expect(chromeMock.tabs.create).toHaveBeenCalledWith({"}
+{"file":"tests/background-glue.test.ts","message":"expect(chromeMock.tabs.query).toHaveBeenCalledWith({ active: true, currentWindow: true });"}
+{"file":"tests/background-glue.test.ts","message":"expect(chromeMock.tabs.sendMessage).toHaveBeenCalledWith(5, WPM_REQUEST);"}
+{"file":"tests/background-glue.test.ts","message":"expect(sendResponse).not.toHaveBeenCalled();"}
+{"file":"tests/background-glue.test.ts","message":"number 10 mirrors entrypoints/background.ts's non-exported internals"}
+{"file":"tests/background-glue.test.ts","message":"string 'speedwatcher-measure-link' mirrors entrypoints/background.ts's non-exported internals"}
+{"file":"tests/background-glue.test.ts","message":"string \"Measure this video's rate\" mirrors entrypoints/background.ts's non-exported internals"}
+{"file":"tests/caption-fetch.test.ts","message":"expect(failing).toHaveBeenCalledTimes(1);"}
+{"file":"tests/caption-fetch.test.ts","message":"expect(fetchMock).toHaveBeenCalledTimes(1);"}
+{"file":"tests/caption-fetch.test.ts","message":"expect(throwing).toHaveBeenCalledTimes(1);"}
+{"file":"tests/caption-fetch.test.ts","message":"number 20.10 mirrors lib/caption-fetch.ts's non-exported internals"}
+{"file":"tests/caption-fetch.test.ts","message":"number 31 mirrors lib/caption-fetch.ts's non-exported internals"}
+{"file":"tests/caption-fetch.test.ts","message":"string '20.10.31' mirrors lib/caption-fetch.ts's non-exported internals"}
+{"file":"tests/caption-fetch.test.ts","message":"string 'ANDROID' mirrors lib/caption-fetch.ts's non-exported internals"}
+{"file":"tests/caption-trigger.test.ts","message":"const escapeSpy = vi.spyOn(document, 'dispatchEvent');"}
+{"file":"tests/caption-trigger.test.ts","message":"expect(escapeSpy).toHaveBeenCalledWith("}
+{"file":"tests/caption-trigger.test.ts","message":"expect(escapeSpy).toHaveBeenCalledWith(expect.objectContaining({ type: 'keydown', key: 'Escape' }));"}
+{"file":"tests/caption-trigger.test.ts","message":"expect(nudge).toHaveBeenCalledTimes(1);"}
+{"file":"tests/caption-trigger.test.ts","message":"number 100 mirrors lib/caption-trigger.ts's non-exported internals"}
+{"file":"tests/caption-trigger.test.ts","message":"number 3000 mirrors lib/caption-trigger.ts's non-exported internals"}
+{"file":"tests/captions-harvest-adapters.test.ts","message":"number 1 mirrors lib/captions-harvest.ts's non-exported internals"}
+{"file":"tests/captions-harvest-adapters.test.ts","message":"number 3 mirrors lib/captions-harvest.ts's non-exported internals"}
+{"file":"tests/captions-harvest.test.ts","message":"number 1 mirrors lib/captions-harvest.ts's non-exported internals"}
+{"file":"tests/capture-orchestrator.test.ts","message":"expect(api.offscreen.createDocument).not.toHaveBeenCalled();"}
+{"file":"tests/capture-orchestrator.test.ts","message":"expect(api.offscreen.createDocument).toHaveBeenCalledWith({"}
+{"file":"tests/capture-orchestrator.test.ts","message":"expect(api.runtime.sendMessage).not.toHaveBeenCalled();"}
+{"file":"tests/capture-orchestrator.test.ts","message":"expect(api.runtime.sendMessage).toHaveBeenCalledTimes(3);"}
+{"file":"tests/capture-orchestrator.test.ts","message":"expect(api.runtime.sendMessage).toHaveBeenCalledWith({ kind: 'offscreen-start', streamId: 'stream-1' });"}
+{"file":"tests/capture-orchestrator.test.ts","message":"expect(api.runtime.sendMessage).toHaveBeenCalledWith({ kind: 'offscreen-stop' });"}
+{"file":"tests/capture-orchestrator.test.ts","message":"expect(api.storage.session.remove).toHaveBeenCalledWith(MIRROR_KEY);"}
+{"file":"tests/capture-orchestrator.test.ts","message":"expect(api.storage.session.set).not.toHaveBeenCalled();"}
+{"file":"tests/capture-orchestrator.test.ts","message":"expect(api.storage.session.set).toHaveBeenCalledTimes(2);"}
+{"file":"tests/capture-orchestrator.test.ts","message":"expect(api.storage.session.set).toHaveBeenCalledWith({"}
+{"file":"tests/capture-orchestrator.test.ts","message":"expect(api.tabCapture.getMediaStreamId).not.toHaveBeenCalled();"}
+{"file":"tests/capture-orchestrator.test.ts","message":"expect(api.tabCapture.getMediaStreamId).toHaveBeenCalledTimes(2);"}
+{"file":"tests/capture-orchestrator.test.ts","message":"expect(api.tabCapture.getMediaStreamId).toHaveBeenCalledWith({ targetTabId: 7 });"}
+{"file":"tests/capture-orchestrator.test.ts","message":"expect(api.tabCapture.getMediaStreamId).toHaveBeenCalledWith({ targetTabId: 9 });"}
+{"file":"tests/capture-orchestrator.test.ts","message":"expect(api.tabs.query).not.toHaveBeenCalled();"}
+{"file":"tests/capture-orchestrator.test.ts","message":"string 'probeCapture' mirrors lib/capture-orchestrator.ts's non-exported internals"}
+{"file":"tests/channel-memory.test.ts","message":"number 1 mirrors lib/channel-memory.ts's non-exported internals"}
+{"file":"tests/channel-memory.test.ts","message":"number 1000 mirrors lib/channel-memory.ts's non-exported internals"}
+{"file":"tests/chapter-scheduler.test.ts","message":"expect(apply).not.toHaveBeenCalled();"}
+{"file":"tests/chapter-scheduler.test.ts","message":"expect(apply).toHaveBeenCalledTimes(1);"}
+{"file":"tests/chapter-scheduler.test.ts","message":"expect(apply).toHaveBeenCalledTimes(3);"}
+{"file":"tests/content-shortcuts.test.ts","message":"number 1 mirrors lib/channel-memory.ts's non-exported internals"}
+{"file":"tests/content-shortcuts.test.ts","message":"number 5 mirrors lib/heuristics.ts's non-exported internals"}
+{"file":"tests/content-shortcuts.test.ts","message":"string 'estimated' mirrors lib/wpm-protocol.ts's non-exported internals"}
+{"file":"tests/content-shortcuts.test.ts","message":"string 'manual-cue' mirrors lib/wpm-protocol.ts's non-exported internals"}
+{"file":"tests/demand.test.ts","message":"number 1000 mirrors lib/demand.ts's non-exported internals"}
+{"file":"tests/demand.test.ts","message":"number 24 mirrors lib/demand.ts's non-exported internals"}
+{"file":"tests/demand.test.ts","message":"number 4 mirrors lib/demand.ts's non-exported internals"}
+{"file":"tests/fixtures/synthetic/chaptered.json","message":"no scripts/data videoId and no results.jsonl reference"}
+{"file":"tests/fixtures/synthetic/cooldown-expired.json","message":"no scripts/data videoId and no results.jsonl reference"}
+{"file":"tests/fixtures/synthetic/cue-level-only.json","message":"no scripts/data videoId and no results.jsonl reference"}
+{"file":"tests/fixtures/synthetic/dzen-word.vtt","message":"no scripts/data videoId and no results.jsonl reference"}
+{"file":"tests/fixtures/synthetic/edx-transcript.json","message":"no scripts/data videoId and no results.jsonl reference"}
+{"file":"tests/fixtures/synthetic/empty.json","message":"no scripts/data videoId and no results.jsonl reference"}
+{"file":"tests/fixtures/synthetic/gapped.json","message":"no scripts/data videoId and no results.jsonl reference"}
+{"file":"tests/fixtures/synthetic/hls/talk/talk.vtt","message":"no scripts/data videoId and no results.jsonl reference"}
+{"file":"tests/fixtures/synthetic/ja-captions.json","message":"no scripts/data videoId and no results.jsonl reference"}
+{"file":"tests/fixtures/synthetic/late-controls.json","message":"no scripts/data videoId and no results.jsonl reference"}
+{"file":"tests/fixtures/synthetic/music-lyrics.json","message":"no scripts/data videoId and no results.jsonl reference"}
+{"file":"tests/fixtures/synthetic/music-segments.json","message":"no scripts/data videoId and no results.jsonl reference"}
+{"file":"tests/fixtures/synthetic/no-controls.json","message":"no scripts/data videoId and no results.jsonl reference"}
+{"file":"tests/fixtures/synthetic/out-of-order.json","message":"no scripts/data videoId and no results.jsonl reference"}
+{"file":"tests/fixtures/synthetic/pot-gated.json","message":"no scripts/data videoId and no results.jsonl reference"}
+{"file":"tests/fixtures/synthetic/rutube.srt","message":"no scripts/data videoId and no results.jsonl reference"}
+{"file":"tests/fixtures/synthetic/sample.vtt","message":"no scripts/data videoId and no results.jsonl reference"}
+{"file":"tests/fixtures/synthetic/single-word.json","message":"no scripts/data videoId and no results.jsonl reference"}
+{"file":"tests/fixtures/synthetic/transcript-gated.json","message":"no scripts/data videoId and no results.jsonl reference"}
+{"file":"tests/fixtures/synthetic/windows-format.json","message":"no scripts/data videoId and no results.jsonl reference"}
+{"file":"tests/fixtures/synthetic/word-level.json","message":"no scripts/data videoId and no results.jsonl reference"}
+{"file":"tests/heuristics.test.ts","message":"number 0.25 mirrors lib/heuristics.ts's non-exported internals"}
+{"file":"tests/heuristics.test.ts","message":"number 0.3 mirrors lib/heuristics.ts's non-exported internals"}
+{"file":"tests/messaging.test.ts","message":"expect(deps.forwardNudgeDismiss).not.toHaveBeenCalled();"}
+{"file":"tests/messaging.test.ts","message":"expect(deps.forwardNudgeRecordApply).not.toHaveBeenCalled();"}
+{"file":"tests/messaging.test.ts","message":"expect(deps.forwardNudgeRecordApply).toHaveBeenCalledTimes(3);"}
+{"file":"tests/messaging.test.ts","message":"expect(forwardAccrue).not.toHaveBeenCalled();"}
+{"file":"tests/messaging.test.ts","message":"expect(forwardDemand).not.toHaveBeenCalled();"}
+{"file":"tests/messaging.test.ts","message":"expect(forwardJournalAppend).not.toHaveBeenCalled();"}
+{"file":"tests/messaging.test.ts","message":"number 1 mirrors lib/channel-memory.ts's non-exported internals"}
+{"file":"tests/messaging.test.ts","message":"number 1000 mirrors lib/channel-memory.ts's non-exported internals"}
+{"file":"tests/messaging.test.ts","message":"number 1000 mirrors lib/demand.ts's non-exported internals"}
+{"file":"tests/messaging.test.ts","message":"string 'asr-word' mirrors lib/wpm-protocol.ts's non-exported internals"}
+{"file":"tests/pill.test.ts","message":"expect(onApply).not.toHaveBeenCalled();"}
+{"file":"tests/pill.test.ts","message":"expect(onAutoAdjust).not.toHaveBeenCalled();"}
+{"file":"tests/pill.test.ts","message":"expect(onDismiss).not.toHaveBeenCalled();"}
+{"file":"tests/properties.test.ts","message":"number -6 mirrors lib/matcher.ts's non-exported internals"}
+{"file":"tests/rate-controller.test.ts","message":"await vi.waitFor(() => expect(h.calls.accrue).not.toHaveBeenCalled());"}
+{"file":"tests/rate-controller.test.ts","message":"expect(h.calls.applyRate).not.toHaveBeenCalled();"}
+{"file":"tests/rate-controller.test.ts","message":"expect(h.calls.applyRate).toHaveBeenCalledWith(h.video, 1.25, 2);"}
+{"file":"tests/rate-controller.test.ts","message":"expect(h.calls.applyRate).toHaveBeenCalledWith(h.video, 1.5, 2);"}
+{"file":"tests/rate-controller.test.ts","message":"expect(h.calls.logAppend).toHaveBeenCalledWith("}
+{"file":"tests/rate-controller.test.ts","message":"expect(h.calls.reportApply).toHaveBeenCalledWith(1.5, h.controller.current?.range);"}
+{"file":"tests/rate-controller.test.ts","message":"expect(h.calls.seenFirstRun).toHaveBeenCalledTimes(1);"}
+{"file":"tests/rate-controller.test.ts","message":"expect(h.calls.skipAttach).toHaveBeenCalledWith(h.video, 1.25);"}
+{"file":"tests/rate-controller.test.ts","message":"expect(h.calls.skipDetach).toHaveBeenCalled(); // endSession teardown"}
+{"file":"tests/rate-controller.test.ts","message":"expect(h.calls.skipDetach).toHaveBeenCalled();"}
+{"file":"tests/rate-controller.test.ts","message":"expect(h.calls.stopRateApplies).toHaveBeenCalled();"}
+{"file":"tests/rate-controller.test.ts","message":"expect(h.calls.teardown).not.toHaveBeenCalled();"}
+{"file":"tests/rate-controller.test.ts","message":"expect(h.calls.teardown).toHaveBeenCalled(); // nudge surface teardown"}
+{"file":"tests/rate-controller.test.ts","message":"expect(h.calls.teardown).toHaveBeenCalledTimes(1);"}
+{"file":"tests/rate-controller.test.ts","message":"expect(h2.calls.applyRate).not.toHaveBeenCalled();"}
+{"file":"tests/rate-controller.test.ts","message":"expect(h2.calls.seenFirstRun).not.toHaveBeenCalled();"}
+{"file":"tests/rate-controller.test.ts","message":"expect(music.calls.applyRate).not.toHaveBeenCalled();"}
+{"file":"tests/schema-pins.test.ts","message":"number 1 mirrors lib/captions-harvest.ts's non-exported internals"}
+{"file":"tests/schema-pins.test.ts","message":"number 3 mirrors lib/captions-harvest.ts's non-exported internals"}
+{"file":"tests/shortcuts.test.ts","message":"expect(chromeMock.tabs.query).not.toHaveBeenCalled();"}
+{"file":"tests/shortcuts.test.ts","message":"expect(chromeMock.tabs.query).toHaveBeenCalledWith({ active: true, currentWindow: true });"}
+{"file":"tests/shortcuts.test.ts","message":"expect(chromeMock.tabs.sendMessage).not.toHaveBeenCalled();"}
+{"file":"tests/shortcuts.test.ts","message":"expect(chromeMock.tabs.sendMessage).toHaveBeenCalledWith(5, {"}
+{"file":"tests/skip-silence.test.ts","message":"expect(onChange).toHaveBeenCalledTimes(1);"}
+{"file":"tests/transcript.test.ts","message":"expect(empty).toHaveBeenCalledTimes(1);"}
+{"file":"tests/transcript.test.ts","message":"expect(failing).toHaveBeenCalledTimes(1);"}
+{"file":"tests/transcript.test.ts","message":"expect(fetchMock).not.toHaveBeenCalled();"}
+{"file":"tests/transcript.test.ts","message":"expect(fetchMock).toHaveBeenCalledTimes(1);"}
+{"file":"tests/realsite-verdict.test.ts","message":"number 1 mirrors scripts/realsite-verdict.ts's non-exported internals"}
+{"file":"tests/realsite-verdict.test.ts","message":"number 0 mirrors scripts/realsite-verdict.ts's non-exported internals"}
+{"file":"tests/caption-capture.test.ts","message":"expect(fetchMock).toHaveBeenCalledWith(TIMEDTEXT_URL, undefined);"}
+{"file":"tests/caption-capture.test.ts","message":"expect(nativeOpen).toHaveBeenCalledWith('GET', TIMEDTEXT_URL, undefined, undefined, undefined);"}
+{"file":"tests/caption-capture.test.ts","message":"expect(nativeSend).toHaveBeenCalled();"}
+{"file":"tests/caption-capture.test.ts","message":"expect(nativeSend).toHaveBeenCalledTimes(2);"}
