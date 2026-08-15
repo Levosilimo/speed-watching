@@ -971,9 +971,13 @@ export async function runAutoSpecs(driver: E2EDriver): Promise<void> {
       throw new Error('generic: reapplier not active before the manual-rate check');
     }
     await driver.setPlaybackRate(1.25);
-    await driver.waitForReassertPast(
-      (reBeforeManual.lastAssertAt ?? Date.now()) + reBeforeManual.intervalMs,
-    );
+    // The override (markUserOverride) detaches the loop the moment the
+    // rate diverges — the delta witness for "the loop must not fight the
+    // user": the loop that could re-assert is gone.
+    const afterManual = await driver.readReapplier();
+    if (afterManual === null || afterManual.active) {
+      throw new Error('generic: reapplier still active after the manual 1.25 (override did not detach)');
+    }
     const gManual = await driver.readPlaybackRate();
     if (gManual === null || Math.abs(gManual - 1.25) > RATE_TOLERANCE) {
       throw new Error(
@@ -1146,9 +1150,12 @@ export async function runJourneySpecs(driver: E2EDriver): Promise<void> {
       throw new Error('journey-generic: reapplier not active before the manual-rate check');
     }
     await driver.setPlaybackRate(1.25);
-    await driver.waitForReassertPast(
-      (reBeforeManual.lastAssertAt ?? Date.now()) + reBeforeManual.intervalMs,
-    );
+    // The override detaches the loop the moment the rate diverges — the
+    // delta witness for "the loop must not fight the user".
+    const afterManual = await driver.readReapplier();
+    if (afterManual === null || afterManual.active) {
+      throw new Error('journey-generic: reapplier still active after the manual 1.25 (override did not detach)');
+    }
     const manual = await driver.readPlaybackRate();
     if (manual === null || Math.abs(manual - 1.25) > RATE_TOLERANCE) {
       throw new Error(
