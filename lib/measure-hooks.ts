@@ -2,7 +2,6 @@
 // watch-page script stays under the file-size gate: the E2E wpm summaries
 // (one-line console.info lines compiled out of the store bundle, SEC-2) and
 // the player-response wait. Runs in the MAIN world with the pipeline.
-// aislop-ignore-file console-leftover
 
 import type { PlayerResponse } from './youtube';
 
@@ -35,6 +34,7 @@ export function logWpm(
     `[speed-watcher] video=${videoId} kind=${kind} lang=${lang} ` +
     `wpm word-level=${fmt(stats.word)} cue-level=${fmt(stats.cue)} ` +
     `corrected=${fmt(stats.corrected)} nWords=${stats.nWords}`;
+  // aislop-ignore-next-line console-leftover
   if (__E2E__) console.info(line);
   window.dispatchEvent(
     new CustomEvent('speedwatcher:measure', {

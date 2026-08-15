@@ -32,7 +32,6 @@
 // The console.debug in safe() is the harvest-failure surface — the user-
 // visible fallback is the estimated-tier pill, and this line is the only
 // trace of why a probe was skipped.
-// aislop-ignore-file console-leftover
 
 import vttjs from 'vtt.js';
 import type { Segment } from './captions';
@@ -230,6 +229,7 @@ async function safe<T>(run: () => Promise<T | null>, label: string): Promise<T |
   try {
     return await run();
   } catch (error) {
+    // aislop-ignore-next-line console-leftover
     console.debug(`[speed-watcher] caption harvest ${label} failed: ${String(error)}`);
     return null;
   }

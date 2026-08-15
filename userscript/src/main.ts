@@ -7,7 +7,6 @@
 // pill.ts). Storage is two optional GM keys (target + channel memory, see
 // storage.ts); Greasemonkey 4's async API no-ops gracefully and the script
 // still measures.
-// aislop-ignore-file console-leftover
 
 import { installCaptionCapture, TimedtextBuffer } from '../../lib/caption-capture';
 import { fetchCaptions as fetchCaptionsWithContext } from '../../lib/caption-fetch';
@@ -122,6 +121,7 @@ function logMeasure(
     `[speed-watcher] video=${videoId} kind=${kind} lang=${lang} ` +
     `wpm word-level=${fmt(stats.word)} cue-level=${fmt(stats.cue)} ` +
     `corrected=${fmt(stats.corrected)} nWords=${stats.nWords}`;
+  // aislop-ignore-next-line console-leftover
   console.info(line);
   window.dispatchEvent(
     new CustomEvent<MeasureEventDetail>('speedwatcher:measure', {
