@@ -23,6 +23,7 @@ import { chromeMock } from './chrome-mock';
 vi.mock('@/lib/caption-trigger', () => ({
   triggerCcAutomation: vi.fn(async () => undefined),
   waitForWordTimedCapture: vi.fn(async () => null),
+  restoreCcState: vi.fn(),
 }));
 
 // readFixture (fixtures/helpers.ts) builds its path with the global URL

@@ -197,6 +197,12 @@ async function main(): Promise<void> {
       async readBrowserLanguage() {
         return driver.executeScript('return navigator.language') as unknown as Promise<string>;
       },
+      async readCcState() {
+        return driver.executeScript(
+          'const btn = document.querySelector("button.ytp-subtitles-button");' +
+            'return btn ? btn.getAttribute("aria-pressed") : null',
+        ) as unknown as Promise<string | null>;
+      },
       async navigateToGeneric() {
         await driver.get(`${server.baseUrl}/generic`);
       },

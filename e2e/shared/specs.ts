@@ -101,6 +101,10 @@ export interface E2EDriver {
    * tier's UI-locale language fallback reads it, so the spec mirror needs
    * the same input the content script uses. */
   readBrowserLanguage(): Promise<string>;
+  /** The CC button's aria-pressed attribute ('true'/'false'), or null when
+   * the stub controls are absent — the CC-restore lane reads it after the
+   * measure. */
+  readCcState(): Promise<string | null>;
   /** Navigate to the generic player fixture page (non-YouTube origin). */
   navigateToGeneric(): Promise<void>;
   /** Navigate to the Dzen-shaped track-src fixture page. */
@@ -453,6 +457,14 @@ export async function runCaptureSpecs(driver: E2EDriver): Promise<void> {
     throw new Error(
       `${fixture}: nWords ${measurement.stats.nWords} !== expected ${expected.nWords}`,
     );
+  }
+  // (c) The CC automation restores the pre-measure CC state: the stub's CC
+  // button starts aria-pressed=false (off), the trigger turns it on, and
+  // after the measure the page must read off again — the fail-without-fix
+  // lane: before the restore wiring, the automation left the toggle on.
+  const ccState = await driver.readCcState();
+  if (ccState !== 'false') {
+    throw new Error(`${fixture}: CC aria-pressed ${ccState}, expected false (pre-measure state)`);
   }
 }
 
