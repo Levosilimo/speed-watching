@@ -43,6 +43,9 @@ const EN = {
   'pill.label.unreachable': 'safe zone unreachable — {mult}x ≈ {rate} {unit}',
   'pill.label.music': 'music — speed not recommended',
   'pill.label.cappedSuffix': ' (capped below safe zone)',
+  'pill.caption.noTrack': 'no captions found',
+  'pill.caption.fetchFailed': 'captions unavailable',
+  'pill.caption.captureMissed': 'captions empty',
   'nudge.title': 'At a glance, was that still fully clear?',
   'nudge.body':
     'Fast playback can feel as clear as normal speed even when recall dips — speed-watching mostly affects how confident you feel about understanding, not what you objectively catch. If anything felt rushed, {lo}–{hi} {unit} is the comfortable range to fall back to.',

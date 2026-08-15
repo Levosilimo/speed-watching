@@ -10,6 +10,8 @@ import type { BridgeClient } from './messaging';
 import type { ContentType } from './music';
 import type { RateTier, Recommendation } from './recommend';
 
+export type { CaptionStatus } from '../ui/pill';
+
 /** The current-video context; the content side extends it with the
  * videoId/language/target the wpm:get answer builder reads. */
 export interface RateCurrent {

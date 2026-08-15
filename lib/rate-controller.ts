@@ -4,7 +4,7 @@
 // (lib/rate-controller-types.ts): the pill anchor, the apply mechanism, and
 // the current-video context.
 
-import { createPill, type AppliedSource, type LiveRate, type PillApi, type PillEvents, type PillState } from '../ui/pill';
+import { createPill, type AppliedSource, type CaptionStatus, type LiveRate, type PillApi, type PillEvents, type PillState } from '../ui/pill';
 import { OVERLAY_Z_INDEX, ensureAutohideCouplingCss } from '../ui/styles';
 import { shouldAutoApply } from './auto-apply';
 import type { LanguageModel, RateRange } from './languages';
@@ -26,8 +26,7 @@ export function createRateController<C extends RateCurrent>(deps: RateController
   /** The element that last fired a media event — the apply target. */
   let activeVideo: HTMLVideoElement | null = null;
 
-  // Auto-apply lifecycle (per video): 'pending' until the first measure,
-  // 'auto' after a self-apply, 'stopped' after override/dismiss/Stop-auto.
+  // Auto-apply lifecycle (per video): 'pending' until the first measure, 'auto' after a self-apply, 'stopped' after override/dismiss/Stop-auto.
   let autoState: 'pending' | 'auto' | 'stopped' = 'pending';
   /** How the current rate got applied — rides into the pill as applied. */
   let appliedSource: AppliedSource = 'none';
@@ -49,8 +48,7 @@ export function createRateController<C extends RateCurrent>(deps: RateController
 
   const NONE_STATE: PillState = { mode: 'none', rateWpm: 0, multiplier: 1, effectiveWpm: 0, label: '' };
 
-  /** E2E hook (SEC-2); showPill keeps its state in sync. The apply gate
-   * mirrors ui/pill.ts wireEvents: music/unreachable never touch the rate. */
+  /** E2E hook (SEC-2); showPill keeps its state in sync — the apply gate mirrors ui/pill.ts wireEvents (music/unreachable never touch the rate). */
   const pillHook: PillTestHook = {
     state: null,
     apply: () => {
@@ -353,6 +351,7 @@ export function createRateController<C extends RateCurrent>(deps: RateController
     wordInputs?: { articulatoryWpm: number; timingCoverageOk: boolean } | null,
     language?: LanguageModel,
     startedAt?: number,
+    captionStatus?: CaptionStatus,
   ): void {
     // The video reset while this measure was in flight: render nothing.
     if (startedAt !== undefined && epoch !== startedAt) return;
@@ -411,6 +410,7 @@ export function createRateController<C extends RateCurrent>(deps: RateController
       applied: appliedSource,
       undoRate: appliedSource === 'auto' ? preAutoRate ?? 1 : undefined,
       firstRun,
+      captionStatus,
       ...chapter?.extras(),
     });
   }

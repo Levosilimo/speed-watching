@@ -254,6 +254,21 @@ describe('createPill', () => {
     expect(apply.getAttribute('aria-label')).toBe('Apply 1.6x playback speed');
   });
 
+  it('appends the caption-collapse copy to the estimated tier badge', () => {
+    const host = shadowHost();
+    const pill = createPill(host, {}, { locale: 'en' });
+    pill.mount();
+    pill.update(state({ tierLabel: 'estimated', captionStatus: 'no-track' }));
+    expect(rootOf(host).querySelector<HTMLSpanElement>('.tier')?.textContent).toBe('estimated · no captions found');
+    pill.update(state({ tierLabel: 'estimated', captionStatus: 'fetch-failed' }));
+    expect(rootOf(host).querySelector<HTMLSpanElement>('.tier')?.textContent).toBe('estimated · captions unavailable');
+    pill.update(state({ tierLabel: 'estimated', captionStatus: 'capture-missed' }));
+    expect(rootOf(host).querySelector<HTMLSpanElement>('.tier')?.textContent).toBe('estimated · captions empty');
+    // A measured tier with no collapse keeps the plain badge.
+    pill.update(state({ tierLabel: 'from captions' }));
+    expect(rootOf(host).querySelector<HTMLSpanElement>('.tier')?.textContent).toBe('from captions');
+  });
+
   it('renders the warning note for warning mode and picks the copy by reason', () => {
     const host = shadowHost();
     const pill = createPill(host, {}, { locale: 'en' });
