@@ -1,0 +1,418 @@
+{
+ "fixture": "windows-asr-Ks-_Mh1QhMc-trunc.json",
+ "provenance": {
+  "source": "real",
+  "videoId": "Ks-_Mh1QhMc",
+  "captureDate": "2026-08-12",
+  "captureMethod": "player-signed intercept (page.on('response'), CC toggled on)",
+  "truncation": "first 20 events + first 12 top-level windows (tests/fixtures/README.md)",
+  "backs": "word timing parsing (words > 0 on a real WEB payload); windows==segs cue parity",
+  "notes": []
+ },
+ "layout": {
+  "events": 20,
+  "windows": 0,
+  "segOffsets": 61,
+  "windowTexts": 0
+ },
+ "kind": "asr",
+ "parse": {
+  "words": [
+   {
+    "text": " I",
+    "startSec": 16.76,
+    "durSec": 0.0799999999999983
+   },
+   {
+    "text": " want",
+    "startSec": 16.84,
+    "durSec": 0.120000000000001
+   },
+   {
+    "text": " to",
+    "startSec": 16.96,
+    "durSec": 0.1999999999999993
+   },
+   {
+    "text": " start",
+    "startSec": 17.16,
+    "durSec": 0.35999999999999943
+   },
+   {
+    "text": " by",
+    "startSec": 17.52,
+    "durSec": 0.3200000000000003
+   },
+   {
+    "text": " um",
+    "startSec": 17.84,
+    "durSec": 0.19900000000000162
+   },
+   {
+    "text": " offering",
+    "startSec": 18.039,
+    "durSec": 0.3999999999999986
+   },
+   {
+    "text": " you",
+    "startSec": 18.439,
+    "durSec": 0.16100000000000136
+   },
+   {
+    "text": " a",
+    "startSec": 18.6,
+    "durSec": 1.0799999999999983
+   },
+   {
+    "text": " no",
+    "startSec": 19.68,
+    "durSec": 0.43900000000000006
+   },
+   {
+    "text": " Tech",
+    "startSec": 20.119,
+    "durSec": 0.240000000000002
+   },
+   {
+    "text": " life",
+    "startSec": 20.359,
+    "durSec": 0.6799999999999997
+   },
+   {
+    "text": " hack",
+    "startSec": 21.039,
+    "durSec": 1
+   },
+   {
+    "text": " um",
+    "startSec": 22.039,
+    "durSec": 0.3200000000000003
+   },
+   {
+    "text": " and",
+    "startSec": 22.359,
+    "durSec": 0.20099999999999696
+   },
+   {
+    "text": " all",
+    "startSec": 22.56,
+    "durSec": 0.16000000000000014
+   },
+   {
+    "text": " it",
+    "startSec": 22.72,
+    "durSec": 0.6799999999999997
+   },
+   {
+    "text": " of",
+    "startSec": 23.4,
+    "durSec": 0.16000000000000014
+   },
+   {
+    "text": " you",
+    "startSec": 23.56,
+    "durSec": 0.240000000000002
+   },
+   {
+    "text": " is",
+    "startSec": 23.8,
+    "durSec": 0.31899999999999906
+   },
+   {
+    "text": " this",
+    "startSec": 24.119,
+    "durSec": 0.240000000000002
+   },
+   {
+    "text": " that",
+    "startSec": 24.359,
+    "durSec": 0.12099999999999866
+   },
+   {
+    "text": " you",
+    "startSec": 24.48,
+    "durSec": 0.16000000000000014
+   },
+   {
+    "text": " change",
+    "startSec": 24.64,
+    "durSec": 0.9589999999999996
+   },
+   {
+    "text": " posture",
+    "startSec": 25.599,
+    "durSec": 1
+   },
+   {
+    "text": " for",
+    "startSec": 26.599,
+    "durSec": 0.5199999999999996
+   },
+   {
+    "text": " two",
+    "startSec": 27.119,
+    "durSec": 0.3200000000000003
+   },
+   {
+    "text": " minutes",
+    "startSec": 27.439,
+    "durSec": 0.9609999999999985
+   },
+   {
+    "text": " but",
+    "startSec": 28.4,
+    "durSec": 0.240000000000002
+   },
+   {
+    "text": " before",
+    "startSec": 28.64,
+    "durSec": 0.3990000000000009
+   },
+   {
+    "text": " give",
+    "startSec": 29.039,
+    "durSec": 0.12099999999999866
+   },
+   {
+    "text": " it",
+    "startSec": 29.16,
+    "durSec": 0.16000000000000014
+   },
+   {
+    "text": " away",
+    "startSec": 29.32,
+    "durSec": 0.6799999999999997
+   },
+   {
+    "text": " I",
+    "startSec": 30,
+    "durSec": 0.0799999999999983
+   },
+   {
+    "text": " want",
+    "startSec": 30.08,
+    "durSec": 0.11900000000000333
+   },
+   {
+    "text": " to",
+    "startSec": 30.199,
+    "durSec": 0.16000000000000014
+   },
+   {
+    "text": " ask",
+    "startSec": 30.359,
+    "durSec": 0.20099999999999696
+   },
+   {
+    "text": " you",
+    "startSec": 30.56,
+    "durSec": 0.16000000000000014
+   },
+   {
+    "text": " to",
+    "startSec": 30.72,
+    "durSec": 0.559000000000001
+   },
+   {
+    "text": " now",
+    "startSec": 31.279,
+    "durSec": 0.4800000000000004
+   },
+   {
+    "text": " do",
+    "startSec": 31.759,
+    "durSec": 0.2010000000000005
+   },
+   {
+    "text": " a",
+    "startSec": 31.96,
+    "durSec": 0.11899999999999977
+   },
+   {
+    "text": " little",
+    "startSec": 32.079,
+    "durSec": 0.2809999999999988
+   },
+   {
+    "text": " audit",
+    "startSec": 32.36,
+    "durSec": 0.4399999999999977
+   },
+   {
+    "text": " of",
+    "startSec": 32.8,
+    "durSec": 0.20000000000000284
+   },
+   {
+    "text": " your",
+    "startSec": 33,
+    "durSec": 0.23899999999999721
+   },
+   {
+    "text": " body",
+    "startSec": 33.239,
+    "durSec": 0.480000000000004
+   },
+   {
+    "text": " what",
+    "startSec": 33.719,
+    "durSec": 0.12100000000000222
+   },
+   {
+    "text": " you're",
+    "startSec": 33.84,
+    "durSec": 0.1599999999999966
+   },
+   {
+    "text": " doing",
+    "startSec": 34,
+    "durSec": 0.23899999999999721
+   },
+   {
+    "text": " with",
+    "startSec": 34.239,
+    "durSec": 0.12100000000000222
+   },
+   {
+    "text": " your",
+    "startSec": 34.36,
+    "durSec": 0.19899999999999807
+   },
+   {
+    "text": " body",
+    "startSec": 34.559,
+    "durSec": 0.6799999999999997
+   },
+   {
+    "text": " so",
+    "startSec": 35.239,
+    "durSec": 0.3200000000000003
+   },
+   {
+    "text": " many",
+    "startSec": 35.559,
+    "durSec": 0.2010000000000005
+   },
+   {
+    "text": " of",
+    "startSec": 35.76,
+    "durSec": 0.11899999999999977
+   },
+   {
+    "text": " you",
+    "startSec": 35.879,
+    "durSec": 0.12100000000000222
+   },
+   {
+    "text": " are",
+    "startSec": 36,
+    "durSec": 0.11999999999999744
+   },
+   {
+    "text": " sort",
+    "startSec": 36.12,
+    "durSec": 0.1600000000000037
+   },
+   {
+    "text": " of",
+    "startSec": 36.28,
+    "durSec": 0.11899999999999977
+   },
+   {
+    "text": " making",
+    "startSec": 36.399
+   }
+  ],
+  "cues": [
+   {
+    "text": "[Music]",
+    "startSec": 2.63,
+    "durSec": 12.85
+   },
+   {
+    "text": "[Applause]",
+    "startSec": 12.31,
+    "durSec": 3.17
+   },
+   {
+    "text": "so I want to start by um offering you a",
+    "startSec": 16.52,
+    "durSec": 6.4
+   },
+   {
+    "text": "free no Tech life hack um and all it",
+    "startSec": 18.8,
+    "durSec": 6.2
+   },
+   {
+    "text": "requires of you is this that you change",
+    "startSec": 22.92,
+    "durSec": 5.96
+   },
+   {
+    "text": "your posture for two minutes but before",
+    "startSec": 25,
+    "durSec": 6.039
+   },
+   {
+    "text": "I give it away I want to ask you to",
+    "startSec": 28.88,
+    "durSec": 4.679
+   },
+   {
+    "text": "right now do a little audit of your body",
+    "startSec": 31.039,
+    "durSec": 4.401
+   },
+   {
+    "text": "and what you're doing with your body so",
+    "startSec": 33.559,
+    "durSec": 3.081
+   },
+   {
+    "text": "how many of you are sort of making",
+    "startSec": 35.44,
+    "durSec": 3.72
+   }
+  ]
+ },
+ "pins": {
+  "tier": "asr-word",
+  "wordCount": 61,
+  "cueCount": 10,
+  "tokenCount": 72,
+  "spanSec": 36.529999999999994,
+  "speechDurationSec": 16.559,
+  "pauseBiasPct": -14.258107373633669,
+  "timingCoverageOk": true,
+  "rates": {
+   "wordLevelWpm": 186.3638678140435,
+   "cueLevelWpm": 116.61647960580348,
+   "correctedCueLevelWpm": 116.61647960580348,
+   "manualCueRate": 185.5123674911661,
+   "unifiedWpm": 221.98731501057082,
+   "articulatoryWpm": 253.63850474062443
+  },
+  "tolerance": {
+   "countsRel": 0.25,
+   "ratesRel": 0.15
+  }
+ },
+ "recorded": {
+  "sourceFiles": [
+   "scripts/data/sample-results.jsonl",
+   "scripts/data/web-rerun/rerun-results.jsonl"
+  ],
+  "fields": {
+   "kind": "asr",
+   "nCues": 535,
+   "nWordsTimed": 3297,
+   "textTokens": 3832,
+   "coveragePct": 86.03862212943632,
+   "spanSec": 1255.849,
+   "unifiedRate": 194.074556405665,
+   "wordAccurateRate": 242.57221772901397,
+   "pauseBiasPct": -24.98919086640939
+  }
+ }
+}

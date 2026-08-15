@@ -1,0 +1,46 @@
+{
+ "fixture": "transcript-gated.json",
+ "provenance": {
+  "source": "synthetic",
+  "videoId": "e2e-fixture",
+  "captureDate": "2026-08-12",
+  "captureMethod": "authored (synthetic): the get_transcript fallback lane",
+  "truncation": "first 20 events + first 12 top-level windows (tests/fixtures/README.md)",
+  "backs": "TRANSCRIPT_GATED_FIXTURES: the ANDROID player response whose transcript-panel params back the get_transcript POST (e2e/shared/fixtures.ts); the payload itself parses to no captions",
+  "notes": []
+ },
+ "layout": {
+  "events": 0,
+  "windows": 0,
+  "segOffsets": 0,
+  "windowTexts": 0
+ },
+ "kind": "asr",
+ "parse": {
+  "words": [],
+  "cues": []
+ },
+ "pins": {
+  "tier": "asr-cue",
+  "wordCount": 0,
+  "cueCount": 0,
+  "tokenCount": 0,
+  "spanSec": null,
+  "speechDurationSec": null,
+  "pauseBiasPct": null,
+  "timingCoverageOk": null,
+  "rates": {
+   "wordLevelWpm": null,
+   "cueLevelWpm": null,
+   "correctedCueLevelWpm": null,
+   "manualCueRate": null,
+   "unifiedWpm": null,
+   "articulatoryWpm": null
+  },
+  "tolerance": {
+   "countsRel": 0.25,
+   "ratesRel": 0.15
+  }
+ },
+ "recorded": null
+}

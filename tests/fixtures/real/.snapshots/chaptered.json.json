@@ -1,0 +1,272 @@
+{
+ "fixture": "chaptered.json",
+ "provenance": {
+  "source": "synthetic",
+  "videoId": "e2e-fixture",
+  "captureDate": "2026-08-12",
+  "captureMethod": "authored (synthetic): the chaptered lane",
+  "truncation": "first 20 events + first 12 top-level windows (tests/fixtures/README.md)",
+  "backs": "CHAPTERED_FIXTURES: 3x30s spans (fast speech / music / slow speech) with chapter markers (e2e/shared/fixtures.ts)",
+  "notes": []
+ },
+ "layout": {
+  "events": 45,
+  "windows": 0,
+  "segOffsets": 0,
+  "windowTexts": 0
+ },
+ "kind": "asr",
+ "parse": {
+  "words": [],
+  "cues": [
+   {
+    "text": "the introduction covers productivity basics",
+    "startSec": 0,
+    "durSec": 2
+   },
+   {
+    "text": "today we begin with core principles",
+    "startSec": 2,
+    "durSec": 2
+   },
+   {
+    "text": "of focused work and deep attention",
+    "startSec": 4,
+    "durSec": 2
+   },
+   {
+    "text": "we talk about why focus matters",
+    "startSec": 6,
+    "durSec": 2
+   },
+   {
+    "text": "for anyone who wants results",
+    "startSec": 8,
+    "durSec": 2
+   },
+   {
+    "text": "in less time with fewer distractions",
+    "startSec": 10,
+    "durSec": 2
+   },
+   {
+    "text": "the key ideas build on research",
+    "startSec": 12,
+    "durSec": 2
+   },
+   {
+    "text": "into how the mind handles tasks",
+    "startSec": 14,
+    "durSec": 2
+   },
+   {
+    "text": "and how focus trains like muscle",
+    "startSec": 16,
+    "durSec": 2
+   },
+   {
+    "text": "so we start with definitions",
+    "startSec": 18,
+    "durSec": 2
+   },
+   {
+    "text": "before moving to practical strategies",
+    "startSec": 20,
+    "durSec": 2
+   },
+   {
+    "text": "you can apply in your schedule",
+    "startSec": 22,
+    "durSec": 2
+   },
+   {
+    "text": "the first principle is simple",
+    "startSec": 24,
+    "durSec": 2
+   },
+   {
+    "text": "protect your attention from interruptions",
+    "startSec": 26,
+    "durSec": 2
+   },
+   {
+    "text": "and guard your time carefully",
+    "startSec": 28,
+    "durSec": 2
+   },
+   {
+    "text": "♪ oh baby ♪",
+    "startSec": 30,
+    "durSec": 2
+   },
+   {
+    "text": "♪ yeah yeah ♪",
+    "startSec": 32,
+    "durSec": 2
+   },
+   {
+    "text": "♪ oh baby baby ♪",
+    "startSec": 34,
+    "durSec": 2
+   },
+   {
+    "text": "♪ yeah yeah yeah ♪",
+    "startSec": 36,
+    "durSec": 2
+   },
+   {
+    "text": "♪ oh baby ♪",
+    "startSec": 38,
+    "durSec": 2
+   },
+   {
+    "text": "♪ yeah yeah ♪",
+    "startSec": 40,
+    "durSec": 2
+   },
+   {
+    "text": "♪ oh baby baby ♪",
+    "startSec": 42,
+    "durSec": 2
+   },
+   {
+    "text": "♪ yeah yeah yeah ♪",
+    "startSec": 44,
+    "durSec": 2
+   },
+   {
+    "text": "♪ oh baby ♪",
+    "startSec": 46,
+    "durSec": 2
+   },
+   {
+    "text": "♪ yeah yeah ♪",
+    "startSec": 48,
+    "durSec": 2
+   },
+   {
+    "text": "♪ oh baby baby ♪",
+    "startSec": 50,
+    "durSec": 2
+   },
+   {
+    "text": "♪ yeah yeah yeah ♪",
+    "startSec": 52,
+    "durSec": 2
+   },
+   {
+    "text": "♪ oh baby ♪",
+    "startSec": 54,
+    "durSec": 2
+   },
+   {
+    "text": "♪ yeah yeah ♪",
+    "startSec": 56,
+    "durSec": 2
+   },
+   {
+    "text": "♪ oh baby baby ♪",
+    "startSec": 58,
+    "durSec": 2
+   },
+   {
+    "text": "finally we wrap up the points",
+    "startSec": 60,
+    "durSec": 2
+   },
+   {
+    "text": "and list your next steps",
+    "startSec": 62,
+    "durSec": 2
+   },
+   {
+    "text": "the tools work best when",
+    "startSec": 64,
+    "durSec": 2
+   },
+   {
+    "text": "you combine them with practice",
+    "startSec": 66,
+    "durSec": 2
+   },
+   {
+    "text": "speed is not the goal",
+    "startSec": 68,
+    "durSec": 2
+   },
+   {
+    "text": "clarity and retention matter",
+    "startSec": 70,
+    "durSec": 2
+   },
+   {
+    "text": "review the notes again",
+    "startSec": 72,
+    "durSec": 2
+   },
+   {
+    "text": "and revisit the examples",
+    "startSec": 74,
+    "durSec": 2
+   },
+   {
+    "text": "the exercises build your skill",
+    "startSec": 76,
+    "durSec": 2
+   },
+   {
+    "text": "gradually over several weeks",
+    "startSec": 78,
+    "durSec": 2
+   },
+   {
+    "text": "do not rush the stages",
+    "startSec": 80,
+    "durSec": 2
+   },
+   {
+    "text": "mastery comes from repetition",
+    "startSec": 82,
+    "durSec": 2
+   },
+   {
+    "text": "thanks for watching this lecture",
+    "startSec": 84,
+    "durSec": 2
+   },
+   {
+    "text": "and the best in your work",
+    "startSec": 86,
+    "durSec": 2
+   },
+   {
+    "text": "see you in the next video",
+    "startSec": 88,
+    "durSec": 2
+   }
+  ]
+ },
+ "pins": {
+  "tier": "asr-cue",
+  "wordCount": 0,
+  "cueCount": 45,
+  "tokenCount": 193,
+  "spanSec": 90,
+  "speechDurationSec": null,
+  "pauseBiasPct": null,
+  "timingCoverageOk": null,
+  "rates": {
+   "wordLevelWpm": null,
+   "cueLevelWpm": 148.66666666666669,
+   "correctedCueLevelWpm": 148.66666666666669,
+   "manualCueRate": 128.66666666666666,
+   "unifiedWpm": 131.5909090909091,
+   "articulatoryWpm": null
+  },
+  "tolerance": {
+   "countsRel": 0.25,
+   "ratesRel": 0.15
+  }
+ },
+ "recorded": null
+}

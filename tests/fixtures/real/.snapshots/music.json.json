@@ -1,0 +1,254 @@
+{
+ "fixture": "music.json",
+ "provenance": {
+  "source": "real",
+  "videoId": "60ItHLz5WEA",
+  "captureDate": "2026-08-11",
+  "captureMethod": "ANDROID innertube control fetch (phase-0 harness androidControl)",
+  "truncation": "first 20 events + first 12 top-level windows (tests/fixtures/README.md)",
+  "backs": "music-video word timing (kind=asr per sample-results); legacy music slot (tests/fixtures/README.md FIXTURE_SLOTS)",
+  "notes": []
+ },
+ "layout": {
+  "events": 20,
+  "windows": 0,
+  "segOffsets": 29,
+  "windowTexts": 0
+ },
+ "kind": "asr",
+ "parse": {
+  "words": [
+   {
+    "text": " were",
+    "startSec": 12.08,
+    "durSec": 0.16000000000000014
+   },
+   {
+    "text": " the",
+    "startSec": 12.24,
+    "durSec": 0.39899999999999913
+   },
+   {
+    "text": " shadow",
+    "startSec": 12.639,
+    "durSec": 0.641
+   },
+   {
+    "text": " to",
+    "startSec": 13.28,
+    "durSec": 0.3990000000000009
+   },
+   {
+    "text": " my",
+    "startSec": 13.679,
+    "durSec": 0.32099999999999973
+   },
+   {
+    "text": " light.",
+    "startSec": 14,
+    "durSec": 0.7189999999999994
+   },
+   {
+    "text": " Did",
+    "startSec": 14.719,
+    "durSec": 0.24100000000000144
+   },
+   {
+    "text": " you",
+    "startSec": 14.96,
+    "durSec": 0.7989999999999995
+   },
+   {
+    "text": " us?",
+    "startSec": 15.759,
+    "durSec": 3.5199999999999996
+   },
+   {
+    "text": " star.",
+    "startSec": 19.279,
+    "durSec": 1.0410000000000004
+   },
+   {
+    "text": " You",
+    "startSec": 20.32,
+    "durSec": 0.3200000000000003
+   },
+   {
+    "text": " fade",
+    "startSec": 20.64,
+    "durSec": 0.3990000000000009
+   },
+   {
+    "text": " away.",
+    "startSec": 21.039,
+    "durSec": 1.360999999999997
+   },
+   {
+    "text": " Afraid",
+    "startSec": 22.4,
+    "durSec": 0.6390000000000029
+   },
+   {
+    "text": " our",
+    "startSec": 23.039,
+    "durSec": 0.6409999999999982
+   },
+   {
+    "text": " is",
+    "startSec": 23.68,
+    "durSec": 0.3999999999999986
+   },
+   {
+    "text": " out",
+    "startSec": 24.08,
+    "durSec": 0.240000000000002
+   },
+   {
+    "text": " of",
+    "startSec": 24.32,
+    "durSec": 0.23999999999999844
+   },
+   {
+    "text": " sight.",
+    "startSec": 24.56,
+    "durSec": 0.799000000000003
+   },
+   {
+    "text": " Want",
+    "startSec": 25.359,
+    "durSec": 0.24099999999999966
+   },
+   {
+    "text": " to",
+    "startSec": 25.6,
+    "durSec": 0.3200000000000003
+   },
+   {
+    "text": " see",
+    "startSec": 25.92,
+    "durSec": 0.3999999999999986
+   },
+   {
+    "text": " us",
+    "startSec": 26.32,
+    "durSec": 5.68
+   },
+   {
+    "text": " are",
+    "startSec": 32,
+    "durSec": 0.3200000000000003
+   },
+   {
+    "text": " you",
+    "startSec": 32.32,
+    "durSec": 0.3200000000000003
+   },
+   {
+    "text": " now?",
+    "startSec": 32.64,
+    "durSec": 4.719999999999999
+   },
+   {
+    "text": " are",
+    "startSec": 37.36,
+    "durSec": 0.240000000000002
+   },
+   {
+    "text": " you",
+    "startSec": 37.6,
+    "durSec": 0.3200000000000003
+   },
+   {
+    "text": " now?",
+    "startSec": 37.92
+   }
+  ],
+  "cues": [
+   {
+    "text": "[Music]",
+    "startSec": 0.88,
+    "durSec": 7.44
+   },
+   {
+    "text": "[Applause]",
+    "startSec": 5.13,
+    "durSec": 3.19
+   },
+   {
+    "text": "You were the shadow to my light. Did you",
+    "startSec": 11.679,
+    "durSec": 6.721
+   },
+   {
+    "text": "fear us?",
+    "startSec": 15.28,
+    "durSec": 7.999
+   },
+   {
+    "text": "Another star. You fade away. Afraid our",
+    "startSec": 18.4,
+    "durSec": 10.719
+   },
+   {
+    "text": "aim is out of sight. Want to see us",
+    "startSec": 23.279,
+    "durSec": 8.481
+   },
+   {
+    "text": "alive.",
+    "startSec": 29.119,
+    "durSec": 6.521
+   },
+   {
+    "text": "Where are you now?",
+    "startSec": 31.76,
+    "durSec": 3.88
+   },
+   {
+    "text": "Where are you now?",
+    "startSec": 37.04,
+    "durSec": 5.359
+   },
+   {
+    "text": "[Music]",
+    "startSec": 39.37,
+    "durSec": 5.509
+   }
+  ]
+ },
+ "pins": {
+  "tier": "asr-word",
+  "wordCount": 29,
+  "cueCount": 10,
+  "tokenCount": 39,
+  "spanSec": 43.998999999999995,
+  "speechDurationSec": 9.518000000000006,
+  "pauseBiasPct": -166.45303635217462,
+  "timingCoverageOk": true,
+  "rates": {
+   "wordLevelWpm": 67.33746130030958,
+   "cueLevelWpm": 53.18302688697471,
+   "correctedCueLevelWpm": 53.18302688697471,
+   "manualCueRate": 70.3125,
+   "unifiedWpm": 85.17014313315723,
+   "articulatoryWpm": 226.9384324437906
+  },
+  "tolerance": {
+   "countsRel": 0.25,
+   "ratesRel": 0.15
+  }
+ },
+ "recorded": {
+  "sourceFiles": [
+   "scripts/data/sample-results.jsonl"
+  ],
+  "fields": {
+   "kind": "asr",
+   "nCues": 42,
+   "nWordsTimed": 89,
+   "textTokens": 131,
+   "coveragePct": 67.93893129770993,
+   "spanSec": 208.58
+  }
+ }
+}

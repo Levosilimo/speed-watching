@@ -1,0 +1,282 @@
+{
+ "fixture": "windows-asr--rg9mV6DBl4-trunc.json",
+ "provenance": {
+  "source": "real",
+  "videoId": "-rg9mV6DBl4",
+  "captureDate": "2026-08-14",
+  "captureMethod": "player-signed intercept (page.on('response'), CC toggled on)",
+  "truncation": "first 20 events + first 12 top-level windows (tests/fixtures/README.md)",
+  "backs": "ru word timing parsing (words > 0 on a real ru WEB payload); windows==segs cue parity (ru-corpus G4 anchor)",
+  "notes": [
+   "ru-corpus.json records register=lecture for this video; no per-video rate record exists"
+  ]
+ },
+ "layout": {
+  "events": 20,
+  "windows": 0,
+  "segOffsets": 35,
+  "windowTexts": 0
+ },
+ "kind": "asr",
+ "parse": {
+  "words": [
+   {
+    "text": " частицы",
+    "startSec": 8.04,
+    "durSec": 2.639000000000001
+   },
+   {
+    "text": " понятно",
+    "startSec": 10.679,
+    "durSec": 0.18099999999999916
+   },
+   {
+    "text": " что",
+    "startSec": 10.86,
+    "durSec": 0.41999999999999993
+   },
+   {
+    "text": " это",
+    "startSec": 11.28,
+    "durSec": 0.1800000000000015
+   },
+   {
+    "text": " означает",
+    "startSec": 11.46,
+    "durSec": 0.23999999999999844
+   },
+   {
+    "text": " это",
+    "startSec": 11.7,
+    "durSec": 0.8990000000000009
+   },
+   {
+    "text": " такое",
+    "startSec": 12.599,
+    "durSec": 0.24099999999999966
+   },
+   {
+    "text": " такое",
+    "startSec": 12.84,
+    "durSec": 0.7799999999999994
+   },
+   {
+    "text": " самое",
+    "startSec": 13.62,
+    "durSec": 0.5400000000000009
+   },
+   {
+    "text": " элементарное",
+    "startSec": 14.16,
+    "durSec": 0.9599999999999991
+   },
+   {
+    "text": " уже",
+    "startSec": 15.12,
+    "durSec": 0.17900000000000027
+   },
+   {
+    "text": " нельзя",
+    "startSec": 15.299,
+    "durSec": 0.18100000000000094
+   },
+   {
+    "text": " расколоть",
+    "startSec": 15.48,
+    "durSec": 0.7800000000000011
+   },
+   {
+    "text": " на",
+    "startSec": 16.26,
+    "durSec": 0.23999999999999844
+   },
+   {
+    "text": " части",
+    "startSec": 16.5,
+    "durSec": 0.23999999999999844
+   },
+   {
+    "text": " нельзя",
+    "startSec": 16.74,
+    "durSec": 0.7800000000000011
+   },
+   {
+    "text": " из",
+    "startSec": 17.52,
+    "durSec": 0.5990000000000002
+   },
+   {
+    "text": " чего",
+    "startSec": 18.119,
+    "durSec": 0.12099999999999866
+   },
+   {
+    "text": " это",
+    "startSec": 18.24,
+    "durSec": 0.29900000000000304
+   },
+   {
+    "text": " с",
+    "startSec": 18.539,
+    "durSec": 0.18099999999999739
+   },
+   {
+    "text": " частица",
+    "startSec": 18.72,
+    "durSec": 0.240000000000002
+   },
+   {
+    "text": " состоит",
+    "startSec": 18.96,
+    "durSec": 2.399000000000001
+   },
+   {
+    "text": " в",
+    "startSec": 21.359,
+    "durSec": 0.4809999999999981
+   },
+   {
+    "text": " то",
+    "startSec": 21.84,
+    "durSec": 0.05999999999999872
+   },
+   {
+    "text": " же",
+    "startSec": 21.9,
+    "durSec": 0.120000000000001
+   },
+   {
+    "text": " время",
+    "startSec": 22.02,
+    "durSec": 0.05999999999999872
+   },
+   {
+    "text": " понятия",
+    "startSec": 22.08,
+    "durSec": 2.580000000000002
+   },
+   {
+    "text": " самый",
+    "startSec": 24.66,
+    "durSec": 0.5390000000000015
+   },
+   {
+    "text": " элементарными",
+    "startSec": 25.199,
+    "durSec": 0.7210000000000001
+   },
+   {
+    "text": " частицами",
+    "startSec": 25.92,
+    "durSec": 1.139999999999997
+   },
+   {
+    "text": " считались",
+    "startSec": 27.06,
+    "durSec": 0.29900000000000304
+   },
+   {
+    "text": " атомы",
+    "startSec": 27.359,
+    "durSec": 0.4809999999999981
+   },
+   {
+    "text": " потому",
+    "startSec": 27.84,
+    "durSec": 0.9600000000000009
+   },
+   {
+    "text": " что",
+    "startSec": 28.8,
+    "durSec": 0.35999999999999943
+   },
+   {
+    "text": " еще",
+    "startSec": 29.16
+   }
+  ],
+  "cues": [
+   {
+    "text": "[музыка]",
+    "startSec": 0.12,
+    "durSec": 6.589
+   },
+   {
+    "text": "Элементарные частицы",
+    "startSec": 7.04,
+    "durSec": 5.26
+   },
+   {
+    "text": "интуитивно понятно что это означает это",
+    "startSec": 9.679,
+    "durSec": 5.141
+   },
+   {
+    "text": "что-то такое такое самое элементарное",
+    "startSec": 12.3,
+    "durSec": 4.86
+   },
+   {
+    "text": "что уже нельзя расколоть на части нельзя",
+    "startSec": 14.82,
+    "durSec": 5.539
+   },
+   {
+    "text": "найти из чего это с частица состоит",
+    "startSec": 17.16,
+    "durSec": 5.459
+   },
+   {
+    "text": "исторически в то же время понятия",
+    "startSec": 20.359,
+    "durSec": 3.701
+   },
+   {
+    "text": "менялось",
+    "startSec": 22.619,
+    "durSec": 3.66
+   },
+   {
+    "text": "наверное самый элементарными частицами",
+    "startSec": 24.06,
+    "durSec": 5.299
+   },
+   {
+    "text": "когда-то считались атомы потому что еще",
+    "startSec": 26.279,
+    "durSec": 6
+   }
+  ]
+ },
+ "pins": {
+  "tier": "asr-word",
+  "wordCount": 35,
+  "cueCount": 10,
+  "tokenCount": 47,
+  "spanSec": 32.159,
+  "speechDurationSec": 12.362,
+  "pauseBiasPct": -55.630156932535215,
+  "timingCoverageOk": true,
+  "rates": {
+   "wordLevelWpm": 99.43181818181819,
+   "cueLevelWpm": 83.95783450977954,
+   "correctedCueLevelWpm": 83.95783450977954,
+   "manualCueRate": 109.3545703078569,
+   "unifiedWpm": 143.45859971932012,
+   "articulatoryWpm": 223.26484387639542
+  },
+  "tolerance": {
+   "countsRel": 0.25,
+   "ratesRel": 0.15
+  }
+ },
+ "recorded": {
+  "sourceFiles": [
+   "scripts/data/gap-yield/results.jsonl"
+  ],
+  "fields": {
+   "fullDurationSec": 7937.539000000001,
+   "classification": "parse-available"
+  }
+ }
+}
