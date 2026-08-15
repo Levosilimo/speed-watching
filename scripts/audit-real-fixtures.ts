@@ -13,7 +13,7 @@
  * discovery.
  */
 
-import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 
 export interface ScanFinding {
@@ -30,12 +30,11 @@ const DATA_REF = /scripts\/data|results\.jsonl/;
 export function discoverSyntheticFixtures(root: string): string[] {
   const files: string[] = [];
   const walk = (dir: string): void => {
-    for (const entry of readdirSync(dir)) {
-      const full = join(dir, entry);
-      if (statSync(full).isDirectory()) {
-        walk(full);
-      } else if (FIXTURE_EXT.test(entry)) {
-        files.push(full);
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      if (entry.isDirectory()) {
+        walk(join(dir, entry.name));
+      } else if (FIXTURE_EXT.test(entry.name)) {
+        files.push(join(dir, entry.name));
       }
     }
   };
@@ -46,12 +45,11 @@ export function discoverSyntheticFixtures(root: string): string[] {
 function recordedVideoIds(root: string): Set<string> {
   const ids = new Set<string>();
   const walk = (dir: string): void => {
-    for (const entry of readdirSync(dir)) {
-      const full = join(dir, entry);
-      if (statSync(full).isDirectory()) {
-        walk(full);
-      } else if (entry.endsWith('.jsonl')) {
-        for (const m of readFileSync(full, 'utf8').matchAll(RECORDED_ID)) ids.add(m[1]!);
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      if (entry.isDirectory()) {
+        walk(join(dir, entry.name));
+      } else if (entry.name.endsWith('.jsonl')) {
+        for (const m of readFileSync(join(dir, entry.name), 'utf8').matchAll(RECORDED_ID)) ids.add(m[1]!);
       }
     }
   };
