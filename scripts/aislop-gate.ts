@@ -3,7 +3,8 @@
  * aislop-gate — SARIF-based quality gate for aislop scan results.
  *
  * Reads SARIF JSON from stdin (pipe from `bunx aislop scan --staged --format sarif`),
- * exits 0 on clean scan, 1 if any blocking-level result found, 2 on malformed input.
+ * exits 0 on clean scan, 1 if any blocking-level result found or the scan
+ * produced no output at all, 2 on malformed input.
  *
  * Blocking level: 'error' (default), or 'error|warning' if LCE_STRICT_AISLOP=1.
  * Setting LCE_STRICT_AISLOP=0 disables gating (advisory only).
@@ -69,8 +70,11 @@ function main(): void {
 
   stdin.on("end", () => {
     if (!input || input.trim() === "") {
-      // Empty input means aislop found nothing to scan — clean exit
-      process.exit(0)
+      // aislop always emits a SARIF log with an empty results array on a
+      // clean scan, so empty stdin means the scan died before writing
+      // anything — a missing gate must not pass.
+      console.error("[aislop-gate] aislop produced no output (scan crashed or was killed)")
+      process.exit(1)
     }
     try {
       const log = parseSarif(input)
