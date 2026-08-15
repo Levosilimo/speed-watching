@@ -5,7 +5,7 @@ import { main, scanDisabledAssertions } from '../scripts/audit-disabled-assertio
 import { CORPUS } from './fixtures/audit-corpus/disabled-assertions.ts';
 
 const corpusPath = fileURLToPath(new URL('./fixtures/audit-corpus/disabled-assertions.ts', import.meta.url));
-const cleanPath = fileURLToPath(new URL('./fixtures/audit-corpus/mirror-lib.ts', import.meta.url));
+const cleanPath = fileURLToPath(new URL('./fixtures/audit-corpus/clean-lib.ts', import.meta.url));
 
 describe('audit-disabled-assertions', () => {
   it('flags every disabled-assertion sample with file:line', () => {
