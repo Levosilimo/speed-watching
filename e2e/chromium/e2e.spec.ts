@@ -21,6 +21,7 @@ import {
   runAutoSpecs,
   runBridgeSpecs,
   runChapterSpecs,
+  runCaptureSpecs,
   runGenericSpecs,
   runLiveSuppressionSpecs,
   runMeasurementSpecs,
@@ -180,6 +181,12 @@ test.beforeAll(async () => {
         () => (window.__speedwatcherCaptionSource as CaptionSource) ?? null,
       );
     },
+    async readBareTimedtext(fixture) {
+      return page.evaluate(async (f) => {
+        const response = await fetch(`/api/timedtext?fixture=${f}`);
+        return { status: response.status, body: await response.text() };
+      }, fixture);
+    },
     async readBrowserLanguage() {
       return page.evaluate(() => navigator.language);
     },
@@ -327,6 +334,10 @@ test('pill renders, applies, dismisses; music/unreachable suppress Apply; WEB-bl
   // Network-layer proof the ANDROID innertube fallback actually fired: the
   // web-blocked fixture must have produced one youtubei/v1/player POST.
   expect(androidPosts).toBeGreaterThan(0);
+});
+
+test('pot-gated fixture: bare timedtext 200-empties; the capture path measures from the signed response', async () => {
+  await runCaptureSpecs(driver);
 });
 
 test('pill really paints: shadow root populated, non-zero geometry, in the layout tree', async () => {
