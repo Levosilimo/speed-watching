@@ -215,12 +215,25 @@ function buildDom(): PillDom {
 
 /** The player area that hosted the pill — #movie_player on YouTube, else the
  * video element, else body. Moving focus here after Apply/Dismiss/Escape
- * keeps it from stranding inside a pill that just hid itself. */
+ * keeps it from stranding inside a pill that just hid itself. Real players
+ * only take focus when the anchor carries tabindex (YouTube's #movie_player
+ * has tabindex=-1; a bare <video> or div does not, and .focus() on a
+ * non-focusable element is a silent no-op), so each candidate is made
+ * programmatically focusable and verified to have taken focus before the
+ * next fallback. */
 function restoreFocus(host: HTMLElement): void {
   const doc = host.ownerDocument;
-  const anchor = doc.querySelector<HTMLElement>('#movie_player');
-  const video = doc.querySelector<HTMLVideoElement>('video');
-  (anchor ?? video ?? doc.body).focus();
+  const candidates = [
+    doc.querySelector<HTMLElement>('#movie_player'),
+    doc.querySelector<HTMLVideoElement>('video'),
+    doc.body,
+  ];
+  for (const candidate of candidates) {
+    if (candidate === null) continue;
+    candidate.setAttribute('tabindex', '-1');
+    candidate.focus();
+    if (doc.activeElement === candidate) return;
+  }
 }
 
 function wireEvents(
