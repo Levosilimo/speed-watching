@@ -382,6 +382,8 @@ describe('createPill', () => {
     const pill = createPill(host, { onDismiss: vi.fn() }, { locale: 'en' });
     pill.mount();
     pill.update(state());
+    // The pre-click focus state is pinned by the chromium lane
+    // (interaction.spec.ts (c)); here only the restore target is asserted.
     rootOf(host).querySelector<HTMLButtonElement>('.btn-dismiss')!.click();
     expect(document.activeElement).toBe(player);
   });
