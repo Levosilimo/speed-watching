@@ -334,6 +334,14 @@ describe('tokenizer-mode consistency', () => {
 // (corpus headroom).
 const RESEARCHED_CEILING = new Set(['en', 'zh', 'ja', 'ar', 'ru', 'uk', 'pl', 'cs', 'sr']);
 
+/** A language whose ceiling is genuinely measured or corpus-anchored — the
+ * model's own evidence flags: a measured entry (!derived) or a
+ * corpus-researched one (priorsSource 'corpus'). */
+function researchedCeiling(code: string): boolean {
+  const model = LANGUAGES[code];
+  return model !== undefined && (model.derived === false || model.priorsSource === 'corpus');
+}
+
 describe('language-model invariants', () => {
   it('keeps every prior a range — generic and per-register', () => {
     for (const model of Object.values(LANGUAGES)) {
@@ -364,6 +372,16 @@ describe('language-model invariants', () => {
       const ratio = model.ceiling / model.target;
       expect(ratio, model.code).toBeGreaterThanOrEqual(1.0);
       expect(ratio, model.code).toBeLessThanOrEqual(1.05);
+    }
+  });
+
+  it('keeps the ratio-band exemption set inside the genuinely researched languages', () => {
+    // Cross-check for the hardcoded set: an exempt code must exist in the
+    // model and carry a measured (!derived) or corpus-researched
+    // (priorsSource 'corpus') ceiling. A plain derived language added to
+    // the set fails here — before the ratio test can silently accept it.
+    for (const code of RESEARCHED_CEILING) {
+      expect(researchedCeiling(code), code).toBe(true);
     }
   });
 });
