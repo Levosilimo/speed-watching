@@ -16,8 +16,9 @@ export interface CapturedTimedtext {
 declare global {
   interface Window {
     /** Idempotence guard: the page is patched once even if the caller
-     * re-runs (e.g. across SPA navigations). */
-    __speedwatcherCaptionCapture?: true;
+     * re-runs (e.g. across SPA navigations). Kept out of the __speedwatcher
+     * hook namespace: it is production behavior, not an E2E hook. */
+    __swCaptionCaptureInstalled?: true;
   }
 }
 
@@ -33,8 +34,8 @@ function isTimedtextUrl(url: URL): boolean {
 }
 
 export function installCaptionCapture(onCapture: (capture: CapturedTimedtext) => void): void {
-  if (window.__speedwatcherCaptionCapture === true) return;
-  window.__speedwatcherCaptionCapture = true;
+  if (window.__swCaptionCaptureInstalled === true) return;
+  window.__swCaptionCaptureInstalled = true;
 
   // Natives saved before patching so the wrappers (and any later re-fetch
   // in this or other modules) never self-intercept.

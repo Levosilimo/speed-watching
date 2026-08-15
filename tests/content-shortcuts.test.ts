@@ -15,6 +15,16 @@ import { defaultSettings, resolveContentType, resolvePlatformMax, resolveUserTar
 import { manualCueRate } from '../lib/wpm';
 import { chromeMock } from './chrome-mock';
 
+// The capture-first path would stall these specs: the fake page has a
+// playing video but no CC controls, so waitForWordTimedCapture would poll
+// its full timeout before the stubbed fetch serves the fixture. These specs
+// cover shortcuts/channel-memory/relay, not capture — mock it to fall
+// through.
+vi.mock('@/lib/caption-trigger', () => ({
+  triggerCcAutomation: vi.fn(async () => undefined),
+  waitForWordTimedCapture: vi.fn(async () => null),
+}));
+
 // readFixture (fixtures/helpers.ts) builds its path with the global URL
 // constructor, which the happy-dom environment replaces; load the payload
 // with plain path joins instead.

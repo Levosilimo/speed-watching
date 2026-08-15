@@ -34,7 +34,7 @@ export interface RealsiteRecord {
   tier: string | null;
   rate: number | null;
   lang: string | null;
-  source: 'web' | 'android' | 'none' | null;
+  source: 'web' | 'android' | 'capture' | 'none' | null;
   measure: MeasureEventDetail | null;
   consoleLines: string[];
   pass: boolean;

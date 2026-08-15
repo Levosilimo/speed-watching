@@ -73,7 +73,7 @@ declare global {
       dismiss(): void;
       stopAuto?(): void;
     };
-    __speedwatcherCaptionSource?: 'web' | 'android' | 'none';
+    __speedwatcherCaptionSource?: 'web' | 'android' | 'capture' | 'none';
   }
 }
 
