@@ -229,35 +229,19 @@ test('keyboard: Tab walks the pill buttons in DOM order', async () => {
 
 test('a11y: label/tier live region excludes the action buttons', async () => {
   await renderPill();
-  const split = await page.evaluate(() => {
-    const host = document.querySelector<HTMLElement>('.speedwatcher-pill-host');
-    const root = host?.shadowRoot;
-    const mainText = root?.querySelector<HTMLElement>('.main-text');
-    if (mainText === null || mainText === undefined) return null;
-    const buttons = [
-      'button.btn-apply',
-      'button.btn-dismiss',
-      'button.btn-stop-auto',
-      'button.btn-chapter-toggle',
-    ]
-      .map((sel) => root?.querySelector<HTMLButtonElement>(sel))
-      .filter((btn): btn is HTMLButtonElement => btn !== null && btn !== undefined);
-    return {
-      role: mainText.getAttribute('role'),
-      hasLabel: mainText.querySelector('.label') !== null,
-      hasTier: mainText.querySelector('.tier') !== null,
-      buttonsInsideLiveRegion: buttons.some((btn) => mainText.contains(btn)),
-      buttons: buttons.map((btn) => btn.className),
-    };
-  });
-  expect(split).not.toBeNull();
-  // role=status implies aria-live=polite — the label/tier announce.
-  expect(split?.role).toBe('status');
-  expect(split?.hasLabel).toBe(true);
-  expect(split?.hasTier).toBe(true);
-  expect(split?.buttonsInsideLiveRegion).toBe(false);
-  console.log('interaction a11y split:', JSON.stringify(split));
-  // Report the accessibility tree shape for the record: the status node
-  // wraps the text, the buttons are siblings.
+  // The pill host's accessibility tree is exactly the status live region
+  // plus the action buttons as its siblings. children: 'equal' (wired in
+  // playwright.config.chromium.ts) pins the exact child set — a button
+  // moved inside the status, or any stray node in the pill's a11y
+  // surface, fails the snapshot. The status's text child is matched as a
+  // regex on the stable tier label (character classes for the parens —
+  // the key parser strips backslash escapes), so the rate numbers stay
+  // unpinned; the buttons stay role-only.
+  await expect(page.locator('.speedwatcher-pill-host')).toMatchAriaSnapshot(`
+    - status:
+      - text: /from captions [(]corrected[)]/
+    - button
+    - button
+  `);
   console.log('interaction aria snapshot:\n' + (await page.locator('.speedwatcher-pill-host').ariaSnapshot()));
 });
