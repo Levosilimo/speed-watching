@@ -34,6 +34,7 @@ import {
   runMultiVideoSpecs,
   runPillSpecs,
   runTranscriptSpecs,
+  runLoginRequiredSpecs,
   type CaptionSource,
   type E2EDriver,
   type Measurement,
@@ -331,6 +332,7 @@ async function main(): Promise<void> {
     await runPillSpecs(e2e);
     await runCaptureSpecs(e2e);
     await runTranscriptSpecs(e2e);
+    await runLoginRequiredSpecs(e2e);
     await runBridgeSpecs(e2e);
     await runGenericSpecs(e2e);
     await runMultiVideoSpecs(e2e);

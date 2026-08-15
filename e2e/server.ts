@@ -104,6 +104,36 @@ window.ytcfg = {
 };
 </script>`;
 
+/** The transcript search panel shared by the ANDROID and WEB player
+ * responses: the footer button's getTranscriptEndpoint params are what the
+ * /youtubei/v1/get_transcript POST is built from (lib/transcript.ts). */
+function transcriptPanel(): Record<string, unknown> {
+  return {
+    engagementPanelSectionListRenderer: {
+      targetId: 'engagement-panel-searchable-transcript',
+      content: {
+        transcriptRenderer: {
+          content: {
+            transcriptSearchPanelRenderer: {
+              footer: {
+                transcriptFooterRenderer: {
+                  primaryButton: {
+                    buttonRenderer: {
+                      command: {
+                        getTranscriptEndpoint: { params: 'FIXTURE_TRANSCRIPT_PARAMS' },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  };
+}
+
 /** The ANDROID player response for the transcript-gated fixture: a caption
  * track (whose bare baseUrl 200-empties under the POT gate) plus the
  * transcript panel whose footer button carries the getTranscriptEndpoint
@@ -121,32 +151,20 @@ function androidTranscriptResponse(fixture: string): string {
         ],
       },
     },
-    engagementPanels: [
-      {
-        engagementPanelSectionListRenderer: {
-          targetId: 'engagement-panel-searchable-transcript',
-          content: {
-            transcriptRenderer: {
-              content: {
-                transcriptSearchPanelRenderer: {
-                  footer: {
-                    transcriptFooterRenderer: {
-                      primaryButton: {
-                        buttonRenderer: {
-                          command: {
-                            getTranscriptEndpoint: { params: 'FIXTURE_TRANSCRIPT_PARAMS' },
-                          },
-                        },
-                      },
-                    },
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
-    ],
+    engagementPanels: [transcriptPanel()],
+  });
+}
+
+/** The logged-in ANDROID failure mode (asbplayer #978): the innertube
+ * player POST answers LOGIN_REQUIRED with no caption tracks and no
+ * transcript params — the chain must reach get_transcript through the WEB
+ * response's own engagement panel instead. */
+function loginRequiredAndroidResponse(): string {
+  return JSON.stringify({
+    playabilityStatus: {
+      status: 'LOGIN_REQUIRED',
+      reason: "Sign in to confirm you're not a bot",
+    },
   });
 }
 
@@ -170,6 +188,9 @@ export function createFixtureServer(port = FIXTURE_PORT): Promise<FixtureServer>
   /** The last watch page served — the ANDROID response the innertube
    * fallback gets depends on the page's fixture. */
   let lastWatchFixture: string | null = null;
+  /** Whether the last watch page asked for the loginrequired=1 variant —
+   * the ANDROID response then answers LOGIN_REQUIRED (no caption tracks). */
+  let lastWatchLoginRequired = false;
   const server: Server = createServer((req, res) => {
     const url = new URL(req.url ?? '/', `http://127.0.0.1:${actualPort}`);
     const path = url.pathname;
@@ -184,10 +205,16 @@ export function createFixtureServer(port = FIXTURE_PORT): Promise<FixtureServer>
       // The content script's ANDROID innertube fallback (same-origin POST).
       androidPosts += 1;
       if (lastWatchFixture !== null && TRANSCRIPT_GATED_FIXTURES.includes(lastWatchFixture)) {
-        // The transcript-gated fixture's ANDROID response carries the
-        // transcript panel params — the fallback must land on get_transcript.
         res.setHeader('Content-Type', 'application/json');
-        res.end(androidTranscriptResponse(lastWatchFixture));
+        if (lastWatchLoginRequired) {
+          // loginrequired=1 variant: the logged-in failure mode — the chain
+          // must then land on get_transcript via the WEB response's params.
+          res.end(loginRequiredAndroidResponse());
+        } else {
+          // The transcript-gated fixture's ANDROID response carries the
+          // transcript panel params — the fallback must land on get_transcript.
+          res.end(androidTranscriptResponse(lastWatchFixture));
+        }
       } else {
         res.statusCode = 400;
         res.end('no player');
@@ -306,6 +333,7 @@ export function createFixtureServer(port = FIXTURE_PORT): Promise<FixtureServer>
       return;
     }
     lastWatchFixture = fixture;
+    lastWatchLoginRequired = url.searchParams.get('loginrequired') === '1';
     const trackKind = KIND_BY_FIXTURE[fixture];
     const live = url.searchParams.get('live') === '1';
     const playerSize = url.searchParams.get('playersize');
@@ -337,6 +365,13 @@ export function createFixtureServer(port = FIXTURE_PORT): Promise<FixtureServer>
               },
             },
           }),
+      // The transcript-gated fixture's WEB playerResponse carries the same
+      // transcript panel as the ANDROID one: the WEB params back the final
+      // get_transcript resort when the ANDROID POST answers LOGIN_REQUIRED
+      // (lib/caption-fetch.ts fetchCaptions).
+      ...(TRANSCRIPT_GATED_FIXTURES.includes(fixture)
+        ? { engagementPanels: [transcriptPanel()] }
+        : {}),
     };
     const page = html
       .replace(

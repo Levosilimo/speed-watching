@@ -137,18 +137,41 @@ describe('triggerCcAutomation drive cooldown', () => {
     expect(settingsClicks()).toBe(2);
   });
 
-  it('the retrigger path does not re-drive within the window', async () => {
+  it('the retrigger re-drives within the cooldown window (same-attempt recovery)', async () => {
     const { triggerCcAutomation, waitForWordTimedCapture } = await freshTrigger();
     const { cc, settingsClicks } = stubPlayerControls();
     await driveToCompletion(triggerCcAutomation, 'v1');
+    expect(settingsClicks()).toBe(1);
     const nudge = vi.fn();
-    // timeout=2000 → the retrigger fires at 1000ms — inside the cooldown.
+    // timeout=2000 → the retrigger fires at 1000ms, the drive recorded
+    // ~1.2s in — inside the cooldown window. The retrigger is the same
+    // capture attempt's recovery pass (the first drive may have raced the
+    // track list), so it must re-drive even though a re-measure would not.
     const capture = waitForWordTimedCapture(new TimedtextBuffer(), 'v1', nudge, 2000, 50);
     await vi.advanceTimersByTimeAsync(3000);
     expect(await capture).toBeNull();
-    expect(settingsClicks()).toBe(1);
+    expect(settingsClicks()).toBe(2);
     expect(cc.getAttribute('aria-pressed')).toBe('true');
     expect(nudge).toHaveBeenCalledTimes(1);
+  });
+
+  it('the retrigger drive records the cooldown entry (a later re-measure stays gated)', async () => {
+    const { triggerCcAutomation, waitForWordTimedCapture } = await freshTrigger();
+    const { cc, settingsClicks } = stubPlayerControls();
+    await driveToCompletion(triggerCcAutomation, 'v1');
+    const capture = waitForWordTimedCapture(new TimedtextBuffer(), 'v1', () => undefined, 2000, 50);
+    await vi.advanceTimersByTimeAsync(3000);
+    expect(await capture).toBeNull();
+    expect(settingsClicks()).toBe(2);
+
+    // An external (re-measure) drive right after the retrigger still no-ops:
+    // the retrigger's drive recorded the cooldown entry itself.
+    const suppressed = triggerCcAutomation('v1');
+    await vi.advanceTimersByTimeAsync(100);
+    const result = await suppressed;
+    expect(result).toEqual({ ccWasOn: true, changed: false });
+    expect(settingsClicks()).toBe(2);
+    expect(cc.getAttribute('aria-pressed')).toBe('true');
   });
 
   it('a drive that touched nothing does not start a cooldown', async () => {
