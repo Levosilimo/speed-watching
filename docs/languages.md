@@ -262,8 +262,9 @@ keeps working in every mode.
   target; ja uses the mora path, zh/th the char path; tr/hi count vowel
   nuclei; the rest word-count with per-language targets.
 - The estimated tier (no usable captions) uses the language-aware priors
-  when the track language is known; unmapped languages and English keep the
-  existing content-type anchors / generic prior.
+  when the track language is known, falling back to the UI language's model
+  when it isn't; unmapped languages and English keep the existing
+  content-type anchors / generic prior.
 - **Channel rate memory** (YouTube only; `lib/channel-memory.ts`): a
   measured recommendation stores the channel's natural rate (keyed by
   `videoDetails.channelId`, author name as the fallback key). A later

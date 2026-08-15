@@ -77,12 +77,6 @@ the first `cws` job run — a testing-mode client rejects the upload.
    - Both store jobs finished in Actions (or failed with a real upload
      error, not a missing-secrets one).
 
-Known gap, not fixed here: the userscript metadata block in
-`scripts/build-userscript.ts` carries a static `@version 0.0.2` and no
-`@updateURL`/`@downloadURL`, so userscript auto-update does not work yet —
-the Release download is a manual reinstall path. Version the metadata
-before promising auto-update anywhere.
-
 ## 3. Launch day
 
 1. Replace the README's commented badge placeholder with the CWS
