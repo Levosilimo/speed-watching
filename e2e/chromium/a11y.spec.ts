@@ -3,10 +3,23 @@
 // pill-host + its open shadow root) so the fixture page's bare video never
 // leaks into the result; the fixture background is the plain body (white),
 // so the pill's contrast pairs are computed against a known backdrop, not
-// arbitrary video content. The real-video gradient case stays out of CI
-// scope: axe reports color-contrast as INCOMPLETE there (backdrop-filter
-// over unknown pixels), never as a violation — the assertion keys on the
-// violations array only, and incomplete findings are logged, not failed.
+// arbitrary video content.
+//
+// Incomplete findings are pinned, not ignored: the pill's backdrop-filter
+// blur (ui/pill-css.ts) leaves axe unable to resolve text backgrounds, so
+// each scan reports exactly ONE color-contrast incomplete. The finding's
+// node set is theme/order-dependent and logged, not asserted:
+//   - light (first scan, fresh profile): the one-time .first-run explainer
+//     is up, and its wrapped text at the pill's rounded edge is
+//     unresolvable → the finding carries .first-run.
+//   - dark (second scan, same profile): the first-run flag already
+//     persisted (settings:seenFirstRun), and the dark pill's translucent
+//     primarySubtle background forces axe to composite through the blur,
+//     so the finding carries .label/.tier/.btn-dismiss instead.
+// A count !== 1 (or a non-color-contrast id) means the backdrop-filter
+// limitation changed — a real contrast regression behind the blur, a new
+// unresolvable element, or the limitation lifted — and the gate fails with
+// the finding data instead of passing silently.
 //
 // Two scans: the pill themes itself off (prefers-color-scheme), so each
 // scan emulates the scheme BEFORE navigation and the pill is born in the
@@ -87,7 +100,13 @@ async function renderPill(colorScheme: 'light' | 'dark'): Promise<void> {
   );
 }
 
-async function scanPill(): Promise<{ violations: number; incomplete: number; detail: string }> {
+async function scanPill(): Promise<{
+  violations: number;
+  incomplete: number;
+  incompleteIds: string[];
+  detail: string;
+  incompleteDetail: string;
+}> {
   const results = await new AxeBuilder({ page })
     .withTags(['wcag2a', 'wcag2aa', 'wcag21aa'])
     .include('.speedwatcher-pill-host')
@@ -97,13 +116,36 @@ async function scanPill(): Promise<{ violations: number; incomplete: number; det
       (v) => `${v.id} (${v.impact}): ${v.help} — ${v.nodes.length} node(s)`,
     )
     .join('\n');
+  const incompleteDetail = results.incomplete
+    .map(
+      (v) =>
+        `${v.id} (${v.impact}): ${v.help} — ${v.nodes.map((n) => n.target.join(' ')).join('; ')}`,
+    )
+    .join('\n');
   return {
     violations: results.violations.length,
-    // Incomplete findings (backdrop-filter over unknown pixels) are logged
-    // for the report but never fail the gate.
     incomplete: results.incomplete.length,
+    incompleteIds: results.incomplete.map((v) => v.id),
     detail,
+    incompleteDetail,
   };
+}
+
+/** The known incomplete: exactly one color-contrast finding (the
+ * backdrop-filter limitation above). Any other count or id is a new case. */
+function assertKnownIncomplete(result: {
+  incomplete: number;
+  incompleteIds: string[];
+  incompleteDetail: string;
+}): void {
+  expect(
+    result.incomplete,
+    `unexpected incomplete count (expected the one backdrop-filter finding):\n${result.incompleteDetail}`,
+  ).toBe(1);
+  expect(
+    result.incompleteIds,
+    `unexpected incomplete rule id (expected color-contrast):\n${result.incompleteDetail}`,
+  ).toEqual(['color-contrast']);
 }
 
 test('a11y: the recommend pill has no WCAG 2 A/AA violations (light)', async () => {
@@ -112,7 +154,9 @@ test('a11y: the recommend pill has no WCAG 2 A/AA violations (light)', async () 
   console.log(
     `a11y light: ${result.violations} violations, ${result.incomplete} incomplete findings`,
   );
+  console.log(`a11y light incomplete:\n${result.incompleteDetail}`);
   expect(result.violations, result.detail).toBe(0);
+  assertKnownIncomplete(result);
 });
 
 test('a11y: the recommend pill has no WCAG 2 A/AA violations (dark)', async () => {
@@ -121,5 +165,7 @@ test('a11y: the recommend pill has no WCAG 2 A/AA violations (dark)', async () =
   console.log(
     `a11y dark: ${result.violations} violations, ${result.incomplete} incomplete findings`,
   );
+  console.log(`a11y dark incomplete:\n${result.incompleteDetail}`);
   expect(result.violations, result.detail).toBe(0);
+  assertKnownIncomplete(result);
 });
