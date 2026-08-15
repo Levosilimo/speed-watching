@@ -152,3 +152,9 @@
 {"file":"tests/transcript.test.ts","message":"expect(failing).toHaveBeenCalledTimes(1);"}
 {"file":"tests/transcript.test.ts","message":"expect(fetchMock).not.toHaveBeenCalled();"}
 {"file":"tests/transcript.test.ts","message":"expect(fetchMock).toHaveBeenCalledTimes(1);"}
+{"file":"tests/realsite-verdict.test.ts","message":"number 1 mirrors scripts/realsite-verdict.ts's non-exported internals"}
+{"file":"tests/realsite-verdict.test.ts","message":"number 0 mirrors scripts/realsite-verdict.ts's non-exported internals"}
+{"file":"tests/caption-capture.test.ts","message":"expect(fetchMock).toHaveBeenCalledWith(TIMEDTEXT_URL, undefined);"}
+{"file":"tests/caption-capture.test.ts","message":"expect(nativeOpen).toHaveBeenCalledWith('GET', TIMEDTEXT_URL, undefined, undefined, undefined);"}
+{"file":"tests/caption-capture.test.ts","message":"expect(nativeSend).toHaveBeenCalled();"}
+{"file":"tests/caption-capture.test.ts","message":"expect(nativeSend).toHaveBeenCalledTimes(2);"}
