@@ -10,3 +10,31 @@ Full transcripts are not committed: every fixture is truncated to the first 20 e
 | windows-asr-Ks-_Mh1QhMc-trunc.json | Ks-_Mh1QhMc | Your Body Language May Shape Who You Are / Amy Cuddy / TED | 2026-08-12 | player-signed intercept (page.on('response'), CC toggled on) | 403358 | 4751 | word timing parsing (words > 0 on a real WEB payload); windows==segs cue parity |
 | windows-asr-arj7oStGLkU-trunc.json | arj7oStGLkU | Inside the Mind of a Master Procrastinator / Tim Urban / TED | 2026-08-12 | player-signed intercept (page.on('response'), CC toggled on) | 241331 | 4625 | word timing parsing (words > 0 on a real WEB payload); windows==segs cue parity |
 | windows-asr--rg9mV6DBl4-trunc.json | -rg9mV6DBl4 | Физика элементарных частиц – курс Дмитрия Казакова / ПостНаука | 2026-08-14 | player-signed intercept (page.on('response'), CC toggled on) | 2023524 | 3726 | ru word timing parsing (words > 0 on a real ru WEB payload); windows==segs cue parity (ru-corpus G4 anchor) |
+
+## Synthetic fixtures — provenance gate
+
+Every fixture data file under `tests/fixtures/synthetic/` (*.json/*.vtt/*.srt) must be named here with its derivation lineage; `scripts/audit-lanes.ts` fails on any synthetic fixture this table does not name. The lineage is the doc line, not a greppable token: a `scripts/data` videoId inside the payload buys no exemption. Non-data assets (`hls/*.m3u8`, `media/silence.webm`) are outside the gate.
+
+| fixture | lineage |
+|---|---|
+| synthetic/chaptered.json | authored for the chaptered e2e lane (73862eb): three 30 s spans (fast speech / lyrics / slow speech) in the word-timed json3 shape, with the chapter markersMap injected by the fixture server (e2e/shared/fixtures.ts CHAPTERED_FIXTURES) |
+| synthetic/cooldown-expired.json | bug-zoo lane (673e0a9): word-timed json3 in the pot-gated shape, served on the signed-fetch page; pins the second drive re-picking once the 30 s cooldown has passed |
+| synthetic/cue-level-only.json | manual-track shape of the captured real/manual-cue.json (qp0HIF3SfI4): segs without word timing, no windows |
+| synthetic/dzen-word.vtt | Dzen player's word-timed VTT shape (ru), authored for the track-src harvest probe (b5bcf26) |
+| synthetic/edx-transcript.json | edX transcript shape ({start, text} arrays), authored for the network-layer harvest parser (37a246d) |
+| synthetic/empty.json | empty-payload case for the wpm pipeline (3c99d7d) |
+| synthetic/gapped.json | authored for the skip-silence gap lane (c8ad7ca): a recommend-mode 1.4x cue timeline with one exactly-1.5s inter-cue gap (e2e/shared/specs.ts runSkipSpecs) |
+| synthetic/hls/talk/talk.vtt | VTT segment referenced by the generic-matcher HLS playlist (d4239ad) |
+| synthetic/ja-captions.json | word-timed json3 in the captured WEB ASR shape with ja segs, authored for the language-unit chain e2e (b31d3c1) |
+| synthetic/late-controls.json | bug-zoo lane (673e0a9): word-timed json3 in the pot-gated shape; controls mount 4 s past the drive's 3 s visibility wait (LATE_CONTROLS_FIXTURES) |
+| synthetic/music-lyrics.json | music-track word-timed shape for the pill recommendation lane (353538a) |
+| synthetic/music-segments.json | music-video events + windows shape for the wpm pipeline (3c99d7d) |
+| synthetic/no-controls.json | bug-zoo lane (673e0a9): word-timed json3 served on the plain watch page with no control stub (NO_CONTROLS_FIXTURES) |
+| synthetic/out-of-order.json | out-of-order event/window timeline edge for the wpm pipeline (3c99d7d) |
+| synthetic/pot-gated.json | base word-timed json3 for the POT-gated signed-fetch lane (a3280a6): the stub player pays the payload only to signed /api/timedtext fetches (POT_GATED_FIXTURES); shape ancestor of the bug-zoo fixtures |
+| synthetic/rutube.srt | rutube SRT shape (ru), authored for the track-src harvest probe (b5bcf26) |
+| synthetic/sample.vtt | VTT shape with markup, authored for the network-layer harvest parser (37a246d); referenced by synthetic/hls/master.m3u8 |
+| synthetic/single-word.json | single-event minimal case for the wpm pipeline (3c99d7d) |
+| synthetic/transcript-gated.json | authored for the get_transcript fallback lane (d6762be): ANDROID player response whose transcript-panel params back the POST; parses to no captions (TRANSCRIPT_GATED_FIXTURES) |
+| synthetic/windows-format.json | format-drift sentinel (7b3a0cf): the events[].windows[].segs shape no recorded WEB payload has used since the residential re-run — the shape the recorded windows-asr-* payloads are NOT; the parser must keep handling it |
+| synthetic/word-level.json | word-timed json3 in the captured real/asr-word.json event/seg shape (ANDROID iG9CE55wbtY), truncated to 3 events |
