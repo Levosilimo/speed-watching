@@ -382,8 +382,6 @@ describe('createPill', () => {
     const pill = createPill(host, { onDismiss: vi.fn() }, { locale: 'en' });
     pill.mount();
     pill.update(state());
-    // happy-dom cannot focus elements inside a shadow root, so the pre-click
-    // focus assertion is skipped; the restore target lives in the light DOM.
     rootOf(host).querySelector<HTMLButtonElement>('.btn-dismiss')!.click();
     expect(document.activeElement).toBe(player);
   });
