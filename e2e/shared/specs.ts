@@ -10,9 +10,12 @@
 // the pill specs assert that the content script ran the same math and that
 // Apply really changes the fixture <video>'s playbackRate.
 //
-// The pill's shadow root is closed, so specs observe it through the content
-// script's test hook (window.__speedwatcherPill: state + apply/dismiss),
-// which invokes the exact handlers the pill buttons are wired to.
+// The pill's shadow root is open (ui/pill.ts attachShadow), so the chromium
+// runner can pierce it directly (e2e.spec.ts setChapterConsent); the specs
+// still route state through the content script's test hook
+// (window.__speedwatcherPill: state + apply/dismiss) because it invokes the
+// exact handlers the pill buttons are wired to — the same callback path in
+// both runners.
 
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';

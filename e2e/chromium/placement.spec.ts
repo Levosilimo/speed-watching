@@ -1,6 +1,6 @@
-// Visual placement pin: golden screenshots of #player (the fixture player
-// box) with the recommend pill anchored in its control zone, one golden per
-// theme. The shot freezes every nondeterminism the pill could render:
+// Visual placement pin: golden screenshots of the PILL'S OWN bounding box
+// (+20px margin), cropped out of the fixture player — one golden per theme.
+// The shot freezes every nondeterminism the pill could render:
 // prefers-color-scheme is emulated before navigation so the pill is born in
 // the theme under test, the clock is pinned (Date.now is part of the pill's
 // live/saved line inputs even though a paused fixture video renders none),
@@ -8,12 +8,19 @@
 // behavior. The pill's 200ms mode transition is waited out (transform back
 // to none) before the shutter, mirroring settlePill in the main suite.
 //
+// The golden is the COARSE visual pin: maxDiffPixelRatio 0.02 absorbs the
+// antialiasing noise but cannot catch a 1-2px inset drift (a 420px-wide
+// pill moved by 2px shifts ~0.3% of the crop). The EXACT insets are pinned
+// by the control-zone geometry lane (e2e.spec.ts assertControlZone: the
+// right >= 12px and bottom >= 40px bounding-box checks, plus containment
+// and occlusion), which measures layout numbers, not pixels. This spec
+// proves the pill still LOOKS right (colors, shape, spacing) within its
+// region; the geometry lane proves it sits exactly there.
+//
 // The golden's premise is shared with the other lanes: the same Playwright
 // chromium build (1.62.1 → CfT 151) on the same Linux/headless stack, with
 // fontconfig resolving the pill's system-ui stack to DejaVu Sans on both
-// this box and CI's ubuntu-latest. maxDiffPixelRatio 0.02 absorbs the
-// antialiasing noise while still pinning the placement (a misanchored pill
-// moves tens of thousands of pixels).
+// this box and CI's ubuntu-latest.
 //
 // The firefox/userscript lanes get their own basenames in a later wave —
 // this wave pins the chromium pair only.
@@ -103,16 +110,40 @@ async function renderStablePill(colorScheme: 'light' | 'dark'): Promise<void> {
   );
 }
 
+/** The pill's bounding box inflated by a margin, clamped to the player box
+ * (the screenshot clip must stay inside the page). The crop keeps the
+ * golden focused on the pill — a background change in #player (the video
+ * area, the controls bar) no longer trips the comparison. */
+async function pillClip(margin = 20): Promise<{ x: number; y: number; width: number; height: number }> {
+  return page.evaluate((m) => {
+    const host = document.querySelector<HTMLElement>('.speedwatcher-pill-host');
+    const player = document.querySelector<HTMLElement>('#player');
+    const pill = host?.shadowRoot?.querySelector<HTMLElement>('.pill');
+    if (host === null || player === null || pill === null || pill === undefined) {
+      throw new Error('pill or player missing for the golden crop');
+    }
+    const r = pill.getBoundingClientRect();
+    const p = player.getBoundingClientRect();
+    const x = Math.max(p.left, r.left - m);
+    const y = Math.max(p.top, r.top - m);
+    const right = Math.min(p.right, r.right + m);
+    const bottom = Math.min(p.bottom, r.bottom + m);
+    return { x, y, width: right - x, height: bottom - y };
+  }, margin);
+}
+
 test('placement pin: recommend pill in the player control zone (light)', async () => {
   await renderStablePill('light');
-  await expect(page.locator('#player')).toHaveScreenshot('pill-in-player-light.png', {
+  await expect(page).toHaveScreenshot('pill-in-player-light.png', {
+    clip: await pillClip(),
     maxDiffPixelRatio: 0.02,
   });
 });
 
 test('placement pin: recommend pill in the player control zone (dark)', async () => {
   await renderStablePill('dark');
-  await expect(page.locator('#player')).toHaveScreenshot('pill-in-player-dark.png', {
+  await expect(page).toHaveScreenshot('pill-in-player-dark.png', {
+    clip: await pillClip(),
     maxDiffPixelRatio: 0.02,
   });
 });
