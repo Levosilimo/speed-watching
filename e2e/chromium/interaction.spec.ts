@@ -1,9 +1,8 @@
 // Interaction-a11y e2e: the REAL shadow-DOM pill driven through the
 // keyboard — locator.focus()/press() and page.keyboard, no test-hook
 // shortcuts for the button semantics. The unit tests (tests/pill.test.ts)
-// cover the same handlers in happy-dom, which cannot focus shadow content
-// or run native button activation; this lane proves the behaviors in real
-// chromium: Enter applies, Escape dismisses, focus returns to the player
+// cover the same handlers in happy-dom; this lane proves the behaviors in
+// real chromium: Enter applies, Escape dismisses, focus returns to the player
 // anchor (never stranded in the pill), Tab walks the buttons in DOM order
 // (== visual order), and the label/tier live region (role=status) excludes
 // the action buttons.

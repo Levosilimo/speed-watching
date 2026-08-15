@@ -64,6 +64,44 @@ No AI-slop patterns:
 Banned words: delve, leverage, seamless, robust, comprehensive, dive into,
 streamline, elevate, unlock, effortless, landscape.
 
+## Testing lanes
+
+Every feature ships a spec lane and an audit lane.
+
+- **Independent lane.** Tests are written from the spec + real fixtures,
+  never the implementation they test. A test that reads the code it tests
+  cannot fail for the right reason.
+- **Contract, not count.** Assert observable outcomes (source, tier, pill
+  state). Never assert implementation counts (clicks, calls) unless the count
+  IS the user-visible contract (the demand and time-saved stores are).
+- **Two-commit bug fixes.** A bug fix is two commits: `test:` first — it must
+  fail against the current code — then `fix:`. Never squash them. A fix whose
+  test passes on the old code is not a fix.
+- **Retrigger ≠ drive.** An attempt's retrigger must not call the same
+  cooldown-gated function as its drive; a retrigger is an ungated sub-operation
+  of the attempt (see 64b628b: the retrigger is the same attempt's second
+  pass, not a new drive).
+- **External truth.** Invariants and the golden-master baseline are written
+  from `plan-v2.md`, the wpm literature, and recorded real-site data — never
+  regenerated from `lib/`. `scripts/data/*/results.jsonl` is the oracle: the
+  only non-LLM artifact. Synthetic fixtures derive from a real captured
+  payload, not from invention.
+
+## Wave methodology
+
+Work ships in waves: process → executable spec → failure space → environment
+classes → mirror detector. Each wave passes CI and its DoD checkboxes before
+the next starts.
+
+- **Release gate.** The real-site runner (`scripts/realsite-runner.ts`) holds
+  a ≥80% pass ratio on a fresh build before release; box runs are scheduled,
+  not ad hoc. Below the bar does not ship.
+- **Stryker tripwire.** The nightly mutation run must not exceed 65
+  survivors. On breach, fix the surviving mutants — never add tests that paper
+  over them.
+- **Human checkpoint.** One pair of eyes on the golden-master diff per
+  release — the only gate that cannot mirror. No script replaces it.
+
 ## Commit style
 
 - Imperative subject, ≤72 chars, no trailing period
