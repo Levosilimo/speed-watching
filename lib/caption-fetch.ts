@@ -2,6 +2,17 @@ import type { CaptionTrack, PlayerResponse } from '@/lib/youtube';
 import type { TimedtextBuffer } from './caption-capture';
 import { restoreCcState, triggerCcAutomation, waitForWordTimedCapture } from './caption-trigger';
 
+/** E2E hook gate. The userscript bundle builds with __E2E__ defined false,
+ * so the runtime flag carries the gate there (userscript/src/main.ts uses
+ * the same combination); production extension builds have neither. */
+const e2eHooks = __E2E__ || window.__speedwatcherE2E === true;
+
+declare global {
+  interface Window {
+    __speedwatcherE2E?: boolean;
+  }
+}
+
 // ANDROID innertube fallback (plan-v3): the WEB timedtext endpoint returns
 // 200-with-empty-body / 400/403 from some IPs, while the ANDROID
 // youtubei/v1/player POST returns real caption tracks (proven from hostile
@@ -71,7 +82,7 @@ export async function fetchCaptions(
   ctx.buffer.clear(videoId);
   const capture = ctx.buffer.pickWordTimed(videoId);
   if (capture !== null) {
-    if (__E2E__) window.__speedwatcherCaptionSource = 'capture';
+    if (e2eHooks) window.__speedwatcherCaptionSource = 'capture';
     return JSON.parse(capture.body);
   }
   const video = ctx.video;
@@ -84,7 +95,7 @@ export async function fetchCaptions(
       };
       const captured = await waitForWordTimedCapture(ctx.buffer, videoId, nudge, 15000);
       if (captured !== null) {
-        if (__E2E__) window.__speedwatcherCaptionSource = 'capture';
+        if (e2eHooks) window.__speedwatcherCaptionSource = 'capture';
         return JSON.parse(captured.body);
       }
     } finally {
@@ -95,14 +106,14 @@ export async function fetchCaptions(
   }
   const web = await fetchJson3(track.baseUrl);
   if (web !== null) {
-    if (__E2E__) window.__speedwatcherCaptionSource = 'web';
+    if (e2eHooks) window.__speedwatcherCaptionSource = 'web';
     return web;
   }
   const android = await fetchAndroidCaptions(videoId);
   if (android !== null) {
-    if (__E2E__) window.__speedwatcherCaptionSource = 'android';
+    if (e2eHooks) window.__speedwatcherCaptionSource = 'android';
     return android;
   }
-  if (__E2E__) window.__speedwatcherCaptionSource = 'none';
+  if (e2eHooks) window.__speedwatcherCaptionSource = 'none';
   return null;
 }
