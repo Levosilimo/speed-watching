@@ -1,11 +1,11 @@
 // Real-site extension runner — drives the BUILT e2e extension against real
 // youtube.com videos (docs/realsite-run.md). Box-gated manual tier: not CI.
 // Run: bun run scripts/realsite-runner.ts [--headless] [--limit=N] [--video=ID]
-//      [--kind=speech|music|live] [--threshold=N]
+//      [--kind=speech|music|live] [--threshold=N] [--no-rebuild]
 // Results: scripts/data/realsite-run/results.jsonl (live-appended).
 
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
@@ -42,14 +42,48 @@ const EXTENSION_DIR = join(ROOT, '..', '.output', 'chrome-mv3-e2e');
 const PAGE_PACE_MS = 2500;
 const WATCHDOG_IDLE_MS = 8 * 60_000;
 
-function ensureE2eBuild(): void {
-  if (existsSync(join(EXTENSION_DIR, 'manifest.json'))) return;
-  console.log(`realsite-runner: e2e build missing at ${EXTENSION_DIR} — building`);
-  const built = spawnSync('bun', ['run', 'build:e2e'], { cwd: join(ROOT, '..'), stdio: 'inherit' });
-  if (built.status !== 0) {
+const CONTENT_JS = join(EXTENSION_DIR, 'content-scripts', 'content.js');
+
+/** HEAD's commit date (commit date, not author date); null when git is unavailable. */
+function headCommitDate(): Date | null {
+  const out = spawnSync('git', ['log', '-1', '--format=%cI', 'HEAD'], { encoding: 'utf8' });
+  const line = (out.stdout ?? '').trim();
+  if (out.status !== 0 || line === '') return null;
+  const date = new Date(line);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+const fmtDate = (date: Date | null): string => (date === null ? 'unknown' : date.toISOString());
+
+// A stale build (predating merged fixes) silently runs and produces false
+// failures — the 2026-08-15 2/10 live-detection false positive. Rebuild when
+// the bundle predates HEAD; a rebuild is ~1 min, over-building beats a false
+// run. --no-rebuild opts out (docs/realsite-run.md).
+function ensureE2eBuild(noRebuild: boolean): void {
+  const built = existsSync(CONTENT_JS) ? statSync(CONTENT_JS).mtime : null;
+  const head = headCommitDate();
+  if (built === null) {
+    console.log(`realsite-runner: e2e build missing at ${EXTENSION_DIR} (HEAD ${fmtDate(head)})`);
+    if (noRebuild) {
+      console.error('realsite-runner: --no-rebuild set but no e2e build on disk — nothing to run');
+      process.exit(2);
+    }
+    console.log('realsite-runner: building');
+  } else if (head === null || built < head) {
+    if (noRebuild) {
+      console.log(`realsite-runner: e2e build stale (built ${fmtDate(built)}, HEAD ${fmtDate(head)}) — --no-rebuild, running as-is`);
+      return;
+    }
+    console.log(`realsite-runner: e2e build stale (built ${fmtDate(built)}, HEAD ${fmtDate(head)}) — rebuilding`);
+  } else {
+    return;
+  }
+  const spawned = spawnSync('bun', ['run', 'build:e2e'], { cwd: join(ROOT, '..'), stdio: 'inherit' });
+  if (spawned.status !== 0) {
     console.error('realsite-runner: bun run build:e2e failed');
     process.exit(1);
   }
+  console.log(`realsite-runner: e2e build fresh (built ${fmtDate(statSync(CONTENT_JS).mtime)}, HEAD ${fmtDate(head)})`);
 }
 
 async function main(): Promise<void> {
@@ -59,6 +93,7 @@ async function main(): Promise<void> {
   const kindArg = args.find((a) => a.startsWith('--kind='))?.slice('--kind='.length) as VideoKind | undefined;
   const limitArg = args.find((a) => a.startsWith('--limit='))?.slice('--limit='.length);
   const thresholdArg = args.find((a) => a.startsWith('--threshold='))?.slice('--threshold='.length);
+  const noRebuild = args.includes('--no-rebuild');
   const limit = limitArg === undefined ? undefined : Number(limitArg);
   const threshold = thresholdArg === undefined ? 0.8 : Number(thresholdArg);
   if (limit !== undefined && !Number.isFinite(limit)) {
@@ -73,7 +108,7 @@ async function main(): Promise<void> {
     console.error('--kind must be speech|music|live');
     process.exit(2);
   }
-  ensureE2eBuild();
+  ensureE2eBuild(noRebuild);
 
   let videos = videoArg === undefined
     ? DEFAULT_VIDEOS

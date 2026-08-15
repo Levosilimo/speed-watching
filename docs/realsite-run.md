@@ -24,7 +24,12 @@ bun install --frozen-lockfile   # if node_modules is missing
 bun run scripts/realsite-runner.ts
 ```
 
-The e2e build is produced automatically if absent (`bun run build:e2e`).
+The e2e build is produced automatically when missing **or stale**: the mtime
+of `.output/chrome-mv3-e2e/content-scripts/content.js` is compared against
+HEAD's commit date (`git log -1 --format=%cI HEAD`); older than HEAD ⇒
+`bun run build:e2e` first. A rebuild is ~1 min — over-building is cheaper
+than a false run. `--no-rebuild` skips the check and runs whatever build is
+on disk.
 
 Flags:
 
@@ -35,6 +40,7 @@ Flags:
 | `--video=ID` | sample one video (any id; defaults to `speech`) |
 | `--kind=speech\|music\|live` | expected class for `--video` runs |
 | `--threshold=N` | pass-ratio bar, default 0.8 |
+| `--no-rebuild` | skip the staleness check — run the on-disk build as-is |
 
 Results: `scripts/data/realsite-run/results.jsonl`, appended live per video
 so a mid-run kill never loses completed samples.
@@ -101,8 +107,14 @@ every failing video with its reason (`no-pill-render` / `bot-wall` /
 
 ## Status
 
-- **2026-08-15 first run** (current main build, residential box, headed):
-  10/10 videos sampled, pass ratio **2/10 (20%)** — exit 1, as designed.
+- **2026-08-15 run 1 — invalidated (stale build).** 10/10 videos sampled,
+  pass ratio **2/10 (20%)** — exit 1. This run sampled against a stale
+  `.output/chrome-mv3-e2e` (predating the merged fixes), so it measured an
+  old bundle: only the two live controls passed. **The same sample on a
+  fresh `bun run build:e2e` passed 8/10** — the stale bundle's false 2/10 is
+  the incident that added the staleness check above (rebuild when the build
+  predates HEAD; `--no-rebuild` opts out). Table and finding below are from
+  this invalidated run.
 
   | videoId | category | kind | mode | source | result |
   |---|---|---|---|---|---|
@@ -117,15 +129,11 @@ every failing video with its reason (`no-pill-render` / `bot-wall` /
   | `dQw4w9WgXcQ` | music | music | — | — | FAIL — page hung past the 3-min deadline (prior run: recommend-estimated) |
   | `jfKfPfyJRdk` | live | live | none | — | **PASS** — live suppression |
 
-  **Finding (extension-side, feeds the next fix wave — not fixed here):** the
-  extension's own caption fetch fails on real sessions from this box — every
-  speech video and the music control logged `[speed-watcher] wpm: caption
-  fetch failed — estimated` (both the WEB `fetchJson3` and the ANDROID
-  innertube fallback returned nothing), so the pill fell back to the
-  estimated tier (`recommend`/`unreachable`) and music detection never ran.
-  The same videos' *player-signed* requests work on this box
-  (`gate1-residential.ts` 2026-08-13: `web-ok`, word/cue counts intact) —
-  the bare `track.baseUrl` script fetch is the POT-gated path the audit
-  flagged. Live detection is healthy on real live content (2/2, including
-  the JRE #1169 live re-broadcast), and the pill renders on real pages
-  (layout/stacking class: no issues observed).
+  **Finding (run 1 — invalidated, see above):** the run-1 failures logged
+  `[speed-watcher] wpm: caption fetch failed — estimated` on every speech
+  video and the music control, pointing at the bare `track.baseUrl` fetch as
+  the POT-gated path the audit flagged — but that was the stale bundle; the
+  fresh build passes the same sample set 8/10. Live detection is healthy on
+  real live content (2/2, including the JRE #1169 live re-broadcast), and
+  the pill renders on real pages (layout/stacking class: no issues
+  observed).
