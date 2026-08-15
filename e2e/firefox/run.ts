@@ -183,6 +183,9 @@ async function main(): Promise<void> {
         }
         return null;
       },
+      async readBrowserLanguage() {
+        return driver.executeScript('return navigator.language') as unknown as Promise<string>;
+      },
       async navigateToGeneric() {
         await driver.get(`${server.baseUrl}/generic`);
       },

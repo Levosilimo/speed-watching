@@ -10,7 +10,7 @@ import { defineContentScript } from 'wxt/utils/define-content-script';
 import { fetchAndroidCaptions, fetchJson3 } from '@/lib/caption-fetch';
 import { parseYouTubeJson3, type Segment } from '@/lib/captions';
 import { cueSignal, detectContentType, priorMidpoint } from '@/lib/heuristics';
-import { resolveLanguage, UNIT_LABELS, type LanguageModel, type RateRange } from '@/lib/languages';
+import { normalizeLanguageCode, resolveLanguage, UNIT_LABELS, type LanguageModel, type RateRange } from '@/lib/languages';
 import { logWpm, waitForPlayerResponse } from '@/lib/measure-hooks';
 import { buildWpmResponse, type MeasurementContext } from '@/lib/wpm-provider';
 import { createBridgeClient, isShortcutEnvelope, SHORTCUT_APPLY } from '@/lib/messaging';
@@ -52,8 +52,7 @@ let chapterRates: RateSegment[] | null = null;
 let chapterConsent = false;
 const chapterScheduler = new ChapterScheduler();
 
-// Skip-silence session (lib/skip-silence.ts): the actuator dips the rate
-// inside caption gaps while the toggle is on and the video has a gap index.
+// Skip-silence (lib/skip-silence.ts): dips the rate inside caption gaps while the toggle is on.
 const skipActuator = new SkipSilenceActuator();
 /** The current video's gap plan; null without one (see planSkipSilence). */
 let skipPlan: { index: GapSpan[]; prefs: SkipSilencePrefs } | null = null;
@@ -341,8 +340,10 @@ async function showEstimatedPill(
   startedAt?: number,
 ): Promise<void> {
   const contentType = resolveContentType(settings, site, 'generic');
-  const seeded = await channelSeededRate(videoDetails, language);
-  controller.renderRecommendation(videoId, seeded ?? priorMidpoint(contentType), 'estimated', contentType, settings, site, null, language, startedAt);
+  // No track language → the UI language's model drives math and range alike.
+  const model = language ?? resolveLanguage(normalizeLanguageCode(navigator.language) ?? undefined) ?? undefined;
+  const seeded = await channelSeededRate(videoDetails, model);
+  controller.renderRecommendation(videoId, seeded ?? priorMidpoint(contentType), 'estimated', contentType, settings, site, null, model, startedAt);
   // Demand proxy (Phase-2 STT gate): one local count per estimated render.
   // Best-effort like logAction — a dead bridge must not suppress the pill.
   void bridge

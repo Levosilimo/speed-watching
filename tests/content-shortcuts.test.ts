@@ -393,7 +393,8 @@ describe('wpm:get measured-rate answer', () => {
   }
 
   it('answers from the measurement context without the videoId', async () => {
-    // Estimated tier: the beforeEach player response has no caption tracks.
+    // Estimated tier: the beforeEach player response has no caption tracks,
+    // so the UI-locale fallback resolves the en model (happy-dom runs en-US).
     const settings = defaultSettings();
     const site = 'youtube.com';
     const contentType = resolveContentType(settings, site, 'generic');
@@ -422,7 +423,7 @@ describe('wpm:get measured-rate answer', () => {
       version: 1,
       site: 'youtube.com',
       unit: 'wpm',
-      language: null,
+      language: 'en',
       tier: 'estimated',
       contentType: 'generic',
       platformMax: 2,
