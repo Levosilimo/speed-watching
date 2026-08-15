@@ -11,9 +11,9 @@ export function pillCss(t: Theme): string {
     :host {
       all: initial;
       display: block;
-      position: fixed;
-      bottom: 18px;
-      right: 18px;
+      position: absolute;
+      bottom: 44px;
+      right: 12px;
       z-index: ${OVERLAY_Z_INDEX};
       font-family: ${TOKENS.fontSans};
       font-size: ${TOKENS.textBase};

@@ -11,8 +11,8 @@ export function nudgeCss(t: Theme): string {
     :host {
       all: initial;
       display: block;
-      position: fixed;
-      bottom: 18px;
+      position: absolute;
+      bottom: 44px;
       left: 50%;
       transform: translateX(-50%);
       z-index: ${OVERLAY_Z_INDEX};

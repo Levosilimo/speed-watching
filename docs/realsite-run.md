@@ -63,12 +63,17 @@ so a mid-run kill never loses completed samples.
    (word → cue → corrected, in the track language's unit), the caption
    source (`web` / `android` / `none`), the `[speed-watcher]` console lines,
    and the page title.
+4. Records the pill placement geometry: the `.pill` and `#movie_player`
+   rects, whether the pill is fully inside the player (containment), how
+   far its bottom sits above the player's bottom (clears ≥ 40px — the
+   controls-bar clearance), and whether the pill is the hit target at its
+   center (`elementFromPoint` — anything else means something covers it).
 
 ## Pass criteria
 
 | Video class | Must hold |
 |---|---|
-| `speech` (talks, lectures, podcasts, explainers) | pill rendered (`mode != none`), caption source `web` or `android` (not `none`), measured rate in 100–600 in the language's unit |
+| `speech` (talks, lectures, podcasts, explainers) | pill rendered (`mode != none`), caption source `web` or `android` (not `none`), measured rate in 100–600 in the language's unit, pill fully inside the player (containment), ≥ 40px above the player's bottom (clears the controls bar), and the hit target at its center (not occluded) |
 | `music` (control) | pill mode `music` — the "speed not recommended" suppression |
 | `live` (control) | pill mode `none` — live suppression |
 
@@ -106,6 +111,32 @@ every failing video with its reason (`no-pill-render` / `bot-wall` /
   next fix wave.
 
 ## Status
+
+- **2026-08-15 run 2 — player-anchored pill placement (wt-pillzone).**
+  10/10 videos sampled, pass ratio **8/10 (80%)** — exit 0 (threshold 80%).
+  Every speech video with a caption source rendered the pill **inside** the
+  player, clearing the controls bar (`clears=yes`), not occluded at its
+  center (`occ=no`) — the absolute-in-player placement holds on real
+  YouTube, including the two lecture videos in theater-ish wide layouts.
+  The two failures are the known non-geometry set: `fpbOEoRrHyU` lost its
+  caption fetch (source=none, rate n/a) and the music control
+  `dQw4w9WgXcQ` hung past the 3-min deadline (same as run 1). Live controls
+  pass (mode=none); their hidden pill reports `clears=no`/`occ=yes`
+  because the hidden state drops pointer-events — placement gates apply to
+  visible speech pills only.
+
+  | videoId | category | kind | mode | rate | source | pill | clears | occ | result |
+  |---|---|---|---|---|---|---|---|---|---|
+  | `iG9CE55wbtY` | talk | speech | recommend | 140.5 | capture | inside | yes | no | **PASS** |
+  | `Ks-_Mh1QhMc` | talk | speech | recommend | 160.9 | capture | inside | yes | no | **PASS** |
+  | `HtSuA80QTyo` | lecture | speech | recommend | 110.8 | capture | inside | yes | no | **PASS** |
+  | `jGwO_UgTS7I` | lecture | speech | recommend | 142.9 | capture | inside | yes | no | **PASS** |
+  | `ycPr5-27vSI` | podcast | live | none | — | — | inside | no | yes | **PASS** — live suppression |
+  | `fpbOEoRrHyU` | news-comedy | speech | recommend | n/a | none | inside | yes | no | FAIL — caption fetch failed |
+  | `WUvTyaaNkzM` | explainer | speech | recommend | 150.2 | capture | inside | yes | no | **PASS** |
+  | `7Pq-S557XQU` | explainer | speech | recommend | 159.6 | capture | inside | yes | no | **PASS** |
+  | `dQw4w9WgXcQ` | music | music | — | — | — | — | — | — | FAIL — page hung past the 3-min deadline |
+  | `jfKfPfyJRdk` | live | live | none | — | — | inside | no | yes | **PASS** — live suppression |
 
 - **2026-08-15 run 1 — invalidated (stale build).** 10/10 videos sampled,
   pass ratio **2/10 (20%)** — exit 1. This run sampled against a stale
