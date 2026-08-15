@@ -303,6 +303,11 @@ export async function runPillSpecs(driver: E2EDriver): Promise<void> {
     if ((state.reason ?? null) !== rec.reason) {
       throw new Error(`${fixture}: pill reason ${state.reason} !== expected ${rec.reason}`);
     }
+    // Measured tiers never carry a caption-collapse reason (WebDriver
+    // serializes the absent field as null — normalize before comparing).
+    if ((state.captionStatus ?? null) !== null) {
+      throw new Error(`${fixture}: measured tier carries captionStatus ${state.captionStatus}`);
+    }
     const source = await driver.readCaptionSource();
     if (source !== 'web') throw new Error(`${fixture}: caption source ${source}, expected web`);
   }
@@ -382,6 +387,11 @@ export async function runPillSpecs(driver: E2EDriver): Promise<void> {
     if (Math.abs(state.rateWpm - naturalRate) > WPM_TOLERANCE) {
       throw new Error(`${fixture}: pill rateWpm ${state.rateWpm}, expected ${naturalRate}`);
     }
+    // The fetch-failed collapse reason rides the estimated tier (the S4
+    // real-session class: tracks exist, every fetch chain died).
+    if (state.captionStatus !== 'fetch-failed') {
+      throw new Error(`${fixture}: pill captionStatus ${state.captionStatus}, expected fetch-failed`);
+    }
   }
 
   // (g) No caption tracks at all → estimated tier from the generic prior.
@@ -404,6 +414,29 @@ export async function runPillSpecs(driver: E2EDriver): Promise<void> {
     }
     if (state.label !== rec.label) {
       throw new Error(`${fixture}: pill label "${state.label}" !== expected "${rec.label}"`);
+    }
+    if (state.captionStatus !== 'no-track') {
+      throw new Error(`${fixture}: pill captionStatus ${state.captionStatus}, expected no-track`);
+    }
+  }
+
+  // (h) Captions parsed but empty (a 200 payload with no words or cues):
+  // the estimated tier names the capture-missed collapse.
+  {
+    const fixture = 'synthetic/empty.json';
+    await driver.navigateToWatch(fixture);
+    const state = expectState(await driver.readPillState(), fixture);
+    const { rec, naturalRate } = expectedEstimatedPill(await driver.readBrowserLanguage());
+    if (state.mode !== rec.mode || state.tierLabel !== rec.tierLabel) {
+      throw new Error(
+        `${fixture}: pill ${state.mode}/${state.tierLabel}, expected ${rec.mode}/${rec.tierLabel}`,
+      );
+    }
+    if (Math.abs(state.rateWpm - naturalRate) > WPM_TOLERANCE) {
+      throw new Error(`${fixture}: pill rateWpm ${state.rateWpm}, expected ${naturalRate}`);
+    }
+    if (state.captionStatus !== 'capture-missed') {
+      throw new Error(`${fixture}: pill captionStatus ${state.captionStatus}, expected capture-missed`);
     }
   }
 }
@@ -451,6 +484,11 @@ export async function runCaptureSpecs(driver: E2EDriver): Promise<void> {
     throw new Error(
       `${fixture}: pill multiplier ${state.multiplier} !== expected ${rec.multiplier}`,
     );
+  }
+  // The measured capture tier carries no collapse reason (WebDriver
+  // serializes the absent field as null — normalize before comparing).
+  if ((state.captionStatus ?? null) !== null) {
+    throw new Error(`${fixture}: measured capture tier carries captionStatus ${state.captionStatus}`);
   }
   // The word-timed measurement itself (not just the pill): the captured
   // payload must have produced the word-level rate of the fixture.
@@ -527,6 +565,11 @@ export async function runTranscriptSpecs(driver: E2EDriver): Promise<void> {
   }
   if (state.tierLabel !== 'from captions') {
     throw new Error(`${fixture}: pill tierLabel ${state.tierLabel}, expected from captions`);
+  }
+  // The measured transcript tier carries no collapse reason (WebDriver
+  // serializes the absent field as null — normalize before comparing).
+  if ((state.captionStatus ?? null) !== null) {
+    throw new Error(`${fixture}: measured transcript tier carries captionStatus ${state.captionStatus}`);
   }
   if (Math.abs(state.rateWpm - expectedRate) > WPM_TOLERANCE) {
     throw new Error(

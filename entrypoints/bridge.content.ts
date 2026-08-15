@@ -55,6 +55,8 @@ export default defineContentScript({
           channels,
           forwardDemand: (contentType) =>
             browser.runtime.sendMessage({ type: 'demand:increment', contentType }),
+          forwardJournalAppend: (entry) =>
+            browser.runtime.sendMessage({ type: 'journal:append', ...entry }),
           forwardNudgeRecordApply: (multiplier) =>
             browser.runtime.sendMessage({ type: 'nudge:recordApply', multiplier }),
           forwardNudgeDismiss: (forever) =>

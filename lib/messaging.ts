@@ -25,11 +25,12 @@ import { isContentType, type ContentType } from './music';
 import { OverrideLog } from './override-log';
 import { SettingsStore } from './settings';
 import { SkipSilenceStore } from './skip-silence';
-import { BRIDGE_CHANNEL, isBridgeEnvelope, isLogEntry, isNudgeDismiss, isNudgeRecordApply, isSettingsPayload, isSkipPrefs, isTimeSavedAccrueMessage, type BridgeRequest, type BridgeResult } from './bridge-protocol';
+import { BRIDGE_CHANNEL, isBridgeEnvelope, isJournalAppendMessage, isLogEntry, isNudgeDismiss, isNudgeRecordApply, isSettingsPayload, isSkipPrefs, isTimeSavedAccrueMessage, type BridgeRequest, type BridgeResult, type JournalAppendMessage } from './bridge-protocol';
 export {
   BRIDGE_CHANNEL,
   isBridgeEnvelope,
   isDemandIncrementMessage,
+  isJournalAppendMessage,
   isNudgeDismiss,
   isNudgeRecordApply,
   isSettingsPayload,
@@ -69,6 +70,7 @@ export interface BridgeDeps {
   log: OverrideLog;
   channels: ChannelMemory;
   forwardDemand: (contentType: ContentType) => Promise<unknown>;
+  forwardJournalAppend: (entry: Omit<JournalAppendMessage, 'type'>) => Promise<unknown>;
   forwardNudgeRecordApply: (multiplier: number) => Promise<unknown>;
   forwardNudgeDismiss: (forever: boolean) => Promise<unknown>;
   forwardAccrue: (deltaSec: number, multiplier: number) => Promise<unknown>;
@@ -146,6 +148,14 @@ export async function handleBridgeRequest(
         throw new Error(`demand:increment: unknown content type ${request.contentType}`);
       }
       await deps.forwardDemand(request.contentType);
+      return undefined;
+    case 'journal:append':
+      // Boundary validation: unknown reasons never reach the background
+      // writer.
+      if (!isJournalAppendMessage(request)) {
+        throw new Error('journal:append: invalid entry');
+      }
+      await deps.forwardJournalAppend({ reason: request.reason, videoId: request.videoId });
       return undefined;
     case 'nudge:recordApply':
       // Boundary validation: out-of-range multipliers never reach the

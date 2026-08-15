@@ -19,7 +19,7 @@ import { existsSync, mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import type { RateTier } from '../../lib/recommend';
-import type { PillState } from '../../ui/pill';
+import type { CaptionStatus, PillState } from '../../ui/pill';
 import type { CaptionSource, Measurement } from '../shared/specs';
 import { routeFixtures } from '../shared/route-fixtures';
 
@@ -117,7 +117,7 @@ function tierOf(pill: PillState, measure: Measurement | undefined): RateTier {
  * expectation asserts the hook's absence — the no-track page never sets it
  * (no fetch chain ran), so the read peeks instead of waiting. */
 async function assertCell(
-  expected: { source: CaptionSource | null; tier: RateTier },
+  expected: { source: CaptionSource | null; tier: RateTier; captionStatus?: CaptionStatus },
   timeoutMs: number,
 ): Promise<void> {
   const pill = await driver.readPillState(timeoutMs);
@@ -127,6 +127,12 @@ async function assertCell(
     throw new Error(
       `cell ${expected.source ?? 'no-source'}/${expected.tier}: pill=${pill === null ? 'null' : `mode ${pill.mode}`} ` +
         `source=${source} tierLabel=${pill?.tierLabel ?? 'undefined'}`,
+    );
+  }
+  if (expected.captionStatus !== undefined && pill.captionStatus !== expected.captionStatus) {
+    throw new Error(
+      `cell ${expected.source ?? 'no-source'}/${expected.tier}: captionStatus ${pill.captionStatus ?? 'undefined'}, ` +
+        `expected ${expected.captionStatus}`,
     );
   }
   if (expected.tier === 'estimated') {
@@ -148,6 +154,8 @@ interface MatrixCell {
   /** Null asserts the source hook's absence (the no-track page). */
   source: CaptionSource | null;
   tier: RateTier;
+  /** The collapse reason the estimated tier must name (contract, not counts). */
+  captionStatus?: CaptionStatus;
   /** Read timeout: the capture-miss cells render ~22s after navigation (the
    * 6s no-controls drive + the 15s capture window), the delayed ones later. */
   timeoutMs?: number;
@@ -198,6 +206,7 @@ const MATRIX: MatrixCell[] = [
     extra: 'transcriptfail=1',
     source: 'none',
     tier: 'estimated',
+    captionStatus: 'fetch-failed',
   },
   {
     name: 'ANDROID LOGIN_REQUIRED + transcript 500: none',
@@ -205,6 +214,7 @@ const MATRIX: MatrixCell[] = [
     extra: 'loginrequired=1&transcriptfail=1',
     source: 'none',
     tier: 'estimated',
+    captionStatus: 'fetch-failed',
   },
   {
     name: 'ANDROID no params + no WEB panel: none',
@@ -212,20 +222,24 @@ const MATRIX: MatrixCell[] = [
     extra: 'androidnoparams=1&webnopanel=1',
     source: 'none',
     tier: 'estimated',
+    captionStatus: 'fetch-failed',
   },
   {
     name: 'WEB 403 and no ANDROID player response: none',
     fixture: 'synthetic/web-blocked.json',
     source: 'none',
     tier: 'estimated',
+    captionStatus: 'fetch-failed',
   },
   {
     // No caption track: the fetch chain never runs, so the source hook
-    // stays unset — the cell asserts that absence plus the estimated pill.
+    // stays unset — the cell asserts that absence plus the estimated pill
+    // with its no-track collapse reason.
     name: 'no caption track at all: the estimated tier',
     fixture: 'synthetic/no-tracks.json',
     source: null,
     tier: 'estimated',
+    captionStatus: 'no-track',
   },
   {
     // The chain-order discriminator: with the ANDROID response synthesized
@@ -260,7 +274,7 @@ test.describe('timing classes', () => {
     // fall through (bare web 200-empty → ANDROID 400 → no WEB panel) to
     // none instead of hanging on the capture stage.
     await driver.navigateToWatch('synthetic/pot-gated.json', 'timedtextDelay=18000');
-    await assertCell({ source: 'none', tier: 'estimated' }, 60_000);
+    await assertCell({ source: 'none', tier: 'estimated', captionStatus: 'fetch-failed' }, 60_000);
   });
 
   test('flaky network: a 429 on the ANDROID POST falls through to the WEB-params transcript', async () => {
@@ -272,7 +286,7 @@ test.describe('timing classes', () => {
     offlineArmed = true;
     try {
       await driver.navigateToWatch('real/asr-word.json');
-      await assertCell({ source: 'none', tier: 'estimated' }, 30_000);
+      await assertCell({ source: 'none', tier: 'estimated', captionStatus: 'fetch-failed' }, 30_000);
     } finally {
       offlineArmed = false;
     }
@@ -282,7 +296,7 @@ test.describe('timing classes', () => {
     offlineArmed = true;
     try {
       await driver.navigateToWatch('synthetic/transcript-gated.json');
-      await assertCell({ source: 'none', tier: 'estimated' }, 30_000);
+      await assertCell({ source: 'none', tier: 'estimated', captionStatus: 'fetch-failed' }, 30_000);
     } finally {
       offlineArmed = false;
     }

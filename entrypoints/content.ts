@@ -36,7 +36,7 @@ import type { CaptionTrack, PlayerResponse } from '@/lib/youtube';
 import { channelKeyOf, chaptersOf } from '@/lib/youtube';
 import { createNudgeHost } from '@/ui/nudge-host';
 import { createRateController } from '@/lib/rate-controller';
-import type { PillTestHook } from '@/lib/rate-controller-types';
+import type { CaptionStatus, PillTestHook } from '@/lib/rate-controller-types';
 
 /** The current-video context: the measurement plus the identity and
  * recommendation the wpm:get answer and the override log read. */
@@ -163,9 +163,8 @@ export default defineContentScript({
         controller.userApply(current.recommendation.multiplier);
       } else if (controller.pillState !== null && controller.pillState.mode !== 'none') controller.dismissCurrent();
     });
-    // Measured-rate provider (Tier 4): relays wpm:get to the answer builder;
-    // no source guard, like the shortcut relay (the bridge validates the
-    // response, and the channel carries only the minimized measurement).
+    // Measured-rate provider (Tier 4): relays wpm:get to the answer builder —
+    // no source guard, like the shortcut relay (the bridge validates the response).
     window.addEventListener('message', (event: MessageEvent): void => {
       if (!isWpmEnvelope(event.data) || !isWpmGetRequest(event.data.message)) return;
       window.postMessage({ channel: WPM_CHANNEL, message: buildWpmResponse(controller.current) }, '*');
@@ -186,8 +185,7 @@ export default defineContentScript({
         get activeIndex() {
           return chapterScheduler.activeIndex;
         },
-        // Seek + tick: the scheduler steps on timeupdate, so the driver
-        // crosses boundaries without the fixture video ever playing.
+        // Seek + tick: the scheduler steps on timeupdate (no fixture playback needed).
         applyFor: (sec: number) => {
           const video = controller.activeVideo ?? document.querySelector<HTMLVideoElement>('video');
           if (video === null) return;
@@ -208,9 +206,7 @@ export default defineContentScript({
   },
 });
 
-function measure(): void {
-  controller.runMeasure((startedAt) => measureOnce(startedAt));
-}
+function measure(): void { controller.runMeasure((startedAt) => measureOnce(startedAt)); }
 
 function isLive(response?: PlayerResponse): boolean {
   if (response?.videoDetails?.isLiveContent === true) return true;
@@ -221,19 +217,19 @@ function isLive(response?: PlayerResponse): boolean {
 }
 
 /** Track resolution + web/android fetch + json3 parse. On failure carries
- * the resolved language (undefined only for the no-track case). */
+ * the resolved language (undefined only for the no-track case) and the collapse reason. */
 async function fetchAndParseCaptions(
   response: PlayerResponse,
   videoId: string,
 ): Promise<
   | { ok: true; words: Segment[]; cues: Segment[]; track: CaptionTrack; language: LanguageModel | undefined }
-  | { ok: false; language: LanguageModel | undefined }
+  | { ok: false; language: LanguageModel | undefined; reason: 'no-track' | 'fetch-failed' }
 > {
   const track = response.captions?.playerCaptionsTracklistRenderer?.captionTracks?.[0];
   const language = resolveLanguage(track?.languageCode) ?? undefined;
   if (track === undefined) {
     if (__E2E__) console.info('[speed-watcher] wpm: no caption tracks for this video — estimated');
-    return { ok: false, language: undefined };
+    return { ok: false, language: undefined, reason: 'no-track' };
   }
   const result = await fetchCaptions(track, videoId, {
     buffer: captureBuffer,
@@ -244,7 +240,7 @@ async function fetchAndParseCaptions(
   if (__E2E__) window.__speedwatcherCaptionSource = result.source;
   if (result.json === null) {
     if (__E2E__) console.info('[speed-watcher] wpm: caption fetch failed — estimated');
-    return { ok: false, language };
+    return { ok: false, language, reason: 'fetch-failed' };
   }
   const { words, cues } = parseYouTubeJson3(result.json);
   return { ok: true, words, cues, track, language };
@@ -300,7 +296,7 @@ async function measureOnce(startedAt: number): Promise<void> {
   const site = location.hostname.replace(/^www\./, '');
   const parsed = await fetchAndParseCaptions(response, videoId);
   if (!parsed.ok) {
-    void showEstimatedPill(videoId, settings, site, parsed.language, response.videoDetails, startedAt);
+    void showEstimatedPill(videoId, settings, site, parsed.language, response.videoDetails, startedAt, parsed.reason);
     return;
   }
   const { words, cues, track, language } = parsed;
@@ -311,7 +307,7 @@ async function measureOnce(startedAt: number): Promise<void> {
   const kind = track.kind ?? 'manual';
   const lang = track.languageCode ?? '?';
   if (!logParsedRates(videoId, kind, lang, words, cues)) {
-    void showEstimatedPill(videoId, settings, site, language, response.videoDetails, startedAt);
+    void showEstimatedPill(videoId, settings, site, language, response.videoDetails, startedAt, 'capture-missed');
     return;
   }
 
@@ -356,18 +352,22 @@ async function showEstimatedPill(
   site: string,
   language?: LanguageModel,
   videoDetails?: PlayerResponse['videoDetails'],
-  startedAt?: number,
+  startedAt?: number, captionStatus?: CaptionStatus,
 ): Promise<void> {
   const contentType = resolveContentType(settings, site, 'generic');
   // No track language → the UI language's model drives math and range alike.
   const model = language ?? resolveLanguage(normalizeLanguageCode(navigator.language) ?? undefined) ?? undefined;
   const seeded = await channelSeededRate(videoDetails, model);
-  controller.renderRecommendation(videoId, seeded ?? priorMidpoint(contentType), 'estimated', contentType, settings, site, null, model, startedAt);
-  // Demand proxy (Phase-2 STT gate): one local count per estimated render.
-  // Best-effort like logAction — a dead bridge must not suppress the pill.
+  controller.renderRecommendation(videoId, seeded ?? priorMidpoint(contentType), 'estimated', contentType, settings, site, null, model, startedAt, captionStatus);
+  // Local-only counters (demand proxy + collapse journal): best-effort — a dead bridge must not suppress the pill.
   void bridge
     .request({ type: 'demand:increment', contentType })
     .catch(() => undefined);
+  if (captionStatus !== undefined) {
+    void bridge
+      .request({ type: 'journal:append', reason: captionStatus, videoId })
+      .catch(() => undefined);
+  }
 }
 
 /** Arms skip-silence on an apply: the actuator dips to the pause rate

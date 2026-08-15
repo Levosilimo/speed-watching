@@ -19,6 +19,7 @@ import {
   type UiLanguageSetting,
 } from '../../lib/settings';
 import { SkipSilenceStore } from '../../lib/skip-silence';
+import { ERROR_JOURNAL_STORAGE_KEY, ErrorJournal, type ErrorJournalEntry } from '../../lib/error-journal';
 import { resolveLanguage } from '../../lib/languages';
 import { TIME_SAVED_STORAGE_KEY, TimeSavedStore } from '../../lib/time-saved';
 import {
@@ -29,6 +30,7 @@ import {
   unitLabel,
   type UiLocale,
 } from '../../lib/i18n';
+import { CAPTION_STATUS_KEYS } from '../../ui/pill';
 
 // The STT demand-gate diagnostics are dev-only (lib-13: store-review
 // liabilities); ./dev.ts is imported only in dev builds, so the store bundle
@@ -46,16 +48,17 @@ function el(id: string): HTMLElement {
 }
 
 // ── Settings: single storage namespace ───────────────────────────────────
-// chrome.storage.local holds exactly seven keys — 'sw.settings'
+// chrome.storage.local holds exactly eight keys — 'sw.settings'
 // (SettingsStore), 'sw.overrideLog' (OverrideLog), 'sw.demand' (DemandStore),
 // 'sw.channelRates' (ChannelMemory), 'sw.timeSavedSec' (TimeSavedStore),
-// 'sw.nudge' (NudgeStore), and 'sw.skipSilence' (SkipSilenceStore); see the
-// lib/settings.ts module doc.
+// 'sw.nudge' (NudgeStore), 'sw.skipSilence' (SkipSilenceStore), and
+// 'sw.errorJournal' (ErrorJournal); see the lib/settings.ts module doc.
 
 const settingsStore = new SettingsStore(browser.storage.local, SETTINGS_STORAGE_KEY);
 const overrideLog = new OverrideLog(browser.storage.local);
 const timeSavedStore = new TimeSavedStore(browser.storage.local);
 const skipSilenceStore = new SkipSilenceStore(browser.storage.local);
+const errorJournal = new ErrorJournal(browser.storage.local);
 
 // ── Settings: WPM Slider ─────────────────────────────────────────────────
 
@@ -116,6 +119,8 @@ function renderLocale(): void {
   // The saved-time headline is localized text (the other habit stats are
   // numbers) — re-render it on a language switch.
   void refreshHabits();
+  // The journal lines carry localized reason copy — re-render them too.
+  void refreshJournal();
 }
 
 /** P2a: the slider's numeric scale is the English wpm scale, so next to it
@@ -338,6 +343,36 @@ async function refreshHabits(): Promise<void> {
   renderHabits(habits, savedSec);
 }
 
+// ── Error journal: recent caption failures (shipped, local-only) ────────
+
+const journalList = el('journal-list');
+const journalEmpty = el('journal-empty');
+
+function renderJournal(entries: ErrorJournalEntry[]): void {
+  journalList.innerHTML = '';
+  journalEmpty.hidden = entries.length > 0;
+  for (const entry of entries) {
+    const li = document.createElement('li');
+    const when = new Date(entry.ts).toLocaleString(undefined, {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+    const video = entry.videoId === undefined ? '' : ` (${entry.videoId})`;
+    li.textContent = `${when} — ${t(CAPTION_STATUS_KEYS[entry.reason], uiLocale)}${video}`;
+    journalList.appendChild(li);
+  }
+}
+
+async function refreshJournal(): Promise<void> {
+  renderJournal(await errorJournal.entries());
+}
+
+el('journal-clear').addEventListener('click', () => {
+  void errorJournal.clear().then(() => void refreshJournal());
+});
+
 // ── Load persisted state ─────────────────────────────────────────────────
 
 async function loadSettings(): Promise<void> {
@@ -369,6 +404,7 @@ async function loadSettings(): Promise<void> {
 uiLocale = resolveUiLanguage('auto', navigator.language);
 renderLocale();
 void loadSettings();
+void refreshJournal();
 
 // Listen for storage changes from other contexts (e.g., pill apply), with a
 // focus/visibility fallback: a backgrounded or discarded options tab can
@@ -379,6 +415,9 @@ browser.storage.local.onChanged.addListener((changes) => {
   }
   if (changes[TIME_SAVED_STORAGE_KEY] !== undefined) {
     void refreshHabits();
+  }
+  if (changes[ERROR_JOURNAL_STORAGE_KEY] !== undefined) {
+    void refreshJournal();
   }
 });
 

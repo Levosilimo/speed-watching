@@ -345,10 +345,11 @@ describe('channel rate memory wiring', () => {
     channelRates.set('UC-e2e-fixture', { rate: 150, unit: 'wpm', language: 'en', ts: 1 });
     await renderEstimatedWithLanguage();
     // The pill renders the seeded rate's recommendation, still labeled
-    // estimated — the prior got smarter, the tier did not.
+    // estimated — the prior got smarter, the tier did not — with the
+    // fetch-failed collapse reason the failed fetch produced.
     const seeded = recommend({ naturalRate: 150, tier: 'estimated', contentType: 'generic', platformMax: 2 });
     expect(pillLabel()).toBe(seeded.label);
-    expect(pillTier()).toBe('estimated');
+    expect(pillTier()).toBe('estimated · captions unavailable');
   });
 
   it('ignores channel memory measured in another language', async () => {
@@ -361,7 +362,7 @@ describe('channel rate memory wiring', () => {
       platformMax: 2,
     });
     expect(pillLabel()).toBe(fallback.label);
-    expect(pillTier()).toBe('estimated');
+    expect(pillTier()).toBe('estimated · captions unavailable');
   });
 
   it('does not remember a rate without a stable channel key', async () => {

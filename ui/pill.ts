@@ -21,12 +21,18 @@ import {
   tierKeyFromLabel,
   tierLabel,
   unitLabel,
+  type I18nKey,
   type UiLocale,
 } from '../lib/i18n';
 import type { UiLanguageSetting } from '../lib/settings';
 
 // ── Types (matches the seam contract exactly) ────────────────────────────
 export type PillMode = 'recommend' | 'warning' | 'unreachable' | 'music' | 'none';
+
+/** Why the estimated tier rendered instead of a measurement: the video has
+ * no caption tracks, the caption chain collapsed, or the payload parsed
+ * empty. Absent from every measured-tier state. */
+export type CaptionStatus = 'no-track' | 'fetch-failed' | 'capture-missed';
 
 /** How the current rate got applied: by auto-apply, by the user, or not
  * applied. Absent from a PillState ≡ 'none'. */
@@ -45,6 +51,10 @@ export interface PillState {
    * absent → the en 250–275 wpm defaults. Drives the warning copy and the
    * first-run line's unit. */
   range?: RateRange;
+  /** The caption-collapse reason on the estimated tier; the tier badge
+   * appends its copy ('estimated · no captions found'). Absent on measured
+   * tiers and on estimated renders without a collapse (uncountable cues). */
+  captionStatus?: CaptionStatus;
   /** Auto-applied this video; shows the Stop-auto button in recommend mode. */
   applied?: AppliedSource;
   /** The rate the stop-auto/dismiss undo restores (the pre-auto rate);
@@ -399,6 +409,12 @@ function localizedLabel(state: PillState, locale: UiLocale): string {
   return prefix === '' ? text : prefix + text.replace(/^→\s*/, '');
 }
 
+export const CAPTION_STATUS_KEYS: Record<CaptionStatus, I18nKey> = {
+  'no-track': 'pill.caption.noTrack',
+  'fetch-failed': 'pill.caption.fetchFailed',
+  'capture-missed': 'pill.caption.captureMissed',
+};
+
 /** Localized tier badge; unknown labels pass through unchanged. */
 function localizedTier(tierLabelText: string, locale: UiLocale): string {
   if (locale === 'en') return tierLabelText;
@@ -529,9 +545,14 @@ function render(
   // First-run onboarding line
   renderFirstRun(dom, state, locale);
 
-  // Tier
+  // Tier; the estimated tier appends the caption-collapse reason when one
+  // exists ('estimated · no captions found').
   if (state.tierLabel) {
-    dom.tierEl.textContent = localizedTier(state.tierLabel, locale);
+    const collapse =
+      state.captionStatus === undefined
+        ? ''
+        : ` · ${t(CAPTION_STATUS_KEYS[state.captionStatus], locale)}`;
+    dom.tierEl.textContent = localizedTier(state.tierLabel, locale) + collapse;
     dom.tierEl.hidden = false;
   } else {
     dom.tierEl.hidden = true;
