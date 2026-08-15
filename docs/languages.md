@@ -96,7 +96,10 @@ comprehension-measured; its target is derived.
 † ru's, uk's, pl's and cs's priors are **corpus-measured** (2026-08,
 docs/phase0-russian-corpus.md, docs/phase0-slavic-corpus.md); their
 **targets and ceilings remain derived** (168/180, 185/200 — a rate corpus
-measures speech rate, not comprehension of the safe zone).
+measures speech rate, not comprehension of the safe zone). sr carries
+pl/cs's corpus-validated band wholesale (shared family numbers, like
+ms/tl carry id's) — its own probe found no sr ASR on YouTube, so the
+band is the family share, not an sr measurement.
 
 ‡ ar's, id's, vi's (and ms/tl's, copied from id) priors are
 **corpus-measured** (2026-08, docs/phase0-captionless-corpus.md); their

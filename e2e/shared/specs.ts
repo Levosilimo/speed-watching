@@ -57,6 +57,13 @@ declare global {
       activeIndex: number;
       applyFor(sec: number): void;
     };
+    /** Generic-path reapplier witness (entrypoints/generic.content.ts,
+     * __E2E__-gated): active plus the last reassert timestamp. */
+    __speedwatcherReapplier?: {
+      active: boolean;
+      lastAssertAt: number | null;
+      intervalMs: number;
+    };
   }
 }
 
@@ -104,6 +111,13 @@ export interface E2EDriver {
   /** How many /youtubei/v1/get_transcript POSTs the harness saw (the
    * ANDROID-tail transcript fallback, lib/transcript.ts). */
   readTranscriptAttempts(): Promise<number>;
+  /** The generic reapplier's witness, or null on pages without the hook
+   * (youtube watch pages have no reapplier). */
+  readReapplier(): Promise<{ active: boolean; lastAssertAt: number | null; intervalMs: number } | null>;
+  /** Wait until the reapplier's last-assert timestamp passes `after` — the
+   * tick witness: a running loop stamps every interval, a detached one never.
+   * Throws on timeout. */
+  waitForReassertPast(after: number, timeoutMs?: number): Promise<void>;
   /** The page's browser UI language (navigator.language) — the estimated
    * tier's UI-locale language fallback reads it, so the spec mirror needs
    * the same input the content script uses. */
@@ -538,6 +552,7 @@ export async function runTranscriptSpecs(driver: E2EDriver): Promise<void> {
   // (b) Fresh navigation: WEB 200-empties and no capture stub on the page,
   // so the ANDROID tail must land on get_transcript — the bare baseUrl
   // re-fetch would 200-empty too, and the lane fails without the fallback.
+  const attemptsBefore = await driver.readTranscriptAttempts();
   await driver.navigateToWatch(fixture);
   const state = expectState(await driver.readPillState(), fixture);
   const source = await driver.readCaptionSource();
@@ -577,8 +592,9 @@ export async function runTranscriptSpecs(driver: E2EDriver): Promise<void> {
     );
   }
 
-  // (c) Network-level: the get_transcript POST fired.
-  if ((await driver.readTranscriptAttempts()) === 0) {
+  // (c) Network-level: the get_transcript POST fired for this navigation
+  // (delta form — an earlier test's POST must not satisfy the assertion).
+  if ((await driver.readTranscriptAttempts()) <= attemptsBefore) {
     throw new Error(`${fixture}: get_transcript POST never fired`);
   }
 }
@@ -700,9 +716,18 @@ export async function runGenericSpecs(driver: E2EDriver): Promise<void> {
   await driver.waitForPlaybackRate(state.multiplier);
 
   // (d) A user's manual rate is respected: the loop only re-asserts resets
-  // to 1.0, so a manual 1.25 must stick past a re-check interval.
+  // to 1.0, so a manual 1.25 must stick past a re-check interval. The
+  // witness: one interval tick past the pre-set timestamp (the ratechange
+  // from setting 1.25 itself stamps once — a later stamp can only be the
+  // interval).
+  const reBeforeManual = await driver.readReapplier();
+  if (reBeforeManual === null || !reBeforeManual.active) {
+    throw new Error('generic: reapplier not active before the manual-rate check');
+  }
   await driver.setPlaybackRate(1.25);
-  await driver.sleep(3500); // > one re-check interval (2s)
+  await driver.waitForReassertPast(
+    (reBeforeManual.lastAssertAt ?? Date.now()) + reBeforeManual.intervalMs,
+  );
   const manual = await driver.readPlaybackRate();
   if (manual === null || Math.abs(manual - 1.25) > RATE_TOLERANCE) {
     throw new Error(
@@ -710,10 +735,14 @@ export async function runGenericSpecs(driver: E2EDriver): Promise<void> {
     );
   }
 
-  // (e) Dismiss stops the loop: after dismiss, a reset sticks.
+  // (e) Dismiss stops the loop: the reapplier is inactive the moment the
+  // pill dismisses, and a reset then sticks (nothing left to re-assert).
   await driver.dismissPill();
+  const afterDismiss = await driver.readReapplier();
+  if (afterDismiss === null || afterDismiss.active) {
+    throw new Error('generic: reapplier still active after dismiss');
+  }
   await driver.resetPlaybackRate();
-  await driver.sleep(3500); // > one re-check interval (2s)
   const after = await driver.readPlaybackRate();
   if (after === null || Math.abs(after - 1) > RATE_TOLERANCE) {
     throw new Error(`generic: playbackRate ${after} after dismiss + reset, expected 1 (loop stopped)`);
@@ -937,8 +966,18 @@ export async function runAutoSpecs(driver: E2EDriver): Promise<void> {
     }
     await driver.resetPlaybackRate();
     await driver.waitForPlaybackRate(g.multiplier);
+    const reBeforeManual = await driver.readReapplier();
+    if (reBeforeManual === null || !reBeforeManual.active) {
+      throw new Error('generic: reapplier not active before the manual-rate check');
+    }
     await driver.setPlaybackRate(1.25);
-    await driver.sleep(3500); // > one re-check interval (2s)
+    // The override (markUserOverride) detaches the loop the moment the
+    // rate diverges — the delta witness for "the loop must not fight the
+    // user": the loop that could re-assert is gone.
+    const afterManual = await driver.readReapplier();
+    if (afterManual === null || afterManual.active) {
+      throw new Error('generic: reapplier still active after the manual 1.25 (override did not detach)');
+    }
     const gManual = await driver.readPlaybackRate();
     if (gManual === null || Math.abs(gManual - 1.25) > RATE_TOLERANCE) {
       throw new Error(
@@ -951,9 +990,13 @@ export async function runAutoSpecs(driver: E2EDriver): Promise<void> {
     }
     // E1: the override itself must have detached the re-assert loop — a
     // later reset to 1.0 sticks (without the fix the sentinel re-asserts the
-    // old auto rate and fights the reset).
+    // old auto rate and fights the reset). The witness: the reapplier is
+    // inactive the moment markUserOverride runs.
+    const afterOverride = await driver.readReapplier();
+    if (afterOverride === null || afterOverride.active) {
+      throw new Error('generic: reapplier still active after the user override');
+    }
     await driver.resetPlaybackRate();
-    await driver.sleep(3500); // > one re-check interval (2s)
     const gReset = await driver.readPlaybackRate();
     if (gReset === null || Math.abs(gReset - 1) > RATE_TOLERANCE) {
       throw new Error(
@@ -961,8 +1004,11 @@ export async function runAutoSpecs(driver: E2EDriver): Promise<void> {
       );
     }
     await driver.stopAuto();
+    const afterStop = await driver.readReapplier();
+    if (afterStop === null || afterStop.active) {
+      throw new Error('generic: reapplier still active after stop-auto');
+    }
     await driver.resetPlaybackRate();
-    await driver.sleep(3500); // > one re-check interval (2s)
     const gAfter = await driver.readPlaybackRate();
     if (gAfter === null || Math.abs(gAfter - 1) > RATE_TOLERANCE) {
       throw new Error(
@@ -1099,8 +1145,17 @@ export async function runJourneySpecs(driver: E2EDriver): Promise<void> {
     if (g.applied !== 'auto') {
       throw new Error(`journey-generic: pill applied ${g.applied}, expected auto`);
     }
+    const reBeforeManual = await driver.readReapplier();
+    if (reBeforeManual === null || !reBeforeManual.active) {
+      throw new Error('journey-generic: reapplier not active before the manual-rate check');
+    }
     await driver.setPlaybackRate(1.25);
-    await driver.sleep(3500); // > one re-check interval (2s)
+    // The override detaches the loop the moment the rate diverges — the
+    // delta witness for "the loop must not fight the user".
+    const afterManual = await driver.readReapplier();
+    if (afterManual === null || afterManual.active) {
+      throw new Error('journey-generic: reapplier still active after the manual 1.25 (override did not detach)');
+    }
     const manual = await driver.readPlaybackRate();
     if (manual === null || Math.abs(manual - 1.25) > RATE_TOLERANCE) {
       throw new Error(
@@ -1113,12 +1168,15 @@ export async function runJourneySpecs(driver: E2EDriver): Promise<void> {
         `journey-generic: pill applied ${overridden.applied}, expected user after the manual override`,
       );
     }
+    const afterOverride = await driver.readReapplier();
+    if (afterOverride === null || afterOverride.active) {
+      throw new Error('journey-generic: reapplier still active after the user override');
+    }
     await driver.resetPlaybackRate();
-    await driver.sleep(3500); // > one re-check interval (2s)
-    const afterOverride = await driver.readPlaybackRate();
-    if (afterOverride === null || Math.abs(afterOverride - 1) > RATE_TOLERANCE) {
+    const afterOverrideRate = await driver.readPlaybackRate();
+    if (afterOverrideRate === null || Math.abs(afterOverrideRate - 1) > RATE_TOLERANCE) {
       throw new Error(
-        `journey-generic: playbackRate ${afterOverride} after override + reset, expected 1 (loop detached)`,
+        `journey-generic: playbackRate ${afterOverrideRate} after override + reset, expected 1 (loop detached)`,
       );
     }
 
@@ -1128,6 +1186,10 @@ export async function runJourneySpecs(driver: E2EDriver): Promise<void> {
       throw new Error(`journey-generic: auto did not re-arm on the next video (${rearmed.applied})`);
     }
     await driver.stopAuto();
+    const afterStopAuto = await driver.readReapplier();
+    if (afterStopAuto === null || afterStopAuto.active) {
+      throw new Error('journey-generic: reapplier still active after stop-auto');
+    }
     const stopped = expectState(await driver.readPillState(), 'journey-generic');
     if (stopped.applied !== 'none') {
       throw new Error(`journey-generic: pill applied ${stopped.applied}, expected none after stop-auto`);
@@ -1139,11 +1201,10 @@ export async function runJourneySpecs(driver: E2EDriver): Promise<void> {
       );
     }
     await driver.resetPlaybackRate();
-    await driver.sleep(3500); // > one re-check interval (2s)
-    const afterStop = await driver.readPlaybackRate();
-    if (afterStop === null || Math.abs(afterStop - 1) > RATE_TOLERANCE) {
+    const afterStopRate = await driver.readPlaybackRate();
+    if (afterStopRate === null || Math.abs(afterStopRate - 1) > RATE_TOLERANCE) {
       throw new Error(
-        `journey-generic: playbackRate ${afterStop} after stop-auto + reset, expected 1 (loop detached)`,
+        `journey-generic: playbackRate ${afterStopRate} after stop-auto + reset, expected 1 (loop detached)`,
       );
     }
   } finally {

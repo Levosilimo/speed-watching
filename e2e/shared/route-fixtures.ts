@@ -24,6 +24,13 @@ export const routeCounters = {
   transcriptPosts: 0,
 };
 
+/** Zero the counters — the specs' before/after-delta assertions must not
+ * see POSTs from earlier tests in the same worker. */
+export function resetRouteCounters(): void {
+  routeCounters.androidPosts = 0;
+  routeCounters.transcriptPosts = 0;
+}
+
 export interface RouteFixtureOptions {
   /** While true, the caption-chain routes (timedtext, the innertube player
    * POST, get_transcript) abort with a network error — the offline class's

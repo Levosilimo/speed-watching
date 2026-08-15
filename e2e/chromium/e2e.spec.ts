@@ -36,6 +36,7 @@ import {
 } from '../shared/specs';
 import {
   fixtureBase,
+  resetRouteCounters,
   routeCounters,
   routeFixtures,
 } from '../shared/route-fixtures';
@@ -144,6 +145,24 @@ test.beforeAll(async () => {
     },
     async readTranscriptAttempts() {
       return routeCounters.transcriptPosts;
+    },
+    async readReapplier() {
+      return page.evaluate(() => {
+        const hook = window.__speedwatcherReapplier;
+        return hook === undefined
+          ? null
+          : { active: hook.active, lastAssertAt: hook.lastAssertAt, intervalMs: hook.intervalMs };
+      });
+    },
+    async waitForReassertPast(after, timeoutMs = 8_000) {
+      await page.waitForFunction(
+        (target) => {
+          const hook = window.__speedwatcherReapplier;
+          return hook !== undefined && hook.lastAssertAt !== null && hook.lastAssertAt > target;
+        },
+        after,
+        { timeout: timeoutMs },
+      );
     },
     async readBrowserLanguage() {
       return page.evaluate(() => navigator.language);
@@ -294,11 +313,19 @@ test('manifest registers the measurement scripts and the chrome bridge', async (
   );
 });
 
+test.beforeEach(() => {
+  // The route counters are worker-shared module state: a test's delta
+  // assertions must start from zero, not from an earlier test's POSTs.
+  resetRouteCounters();
+});
+
 test('pill renders, applies, dismisses; music/unreachable suppress Apply; WEB-blocked fixture triggers the ANDROID fallback', async () => {
+  const androidBefore = routeCounters.androidPosts;
   await runPillSpecs(driver);
   // Network-layer proof the ANDROID innertube fallback actually fired: the
-  // web-blocked fixture must have produced one youtubei/v1/player POST.
-  expect(routeCounters.androidPosts).toBeGreaterThan(0);
+  // web-blocked fixture must have produced one youtubei/v1/player POST
+  // during this test (delta, not a cumulative count).
+  expect(routeCounters.androidPosts).toBeGreaterThan(androidBefore);
 });
 
 test('pot-gated fixture: bare timedtext 200-empties; the capture path measures from the signed response', async () => {

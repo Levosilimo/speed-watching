@@ -374,6 +374,60 @@ describe('triggerCcAutomation interaction gates (wave-5 complementary)', () => {
   });
 });
 
+describe('wait-loop deadline arithmetic (wave-fixb batch B)', () => {
+  it('waitForVisible gives up at exactly the deadline (>=), not a poll early', async () => {
+    const { triggerCcAutomation } = await freshTrigger();
+    // CC present (no wait), settings absent: the drive parks in the
+    // settings wait, whose deadline is 3000 from the call.
+    const { cc } = stubPlayerControls();
+    cc.setAttribute('aria-pressed', 'true');
+    document.querySelector('button.ytp-settings-button')?.remove();
+    let resolved = false;
+    const drive = triggerCcAutomation('v1').then((result) => {
+      resolved = true;
+      return result;
+    });
+    await vi.advanceTimersByTimeAsync(2999); // deadline − 1: still polling
+    expect(resolved).toBe(false);
+    await vi.advanceTimersByTimeAsync(1); // exactly the deadline: the >= flips
+    expect(resolved).toBe(true);
+    expect(await drive).toEqual({ ccWasOn: true, changed: false });
+  });
+
+  it('waitForMenuRow gives up at exactly its deadline, after the menu settle', async () => {
+    const { triggerCcAutomation } = await freshTrigger();
+    const { cc } = stubPlayerControls();
+    cc.setAttribute('aria-pressed', 'true'); // CC already on: no flip, no cc wait
+    document.querySelector('.ytp-panel-menu')?.replaceChildren(); // no Subtitles row
+    let resolved = false;
+    const drive = triggerCcAutomation('v1').then((result) => {
+      resolved = true;
+      return result;
+    });
+    // The row wait starts after the settings click + 400ms settle.
+    await vi.advanceTimersByTimeAsync(3399); // row deadline − 1
+    expect(resolved).toBe(false);
+    await vi.advanceTimersByTimeAsync(1); // exactly 400 + 3000
+    expect(resolved).toBe(true);
+    expect(await drive).toEqual({ ccWasOn: true, changed: false });
+  });
+
+  it('waitForWordTimedCapture gives up at exactly its timeout', async () => {
+    const { waitForWordTimedCapture } = await freshTrigger();
+    stubPlayerControls();
+    let resolved = false;
+    const capture = waitForWordTimedCapture(new TimedtextBuffer(), 'v1', () => undefined, 1000, 100);
+    void capture.then(() => {
+      resolved = true;
+    });
+    await vi.advanceTimersByTimeAsync(999);
+    expect(resolved).toBe(false);
+    await vi.advanceTimersByTimeAsync(1); // exactly the timeout
+    expect(resolved).toBe(true);
+    expect(await capture).toBeNull();
+  });
+});
+
 describe('pickTrackRow fallbacks (wave-5 batch B)', () => {
   function trackPickerRows(labels: string[]): void {
     const trackMenu = document.querySelector<HTMLElement>('.ytp-panel-menu:nth-of-type(2)');

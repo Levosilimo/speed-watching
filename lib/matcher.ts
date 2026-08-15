@@ -50,8 +50,11 @@ export class RateReapplier {
   private pause: number | null = null;
   private platformMax = 1;
   private timer: ReturnType<typeof setInterval> | null = null;
+  /** When the loop last ran (the E2E hook's tick witness — the specs wait
+   * for this to advance past a full interval instead of sleeping). */
+  lastAssertAt: number | null = null;
 
-  constructor(private readonly intervalMs = 2000) {}
+  constructor(readonly intervalMs = 2000) {}
 
   get active(): boolean {
     return this.video !== null;
@@ -105,6 +108,7 @@ export class RateReapplier {
   private readonly reassert = (): void => {
     const video = this.video;
     if (video === null || this.applied === null) return;
+    this.lastAssertAt = Date.now();
     // The player replaced the element (SPA re-render): nothing left to hold.
     if (!video.isConnected) {
       this.stop();

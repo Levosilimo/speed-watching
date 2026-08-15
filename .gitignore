@@ -67,3 +67,6 @@ scripts/data/stt-battery/clips/
 reports/
 .stryker-temp/
 .stryker-tmp/
+
+# Vitest v8 coverage output
+coverage/

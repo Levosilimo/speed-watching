@@ -321,7 +321,11 @@ export const LANGUAGES: Record<string, LanguageModel> = {
   },
   pl: { code: 'pl', unit: 'wpm', target: 185, ceiling: 200, tokenizerMode: 'words', derived: true, priorsSource: 'corpus', pauseShare: 0.38, priors: { min: 96, max: 141 } },
   cs: { code: 'cs', unit: 'wpm', target: 185, ceiling: 200, tokenizerMode: 'words', derived: true, priorsSource: 'corpus', pauseShare: 0.35, priors: { min: 96, max: 141 } },
-  sr: { code: 'sr', unit: 'wpm', target: 185, ceiling: 200, tokenizerMode: 'words', derived: true, priors: { min: 96, max: 141 } },
+  // sr carries pl/cs's corpus-validated band wholesale (shared family
+  // numbers, like ms/tl carry id's) — its own probe found no sr ASR on
+  // YouTube (docs/phase0-slavic-corpus.md), so the evidence tier is the
+  // shared band's, not an sr measurement.
+  sr: { code: 'sr', unit: 'wpm', target: 185, ceiling: 200, tokenizerMode: 'words', derived: true, priorsSource: 'corpus', priors: { min: 96, max: 141 } },
 };
 
 /** Pill label suffixes per rate unit. 'morae' — the standard plural of
