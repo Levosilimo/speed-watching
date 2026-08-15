@@ -10,3 +10,10 @@ pre-commit:
       run: bun run scripts/audit-disabled-assertions.ts
     audit-lanes:
       run: bun run scripts/audit-lanes.ts
+
+# Push-time backstop: a --no-verify commit skips pre-commit, so the hard gate
+# re-runs here — disabled assertions cannot reach the remote either way.
+pre-push:
+  commands:
+    audit-disabled:
+      run: bun run scripts/audit-disabled-assertions.ts
