@@ -303,8 +303,9 @@ export async function runPillSpecs(driver: E2EDriver): Promise<void> {
     if ((state.reason ?? null) !== rec.reason) {
       throw new Error(`${fixture}: pill reason ${state.reason} !== expected ${rec.reason}`);
     }
-    // Measured tiers never carry a caption-collapse reason.
-    if (state.captionStatus !== undefined) {
+    // Measured tiers never carry a caption-collapse reason (WebDriver
+    // serializes the absent field as null — normalize before comparing).
+    if ((state.captionStatus ?? null) !== null) {
       throw new Error(`${fixture}: measured tier carries captionStatus ${state.captionStatus}`);
     }
     const source = await driver.readCaptionSource();
@@ -484,8 +485,9 @@ export async function runCaptureSpecs(driver: E2EDriver): Promise<void> {
       `${fixture}: pill multiplier ${state.multiplier} !== expected ${rec.multiplier}`,
     );
   }
-  // The measured capture tier carries no collapse reason.
-  if (state.captionStatus !== undefined) {
+  // The measured capture tier carries no collapse reason (WebDriver
+  // serializes the absent field as null — normalize before comparing).
+  if ((state.captionStatus ?? null) !== null) {
     throw new Error(`${fixture}: measured capture tier carries captionStatus ${state.captionStatus}`);
   }
   // The word-timed measurement itself (not just the pill): the captured
@@ -564,8 +566,9 @@ export async function runTranscriptSpecs(driver: E2EDriver): Promise<void> {
   if (state.tierLabel !== 'from captions') {
     throw new Error(`${fixture}: pill tierLabel ${state.tierLabel}, expected from captions`);
   }
-  // The measured transcript tier carries no collapse reason.
-  if (state.captionStatus !== undefined) {
+  // The measured transcript tier carries no collapse reason (WebDriver
+  // serializes the absent field as null — normalize before comparing).
+  if ((state.captionStatus ?? null) !== null) {
     throw new Error(`${fixture}: measured transcript tier carries captionStatus ${state.captionStatus}`);
   }
   if (Math.abs(state.rateWpm - expectedRate) > WPM_TOLERANCE) {
