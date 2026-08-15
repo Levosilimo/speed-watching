@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { ChannelMemory } from '../lib/channel-memory';
 import { DemandStore } from '../lib/demand';
+import { ErrorJournal } from '../lib/error-journal';
 import { NudgeStore } from '../lib/nudge';
 import { TimeSavedStore } from '../lib/time-saved';
 import {
@@ -75,6 +76,7 @@ function serve(
     log: new OverrideLog(mockStorage()),
     channels: new ChannelMemory(mockStorage()),
     forwardDemand,
+    forwardJournalAppend: vi.fn(),
     forwardNudgeRecordApply: vi.fn(),
     forwardNudgeDismiss: vi.fn(),
     forwardAccrue,
@@ -475,6 +477,33 @@ describe('messaging bridge', () => {
     const record = await background.get();
     expect(record.estimatedCount).toBe(2);
     expect(record.byContentType.generic).toBe(2);
+  });
+
+  it('forwards journal:append to the background single writer and resolves on its response', async () => {
+    const { host } = fakeWindow();
+    const background = new ErrorJournal(mockStorage());
+    const deps = serve(host);
+    deps.forwardJournalAppend = vi.fn((entry) => background.append(entry));
+    const client = createBridgeClient(host);
+    await client.request({ type: 'journal:append', reason: 'no-track', videoId: 'abc' });
+    await client.request({ type: 'journal:append', reason: 'fetch-failed' });
+    const entries = await background.entries();
+    expect(entries).toEqual([
+      { ts: expect.any(Number), reason: 'no-track', videoId: 'abc' },
+      { ts: expect.any(Number), reason: 'fetch-failed' },
+    ]);
+  });
+
+  it('rejects journal:append with an unknown reason before forwarding (shape validation)', async () => {
+    const { host } = fakeWindow();
+    const forwardJournalAppend = vi.fn();
+    const deps = serve(host);
+    deps.forwardJournalAppend = forwardJournalAppend;
+    const client = createBridgeClient(host);
+    await expect(
+      client.request({ type: 'journal:append', reason: 'bogus' as never }),
+    ).rejects.toThrow('invalid entry');
+    expect(forwardJournalAppend).not.toHaveBeenCalled();
   });
 
   it('rejects demand:increment with an unknown content type before forwarding (shape validation)', async () => {

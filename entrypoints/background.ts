@@ -3,8 +3,10 @@ import { defineBackground } from 'wxt/utils/define-background';
 import { createCaptureOrchestrator } from '../lib/capture-orchestrator';
 import { isOffscreenEvent, isOptionsMessage } from '../lib/audio-probe';
 import { DemandStore } from '../lib/demand';
+import { ErrorJournal } from '../lib/error-journal';
 import {
   isDemandIncrementMessage,
+  isJournalAppendMessage,
   isNudgeDismiss,
   isNudgeRecordApply,
   isTimeSavedAccrueMessage,
@@ -35,6 +37,7 @@ export default defineBackground(() => {
   // here, so one promise chain covers all frames instead of per-frame
   // get→set interleaves.
   const demand = new DemandStore(browser.storage.local);
+  const errorJournal = new ErrorJournal(browser.storage.local);
   const nudge = new NudgeStore(browser.storage.local);
   const timeSaved = new TimeSavedStore(browser.storage.local);
   const settings = new SettingsStore(browser.storage.local);
@@ -69,6 +72,10 @@ export default defineBackground(() => {
       }
       if (isDemandIncrementMessage(message)) {
         void demand.increment(message.contentType).then(sendResponse);
+        return true;
+      }
+      if (isJournalAppendMessage(message)) {
+        void errorJournal.append({ reason: message.reason, videoId: message.videoId }).then(sendResponse);
         return true;
       }
       if (isNudgeRecordApply(message)) {

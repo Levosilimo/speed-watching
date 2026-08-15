@@ -50,10 +50,10 @@ describe('options accessibility structure', () => {
   });
 
   it('marks the shipped section labels as headings', () => {
-    // dev.ts injects its own div.section-label sections; the shipped ten
-    // (incl. the interface-language, Integration, Auto-apply, and Skip
-    // silence sections) are the only h2s with the class.
-    expect(document.querySelectorAll('h2.section-label')).toHaveLength(10);
+    // dev.ts injects its own div.section-label sections; the shipped eleven
+    // (incl. the interface-language, Integration, Auto-apply, Skip silence,
+    // and Recent caption failures sections) are the only h2s with the class.
+    expect(document.querySelectorAll('h2.section-label')).toHaveLength(11);
   });
 
   it('keeps the Auto-apply section in slot 2, right after Target (P3)', () => {

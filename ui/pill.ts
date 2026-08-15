@@ -409,7 +409,7 @@ function localizedLabel(state: PillState, locale: UiLocale): string {
   return prefix === '' ? text : prefix + text.replace(/^→\s*/, '');
 }
 
-const CAPTION_STATUS_KEYS: Record<CaptionStatus, I18nKey> = {
+export const CAPTION_STATUS_KEYS: Record<CaptionStatus, I18nKey> = {
   'no-track': 'pill.caption.noTrack',
   'fetch-failed': 'pill.caption.fetchFailed',
   'capture-missed': 'pill.caption.captureMissed',

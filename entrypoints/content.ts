@@ -163,9 +163,8 @@ export default defineContentScript({
         controller.userApply(current.recommendation.multiplier);
       } else if (controller.pillState !== null && controller.pillState.mode !== 'none') controller.dismissCurrent();
     });
-    // Measured-rate provider (Tier 4): relays wpm:get to the answer builder;
-    // no source guard, like the shortcut relay (the bridge validates the
-    // response, and the channel carries only the minimized measurement).
+    // Measured-rate provider (Tier 4): relays wpm:get to the answer builder —
+    // no source guard, like the shortcut relay (the bridge validates the response).
     window.addEventListener('message', (event: MessageEvent): void => {
       if (!isWpmEnvelope(event.data) || !isWpmGetRequest(event.data.message)) return;
       window.postMessage({ channel: WPM_CHANNEL, message: buildWpmResponse(controller.current) }, '*');
@@ -186,8 +185,7 @@ export default defineContentScript({
         get activeIndex() {
           return chapterScheduler.activeIndex;
         },
-        // Seek + tick: the scheduler steps on timeupdate, so the driver
-        // crosses boundaries without the fixture video ever playing.
+        // Seek + tick: the scheduler steps on timeupdate (no fixture playback needed).
         applyFor: (sec: number) => {
           const video = controller.activeVideo ?? document.querySelector<HTMLVideoElement>('video');
           if (video === null) return;
@@ -208,9 +206,7 @@ export default defineContentScript({
   },
 });
 
-function measure(): void {
-  controller.runMeasure((startedAt) => measureOnce(startedAt));
-}
+function measure(): void { controller.runMeasure((startedAt) => measureOnce(startedAt)); }
 
 function isLive(response?: PlayerResponse): boolean {
   if (response?.videoDetails?.isLiveContent === true) return true;
@@ -363,11 +359,15 @@ async function showEstimatedPill(
   const model = language ?? resolveLanguage(normalizeLanguageCode(navigator.language) ?? undefined) ?? undefined;
   const seeded = await channelSeededRate(videoDetails, model);
   controller.renderRecommendation(videoId, seeded ?? priorMidpoint(contentType), 'estimated', contentType, settings, site, null, model, startedAt, captionStatus);
-  // Demand proxy (Phase-2 STT gate): one local count per estimated render.
-  // Best-effort like logAction — a dead bridge must not suppress the pill.
+  // Local-only counters (demand proxy + collapse journal): best-effort — a dead bridge must not suppress the pill.
   void bridge
     .request({ type: 'demand:increment', contentType })
     .catch(() => undefined);
+  if (captionStatus !== undefined) {
+    void bridge
+      .request({ type: 'journal:append', reason: captionStatus, videoId })
+      .catch(() => undefined);
+  }
 }
 
 /** Arms skip-silence on an apply: the actuator dips to the pause rate

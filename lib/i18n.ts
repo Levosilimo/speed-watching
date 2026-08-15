@@ -46,6 +46,11 @@ const EN = {
   'pill.caption.noTrack': 'no captions found',
   'pill.caption.fetchFailed': 'captions unavailable',
   'pill.caption.captureMissed': 'captions empty',
+  'options.journalLabel': 'Recent caption failures',
+  'options.journalNote':
+    'Videos whose captions could not be read, so the speed was estimated. Stored on this device only — never transmitted.',
+  'options.journalEmpty': 'No caption failures recorded.',
+  'options.journalClear': 'Clear',
   'nudge.title': 'At a glance, was that still fully clear?',
   'nudge.body':
     'Fast playback can feel as clear as normal speed even when recall dips — speed-watching mostly affects how confident you feel about understanding, not what you objectively catch. If anything felt rushed, {lo}–{hi} {unit} is the comfortable range to fall back to.',

@@ -7,7 +7,9 @@
 // lib/messaging.ts.
 
 import { type ChannelRecord } from './channel-memory';
+import { isCaptionStatus } from './error-journal';
 import { isContentType, type ContentType } from './music';
+import type { CaptionStatus } from '../ui/pill';
 import type { OverrideLogEntry } from './override-log';
 import { MAX_GAP_SEC, MAX_PAUSE_RATE, MIN_GAP_SEC, MIN_PAUSE_RATE, type SkipSilencePrefs } from './skip-silence';
 import {
@@ -31,6 +33,24 @@ interface DemandIncrementMessage {
 
 export function isDemandIncrementMessage(value: unknown): value is DemandIncrementMessage {
   return isRecord(value) && value.type === 'demand:increment' && isContentType(value.contentType);
+}
+
+/** Runtime message the bridge sends the background for journal:append
+ * (single-writer routing like demand:increment); the background answers
+ * after the record lands. Same shape as the bridge request it carries. */
+export interface JournalAppendMessage {
+  type: 'journal:append';
+  reason: CaptionStatus;
+  videoId?: string;
+}
+
+export function isJournalAppendMessage(value: unknown): value is JournalAppendMessage {
+  return (
+    isRecord(value) &&
+    value.type === 'journal:append' &&
+    isCaptionStatus(value.reason) &&
+    (value.videoId === undefined || typeof value.videoId === 'string')
+  );
 }
 
 /** Runtime message the bridge sends the background for nudge:recordApply
@@ -115,6 +135,7 @@ export type BridgeRequest =
   | { type: 'channel:get'; channelKey: string }
   | { type: 'channel:put'; channelKey: string; record: ChannelRecord }
   | DemandIncrementMessage
+  | JournalAppendMessage
   | NudgeRecordApplyMessage
   | NudgeDismissMessage
   | TimeSavedAccrueMessage;
