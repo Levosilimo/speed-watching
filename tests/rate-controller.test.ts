@@ -365,15 +365,18 @@ describe('live rate and saved time', () => {
 
 describe('session lifecycle', () => {
   it('onMediaEvent adopts a new video target and ends the old session via onVideoSwap', () => {
-    const endSession = vi.fn();
-    const h = makeHarness({ onVideoSwap: (end) => endSession.mockImplementation(end) });
+    const h = makeHarness({ onVideoSwap: (end) => end() });
     h.render({ settings: autoOn() });
     const other = document.createElement('video');
     document.body.append(other);
     other.addEventListener('play', (e) => h.controller.onMediaEvent(e));
     other.dispatchEvent(new Event('play'));
     expect(h.controller.activeVideo).toBe(other);
-    expect(h.controller.pillState?.applied).toBe('none'); // session ended
+    expect(h.calls.skipDetach).toHaveBeenCalled(); // endSession teardown
+    expect(h.calls.teardown).toHaveBeenCalled(); // nudge surface teardown
+    // The swap bumped the epoch: the next measure renders on the fresh session.
+    h.render();
+    expect(h.controller.pillState?.mode).toBe('recommend');
   });
 
   it('onVideoRemoved drops the recommendation, the pill, and the session', () => {
