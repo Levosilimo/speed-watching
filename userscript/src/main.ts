@@ -1,13 +1,16 @@
 // Userscript port of the extension's YouTube measure flow (spec: ports.md §B).
-// Runs in the page world on watch pages: reads the player response, fetches
-// the first caption track (WEB json3 → ANDROID innertube), measures the
-// natural rate, and renders a minimal position:fixed pill (userscript/src/
+// Runs in the page world on watch pages: reads the player response, captures
+// the player's signed timedtext fetches (the POT gate 200-empties bare
+// fetches) with the extension's capture-first chain (buffer → CC drive →
+// WEB → ANDROID), measures the natural rate, and renders a minimal
+// position:fixed pill (userscript/src/
 // pill.ts). Storage is two optional GM keys (target + channel memory, see
 // storage.ts); Greasemonkey 4's async API no-ops gracefully and the script
 // still measures.
 // aislop-ignore-file console-leftover
 
-import { fetchAndroidCaptions, fetchJson3 } from '../../lib/caption-fetch';
+import { installCaptionCapture, TimedtextBuffer } from '../../lib/caption-capture';
+import { fetchCaptions as fetchCaptionsWithContext } from '../../lib/caption-fetch';
 import { parseYouTubeJson3 } from '../../lib/captions';
 import { cueSignal, detectContentType, priorMidpoint } from '../../lib/heuristics';
 import { resolveLanguage, UNIT_LABELS, type LanguageModel } from '../../lib/languages';
@@ -78,6 +81,11 @@ declare global {
 }
 
 function onNavigationStart(): void {
+  // The capture buffer is keyed per video — a previous video's signed
+  // captures must not masquerade as the next measure's (mirror of the
+  // extension's yt-navigate-start clear).
+  const videoId = new URLSearchParams(location.search).get('v');
+  if (videoId !== null) captureBuffer.clear(videoId);
   current = null;
   activeVideo = null;
   showPill(NONE_STATE);
@@ -235,21 +243,24 @@ function renderRecommendation(
   });
 }
 
-// ── Caption fetch: WEB primary, ANDROID innertube fallback ────────────────
+// ── Caption fetch: capture-first, same chain as the extension ─────────────
+
+/** Signed timedtext responses captured from the player (lib/caption-
+ * capture.ts), keyed by video id — the only payload source on POT-gated
+ * pages. */
+const captureBuffer = new TimedtextBuffer();
 
 async function fetchCaptions(track: CaptionTrack, videoId: string): Promise<unknown | null> {
-  const web = await fetchJson3(track.baseUrl);
-  if (web !== null) {
-    if (e2e) window.__speedwatcherCaptionSource = 'web';
-    return web;
-  }
-  const android = await fetchAndroidCaptions(videoId);
-  if (android !== null) {
-    if (e2e) window.__speedwatcherCaptionSource = 'android';
-    return android;
-  }
-  if (e2e) window.__speedwatcherCaptionSource = 'none';
-  return null;
+  // The extension's capture-first order (lib/caption-fetch.ts fetchCaptions):
+  // buffer pick → CC drive + word-timed wait → WEB → ANDROID. The lib
+  // returns the source; the runtime e2e gate (the bundle builds with
+  // __E2E__ false) reports it here.
+  const result = await fetchCaptionsWithContext(track, videoId, {
+    buffer: captureBuffer,
+    video: activeVideo ?? document.querySelector<HTMLVideoElement>('video'),
+  });
+  if (e2e) window.__speedwatcherCaptionSource = result.source;
+  return result.json;
 }
 
 // ── Pill wiring ───────────────────────────────────────────────────────────
@@ -368,6 +379,14 @@ function onKeyDown(event: KeyboardEvent): void {
 
 function main(): void {
   if (!location.pathname.startsWith('/watch')) return;
+  // The signed timedtext requests the player makes (POT-gated pages pay
+  // only those) — patched once per document, as early as the bundle runs
+  // (document-start; the guard flag in installCaptionCapture covers
+  // re-runs). Same top-of-main install as the extension's content script.
+  installCaptionCapture((capture) => {
+    const videoId = new URLSearchParams(location.search).get('v');
+    if (videoId !== null) captureBuffer.add(videoId, capture);
+  });
   document.addEventListener('play', onMediaEvent, true);
   document.addEventListener('playing', onMediaEvent, true);
   document.addEventListener('timeupdate', onMediaEvent, true);

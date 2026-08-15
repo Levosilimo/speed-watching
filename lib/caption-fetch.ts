@@ -1,6 +1,7 @@
 import type { CaptionTrack, PlayerResponse } from '@/lib/youtube';
 import type { TimedtextBuffer } from './caption-capture';
 import { restoreCcState, triggerCcAutomation, waitForWordTimedCapture } from './caption-trigger';
+import { fetchTranscriptViaEndpoint, getTranscriptParams } from './transcript';
 
 // ANDROID innertube fallback (plan-v3): the WEB timedtext endpoint returns
 // 200-with-empty-body / 400/403 from some IPs, while the ANDROID
@@ -43,10 +44,30 @@ export async function fetchAndroidCaptions(videoId: string): Promise<unknown | n
     const data = (await response.json()) as PlayerResponse;
     const track = data.captions?.playerCaptionsTracklistRenderer?.captionTracks?.[0];
     if (track === undefined) return null;
+    // The transcript panel of the ANDROID response carries the
+    // getTranscriptEndpoint params (lib/transcript.ts): the innertube
+    // transcript POST beats the bare baseUrl fetch, which 200-empties
+    // under the POT gate. Only when the params are absent or the POST
+    // fails does the bare fetch run as the last resort.
+    const params = getTranscriptParams(data);
+    if (params !== null) {
+      const transcript = await fetchTranscriptViaEndpoint(params);
+      if (transcript !== null) return transcript;
+    }
     return fetchJson3(track.baseUrl);
   } catch {
     return null;
   }
+}
+
+export type CaptionSource = 'web' | 'android' | 'capture' | 'none';
+
+export interface CaptionFetchResult {
+  json: unknown | null;
+  /** Which chain produced the payload — the caller reports it through its
+   * own e2e hook gate (the lib must not reference window test hooks: the
+   * SEC-2 store-bundle gate greps them out of production builds). */
+  source: CaptionSource;
 }
 
 export interface CaptionFetchContext {
@@ -65,14 +86,13 @@ export async function fetchCaptions(
   track: CaptionTrack,
   videoId: string,
   ctx: CaptionFetchContext,
-): Promise<unknown | null> {
+): Promise<CaptionFetchResult> {
   // The buffer also holds this extension's own web fetches; a previous
   // measure's capture must not masquerade as this measure's.
   ctx.buffer.clear(videoId);
   const capture = ctx.buffer.pickWordTimed(videoId);
   if (capture !== null) {
-    if (__E2E__) window.__speedwatcherCaptionSource = 'capture';
-    return JSON.parse(capture.body);
+    return { json: JSON.parse(capture.body), source: 'capture' };
   }
   const video = ctx.video;
   if (video !== null && (video.readyState >= 1 || !video.paused)) {
@@ -84,8 +104,7 @@ export async function fetchCaptions(
       };
       const captured = await waitForWordTimedCapture(ctx.buffer, videoId, nudge, 15000);
       if (captured !== null) {
-        if (__E2E__) window.__speedwatcherCaptionSource = 'capture';
-        return JSON.parse(captured.body);
+        return { json: JSON.parse(captured.body), source: 'capture' };
       }
     } finally {
       // The automation must not leave the subtitles on: restore the prior
@@ -94,15 +113,8 @@ export async function fetchCaptions(
     }
   }
   const web = await fetchJson3(track.baseUrl);
-  if (web !== null) {
-    if (__E2E__) window.__speedwatcherCaptionSource = 'web';
-    return web;
-  }
+  if (web !== null) return { json: web, source: 'web' };
   const android = await fetchAndroidCaptions(videoId);
-  if (android !== null) {
-    if (__E2E__) window.__speedwatcherCaptionSource = 'android';
-    return android;
-  }
-  if (__E2E__) window.__speedwatcherCaptionSource = 'none';
-  return null;
+  if (android !== null) return { json: android, source: 'android' };
+  return { json: null, source: 'none' };
 }

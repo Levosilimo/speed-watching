@@ -221,8 +221,7 @@ function isLive(response?: PlayerResponse): boolean {
 }
 
 /** Track resolution + web/android fetch + json3 parse. On failure carries
- * the resolved language (undefined only for the no-track case) for the
- * estimated pill, and logs the reason — the caller dispatches. */
+ * the resolved language (undefined only for the no-track case). */
 async function fetchAndParseCaptions(
   response: PlayerResponse,
   videoId: string,
@@ -236,15 +235,17 @@ async function fetchAndParseCaptions(
     if (__E2E__) console.info('[speed-watcher] wpm: no caption tracks for this video — estimated');
     return { ok: false, language: undefined };
   }
-  const json = await fetchCaptions(track, videoId, {
+  const result = await fetchCaptions(track, videoId, {
     buffer: captureBuffer,
     video: controller.activeVideo ?? document.querySelector<HTMLVideoElement>('video'),
   });
-  if (json === null) {
+  // The lib returns the source: its own hook write would leak into the SEC-2-gated store bundle.
+  if (__E2E__) window.__speedwatcherCaptionSource = result.source;
+  if (result.json === null) {
     if (__E2E__) console.info('[speed-watcher] wpm: caption fetch failed — estimated');
     return { ok: false, language };
   }
-  const { words, cues } = parseYouTubeJson3(json);
+  const { words, cues } = parseYouTubeJson3(result.json);
   return { ok: true, words, cues, track, language };
 }
 
@@ -394,8 +395,6 @@ function chapterStatusNow(): 'active' | 'yielded' | 'music' | undefined {
   if (segment !== undefined && segment.mode === 'music') return 'music';
   return 'active';
 }
-
-// ── Channel rate memory (YouTube) ─────────────────────────────────────────
 
 /** Best-effort: remember the measured rate for the channel, seeding the
  * estimated tier of its captionless videos; a dead bridge must not block

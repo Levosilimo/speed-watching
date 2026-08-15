@@ -23,6 +23,7 @@ import { fileURLToPath } from 'node:url';
 import vttjs from 'vtt.js';
 import { parseVtt, parseVttWords, type VttHost } from '../../lib/captions-harvest';
 import { parseYouTubeJson3 } from '../../lib/captions';
+import { parseTranscriptSegments } from '../../lib/transcript';
 import { chapteredInitialData, KIND_BY_FIXTURE, LANG_BY_FIXTURE } from './fixtures';
 import { segmentRates, type RateSegment } from '../../lib/chapters';
 import { priorMidpoint } from '../../lib/heuristics';
@@ -100,6 +101,9 @@ export interface E2EDriver {
    * pot-gated fixture's gate is asserted through the same route the
    * content script's fetchJson3 used. */
   readBareTimedtext(fixture: string): Promise<{ status: number; body: string }>;
+  /** How many /youtubei/v1/get_transcript POSTs the harness saw (the
+   * ANDROID-tail transcript fallback, lib/transcript.ts). */
+  readTranscriptAttempts(): Promise<number>;
   /** The page's browser UI language (navigator.language) — the estimated
    * tier's UI-locale language fallback reads it, so the spec mirror needs
    * the same input the content script uses. */
@@ -468,6 +472,71 @@ export async function runCaptureSpecs(driver: E2EDriver): Promise<void> {
   const ccState = await driver.readCcState();
   if (ccState !== 'false') {
     throw new Error(`${fixture}: CC aria-pressed ${ccState}, expected false (pre-measure state)`);
+  }
+}
+
+/**
+ * The get_transcript fallback lane (ANDROID-tail): the fixture's bare
+ * timedtext 200-empties (POT gate) and the page carries no capture stub, so
+ * the measure can only come from the innertube transcript endpoint the
+ * ANDROID player response points at. (a) proves the gate through the
+ * harness route; (b) asserts the fallback landed on get_transcript — the
+ * fail-without-fix lane: before the transcript wiring the ANDROID tail
+ * re-fetched the bare baseUrl (200-empty) and the pill fell to estimated.
+ */
+export async function runTranscriptSpecs(driver: E2EDriver): Promise<void> {
+  const fixture = 'synthetic/transcript-gated.json';
+
+  // (a) The POT gate is real for this fixture too: a bare timedtext fetch
+  // is HTTP 200 with an empty body.
+  await driver.navigateToWatch(fixture);
+  const bare = await driver.readBareTimedtext(fixture);
+  if (bare.status !== 200 || bare.body !== '') {
+    throw new Error(
+      `transcript-gated: bare timedtext returned ${bare.status}/${JSON.stringify(bare.body.slice(0, 40))}, expected 200/empty`,
+    );
+  }
+
+  // (b) Fresh navigation: WEB 200-empties and no capture stub on the page,
+  // so the ANDROID tail must land on get_transcript — the bare baseUrl
+  // re-fetch would 200-empty too, and the lane fails without the fallback.
+  await driver.navigateToWatch(fixture);
+  const state = expectState(await driver.readPillState(), fixture);
+  const source = await driver.readCaptionSource();
+  if (source !== 'android') {
+    throw new Error(`${fixture}: caption source ${source}, expected android`);
+  }
+  const measurement = await driver.readMeasurement();
+  if (measurement === undefined) {
+    throw new Error(`${fixture}: no speedwatcher:measure payload`);
+  }
+  // The measure is cue-level: the transcript payload carries no word
+  // timings. Expected values are recomputed from the fixture through the
+  // same parser the extension uses (lib/transcript.ts).
+  const json = JSON.parse(readFileSync(join(fixtureRoot, fixture), 'utf8')) as unknown;
+  const segments = parseTranscriptSegments(json);
+  const expectedRate = filteredTokensOverTrimmedSpan(segments);
+  if (expectedRate === null) {
+    throw new Error(`${fixture}: no transcript natural rate`);
+  }
+  assertClose(measurement.stats.cue, cueLevelWpm(segments), `${fixture} transcript cue-level`);
+  if (measurement.stats.nWords !== totalWords(segments)) {
+    throw new Error(
+      `${fixture}: nWords ${measurement.stats.nWords} !== expected ${totalWords(segments)}`,
+    );
+  }
+  if (state.tierLabel !== 'from captions') {
+    throw new Error(`${fixture}: pill tierLabel ${state.tierLabel}, expected from captions`);
+  }
+  if (Math.abs(state.rateWpm - expectedRate) > WPM_TOLERANCE) {
+    throw new Error(
+      `${fixture}: pill rateWpm ${state.rateWpm} outside tolerance of ${expectedRate}`,
+    );
+  }
+
+  // (c) Network-level: the get_transcript POST fired.
+  if ((await driver.readTranscriptAttempts()) === 0) {
+    throw new Error(`${fixture}: get_transcript POST never fired`);
   }
 }
 
