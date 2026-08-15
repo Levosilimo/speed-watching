@@ -21,6 +21,7 @@
     "@ast-grep/cli",
     "@cws-check/cli",
     "@huggingface/transformers",
+    "@types/chrome",
     "sharp"
   ],
   "ignoreBinaries": ["ffmpeg", "yt-dlp"],
