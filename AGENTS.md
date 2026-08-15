@@ -86,6 +86,11 @@ Every feature ships a spec lane and an audit lane.
   regenerated from `lib/`. `scripts/data/*/results.jsonl` is the oracle: the
   only non-LLM artifact. Synthetic fixtures derive from a real captured
   payload, not from invention.
+- **Fixture provenance gate.** Every file under `tests/fixtures/synthetic/`
+  must be named in `tests/fixtures/README.md` with its derivation lineage —
+  the captured payload it truncates or the e2e lane it was authored for.
+  `scripts/audit-lanes.ts` fails on any synthetic fixture the README does
+  not name; there is no baseline backlog and no env escape.
 
 ## Wave methodology
 

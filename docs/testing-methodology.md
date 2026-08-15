@@ -45,8 +45,10 @@ promised "X sessions, Y time saved".
 Example: `tests/demand.test.ts` asserts the store's exposed counters and
 thresholds (exported constants are the public contract). `tests/pill.test.ts`
 asserts the rendered pill — which rate, which tier label — not how often the
-render function was called. The audit lane `audit-contract-not-count` flags
-every spyOn / toHaveBeenCalled* hit so a human confirms each one.
+render function was called. The machine lane that used to flag every spyOn /
+toHaveBeenCalled* hit for human confirmation was removed (wave-nobase): it
+flagged the whole population, so it could never discriminate; the sanctioned
+count contract stays pinned by the pill-state contract tests.
 
 ### Two-commit bug fixes
 
@@ -93,8 +95,10 @@ recorded payload or a real video ID.
 
 Example: `tests/fixtures/synthetic/windows-format.json` carries the
 format-drift sentinel naming the recorded `windows-asr-*` payloads it
-derives from. The audit lane `audit-real-fixtures` flags any synthetic
-fixture with neither a `scripts/data` videoId nor a data reference.
+derives from. The hard gate `audit-real-fixtures` (scripts/audit-lanes.ts)
+fails on any synthetic fixture the provenance README does not name — a
+recorded videoId inside the payload buys no exemption, because the lineage
+is the doc line, not a greppable token.
 
 ## Wave methodology
 
