@@ -342,16 +342,32 @@ test('pot-gated fixture: bare timedtext 200-empties; the capture path measures f
   await runCaptureSpecs(driver);
 });
 
-test('pill really paints: shadow root populated, non-zero geometry, in the layout tree', async () => {
-  // The fixture mirrors real YouTube (a div#movie_player wrapping the
-  // <video>), so the pill's anchor has real layout from the start.
-  await driver.navigateToWatch('real/manual-cue.json');
-  await driver.readPillState();
+/** Wait until the pill renders in recommend mode AND its mode-transition
+ * (transform/opacity, 200ms) has settled — measuring mid-transition would
+ * fail the bottom-inset assertion (the translated pill sits 6px lower). */
+async function settlePill(page: Page): Promise<void> {
   await page.waitForFunction(
     () => window.__speedwatcherPill?.state?.mode === 'recommend',
     undefined,
     { timeout: 15_000 },
   );
+  await page.waitForFunction(
+    () => {
+      const host = document.querySelector<HTMLElement>('.speedwatcher-pill-host');
+      const pill = host?.shadowRoot?.querySelector<HTMLElement>('.pill');
+      return pill !== null && pill !== undefined && getComputedStyle(pill).transform === 'none';
+    },
+    undefined,
+    { timeout: 15_000 },
+  );
+}
+
+test('pill really paints: shadow root populated, non-zero geometry, in the layout tree', async () => {
+  // The fixture mirrors real YouTube (a div#movie_player wrapping the
+  // <video>), so the pill's anchor has real layout from the start.
+  await driver.navigateToWatch('real/manual-cue.json');
+  await driver.readPillState();
+  await settlePill(page);
   const render = await page.evaluate(() => {
     const host = document.querySelector<HTMLElement>('.speedwatcher-pill-host');
     const root = host?.shadowRoot;
@@ -364,11 +380,7 @@ test('pill really paints: shadow root populated, non-zero geometry, in the layou
       mode: pill.dataset.mode ?? null,
       width: rect.width,
       height: rect.height,
-      x: rect.x,
-      y: rect.y,
       hasOffsetParent: pill.offsetParent !== null,
-      hostZIndex: host === null || host === undefined ? -1 : Number(getComputedStyle(host).zIndex),
-      viewport: { width: window.innerWidth, height: window.innerHeight },
     };
   });
   console.log('real-render pill geometry:', JSON.stringify(render));
@@ -383,20 +395,167 @@ test('pill really paints: shadow root populated, non-zero geometry, in the layou
   expect(render.height).toBeGreaterThan(0);
   // (c) the pill is in the layout tree (has a positioned ancestor)
   expect(render.hasOffsetParent).toBe(true);
-  // (d) the pill anchors fixed to the viewport's bottom-right (the shadow
-  // :host rule): fully inside the viewport, in its right-bottom half.
-  const right = render.x + render.width;
-  const bottom = render.y + render.height;
-  expect(render.x).toBeGreaterThanOrEqual(0);
-  expect(render.y).toBeGreaterThanOrEqual(0);
-  expect(right).toBeLessThanOrEqual(render.viewport.width);
-  expect(bottom).toBeLessThanOrEqual(render.viewport.height);
-  expect(right).toBeGreaterThan(render.viewport.width / 2);
-  expect(bottom).toBeGreaterThan(render.viewport.height / 2);
-  // (e) the host sits at the top of the stacking chart — the user-verified
-  // fix for the pill painting behind YouTube's related-videos column (the
-  // computed value reads the inline style on the page-visible host).
-  expect(render.hostZIndex).toBeGreaterThanOrEqual(2147483000);
+});
+
+/** Read the pill/player geometry plus hit-test outcomes at the pill
+ * center, the controls bar, and the old viewport-corner anchor point. */
+async function readControlZone(page: Page): Promise<{
+  pill: { left: number; top: number; right: number; bottom: number };
+  player: { left: number; top: number; right: number; bottom: number };
+  atCenter: { tag: string; cls: string; isHost: boolean };
+  shadowInPill: boolean;
+  atControls: { tag: string; cls: string; isHost: boolean };
+  oldAnchor: { x: number; y: number };
+  atOldCorner: { tag: string; cls: string; isHost: boolean };
+  atOldAnchor: { tag: string; cls: string; isHost: boolean };
+} | { error: string }> {
+  return page.evaluate(() => {
+    const host = document.querySelector<HTMLElement>('.speedwatcher-pill-host');
+    const player = document.querySelector<HTMLElement>('#movie_player');
+    if (host === null || player === null) return { error: 'pill host or #movie_player missing' };
+    const root = host.shadowRoot;
+    const pill = root?.querySelector<HTMLElement>('.pill');
+    if (root === null || root === undefined || pill === null || pill === undefined) {
+      return { error: '.pill missing from the shadow root' };
+    }
+    const pillRect = pill.getBoundingClientRect();
+    const playerRect = player.getBoundingClientRect();
+    const cx = pillRect.left + pillRect.width / 2;
+    const cy = pillRect.top + pillRect.height / 2;
+    const atCenter = document.elementFromPoint(cx, cy);
+    const atCenterShadow = root.elementFromPoint(cx, cy);
+    const atControls = document.elementFromPoint(playerRect.right - 40, playerRect.bottom - 18);
+    const atOldCorner = document.elementFromPoint(window.innerWidth - 20, window.innerHeight - 20);
+    // The old viewport-fixed pill's would-be center (bottom/right 18px
+    // insets): where the pill used to sit, page content must now be
+    // reachable. The bare viewport corner lands inside the pill's
+    // 999px-radius capsule, so it misses the old pill — the center probe
+    // discriminates.
+    const atOldAnchor = document.elementFromPoint(
+      window.innerWidth - 18 - pillRect.width / 2,
+      window.innerHeight - 18 - pillRect.height / 2,
+    );
+    const describe = (el: Element | null): { tag: string; cls: string; isHost: boolean } => ({
+      tag: el?.tagName ?? 'null',
+      cls: el instanceof HTMLElement ? el.className : '',
+      isHost: el === host,
+    });
+    return {
+      pill: {
+        left: pillRect.left,
+        top: pillRect.top,
+        right: pillRect.right,
+        bottom: pillRect.bottom,
+      },
+      player: {
+        left: playerRect.left,
+        top: playerRect.top,
+        right: playerRect.right,
+        bottom: playerRect.bottom,
+      },
+      oldAnchor: {
+        x: window.innerWidth - 18 - pillRect.width / 2,
+        y: window.innerHeight - 18 - pillRect.height / 2,
+      },
+      atCenter: describe(atCenter),
+      shadowInPill: atCenterShadow !== null && (atCenterShadow === pill || pill.contains(atCenterShadow)),
+      atControls: describe(atControls),
+      atOldCorner: describe(atOldCorner),
+      atOldAnchor: describe(atOldAnchor),
+    };
+  });
+}
+
+/** The control-zone lane: containment, the bottom-right control zone,
+ * bounding-box insets, occlusion (pill hit-testable, controls not covered),
+ * and no-escape (the old viewport corner is free of the pill). */
+function assertControlZone(
+  geometry: Awaited<ReturnType<typeof readControlZone>>,
+  label: string,
+): void {
+  if (geometry === null || 'error' in geometry) {
+    throw new Error(`control-zone (${label}): ${geometry === null ? 'no geometry' : geometry.error}`);
+  }
+  const { pill, player } = geometry;
+  // CONTAINMENT: the pill sits fully inside the player
+  expect(pill.left).toBeGreaterThanOrEqual(player.left);
+  expect(pill.top).toBeGreaterThanOrEqual(player.top);
+  expect(pill.right).toBeLessThanOrEqual(player.right);
+  expect(pill.bottom).toBeLessThanOrEqual(player.bottom);
+  // CONTROL-ZONE: bottom-right corner of the player, above the controls bar.
+  // The left-edge band is not asserted: the pill renders up to its 420px
+  // max-width (label + tier + actions), which can exceed a 200px band and
+  // still be right-anchored — the right-edge anchor plus containment pin
+  // the placement.
+  expect(pill.right).toBeGreaterThanOrEqual(player.right - 120);
+  expect(pill.bottom).toBeLessThanOrEqual(player.bottom - 40);
+  // BOUNDING-BOX-FILL: the configured insets hold (not clipped by overflow)
+  expect(player.right - pill.right).toBeGreaterThanOrEqual(12);
+  expect(player.bottom - pill.bottom).toBeGreaterThanOrEqual(40);
+  // OCLUSION: the pill is the hit target at its center (elementFromPoint
+  // reports the host for shadow content; the shadow-root probe confirms
+  // the .pill itself), and the controls bar is NOT covered by the pill
+  expect(geometry.atCenter.isHost).toBe(true);
+  expect(geometry.shadowInPill).toBe(true);
+  expect(geometry.atControls.cls).toContain('ytp-chrome-bottom');
+  expect(geometry.atControls.isHost).toBe(false);
+  // NO-ESCAPE: the old viewport-corner anchor points are free of the pill.
+  // Skipped when the player covers the old anchor (theater/fullscreen): the
+  // pill legitimately sits near the viewport corner there, so the probe is
+  // not discriminating.
+  expect(geometry.atOldCorner.isHost).toBe(false);
+  const { oldAnchor, player: playerRect } = geometry;
+  const oldAnchorInPlayer =
+    oldAnchor.x >= playerRect.left &&
+    oldAnchor.x <= playerRect.right &&
+    oldAnchor.y >= playerRect.top &&
+    oldAnchor.y <= playerRect.bottom;
+  if (!oldAnchorInPlayer) {
+    expect(geometry.atOldAnchor.isHost).toBe(false);
+  }
+}
+
+test('pill anchors inside the player control zone: containment, occlusion, scroll-follows, player-size transitions', async () => {
+  await driver.navigateToWatch('real/manual-cue.json');
+  await driver.readPillState();
+  await settlePill(page);
+  await assertControlZone(await readControlZone(page), 'default');
+
+  // SCROLL-FOLLOWS: the pill stays glued to the player when the page
+  // scrolls (absolute inside the player, not fixed to the viewport).
+  const delta = (): Promise<number> =>
+    page.evaluate(() => {
+      const host = document.querySelector<HTMLElement>('.speedwatcher-pill-host');
+      const player = document.querySelector<HTMLElement>('#movie_player');
+      const pill = host?.shadowRoot?.querySelector<HTMLElement>('.pill');
+      if (host === null || player === null || pill === null || pill === undefined) return NaN;
+      const pillRect = pill.getBoundingClientRect();
+      const playerRect = player.getBoundingClientRect();
+      return pillRect.top - playerRect.top;
+    });
+  const before = await delta();
+  await page.evaluate(() => {
+    const player = document.querySelector('#player');
+    if (player === null) return;
+    const spacer = document.createElement('div');
+    spacer.style.height = '2000px';
+    player.parentElement?.insertBefore(spacer, player);
+    window.scrollTo(0, 500);
+  });
+  const after = await delta();
+  if (!Number.isFinite(before) || !Number.isFinite(after)) {
+    throw new Error('scroll-follows: pill or player missing');
+  }
+  expect(Math.abs(after - before)).toBeLessThan(1);
+
+  // TRANSITIONS: the fixture player-size and fullscreen variants must keep
+  // the pill anchored inside the control zone.
+  for (const extra of ['playersize=mini', 'playersize=theater', 'fullscreen=1']) {
+    await driver.navigateToWatch('real/manual-cue.json', extra);
+    await driver.readPillState();
+    await settlePill(page);
+    await assertControlZone(await readControlZone(page), extra);
+  }
 });
 
 test('estimated renders increment the local demand counter (zero egress)', async () => {
