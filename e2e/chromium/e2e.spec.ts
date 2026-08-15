@@ -23,6 +23,7 @@ import {
   runChapterSpecs,
   runCaptureSpecs,
   runGenericSpecs,
+  runJourneySpecs,
   runLiveSuppressionSpecs,
   runMeasurementSpecs,
   runMultiVideoSpecs,
@@ -646,6 +647,10 @@ test('bridge settings write flows into the pill (shared with firefox single-worl
 
 test('auto-apply: opt-in settings apply on navigation; estimated/music stay pill-only; stop-auto and manual override disengage per video', async () => {
   await runAutoSpecs(driver);
+});
+
+test('journey: one session across measure → apply → dismiss → re-navigation → auto-apply → override → stop-auto', async () => {
+  await runJourneySpecs(driver);
 });
 
 test('generic matcher harvests captions, applies, and re-asserts after a reset', async () => {

@@ -31,6 +31,7 @@
   },
   "devDependencies": {
     "@ast-grep/cli": "^0.36.0",
+    "@axe-core/playwright": "^4.13.0",
     "@cws-check/cli": "^0.1.0",
     "@huggingface/transformers": "^4.2.0",
     "@playwright/test": "^1.62.1",
