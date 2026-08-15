@@ -97,6 +97,10 @@ declare global {
   interface Window {
     __speedwatcherPill?: PillTestHook;
     __speedwatcherCaptionTier?: RateTier;
+    /** E2E hook (SEC-2): the reapplier's read-only witness — active plus
+     * when it last ran — so the specs can assert loop absence via state
+     * and tick presence via the timestamp delta instead of sleeping. */
+    __speedwatcherReapplier?: { active: boolean; lastAssertAt: number | null; intervalMs: number };
     __vimeo_player_config__?: { player?: { config_url?: string } };
   }
 }
@@ -123,7 +127,20 @@ export default defineContentScript({
     document.addEventListener('pause', controller.onMediaEvent, true);
     // E2E-only hook (SEC-2): the store bundle must not expose page-callable
     // playback controls — see entrypoints/content.ts for the gate.
-    if (__E2E__) window.__speedwatcherPill = controller.pillHook;
+    if (__E2E__) {
+      window.__speedwatcherPill = controller.pillHook;
+      window.__speedwatcherReapplier = {
+        get active() {
+          return reapplier.active;
+        },
+        get lastAssertAt() {
+          return reapplier.lastAssertAt;
+        },
+        get intervalMs() {
+          return reapplier.intervalMs;
+        },
+      };
+    }
     // Player elements appear and disappear dynamically (embeds mount late,
     // SPA navigation swaps them): re-measure when the active element changes.
     // The callback runs on every DOM mutation on every page, so it skips the

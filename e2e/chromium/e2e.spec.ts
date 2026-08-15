@@ -146,6 +146,24 @@ test.beforeAll(async () => {
     async readTranscriptAttempts() {
       return routeCounters.transcriptPosts;
     },
+    async readReapplier() {
+      return page.evaluate(() => {
+        const hook = window.__speedwatcherReapplier;
+        return hook === undefined
+          ? null
+          : { active: hook.active, lastAssertAt: hook.lastAssertAt, intervalMs: hook.intervalMs };
+      });
+    },
+    async waitForReassertPast(after, timeoutMs = 8_000) {
+      await page.waitForFunction(
+        (target) => {
+          const hook = window.__speedwatcherReapplier;
+          return hook !== undefined && hook.lastAssertAt !== null && hook.lastAssertAt > target;
+        },
+        after,
+        { timeout: timeoutMs },
+      );
+    },
     async readBrowserLanguage() {
       return page.evaluate(() => navigator.language);
     },

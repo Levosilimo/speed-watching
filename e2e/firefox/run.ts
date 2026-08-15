@@ -205,6 +205,29 @@ async function main(): Promise<void> {
       async readTranscriptAttempts() {
         return server.transcriptPosts();
       },
+      async readReapplier() {
+        const value = await driver.executeScript(
+          'const h = window.__speedwatcherReapplier;' +
+            'return h ? { active: h.active, lastAssertAt: h.lastAssertAt, intervalMs: h.intervalMs } : null',
+        );
+        return value as unknown as {
+          active: boolean;
+          lastAssertAt: number | null;
+          intervalMs: number;
+        } | null;
+      },
+      async waitForReassertPast(after, timeoutMs = 8_000) {
+        const deadline = Date.now() + timeoutMs;
+        while (Date.now() < deadline) {
+          const stamp = await driver.executeScript(
+            'const h = window.__speedwatcherReapplier;' +
+              'return h && h.lastAssertAt !== null ? h.lastAssertAt : null',
+          );
+          if (typeof stamp === 'number' && stamp > after) return;
+          await new Promise((resolve) => setTimeout(resolve, 250));
+        }
+        throw new Error(`reapplier never ticked past ${after} within ${timeoutMs}ms`);
+      },
       async readBrowserLanguage() {
         return driver.executeScript('return navigator.language') as unknown as Promise<string>;
       },
