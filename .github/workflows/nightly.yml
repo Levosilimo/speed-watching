@@ -1,0 +1,81 @@
+name: Nightly mutation tripwire
+
+# The Stryker mirror-detector: the mutation score measures whether the
+# critical-lib suites pin behavior or just read the code back. Scheduled
+# nightly — deliberately NOT a PR check (the design doc's deferral): the
+# full run is too slow for the review loop, and a red PR gate would push
+# toward papering over survivors instead of fixing them. The five ruleset
+# checks (ci + the four e2e lanes) stay the only required checks.
+
+on:
+  schedule:
+    # 02:17 UTC daily — after the box runs, before the working day.
+    - cron: '17 2 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  mutation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      issues: write # the breach-response issue (gh issue create)
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        with:
+          bun-version: '1.3.14'
+      - run: bun install --frozen-lockfile
+
+      # The tripwire: stryker exits 1 when the total score drops below the
+      # break threshold (65, stryker.conf.json). --incremental reuses the
+      # cache between nights so only changed files re-run. continue-on-error
+      # keeps the report upload and the breach issue on the failure path.
+      - name: 'Mutation run (break: 65)'
+        id: mutation
+        continue-on-error: true
+        run: bunx stryker run --incremental
+
+      # The report is the review material for the breach issue — always
+      # uploaded so a passing night's diff can be inspected too.
+      - name: Upload the mutation report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: mutation-report
+          path: reports/mutation/
+          retention-days: 30
+
+      # Breach response: file the issue with the survivor table and the
+      # protocol reminder. The response is always "fix the survivors, never
+      # paper over" — the issue is the prompt, not a waiver.
+      - name: File the breach issue
+        if: steps.mutation.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          summary="$(bun run scripts/mutation-summary.ts)"
+          gh issue create \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "[mutation] nightly breach: score below 65" \
+            --label bug \
+            --body "The nightly Stryker run fell below the break threshold (65). The mutation report is attached to this run's artifacts (\`mutation-report\`).
+
+          ## Survivor summary
+
+          $summary
+
+          ## Protocol (docs/testing-methodology.md → Stryker tripwire)
+
+          On breach, fix the surviving mutants — never paper over them:
+          - **(a) real test gaps** → add the complementary assertion
+          - **(b) documented tradeoffs** → the assertion cannot observe the flip; note it in the PR
+          - **(c) false positives** → equivalent/unreachable mutants; note them
+
+          Never raise the threshold, never exclude a mutant or a file to make the job green."
