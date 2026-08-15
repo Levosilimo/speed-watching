@@ -61,8 +61,12 @@ test.beforeAll(async () => {
       return;
     }
     if (url.pathname === '/api/timedtext') {
-      const fixture = url.searchParams.get('fixture');
-      const response = await fetch(`${fixtureBase}/api/timedtext?fixture=${fixture}`);
+      // All query params are forwarded (fixture + pot/potc/c/fmt): the
+      // pot-gated fixture's gate keys on the pot proof-of-origin params, so
+      // stripping them would break the signed-request lane.
+      const response = await fetch(
+        `${fixtureBase}/api/timedtext?${url.searchParams.toString()}`,
+      );
       await route.fulfill({
         status: response.status,
         contentType: 'application/json',
@@ -244,4 +248,30 @@ test('live suppression: a stray page-level badge must not suppress; isLiveConten
     { timeout: 15_000 },
   );
   expect((await readPill()).mode).toBe('none');
+});
+
+test('pot-gated fixture: the capture path measures word-level from the signed response', async () => {
+  // Fail-without-fix lane for the interception port: the fixture server
+  // 200-empties bare timedtext fetches (no pot params), and the stub player
+  // answers the CC drive with a SIGNED fetch the userscript must capture.
+  // Before the port the chain lands on the estimated tier and never
+  // measures; after it, the captured payload produces the word-level rate
+  // and the source reports 'capture'.
+  await loadBundle('synthetic/pot-gated.json');
+
+  const measurement = await readMeasure();
+  const expected = expectedStats('synthetic/pot-gated.json');
+  assertClose(measurement.stats.word, expected.word, 'captured word-level');
+  expect(measurement.stats.nWords).toBe(expected.nWords);
+  expect(await page.evaluate(() => window.__speedwatcherCaptionSource)).toBe('capture');
+
+  // The CC automation must restore the pre-measure state (off) — the
+  // mirror of the extension's runCaptureSpecs restore assertion.
+  const ccState = await page.evaluate(
+    () =>
+      document
+        .querySelector('button.ytp-subtitles-button')
+        ?.getAttribute('aria-pressed') ?? null,
+  );
+  expect(ccState).toBe('false');
 });
