@@ -648,8 +648,9 @@ test('ru UI locale: the estimated tier targets the ru model (168 wpm) and shows 
   // Fail-without-fix regression for the estimated-tier language split: a ru
   // browser with no caption tracks used to compute the multiplier against
   // the en 250 target (1.55x → 248 wpm) while displaying the ru range. The
-  // UI-locale fallback must drive BOTH — ru target 168 over the en generic
-  // prior midpoint 160 → 1.05x ≈ 168 wpm, inside the ru 168–180 zone. The
+  // UI-locale fallback must drive BOTH — ru target 168 over the ru generic
+  // prior midpoint 125 → 1.35x ≈ 169 wpm, inside the ru 168–180 zone — the
+  // same multiplier the userscript's language-aware path computes. The
   // shared context cannot change locale mid-run, so a second persistent
   // context side-loads the same extension with a ru-RU locale.
   const ruDir = mkdtempSync(join(tmpdir(), 'speedwatcher-e2e-ru-'));
@@ -676,8 +677,9 @@ test('ru UI locale: the estimated tier targets the ru model (168 wpm) and shows 
     const { rec } = expectedEstimatedPill('ru-RU');
     expect(state?.mode).toBe(rec.mode);
     expect(state?.multiplier).toBe(rec.multiplier);
-    expect(state?.multiplier).toBeCloseTo(1.05, 2);
+    expect(state?.multiplier).toBeCloseTo(1.35, 2);
     expect(state?.label).toBe(rec.label);
+    expect(state?.rateWpm).toBeCloseTo(125, 0); // the ru generic prior midpoint
     expect(state?.range?.lo).toBe(168);
     expect(state?.range?.hi).toBe(180);
   } finally {
@@ -712,8 +714,52 @@ test('generic path, ru UI locale: the captionless estimated tier keys to the ru 
     expect(state?.tierLabel).toBe('estimated');
     expect(state?.mode).toBe('recommend');
     expect(state?.range).toEqual({ lo: 168, hi: 180, unit: 'wpm' });
+    // The language-aware prior keeps the multiplier on the userscript's
+    // path: ru target 168 ÷ ru generic prior midpoint 125 → 1.35x.
+    const { rec } = expectedEstimatedPill('ru-RU');
+    expect(state?.multiplier).toBe(rec.multiplier);
+    expect(state?.multiplier).toBeCloseTo(1.35, 2);
+    expect(state?.rateWpm).toBeCloseTo(125, 0);
   } finally {
     await ruContext.close();
+  }
+});
+
+test('ja UI locale: the captionless estimated tier stays unit-coherent (morae target ÷ morae prior)', async () => {
+  // Fail-without-fix regression for the estimated-tier unit mix: a ja
+  // browser with no caption tracks used to divide the ja morae target (470
+  // morae/min) by the en wpm prior (160 wpm) → ~2.94x, clamped to the
+  // platform max in unreachable mode. The language-aware prior keeps the
+  // math in one unit: 470 ÷ the ja generic prior midpoint 415 → 1.15x in
+  // recommend mode, inside the ja 470–495 morae/min zone.
+  const jaDir = mkdtempSync(join(tmpdir(), 'speedwatcher-e2e-ja-'));
+  const jaContext = await chromium.launchPersistentContext(jaDir, {
+    channel: 'chromium',
+    headless: true,
+    locale: 'ja-JP',
+    args: [`--disable-extensions-except=${extensionPath}`, `--load-extension=${extensionPath}`],
+  });
+  try {
+    await routeFixtures(jaContext);
+    const jaPage = jaContext.pages()[0] ?? (await jaContext.newPage());
+    await jaPage.goto(watchUrl('synthetic/no-tracks.json'));
+    await jaPage.waitForFunction(
+      () => window.__speedwatcherPill?.state?.tierLabel === 'estimated',
+      undefined,
+      { timeout: 15_000 },
+    );
+    const state = await jaPage.evaluate(() => window.__speedwatcherPill?.state);
+    expect(state?.tierLabel).toBe('estimated');
+    expect(state?.mode).toBe('recommend');
+    expect(state?.multiplier).toBeCloseTo(1.15, 2);
+    expect(state?.range).toEqual({ lo: 470, hi: 495, unit: 'mora' });
+    expect(state?.rateWpm).toBe(415); // the ja generic prior midpoint, in morae/min
+    // The mirror (the userscript's language-aware path) agrees on the label.
+    const { rec } = expectedEstimatedPill('ja-JP');
+    expect(state?.multiplier).toBe(rec.multiplier);
+    expect(state?.label).toBe(rec.label);
+  } finally {
+    await jaContext.close();
   }
 });
 

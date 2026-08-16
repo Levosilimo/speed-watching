@@ -224,14 +224,15 @@ const WPM_TOLERANCE = 0.5;
 const RATE_TOLERANCE = 0.01;
 
 /** The estimated-tier pill the content script must render when captions are
- * unavailable: generic-prior midpoint (no content-type signal in fixtures),
- * with the UI-locale language fallback mirroring entrypoints/content.ts —
- * no track language → navigator.language's model drives the math and the
- * displayed range. The e2e browsers run en-US, so the en fixtures stay
- * byte-identical. */
+ * unavailable: the UI-locale language's generic prior (no content-type
+ * signal in fixtures) feeds the rate AND the model drives the target and
+ * range — the language-aware path the userscript's estimated tier takes
+ * (userscript/src/main.ts feeds priorMidpoint('generic', language) the same
+ * way). The e2e browsers run en-US, so the en fixtures stay byte-identical
+ * to the old en-anchored math. */
 export function expectedEstimatedPill(browserLanguage: string): { rec: Recommendation; naturalRate: number } {
-  const naturalRate = priorMidpoint('generic');
   const language = resolveLanguage(normalizeLanguageCode(browserLanguage) ?? undefined) ?? undefined;
+  const naturalRate = priorMidpoint('generic', language);
   return {
     rec: recommend({ naturalRate, tier: 'estimated', contentType: 'generic', platformMax: 2, language }),
     naturalRate,

@@ -65,6 +65,34 @@ describe('estimated tier — resolved language threads math and range', () => {
     expect(en.effectiveWpm).toBeGreaterThan(range.hi);
   });
 
+  it('keeps the ja estimated math unit-coherent (morae target ÷ morae prior)', () => {
+    const ja = resolveLanguage('ja')!;
+    expect(ja.unit).toBe('mora');
+    // ja generic band 395–435 morae/min → midpoint 415; target 470 morae/min.
+    // The rate and the target share the unit, so the multiplier stays sane.
+    const rec = recommend({
+      naturalRate: priorMidpoint('generic', ja),
+      tier: 'estimated',
+      contentType: 'generic',
+      platformMax: 2,
+      language: ja,
+    });
+    expect(rec.multiplier).toBeCloseTo(1.15, 5);
+    expect(rec.mode).toBe('recommend');
+    // The en-anchored prior shape (a caller that drops the language) divides
+    // the morae target by the wpm prior — 470 ÷ 160 → clamped to 2x in
+    // unreachable mode: the unit mix the estimated call sites must avoid.
+    const mixed = recommend({
+      naturalRate: priorMidpoint('generic'),
+      tier: 'estimated',
+      contentType: 'generic',
+      platformMax: 2,
+      language: ja,
+    });
+    expect(mixed.multiplier).toBe(2);
+    expect(mixed.mode).toBe('unreachable');
+  });
+
   it('keeps the no-language defaults byte-identical (en 250/275 anchors)', () => {
     const rec = recommend({ naturalRate: 160, tier: 'estimated', contentType: 'generic', platformMax: 2 });
     expect(rec.multiplier).toBe(1.55);
