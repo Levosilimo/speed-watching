@@ -89,7 +89,9 @@ const controller = createRateController<RateCurrent>({
   // YouTube navigation path — the old recommendation and pill must not
   // outlive the swap (a fast Apply would use the previous multiplier). The
   // controller adopted the new element before this hook runs, so re-adopt
-  // it after the reset and re-measure.
+  // it after the reset and re-measure. The first adoption (nothing rendered
+  // yet) skips the reset — there is no stale state, and the reset would
+  // flash an empty pill before the first measure lands.
   onVideoSwap: () => {
     const next = controller.activeVideo;
     if (controller.current !== null) controller.reset();
@@ -241,7 +243,9 @@ async function measureOnce(startedAt: number): Promise<void> {
     language ??
     resolveLanguage(normalizeLanguageCode(navigator.language) ?? undefined) ??
     undefined;
-  controller.renderRecommendation(location.href, priorMidpoint(contentType), 'estimated', contentType, settings, site, undefined, model, startedAt);
+  // The model's own generic prior keeps target ÷ rate in one unit (a ja
+  // 470-morae target over the en 160-wpm prior would be a ~2.94× unit mix).
+  controller.renderRecommendation(location.href, priorMidpoint('generic', model), 'estimated', contentType, settings, site, undefined, model, startedAt);
 }
 
 /** Arms skip-silence on an apply: the reapplier's pair (base = the applied
