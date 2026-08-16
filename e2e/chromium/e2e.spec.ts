@@ -23,6 +23,7 @@ import {
   runChapterSpecs,
   runCaptureSpecs,
   runGenericSpecs,
+  runGenericSwapSpecs,
   runJourneySpecs,
   runLiveSuppressionSpecs,
   runMeasurementSpecs,
@@ -179,6 +180,9 @@ test.beforeAll(async () => {
     },
     async navigateToGenericDzen() {
       await page.goto(`${fixtureBase}/generic-dzen`);
+    },
+    async navigateToGenericSwap() {
+      await page.goto(`${fixtureBase}/generic-swap`);
     },
     async readCaptionTier() {
       await page.waitForFunction(
@@ -701,6 +705,10 @@ test('journey: one session across measure → apply → dismiss → re-navigatio
 
 test('generic matcher harvests captions, applies, and re-asserts after a reset', async () => {
   await runGenericSpecs(driver);
+});
+
+test('generic SPA swap: the old recommendation and pill do not survive a video swap', async () => {
+  await runGenericSwapSpecs(driver);
 });
 
 test('generic apply at >=1.5x counts toward the recall nudge (E6)', async () => {

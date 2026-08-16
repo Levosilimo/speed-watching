@@ -35,6 +35,7 @@ import {
   runBridgeSpecs,
   runCaptureSpecs,
   runGenericSpecs,
+  runGenericSwapSpecs,
   runLiveSuppressionSpecs,
   runMeasurementSpecs,
   runMultiVideoSpecs,
@@ -243,6 +244,9 @@ async function main(): Promise<void> {
       async navigateToGenericDzen() {
         await driver.get(`${server.baseUrl}/generic-dzen`);
       },
+      async navigateToGenericSwap() {
+        await driver.get(`${server.baseUrl}/generic-swap`);
+      },
       async readCaptionTier() {
         const deadline = Date.now() + 15_000;
         while (Date.now() < deadline) {
@@ -364,6 +368,7 @@ async function main(): Promise<void> {
     await runLoginRequiredSpecs(e2e);
     await runBridgeSpecs(e2e);
     await runGenericSpecs(e2e);
+    await runGenericSwapSpecs(e2e);
     await runMultiVideoSpecs(e2e);
     await runLiveSuppressionSpecs(e2e);
     if (server.androidPosts() === 0) {

@@ -130,6 +130,8 @@ export interface E2EDriver {
   navigateToGeneric(): Promise<void>;
   /** Navigate to the Dzen-shaped track-src fixture page. */
   navigateToGenericDzen(): Promise<void>;
+  /** Navigate to the captionless two-video swap fixture page. */
+  navigateToGenericSwap(): Promise<void>;
   /** Which caption tier the generic matcher rendered. */
   readCaptionTier(): Promise<RateTier | null>;
   /** Set the page video's playbackRate to 1 (simulates a player reset). */
@@ -778,6 +780,55 @@ export async function runGenericSpecs(driver: E2EDriver): Promise<void> {
   const dzenTier = await driver.readCaptionTier();
   if (dzenTier !== 'asr-word') {
     throw new Error(`generic-dzen: caption tier ${dzenTier}, expected asr-word`);
+  }
+}
+
+/** Generic SPA video-swap e2e: a second <video> starting to play must not
+ * inherit the first video's recommendation or pill — the swap resets
+ * (current null, pill none) before the re-measure lands, and the re-measure
+ * targets the swapped-in element. The fixture page is captionless, so every
+ * measure renders the estimated tier after the resource-timeline wait — the
+ * stale window the reset closes is the pill read right after the swap
+ * event. */
+export async function runGenericSwapSpecs(driver: E2EDriver): Promise<void> {
+  await driver.navigateToGenericSwap();
+  // (a) The first video autoplays and renders its estimated pill.
+  const first = expectState(await driver.readPillState(), 'generic-swap');
+  if (first.tierLabel !== 'estimated') {
+    throw new Error(`generic-swap: initial pill tierLabel ${first.tierLabel}, expected estimated`);
+  }
+  // (b) The second video starts playing: the old recommendation must not
+  // survive the swap — the pill drops to none before the re-measure lands.
+  await driver.fireMediaEvent(1, 'playing');
+  const swapped = expectState(await driver.readPillState(), 'generic-swap');
+  if (swapped.mode !== 'none') {
+    throw new Error(
+      `generic-swap: pill mode ${swapped.mode} after swap, expected none (stale current/pill)`,
+    );
+  }
+  // (c) The re-measure recovers on the swapped-in element: its own
+  // estimated pill renders after the caption-resource wait.
+  await driver.sleep(3000);
+  const recovered = expectState(await driver.readPillState(), 'generic-swap');
+  if (recovered.mode !== 'recommend' || recovered.tierLabel !== 'estimated') {
+    throw new Error(
+      `generic-swap: recovered pill ${recovered.mode}/${recovered.tierLabel}, expected recommend/estimated`,
+    );
+  }
+  // (d) Apply targets the swapped-in element only: the reset re-adopted it,
+  // so the first video's rate stays untouched.
+  await driver.applyPill();
+  const firstRate = await driver.readPlaybackRate(0);
+  const secondRate = await driver.readPlaybackRate(1);
+  if (firstRate === null || Math.abs(firstRate - 1) > RATE_TOLERANCE) {
+    throw new Error(
+      `generic-swap: video[0] playbackRate ${firstRate} after apply on video[1], expected 1 (untouched)`,
+    );
+  }
+  if (secondRate === null || Math.abs(secondRate - recovered.multiplier) > RATE_TOLERANCE) {
+    throw new Error(
+      `generic-swap: video[1] playbackRate ${secondRate}, expected ${recovered.multiplier} (the swapped-in video)`,
+    );
   }
 }
 

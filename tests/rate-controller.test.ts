@@ -411,6 +411,40 @@ describe('session lifecycle', () => {
   });
 });
 
+describe('generic video swap', () => {
+  // The generic entrypoint's onVideoSwap hook mirrored here (the controller
+  // cannot see the entrypoint; the e2e swap lane pins the entrypoint
+  // itself): a swap must drop current and the pill like the YouTube
+  // navigation reset, and keep the swapped-in element active so the
+  // re-measure targets it. The first adoption (no recommendation rendered
+  // yet) skips the reset — there is no stale state to clear.
+  const swapHook = (getH: () => Harness): NonNullable<RateControllerDeps<Ctx>['onVideoSwap']> => (end) => end();
+
+  it('a generic swap after a render resets current and the pill, and keeps the swapped-in element active for the re-measure', () => {
+    const h = makeHarness({ onVideoSwap: swapHook(() => h) });
+    h.render({ naturalRate: 200 });
+    expect(h.controller.current?.naturalRate).toBe(200);
+    const other = document.createElement('video');
+    document.body.append(other);
+    other.addEventListener('play', (e) => h.controller.onMediaEvent(e));
+    other.dispatchEvent(new Event('play'));
+    expect(h.controller.current).toBeNull();
+    expect(h.controller.pillState?.mode).toBe('none');
+    expect(h.controller.activeVideo).toBe(other);
+  });
+
+  it('the first adoption (no recommendation yet) never renders a none pill', () => {
+    const h = makeHarness({ onVideoSwap: swapHook(() => h) });
+    const other = document.createElement('video');
+    document.body.append(other);
+    other.addEventListener('play', (e) => h.controller.onMediaEvent(e));
+    other.dispatchEvent(new Event('play'));
+    expect(h.controller.current).toBeNull();
+    expect(h.controller.pillState).toBeNull(); // no empty pill flash before the first measure
+    expect(h.controller.activeVideo).toBe(other);
+  });
+});
+
 describe('settings and serialization', () => {
   it('loadSettings falls back to defaults when the bridge is dead', async () => {
     const rejecting = makeHarness({

@@ -39,6 +39,10 @@ const genericDzenHtml = readFileSync(
   join(fileURLToPath(new URL('.', import.meta.url)), 'generic-dzen.html'),
   'utf8',
 );
+const genericSwapHtml = readFileSync(
+  join(fileURLToPath(new URL('.', import.meta.url)), 'generic-swap.html'),
+  'utf8',
+);
 
 const FIXTURE_NAME = /^(real|synthetic)\/[a-z0-9-]+\.json$/;
 /** Generic-matcher fixtures: safe path charset, resolved under syntheticRoot. */
@@ -339,6 +343,13 @@ export function createFixtureServer(port = FIXTURE_PORT): Promise<FixtureServer>
       // word-timed VTT (generic matcher e2e, asr-word tier).
       res.setHeader('Content-Type', 'text/html; charset=utf-8');
       res.end(genericDzenHtml);
+      return;
+    }
+
+    if (path === '/generic-swap') {
+      // Captionless two-video fixture: the generic SPA video-swap e2e lane.
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      res.end(genericSwapHtml);
       return;
     }
 
