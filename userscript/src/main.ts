@@ -380,9 +380,20 @@ async function channelSeededRate(
 
 // ── Keyboard shortcuts ────────────────────────────────────────────────────
 
+/** Shortcut targets that are text-editing surfaces: Shift+W there is a
+ * capital W, not an apply (search, comment, and chat fields bubble the
+ * keydown to the document listener). */
+function isEditableTarget(target: EventTarget | null): boolean {
+  return (
+    target instanceof HTMLInputElement ||
+    target instanceof HTMLTextAreaElement ||
+    (target instanceof HTMLElement && target.isContentEditable)
+  );
+}
+
 function onKeyDown(event: KeyboardEvent): void {
   if (event.shiftKey && event.code === 'KeyW') {
-    applyMultiplier();
+    if (!isEditableTarget(event.target)) applyMultiplier();
   } else if (event.key === 'Escape') {
     if (pillApi !== null && pillApi.isMenuOpen()) {
       pillApi.closeMenu();
