@@ -600,6 +600,7 @@ describe('pillHook and chapter wiring (wave-5 batch B)', () => {
     h.controller.adoptVideo(next);
     expect(h.controller.activeVideo).toBe(next);
     expect(h.calls.skipDetach).toHaveBeenCalled(); // endSession tore the session down
+    expect(h.calls.stopRateApplies).toHaveBeenCalled(); // the re-assert loop leaves the old element
   });
 
   it('flushes accrued saved time to the background store on session end', () => {
