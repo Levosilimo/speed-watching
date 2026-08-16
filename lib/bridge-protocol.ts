@@ -12,6 +12,7 @@ import { isContentType, type ContentType } from './music';
 import type { CaptionStatus } from '../ui/pill';
 import type { OverrideLogEntry } from './override-log';
 import { MAX_GAP_SEC, MAX_PAUSE_RATE, MIN_GAP_SEC, MIN_PAUSE_RATE, type SkipSilencePrefs } from './skip-silence';
+import { MAX_FLUSH_SEC } from './time-saved';
 import {
   PLATFORM_MAX_MAX,
   PLATFORM_MAX_MIN,
@@ -76,14 +77,15 @@ interface TimeSavedAccrueMessage {
 }
 
 /** Shape check for timeSaved:accrue crossing the postMessage boundary: the
- * delta must be a finite number (the store's (0, 1] bound is the accrue
- * authority) and the multiplier must sit in the SEC-3 log bounds. */
+ * delta must be finite and within the honest per-flush bound (a flush spans
+ * at most FLUSH_INTERVAL_MS of tracked wall time — MAX_FLUSH_SEC), and the
+ * multiplier must sit in the SEC-3 log bounds. The store re-checks the
+ * delta > 0 and multiplier range as defense-in-depth. */
 export function isTimeSavedAccrueMessage(value: unknown): value is TimeSavedAccrueMessage {
   return (
     isRecord(value) &&
     value.type === 'timeSaved:accrue' &&
-    typeof value.deltaSec === 'number' &&
-    Number.isFinite(value.deltaSec) &&
+    isFiniteNumberIn(value.deltaSec, 0, MAX_FLUSH_SEC) &&
     isFiniteNumberIn(value.multiplier, MULTIPLIER_MIN, MULTIPLIER_MAX)
   );
 }

@@ -1,5 +1,6 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Segment } from '../lib/captions';
+import { RateReapplier, type VideoLike } from '../lib/matcher';
 import { mockStorage } from './fixtures/helpers';
 import {
   DEFAULT_MIN_GAP_SEC,
@@ -272,5 +273,61 @@ describe('SkipSilenceActuator', () => {
     actuator.attach(second, index, prefs, 1.5);
     expect(first.listeners['timeupdate'] ?? []).toHaveLength(0);
     expect(second.listeners['timeupdate'] ?? []).toHaveLength(1);
+  });
+});
+
+describe('skip-silence × reapplier composition', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  function comboVideo(rate = 1.5): SkipVideo &
+    VideoLike & { fire: (type: string) => void } {
+    const listeners: Record<string, EventListener[]> = {};
+    return {
+      playbackRate: rate,
+      currentTime: 0,
+      paused: false,
+      isConnected: true,
+      addEventListener: (type, listener) => {
+        (listeners[type] ??= []).push(listener);
+      },
+      removeEventListener: (type, listener) => {
+        listeners[type] = (listeners[type] ?? []).filter((l) => l !== listener);
+      },
+      fire: (type) => {
+        for (const listener of listeners[type] ?? []) listener(new Event(type));
+      },
+    };
+  }
+
+  it('never dips to 1.0 with pauseRate at the floor: the rate stays steady in every gap', () => {
+    const video = comboVideo();
+    const reapplier = new RateReapplier();
+    reapplier.start(video, 1.5, 2);
+    reapplier.setRates(1.5, 1.0);
+    const actuator = new SkipSilenceActuator();
+    actuator.attach(
+      video,
+      [{ start: 2, end: 5 }],
+      { enabled: true, minGapSec: 1.5, pauseRate: MIN_PAUSE_RATE },
+      1.5,
+    );
+    expect(actuator.active).toBe(false); // the 1.0 pause is the reset sentinel — no dip to perform
+    video.currentTime = 3; // inside the gap
+    for (let i = 0; i < 5; i++) {
+      video.fire('timeupdate');
+      expect(video.playbackRate).toBe(1.5); // never written 1.0
+      video.fire('ratechange'); // a 1.0 write would re-assert the base here
+      expect(video.playbackRate).toBe(1.5);
+    }
+    video.currentTime = 1; // outside the gap
+    video.fire('timeupdate');
+    expect(video.playbackRate).toBe(1.5);
+    reapplier.stop();
   });
 });

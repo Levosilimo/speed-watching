@@ -27,6 +27,10 @@
 // The actuator mirrors the reset-sentinel arbitration of lib/matcher.ts: it
 // writes only while the observed rate is one of the pair (base or pause) or
 // an exactly-1.0 player reset — a user's manual rate is never overwritten.
+// One asymmetry: a pause target inside the sentinel band (pauseRate at the
+// 1.0 floor) never attaches — writing exactly 1.0 would be re-asserted as a
+// player reset, oscillating the rate in every gap, so the floor means "no
+// dip" rather than "dip to 1.0".
 // The store owns 'sw.skipSilence' (one key per module; see lib/settings.ts).
 
 import type { Segment } from './captions';
@@ -206,8 +210,10 @@ export interface SkipVideo {
 /** Slow-through actuator: a timeupdate listener that dips the rate to the
  * pause target inside a gap and restores the base rate outside it, and
  * reports gap transitions through onChange (the content script re-renders
- * the pill indicator on them). attach() with a collapsed rate range (the
- * dip would equal the base) is a no-op. */
+ * the pill indicator on them). attach() is a no-op when no dip exists: the
+ * range collapsed (pause >= base) or the pause target sits inside the
+ * reapplier's reset-sentinel band (exactly 1.0), which the re-assert loop
+ * would fight back to base. */
 export class SkipSilenceActuator {
   private video: SkipVideo | null = null;
   private index: readonly GapSpan[] = [];
@@ -239,7 +245,12 @@ export class SkipSilenceActuator {
     onChange?: (inGap: boolean) => void,
   ): void {
     this.detach();
-    if (pauseRateFor(base, prefs) >= base) return; // no dip to perform
+    const pause = pauseRateFor(base, prefs);
+    // No dip to perform: the pause equals the base, or sits inside the
+    // reapplier's reset-sentinel band (|rate − 1| ≤ RATE_EPSILON). Writing
+    // exactly 1.0 would be re-asserted as a player reset, so a floor
+    // pauseRate (MIN_PAUSE_RATE) never attaches.
+    if (pause >= base || Math.abs(pause - 1) <= RATE_EPSILON) return;
     this.video = video;
     this.index = index;
     this.prefs = prefs;

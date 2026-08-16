@@ -571,11 +571,11 @@ describe('messaging bridge', () => {
     );
     serve(host, vi.fn(), forwardAccrue);
     const client = createBridgeClient(host);
-    await client.request({ type: 'timeSaved:accrue', deltaSec: 60, multiplier: 2 });
-    await client.request({ type: 'timeSaved:accrue', deltaSec: 30, multiplier: 1.5 });
-    expect(forwardAccrue).toHaveBeenNthCalledWith(1, 60, 2);
-    expect(forwardAccrue).toHaveBeenNthCalledWith(2, 30, 1.5);
-    expect(await background.get()).toBe(30 + (30 * 0.5) / 1.5);
+    await client.request({ type: 'timeSaved:accrue', deltaSec: 6, multiplier: 2 });
+    await client.request({ type: 'timeSaved:accrue', deltaSec: 3, multiplier: 1.5 });
+    expect(forwardAccrue).toHaveBeenNthCalledWith(1, 6, 2);
+    expect(forwardAccrue).toHaveBeenNthCalledWith(2, 3, 1.5);
+    expect(await background.get()).toBe(3 + (3 * 0.5) / 1.5);
   });
 
   it('rejects timeSaved:accrue with an out-of-range multiplier before forwarding', async () => {
@@ -584,9 +584,29 @@ describe('messaging bridge', () => {
     serve(host, vi.fn(), forwardAccrue);
     const client = createBridgeClient(host);
     await expect(
-      client.request({ type: 'timeSaved:accrue', deltaSec: 60, multiplier: 99 }),
+      client.request({ type: 'timeSaved:accrue', deltaSec: 6, multiplier: 99 }),
     ).rejects.toThrow('timeSaved:accrue');
     expect(forwardAccrue).not.toHaveBeenCalled();
+  });
+
+  it('rejects timeSaved:accrue with a deltaSec beyond the honest flush bound before forwarding', async () => {
+    const { host } = fakeWindow();
+    const forwardAccrue = vi.fn();
+    serve(host, vi.fn(), forwardAccrue);
+    const client = createBridgeClient(host);
+    await expect(
+      client.request({ type: 'timeSaved:accrue', deltaSec: 1e12, multiplier: 2 }),
+    ).rejects.toThrow('timeSaved:accrue');
+    expect(forwardAccrue).not.toHaveBeenCalled();
+  });
+
+  it('forwards a normal tick delta within the flush bound', async () => {
+    const { host } = fakeWindow();
+    const forwardAccrue = vi.fn();
+    serve(host, vi.fn(), forwardAccrue);
+    const client = createBridgeClient(host);
+    await client.request({ type: 'timeSaved:accrue', deltaSec: 0.5, multiplier: 2 });
+    expect(forwardAccrue).toHaveBeenCalledExactlyOnceWith(0.5, 2);
   });
 
   it('times out when no response arrives', async () => {

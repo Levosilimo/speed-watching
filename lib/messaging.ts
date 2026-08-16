@@ -171,8 +171,8 @@ export async function handleBridgeRequest(
       return deps.forwardNudgeDismiss(request.forever);
     case 'timeSaved:accrue':
       // Boundary validation: out-of-range payloads never reach the
-      // background writer (the store re-checks the (0, 1] delta bound —
-      // the wire guard only proves finite numbers).
+      // background writer (the wire guard enforces the honest per-flush
+      // delta bound; the store re-checks delta > 0 and the multiplier range).
       if (!isTimeSavedAccrueMessage(request)) {
         throw new Error('timeSaved:accrue: invalid accrue payload');
       }

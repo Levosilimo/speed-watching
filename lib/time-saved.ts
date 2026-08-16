@@ -39,6 +39,12 @@ export const MAX_TICK_MS = 1000;
  * on detach. */
 export const FLUSH_INTERVAL_MS = 10_000;
 
+/** The largest deltaSec one flush message can legitimately carry: the
+ * tracker accrues at most MAX_TICK_MS per tick and flushes every
+ * FLUSH_INTERVAL_MS (ten 1 s ticks), so nothing honest exceeds this. The
+ * bridge's wire guard (lib/bridge-protocol.ts) rejects beyond it. */
+export const MAX_FLUSH_SEC = FLUSH_INTERVAL_MS / 1000;
+
 /** The video surface the tracker listens to: playbackRate (the gate input)
  * plus add/removeEventListener for the timeupdate signal. */
 export interface VideoLike {
@@ -157,10 +163,10 @@ export class TimeSavedStore {
   /** Adds savedSeconds(deltaSec, multiplier) to the total; resolves to the
    * running total. Non-positive deltas and out-of-range multipliers (outside
    * the SEC-3 log bounds) are ignored — nothing is written, the current
-   * total is returned. No upper delta bound here: a legitimate flush spans
-   * up to FLUSH_INTERVAL_MS of wall time (ten 1 s ticks), and the store math
-   * is pinned on 60 s deltas by the tests, so the per-tick cap in the
-   * tracker is the accrual authority (the wire guard proves finite). */
+   * total is returned. No upper delta bound here: the wire guard rejects
+   * flushes beyond MAX_FLUSH_SEC, so this lower-bound and multiplier check
+   * is defense-in-depth; the store math is pinned on 60 s deltas by the
+   * tests. */
   async accrue(deltaSec: number, multiplier: number): Promise<number> {
     const result = this.tail.then(() => this.accrueNow(deltaSec, multiplier));
     this.tail = result.then(
