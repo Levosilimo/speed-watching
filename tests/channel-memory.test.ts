@@ -26,6 +26,19 @@ describe('ChannelMemory', () => {
     expect(await memory.get('UC-a')).toEqual(record({ rate: 165, ts: 2 }));
   });
 
+  it('serializes concurrent puts over one storage so no update is lost', async () => {
+    // chrome.storage.local has no atomic write: two interleaved get→set
+    // pairs would drop one record. The put queue (mirror of DemandStore)
+    // serializes them.
+    const memory = new ChannelMemory(mockStorage());
+    await Promise.all([
+      memory.put('UC-a', record({ ts: 1 })),
+      memory.put('UC-b', record({ ts: 2 })),
+    ]);
+    expect(await memory.get('UC-a')).toEqual(record({ ts: 1 }));
+    expect(await memory.get('UC-b')).toEqual(record({ ts: 2 }));
+  });
+
   it('returns null for unknown channels and drops corrupt records on read', async () => {
     const memory = new ChannelMemory(mockStorage());
     expect(await memory.get('UC-nope')).toBeNull();

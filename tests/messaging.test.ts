@@ -28,6 +28,7 @@ import type { ContentType } from '../lib/music';
 import { OverrideLog } from '../lib/override-log';
 import type { OverrideLogEntry } from '../lib/override-log';
 import { defaultSettings, SettingsStore } from '../lib/settings';
+import type { StorageLike } from '../lib/settings';
 import { SkipSilenceStore, defaultSkipSilence } from '../lib/skip-silence';
 import { mockStorage } from './fixtures/helpers';
 
@@ -69,12 +70,13 @@ function serve(
   host: EventHost,
   forwardDemand: BridgeDeps['forwardDemand'] = vi.fn(),
   forwardAccrue: BridgeDeps['forwardAccrue'] = vi.fn(),
+  channelStorage: StorageLike = mockStorage(),
 ): BridgeDeps {
   const deps: BridgeDeps = {
     settings: new SettingsStore(mockStorage()),
     skip: new SkipSilenceStore(mockStorage()),
     log: new OverrideLog(mockStorage()),
-    channels: new ChannelMemory(mockStorage()),
+    channels: new ChannelMemory(channelStorage),
     forwardDemand,
     forwardJournalAppend: vi.fn(),
     forwardNudgeRecordApply: vi.fn(),
@@ -446,6 +448,35 @@ describe('messaging bridge', () => {
     const client = createBridgeClient(host);
     expect(await client.request({ type: 'channel:get', channelKey: '' })).toBeNull();
     expect(await client.request({ type: 'channel:get', channelKey: 'x'.repeat(201) })).toBeNull();
+  });
+
+  it('serializes concurrent channel:put from two frames so no update is lost (lib-11#3 single writer)', async () => {
+    // Two frames share chrome.storage.local; each answers channel:put with
+    // its own get→set pair, so concurrent writes interleave and lose one
+    // record. The puts must serialize on one writer (mirror of the
+    // demand:increment lane).
+    const storage = mockStorage();
+    const background = new ChannelMemory(storage);
+    const hostA = fakeWindow();
+    const hostB = fakeWindow();
+    serve(hostA.host, vi.fn(), vi.fn(), storage);
+    serve(hostB.host, vi.fn(), vi.fn(), storage);
+    const clientA = createBridgeClient(hostA.host);
+    const clientB = createBridgeClient(hostB.host);
+    await Promise.all([
+      clientA.request({
+        type: 'channel:put',
+        channelKey: 'UC-a',
+        record: { rate: 150, unit: 'wpm', language: 'en', ts: 1 },
+      }),
+      clientB.request({
+        type: 'channel:put',
+        channelKey: 'UC-b',
+        record: { rate: 160, unit: 'wpm', language: 'en', ts: 2 },
+      }),
+    ]);
+    expect(await background.get('UC-a')).toEqual({ rate: 150, unit: 'wpm', language: 'en', ts: 1 });
+    expect(await background.get('UC-b')).toEqual({ rate: 160, unit: 'wpm', language: 'en', ts: 2 });
   });
 
   it('forwards demand:increment to the background single writer and resolves on its response (lib-11#3)', async () => {
