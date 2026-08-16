@@ -16,7 +16,7 @@ else
 fi
 
 fail=0
-for t in mpv/tests/rate_test.lua mpv/tests/recommend_test.lua; do
+for t in mpv/tests/rate_test.lua mpv/tests/recommend_test.lua mpv/tests/main_lifecycle_test.lua; do
   "$LUA" "$t" || fail=1
 done
 exit $fail
