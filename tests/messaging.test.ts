@@ -134,7 +134,6 @@ describe('messaging bridge', () => {
           'youtube.com': {
             target: 240,
             platformMax: 1.75,
-            multiplierOverride: 1.3,
             contentType: 'lecture',
           },
         },
@@ -150,7 +149,6 @@ describe('messaging bridge', () => {
     expect(saved.sites['youtube.com']).toEqual({
       target: 240,
       platformMax: 1.75,
-      multiplierOverride: 1.3,
       contentType: 'lecture',
     });
     expect(saved.contentTypes.lecture).toEqual({ target: 235 });

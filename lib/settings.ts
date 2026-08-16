@@ -35,7 +35,6 @@ export function isUiLanguageSetting(value: unknown): value is UiLanguageSetting 
 export interface SiteOverride {
   target?: number;
   contentType?: ContentType;
-  multiplierOverride?: number;
   platformMax?: number;
   /** Skip-silence on for this site; overrides the global toggle. */
   skipSilence?: boolean;
@@ -185,13 +184,6 @@ export function resolveContentType(
   detected: ContentType,
 ): ContentType {
   return settings.sites[site]?.contentType ?? settings.contentType ?? detected;
-}
-
-export function resolveMultiplierOverride(
-  settings: Settings,
-  site: string,
-): number | undefined {
-  return settings.sites[site]?.multiplierOverride;
 }
 
 export class SettingsStore {

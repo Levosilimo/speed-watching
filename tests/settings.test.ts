@@ -9,7 +9,6 @@ import {
   SettingsStore,
   defaultSettings,
   resolveContentType,
-  resolveMultiplierOverride,
   resolvePlatformMax,
   resolveTarget,
   resolveUserTarget,
@@ -44,17 +43,15 @@ describe('settings resolution', () => {
     expect(resolveTarget(settings)).toBe(260);
   });
 
-  it('resolves per-site content type, multiplier override, and platform max', () => {
+  it('resolves per-site content type and platform max', () => {
     const settings: Settings = {
       ...defaultSettings(),
       sites: {
-        'youtube.com': { contentType: 'talk', multiplierOverride: 1.3, platformMax: 1.75 },
+        'youtube.com': { contentType: 'talk', platformMax: 1.75 },
       },
     };
     expect(resolveContentType(settings, 'youtube.com', 'lecture')).toBe('talk');
     expect(resolveContentType(settings, 'other.com', 'lecture')).toBe('lecture');
-    expect(resolveMultiplierOverride(settings, 'youtube.com')).toBe(1.3);
-    expect(resolveMultiplierOverride(settings, 'other.com')).toBeUndefined();
     expect(resolvePlatformMax(settings, 'youtube.com')).toBe(1.75);
     expect(resolvePlatformMax(settings, 'other.com')).toBe(DEFAULT_PLATFORM_MAX);
   });

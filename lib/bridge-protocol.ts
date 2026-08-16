@@ -207,12 +207,6 @@ function isSiteOverride(value: unknown): boolean {
   ) {
     return false;
   }
-  if (
-    value.multiplierOverride !== undefined &&
-    (typeof value.multiplierOverride !== 'number' || !Number.isFinite(value.multiplierOverride))
-  ) {
-    return false;
-  }
   if (value.contentType !== undefined && !isContentType(value.contentType)) return false;
   if (value.skipSilence !== undefined && typeof value.skipSilence !== 'boolean') return false;
   return true;
