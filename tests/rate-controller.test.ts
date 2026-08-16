@@ -561,7 +561,7 @@ describe('post-apply discipline (wave-5 batch B)', () => {
   it('a media event on the already-active video does not re-run the swap teardown', () => {
     const h = makeHarness({ onVideoSwap: (end) => end() });
     h.render({ settings: autoOn() });
-    h.video.dispatchEvent(new Event('timeupdate')); // first event adopts the element
+    h.video.dispatchEvent(new Event('play')); // first event adopts the element
     expect(h.calls.teardown).toHaveBeenCalledTimes(1);
     h.calls.teardown.mockClear();
     h.video.dispatchEvent(new Event('timeupdate')); // same element again
