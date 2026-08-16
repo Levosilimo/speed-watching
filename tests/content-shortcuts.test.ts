@@ -514,6 +514,47 @@ describe('bridge wpm:get relay (background → window → sendResponse)', () => 
     expect(response).toMatchObject({ ok: true, version: 1, site: 'youtube.com', tier: 'estimated' });
   });
 
+  it('ignores a foreign-source window answer (the relay mirrors the client source guard)', async () => {
+    const main = (bridgeModule as { main: () => void }).main;
+    main();
+    const listener = chromeMock.runtime.onMessage.addListener.mock.calls[0]?.[0] as
+      | ((message: unknown, sender: unknown, sendResponse: (response?: unknown) => void) => boolean)
+      | undefined;
+    if (!listener) throw new Error('no bridge runtime listener registered');
+
+    await vi.waitFor(() => {
+      expect(pillMode()).toBe('recommend');
+    });
+
+    // A cross-frame forgery: a valid-shaped wpm response from a foreign
+    // source must not be forwarded to the background — only the same-window
+    // answer settles sendResponse.
+    const forged = {
+      ok: true,
+      version: 1,
+      ts: 999,
+      site: 'evil.com',
+      naturalRate: 150,
+      unit: 'wpm',
+      language: 'en',
+      tier: 'asr-word',
+      contentType: 'lecture',
+      platformMax: 2,
+      recommendation: { target: 250, recommendedMultiplier: 1.65, mode: 'recommend' },
+    };
+    const response = await new Promise<unknown>((resolve) => {
+      const returned = listener({ type: 'wpm:get', version: 1 }, {}, resolve);
+      expect(returned).toBe(true);
+      window.dispatchEvent(
+        new MessageEvent('message', {
+          data: { channel: 'speedwatcher:wpm', message: forged },
+          source: { foreign: true } as unknown as MessageEvent['source'],
+        }),
+      );
+    });
+    expect(response).toMatchObject({ ok: true, version: 1, site: 'youtube.com' });
+  });
+
   it('keeps the shortcut relay one-way (no response)', async () => {
     const main = (bridgeModule as { main: () => void }).main;
     main();

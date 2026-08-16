@@ -102,6 +102,9 @@ function relayWpmGet(request: WpmGetRequest, sendResponse: (response?: unknown) 
     const envelope = event.data;
     // SEC: the page world can post arbitrary JSON; validate both the
     // channel and the response shape before forwarding to the background.
+    // Same-frame only (mirror of createBridgeClient's source guard): a
+    // cross-frame forgery with a valid shape is dropped too.
+    if (event.source !== window) return;
     if (!isWpmEnvelope(envelope) || !isWpmGetResponse(envelope.message)) return;
     clearTimeout(timer);
     window.removeEventListener('message', onEnvelope);

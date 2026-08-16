@@ -235,6 +235,10 @@ export function createBridgeClient(host: EventHost): BridgeClient {
   >();
 
   host.addEventListener('message', (event) => {
+    // SEC-1 mirror of the request side (createBridgeListener): only the
+    // bridge frame's own responses are accepted — a cross-frame envelope
+    // with a valid shape must not settle an in-flight request.
+    if (event.source !== host) return;
     const envelope = event.data;
     if (!isBridgeEnvelope(envelope) || envelope.direction !== 'response') return;
     const detail = envelope.payload;
