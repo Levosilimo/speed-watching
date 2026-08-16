@@ -50,6 +50,9 @@ let pillState: PillState | null = null;
 let pillApi: PillApi | null = null;
 let activeVideo: HTMLVideoElement | null = null;
 
+/** Video epoch: bumped by every navigation so an in-flight measure goes stale. */
+let epoch = 0;
+
 // Serializes measure() against overlapping triggers (initial load + SPA navigation).
 const measureRunner = new SerializedRunner();
 
@@ -80,6 +83,8 @@ declare global {
 }
 
 function onNavigationStart(): void {
+  // An in-flight measure from the previous video must not render on the new one.
+  epoch += 1;
   // The capture buffer is keyed per video — a previous video's signed
   // captures must not masquerade as the next measure's (mirror of the
   // extension's yt-navigate-start clear).
@@ -104,7 +109,9 @@ function isLive(response?: PlayerResponse): boolean {
 }
 
 function measure(): void {
-  measureRunner.run(measureOnce);
+  // startedAt is the epoch at launch: a measure that outlives a navigation
+  // (queued re-run included) renders only while the epoch still matches.
+  measureRunner.run(() => measureOnce(epoch));
 }
 
 /** E2E-only measurement line + event, same shape as lib/measure-hooks.ts. */
@@ -130,7 +137,7 @@ function logMeasure(
   );
 }
 
-async function measureOnce(): Promise<void> {
+async function measureOnce(startedAt: number): Promise<void> {
   const response = await waitForPlayerResponse();
   if (response === undefined) return;
   if (isLive(response)) {
@@ -142,12 +149,12 @@ async function measureOnce(): Promise<void> {
   const track = response.captions?.playerCaptionsTracklistRenderer?.captionTracks?.[0];
   const language = resolveLanguage(track?.languageCode) ?? undefined;
   if (track === undefined) {
-    void showEstimatedPill(videoId, language, userTarget, response.videoDetails);
+    void showEstimatedPill(videoId, language, userTarget, startedAt, response.videoDetails);
     return;
   }
   const json = await fetchCaptions(track, videoId, response);
   if (json === null) {
-    void showEstimatedPill(videoId, language, userTarget, response.videoDetails);
+    void showEstimatedPill(videoId, language, userTarget, startedAt, response.videoDetails);
     return;
   }
   const { words, cues } = parseYouTubeJson3(json);
@@ -167,21 +174,21 @@ async function measureOnce(): Promise<void> {
       nWords: totalWords(cues),
     });
   } else {
-    void showEstimatedPill(videoId, language, userTarget, response.videoDetails);
+    void showEstimatedPill(videoId, language, userTarget, startedAt, response.videoDetails);
     return;
   }
 
   const naturalRate =
     kind === 'asr' ? filteredTokensOverTrimmedSpan(cues, language) : manualCueRate(cues, language);
   if (naturalRate === null) {
-    void showEstimatedPill(videoId, language, userTarget, response.videoDetails);
+    void showEstimatedPill(videoId, language, userTarget, startedAt, response.videoDetails);
     return;
   }
   const signal = cueSignal(cues, naturalRate, language);
   let detected: ContentType = signal === null ? 'generic' : detectContentType(signal);
   if (detectMusic(cues, naturalRate, language?.unit ?? 'wpm')) detected = 'music';
   const { tier, wordInputs } = asrTierInputs(kind, words, cues);
-  renderRecommendation(videoId, naturalRate, tier, detected, userTarget, wordInputs, language);
+  renderRecommendation(videoId, naturalRate, tier, detected, userTarget, wordInputs, startedAt, language);
   rememberChannelRate(response.videoDetails, naturalRate, language);
 }
 
@@ -192,6 +199,7 @@ async function showEstimatedPill(
   videoId: string,
   language: LanguageModel | undefined,
   userTarget: number | undefined,
+  startedAt: number,
   videoDetails?: PlayerResponse['videoDetails'],
 ): Promise<void> {
   const seeded = await channelSeededRate(videoDetails, language);
@@ -202,6 +210,7 @@ async function showEstimatedPill(
     'generic',
     userTarget,
     null,
+    startedAt,
     language,
   );
 }
@@ -213,8 +222,11 @@ function renderRecommendation(
   contentType: ContentType,
   userTarget: number | undefined,
   wordInputs: { articulatoryWpm: number; timingCoverageOk: boolean } | null,
+  startedAt: number,
   language?: LanguageModel,
 ): void {
+  // The video reset while this measure was in flight: render nothing.
+  if (epoch !== startedAt) return;
   const recommendation = recommend({
     naturalRate,
     tier,
