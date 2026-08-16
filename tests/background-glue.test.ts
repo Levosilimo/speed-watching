@@ -22,9 +22,6 @@ beforeEach(() => {
   chromeMock.storage.session.set.mockResolvedValue(undefined);
   chromeMock.storage.session.remove.mockResolvedValue(undefined);
   chromeMock.runtime.sendMessage.mockResolvedValue({ received: true });
-  // The id-guard consults hasListener; clearAllMocks resets calls but not
-  // implementations, so the default must be re-established per test.
-  chromeMock.contextMenus.onClicked.hasListener.mockReturnValue(false);
 });
 
 function driveMessage(listener: BackgroundListener, message: unknown, senderTabId?: number): Promise<unknown> {
@@ -448,12 +445,36 @@ describe('measure-link context menu', () => {
     expect(chromeMock.contextMenus.onClicked.addListener).toHaveBeenCalledTimes(1);
   });
 
-  it('skips registration when the handler is already installed (id-guard)', () => {
-    chromeMock.contextMenus.onClicked.hasListener.mockReturnValue(true);
-    const main = (backgroundModule as { main: () => unknown }).main;
-    main();
-
-    expect(chromeMock.contextMenus.create).not.toHaveBeenCalled();
+  it('survives the duplicate-id create() rejection after a service-worker restart without an unhandled rejection', async () => {
+    // Menu items persist across restarts; on a fresh session create() with
+    // the persisted id rejects. The rejection is benign (the menu is there)
+    // but must be handled. A plain function (not a vitest mock) stands in
+    // for create(): vitest mocks attach an internal handler to every
+    // returned promise, so the unhandled rejection only surfaces with the
+    // real call shape.
+    const originalCreate = chromeMock.contextMenus.create;
+    chromeMock.contextMenus.create = (() =>
+      Promise.reject(new Error('duplicate id'))) as typeof originalCreate;
+    const unhandled: unknown[] = [];
+    const onUnhandled = (reason: unknown): void => {
+      unhandled.push(reason);
+    };
+    process.on('unhandledRejection', onUnhandled);
+    try {
+      const main = (backgroundModule as { main: () => unknown }).main;
+      main();
+      await new Promise((resolve) => setTimeout(resolve, 0)); // let the rejection surface
+      expect(unhandled).toEqual([]);
+      // The hasListener id-guard cannot work (always false after a restart)
+      // and is gone; the listener wiring survives the failed create.
+      expect(chromeMock.contextMenus.onClicked.hasListener).not.toHaveBeenCalled();
+      expect(chromeMock.contextMenus.onClicked.addListener).toHaveBeenCalledTimes(1);
+      clickHandler()({ linkUrl: 'https://www.youtube.com/watch?v=x' });
+      expect(chromeMock.tabs.create).toHaveBeenCalled();
+    } finally {
+      process.off('unhandledRejection', onUnhandled);
+      chromeMock.contextMenus.create = originalCreate;
+    }
   });
 
   it('opens an http video link in a new tab (the measurement pipeline takes over)', () => {
