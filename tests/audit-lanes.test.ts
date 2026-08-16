@@ -10,22 +10,50 @@ const named = join(corpusDir, 'named-synthetic.json');
 // Both corpus fixtures carry a scripts/data videoId reference; only the
 // provenance doc distinguishes them — a videoId inside the payload must not
 // buy an exemption.
-const corpusDoc = 'named: named-synthetic.json';
+const table = (rows: string[]): string =>
+  ['| fixture | lineage | evidence |', '|---|---|---|', ...rows].join('\n');
+const honestRow = '| named-synthetic.json | wpm pipeline edge case | 3c99d7d |';
 
 describe('audit-real-fixtures', () => {
-  it('flags a synthetic fixture the provenance README does not name', () => {
-    const findings = scanFixtureProvenance([unnamed], corpusDoc, corpusDir);
+  it('flags a synthetic fixture the provenance table does not name', () => {
+    const findings = scanFixtureProvenance([unnamed], table([honestRow]), corpusDir);
     expect(findings).toHaveLength(1);
     expect(findings[0]!.file).toBe(unnamed);
   });
 
-  it('accepts a synthetic fixture named in the provenance README', () => {
-    expect(scanFixtureProvenance([named], corpusDoc, corpusDir)).toEqual([]);
+  it('flags a fixture named only in a doc comment — the name must be a table row', () => {
+    // The old gate name-matched the whole doc, so a comment mentioning the
+    // fixture bought an exemption; the table is the only naming surface.
+    const doc = `<!-- ${'named'} fixture: ${'named-synthetic.json'} — mentioned in prose, not named -->\n\n${table([])}`;
+    expect(scanFixtureProvenance([named], doc, corpusDir)).toHaveLength(1);
+  });
+
+  it('flags a lineage row with no citable evidence', () => {
+    const doc = table(['| named-synthetic.json | wpm pipeline edge case | |']);
+    const findings = scanFixtureProvenance([named], doc, corpusDir);
+    expect(findings).toHaveLength(1);
+    expect(findings[0]!.message).toContain('no citable evidence');
+  });
+
+  it('flags a lineage row whose evidence does not exist', () => {
+    const doc = table(['| named-synthetic.json | wpm pipeline edge case | real/nope.json |']);
+    const findings = scanFixtureProvenance([named], doc, corpusDir);
+    expect(findings).toHaveLength(1);
+    expect(findings[0]!.message).toContain('does not exist: real/nope.json');
+  });
+
+  it('accepts a fixture whose lineage cites real evidence', () => {
+    expect(scanFixtureProvenance([named], table([honestRow]), corpusDir)).toEqual([]);
+  });
+
+  it('accepts a lineage citing a golden-master registry fixture', () => {
+    const doc = table(['| named-synthetic.json | derived from the captured ASR payload | real/asr-word.json |']);
+    expect(scanFixtureProvenance([named], doc, corpusDir)).toEqual([]);
   });
 
   it('ignores non-caption assets', () => {
     const asset = join(corpusDir, 'asset.webm');
-    expect(scanFixtureProvenance([asset], corpusDoc, corpusDir)).toEqual([]);
+    expect(scanFixtureProvenance([asset], table([honestRow]), corpusDir)).toEqual([]);
   });
 });
 
