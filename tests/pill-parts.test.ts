@@ -38,7 +38,11 @@ function mqlStub(initial: boolean): {
 }
 
 /** Speaks the bridge wire protocol on the window: answers every
- * settings:get request with the given settings object. */
+ * settings:get request with the given settings object. The response is
+ * dispatched with the window as source, like the real same-frame bridge
+ * (the isolated-world listener answers the MAIN-world client through the
+ * shared window): happy-dom's postMessage delivers a foreign source
+ * object, which the client's SEC-1 guard would drop. */
 function answerBridge(win: Window, settings: Record<string, unknown>): void {
   win.addEventListener('message', (event: MessageEvent) => {
     const envelope = event.data as {
@@ -47,9 +51,15 @@ function answerBridge(win: Window, settings: Record<string, unknown>): void {
       payload?: { id?: number };
     };
     if (envelope.channel !== BRIDGE_CHANNEL || envelope.direction !== 'request') return;
-    win.postMessage(
-      { channel: BRIDGE_CHANNEL, direction: 'response', payload: { id: envelope.payload?.id, ok: true, result: settings } },
-      '*',
+    win.dispatchEvent(
+      new MessageEvent('message', {
+        source: win,
+        data: {
+          channel: BRIDGE_CHANNEL,
+          direction: 'response',
+          payload: { id: envelope.payload?.id, ok: true, result: settings },
+        },
+      }),
     );
   });
 }
