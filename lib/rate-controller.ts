@@ -301,11 +301,12 @@ export function createRateController<C extends RateCurrent>(deps: RateController
   }
 
   /** Ends the session (tracker, lifecycle, nudge) and bumps the epoch — the
-   * generic path's video-swap/removal subset of reset(). */
+   * generic swap path's subset of reset(); detaches the re-assert loop too. */
   function endSession(): void {
     savedTracker.detach();
     savedSec = null;
     savedMultiplier = null;
+    deps.stopRateApplies();
     deps.skip.detach();
     epoch += 1;
     autoState = 'pending';
@@ -329,16 +330,15 @@ export function createRateController<C extends RateCurrent>(deps: RateController
     endSession();
   }
 
-  /** The active video left the DOM: destroy the pill, drop the re-assert loop and the recommendation. */
+  /** The active video left the DOM: destroy the pill, drop the recommendation. */
   function onVideoRemoved(): void {
     if (pill !== null) {
       pill.api.update(NONE_PILL_STATE);
       pill.api.destroy();
       pill = null;
     }
-    deps.stopRateApplies();
     current = null;
-    endSession();
+    endSession(); // detaches the tracker, the re-assert loop, and the actuator
   }
 
   function renderRecommendation(
