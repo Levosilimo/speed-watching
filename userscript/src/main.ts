@@ -12,7 +12,7 @@ import { installCaptionCapture, TimedtextBuffer } from '../../lib/caption-captur
 import { fetchCaptions as fetchCaptionsWithContext } from '../../lib/caption-fetch';
 import { parseYouTubeJson3 } from '../../lib/captions';
 import { cueSignal, detectContentType, priorMidpoint } from '../../lib/heuristics';
-import { resolveLanguage, UNIT_LABELS, type LanguageModel } from '../../lib/languages';
+import { normalizeLanguageCode, resolveLanguage, UNIT_LABELS, type LanguageModel } from '../../lib/languages';
 import { hasVisiblePlayerBadge } from '../../lib/live';
 import { SerializedRunner } from '../../lib/measure-guard';
 import { waitForPlayerResponse, type MeasureEventDetail } from '../../lib/measure-hooks';
@@ -202,16 +202,21 @@ async function showEstimatedPill(
   startedAt: number,
   videoDetails?: PlayerResponse['videoDetails'],
 ): Promise<void> {
-  const seeded = await channelSeededRate(videoDetails, language);
+  // No track language → the UI language's model drives math and range
+  // alike (mirror of entrypoints/content.ts's fallback). The prior must
+  // come from the same model so recommend() divides same-unit values — a
+  // ja morae target ÷ an en wpm prior would clamp at ~2.94×.
+  const model = language ?? resolveLanguage(normalizeLanguageCode(navigator.language) ?? undefined) ?? undefined;
+  const seeded = await channelSeededRate(videoDetails, model);
   renderRecommendation(
     videoId,
-    seeded ?? priorMidpoint('generic', language),
+    seeded ?? priorMidpoint('generic', model),
     'estimated',
     'generic',
     userTarget,
     null,
     startedAt,
-    language,
+    model,
   );
 }
 
@@ -380,8 +385,18 @@ async function channelSeededRate(
 
 // ── Keyboard shortcuts ────────────────────────────────────────────────────
 
+/** Typing Shift+W in a field is a capital W, not an apply (keydowns
+ * bubble to the document listener). */
+function isEditableTarget(target: EventTarget | null): boolean {
+  return (
+    target instanceof HTMLInputElement ||
+    target instanceof HTMLTextAreaElement ||
+    (target instanceof HTMLElement && target.isContentEditable)
+  );
+}
+
 function onKeyDown(event: KeyboardEvent): void {
-  if (event.shiftKey && event.code === 'KeyW') {
+  if (event.shiftKey && event.code === 'KeyW' && !isEditableTarget(event.target)) {
     applyMultiplier();
   } else if (event.key === 'Escape') {
     if (pillApi !== null && pillApi.isMenuOpen()) {
