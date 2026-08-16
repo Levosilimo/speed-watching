@@ -13,7 +13,7 @@ Full transcripts are not committed: every fixture is truncated to the first 20 e
 
 ## Synthetic fixtures — provenance gate
 
-Every fixture data file under `tests/fixtures/synthetic/` (*.json/*.vtt/*.srt) must be named in the table below with its derivation lineage AND an `evidence` citation the gate verifies exists: a golden-master registry fixture (`real/<name>`), a committed file path (`BUG_ZOO.md`, an e2e spec), a `scripts/data/*.jsonl` record (`scripts/data/<file>.jsonl#<videoId>`), or a commit hash. `scripts/audit-lanes.ts` fails on any synthetic fixture this table does not name, on a lineage row whose evidence does not exist, and on a row with no citable evidence. Name-matching reads only the table rows — a fixture mentioned in prose or a comment buys no exemption. Non-data assets (`hls/*.m3u8`, `media/silence.webm`) are outside the gate.
+Every file under `tests/fixtures/synthetic/` — whatever its extension — must be named in the table below with its derivation lineage AND an `evidence` citation the gate verifies exists: a golden-master registry fixture (`real/<name>`), a committed file path (`BUG_ZOO.md`, an e2e spec), a `scripts/data/*.jsonl` record (`scripts/data/<file>.jsonl#<videoId>`), or a commit hash. `scripts/audit-lanes.ts` fails on any synthetic fixture this table does not name, on a lineage row whose evidence does not exist, and on a row with no citable evidence. Name-matching reads only the table rows — a fixture mentioned in prose or a comment buys no exemption. The gate walks the whole directory extension-agnostically: non-caption assets (`hls/*.m3u8`, `media/silence.webm`) are gated like any other fixture.
 
 | fixture | lineage | evidence |
 |---|---|---|
@@ -24,9 +24,12 @@ Every fixture data file under `tests/fixtures/synthetic/` (*.json/*.vtt/*.srt) m
 | synthetic/edx-transcript.json | edX transcript shape ({start, text} arrays), authored for the network-layer harvest parser (37a246d) | 37a246d |
 | synthetic/empty.json | empty-payload case for the wpm pipeline (3c99d7d) | 3c99d7d |
 | synthetic/gapped.json | authored for the skip-silence gap lane (c8ad7ca): a recommend-mode 1.4x cue timeline with one exactly-1.5s inter-cue gap (e2e/shared/specs.ts runSkipSpecs) | c8ad7ca; e2e/shared/specs.ts |
+| synthetic/hls/master.m3u8 | HLS master playlist for the generic-matcher harvest lane (d4239ad): references ../sample.vtt; the shape tests/captions-harvest.test.ts parses | d4239ad; tests/captions-harvest.test.ts |
+| synthetic/hls/talk/master.m3u8 | HLS playlist fetched by the generic player fixture page (e2e/generic.html) to register the subtitle timeline; references talk.vtt | d4239ad; e2e/generic.html |
 | synthetic/hls/talk/talk.vtt | VTT segment referenced by the generic-matcher HLS playlist (d4239ad), served to e2e/generic.html | d4239ad; e2e/generic.html |
 | synthetic/ja-captions.json | word-timed json3 in the captured WEB ASR shape with ja segs, authored for the language-unit chain e2e (b31d3c1) | b31d3c1 |
 | synthetic/late-controls.json | bug-zoo lane (673e0a9): word-timed json3 in the pot-gated shape; controls mount 4 s past the drive's 3 s visibility wait (LATE_CONTROLS_FIXTURES) | 673e0a9; BUG_ZOO.md |
+| synthetic/media/silence.webm | silent webm source of the generic player fixture video (e2e/generic.html), so the time-saved metric accrues on real timeupdate ticks | e2e/generic.html |
 | synthetic/music-lyrics.json | music-track word-timed shape for the pill recommendation lane (353538a) | 353538a |
 | synthetic/music-segments.json | music-video events + windows shape for the wpm pipeline (3c99d7d) | 3c99d7d |
 | synthetic/no-controls.json | bug-zoo lane (673e0a9): word-timed json3 served on the plain watch page with no control stub (NO_CONTROLS_FIXTURES) | 673e0a9; BUG_ZOO.md |

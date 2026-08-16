@@ -1,12 +1,15 @@
-import { join } from 'node:path';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { main } from '../scripts/audit-lanes.ts';
-import { scanFixtureProvenance } from '../scripts/audit-real-fixtures.ts';
+import { discoverSyntheticFixtures, scanFixtureProvenance } from '../scripts/audit-real-fixtures.ts';
 
 const corpusDir = fileURLToPath(new URL('./fixtures/audit-corpus/', import.meta.url));
 const unnamed = join(corpusDir, 'unnamed-synthetic.json');
 const named = join(corpusDir, 'named-synthetic.json');
+const proofBin = join(corpusDir, 'dummy-proof.bin');
 // Both corpus fixtures carry a scripts/data videoId reference; only the
 // provenance doc distinguishes them — a videoId inside the payload must not
 // buy an exemption.
@@ -51,9 +54,42 @@ describe('audit-real-fixtures', () => {
     expect(scanFixtureProvenance([named], doc, corpusDir)).toEqual([]);
   });
 
-  it('ignores non-caption assets', () => {
+  it('flags a .bin corpus fixture the provenance table does not name', () => {
+    const findings = scanFixtureProvenance([proofBin], table([honestRow]), corpusDir);
+    expect(findings).toHaveLength(1);
+    expect(findings[0]!.file).toBe(proofBin);
+  });
+
+  it('flags non-caption assets the provenance table does not name', () => {
     const asset = join(corpusDir, 'asset.webm');
-    expect(scanFixtureProvenance([asset], table([honestRow]), corpusDir)).toEqual([]);
+    const findings = scanFixtureProvenance([asset], table([honestRow]), corpusDir);
+    expect(findings).toHaveLength(1);
+    expect(findings[0]!.file).toBe(asset);
+  });
+
+  it('discovers every file under synthetic/ regardless of extension', () => {
+    const root = mkdtempSync(join(tmpdir(), 'audit-lanes-'));
+    try {
+      const synth = join(root, 'tests', 'fixtures', 'synthetic', 'nested');
+      mkdirSync(synth, { recursive: true });
+      writeFileSync(join(synth, '..', 'dummy-proof.bin'), 'payload');
+      writeFileSync(join(synth, 'proof.bin'), 'payload');
+      writeFileSync(join(synth, 'proof.json'), '{}');
+      const discovered = discoverSyntheticFixtures(root);
+      expect(discovered).toContain(join(synth, '..', 'dummy-proof.bin'));
+      expect(discovered).toContain(join(synth, 'proof.bin'));
+      expect(discovered).toContain(join(synth, 'proof.json'));
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('discovers the committed non-caption assets (webm + m3u8) too', () => {
+    const root = process.cwd();
+    const names = discoverSyntheticFixtures(root).map((file) => relative(root, file));
+    expect(names).toContain('tests/fixtures/synthetic/media/silence.webm');
+    expect(names).toContain('tests/fixtures/synthetic/hls/master.m3u8');
+    expect(names).toContain('tests/fixtures/synthetic/hls/talk/master.m3u8');
   });
 });
 

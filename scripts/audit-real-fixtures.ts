@@ -4,9 +4,9 @@
  * payload or the e2e lane they were authored for (AGENTS.md: External
  * truth, Fixture provenance gate).
  *
- * Every fixture data file under tests/fixtures/synthetic/ (*.json/*.vtt/
- * *.srt) must be named in tests/fixtures/README.md's synthetic-fixtures
- * table with its derivation lineage AND an evidence citation the scan can
+ * Every file under tests/fixtures/synthetic/ — whatever its extension —
+ * must be named in tests/fixtures/README.md's synthetic-fixtures table
+ * with its derivation lineage AND an evidence citation the scan can
  * verify exists: a golden-master registry fixture (`real/<name>`), a
  * committed file path (`BUG_ZOO.md`, an e2e spec), a scripts/data/*.jsonl
  * record (`scripts/data/<file>.jsonl#<videoId>`), or a commit hash.
@@ -35,7 +35,6 @@ export interface ProvenanceRow {
   evidence: string;
 }
 
-const FIXTURE_EXT = /\.(json|vtt|srt)$/;
 const COMMIT_HASH = /^[0-9a-f]{7,40}$/;
 const JSONL_RECORD = /^scripts\/data\/.+\.jsonl#([A-Za-z0-9_-]+)$/;
 
@@ -107,7 +106,7 @@ export function discoverSyntheticFixtures(root: string): string[] {
     for (const entry of readdirSync(dir, { withFileTypes: true })) {
       if (entry.isDirectory()) {
         walk(join(dir, entry.name));
-      } else if (FIXTURE_EXT.test(entry.name)) {
+      } else {
         files.push(join(dir, entry.name));
       }
     }
@@ -125,7 +124,6 @@ export function scanFixtureProvenance(
   const named = new Set(rows.map((row) => row.name));
   const findings: ScanFinding[] = [];
   for (const file of files) {
-    if (!FIXTURE_EXT.test(file)) continue;
     const name = relative(fixturesRoot, file);
     if (!named.has(name)) {
       findings.push({
