@@ -12,7 +12,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createRateController } from '../lib/rate-controller';
 import type { RateControllerDeps, RateCurrent } from '../lib/rate-controller-types';
 import type { Recommendation } from '../lib/recommend';
-import { defaultSettings, type Settings } from '../lib/settings';
+import { DEFAULT_PLATFORM_MAX, defaultSettings, type Settings } from '../lib/settings';
 
 interface Ctx extends RateCurrent {
   videoId: string;
@@ -191,7 +191,7 @@ describe('renderRecommendation', () => {
   it('auto-applies a recommend-mode measured tier when auto is on, anchoring the undo rate', () => {
     const h = makeHarness();
     h.render({ settings: autoOn() });
-    expect(h.calls.applyRate).toHaveBeenCalledWith(h.video, 1.25, 2);
+    expect(h.calls.applyRate).toHaveBeenCalledWith(h.video, 1.25, DEFAULT_PLATFORM_MAX);
     expect(h.controller.pillState?.applied).toBe('auto');
     expect(h.controller.pillState?.undoRate).toBe(1);
     expect(h.calls.skipAttach).toHaveBeenCalledWith(h.video, 1.25);
@@ -236,7 +236,7 @@ describe('apply plumbing', () => {
     const h = makeHarness();
     h.render({ settings: autoOn() }); // auto at 1.25
     h.controller.userApply(3);
-    expect(h.calls.applyRate).toHaveBeenLastCalledWith(h.video, 2, 2);
+    expect(h.calls.applyRate).toHaveBeenLastCalledWith(h.video, 2, DEFAULT_PLATFORM_MAX);
     expect(h.controller.pillState).toMatchObject({ applied: 'user', undoRate: undefined });
   });
 
