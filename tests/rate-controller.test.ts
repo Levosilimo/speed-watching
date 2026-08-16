@@ -12,7 +12,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createRateController } from '../lib/rate-controller';
 import type { RateControllerDeps, RateCurrent } from '../lib/rate-controller-types';
 import type { Recommendation } from '../lib/recommend';
-import { defaultSettings, type Settings } from '../lib/settings';
+import { DEFAULT_PLATFORM_MAX, defaultSettings, type Settings } from '../lib/settings';
 
 interface Ctx extends RateCurrent {
   videoId: string;
@@ -191,7 +191,7 @@ describe('renderRecommendation', () => {
   it('auto-applies a recommend-mode measured tier when auto is on, anchoring the undo rate', () => {
     const h = makeHarness();
     h.render({ settings: autoOn() });
-    expect(h.calls.applyRate).toHaveBeenCalledWith(h.video, 1.25, 2);
+    expect(h.calls.applyRate).toHaveBeenCalledWith(h.video, 1.25, DEFAULT_PLATFORM_MAX);
     expect(h.controller.pillState?.applied).toBe('auto');
     expect(h.controller.pillState?.undoRate).toBe(1);
     expect(h.calls.skipAttach).toHaveBeenCalledWith(h.video, 1.25);
@@ -236,7 +236,7 @@ describe('apply plumbing', () => {
     const h = makeHarness();
     h.render({ settings: autoOn() }); // auto at 1.25
     h.controller.userApply(3);
-    expect(h.calls.applyRate).toHaveBeenLastCalledWith(h.video, 2, 2);
+    expect(h.calls.applyRate).toHaveBeenLastCalledWith(h.video, 2, DEFAULT_PLATFORM_MAX);
     expect(h.controller.pillState).toMatchObject({ applied: 'user', undoRate: undefined });
   });
 
@@ -566,5 +566,55 @@ describe('pillHook and chapter wiring (wave-5 batch B)', () => {
     status = 'yielded';
     h.controller.refreshChapterStatus();
     expect(h.controller.pillState?.chapterStatus).toBe('yielded');
+  });
+
+  it('the chapter toggle click arms the scheduler through onConsent', () => {
+    const onConsent = vi.fn();
+    const chapter = {
+      extras: () => ({ chaptersAvailable: true, autoAdjust: false, chapterStatus: undefined }),
+      onConsent,
+      onReset: () => undefined,
+    };
+    const h = makeHarness({ chapter });
+    h.render();
+    const root = h.anchor.querySelector<HTMLElement>('.speedwatcher-pill-host')?.shadowRoot;
+    const toggle = root?.querySelector<HTMLButtonElement>('.btn-chapter-toggle');
+    if (toggle === undefined || toggle === null) throw new Error('expected a chapter toggle');
+    toggle.click();
+    expect(onConsent).toHaveBeenCalledWith(true, h.video, expect.any(Function));
+    expect(h.controller.pillState?.autoAdjust).toBe(true);
+  });
+
+  it('showNone renders the none state', () => {
+    const h = makeHarness();
+    h.render();
+    expect(h.controller.pillState?.mode).not.toBe('none');
+    h.controller.showNone();
+    expect(h.controller.pillState).toMatchObject({ mode: 'none' });
+  });
+
+  it('adoptVideo takes the new element as the apply target and ends the old session', () => {
+    const h = makeHarness();
+    h.render({ settings: autoOn() }); // session attached to h.video
+    const next = document.createElement('video');
+    h.controller.adoptVideo(next);
+    expect(h.controller.activeVideo).toBe(next);
+    expect(h.calls.skipDetach).toHaveBeenCalled(); // endSession tore the session down
+  });
+
+  it('flushes accrued saved time to the background store on session end', () => {
+    vi.useFakeTimers();
+    try {
+      const h = makeHarness();
+      h.render({ settings: autoOn() }); // auto-applies at 1.25 and attaches the tracker
+      vi.advanceTimersByTime(5_000);
+      h.video.dispatchEvent(new Event('timeupdate')); // accrues 5 s of wall time
+      h.controller.endSession(); // detach flushes the tail
+      expect(h.calls.accrue).toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'timeSaved:accrue', multiplier: 1.25 }),
+      );
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

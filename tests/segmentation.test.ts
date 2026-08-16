@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Segment } from '../lib/captions';
 import { clusterSegments, cuesInRange, MIN_CLUSTER_SEC, segmentRates } from '../lib/chapters';
+import { resolveLanguage } from '../lib/languages';
 import { recommend } from '../lib/recommend';
 import { filteredTokensOverTrimmedSpan, manualCueRate } from '../lib/wpm';
 import type { ChapterSegment } from '../lib/youtube';
@@ -164,5 +165,51 @@ describe('clusterSegments', () => {
     expect(segments[0]).toMatchObject({ startSec: 0, multiplier: 1, mode: 'music' });
     // The speech half runs far above the safe zone — the rec slows it down.
     expect(segments[1]!.multiplier).toBeLessThan(1);
+  });
+
+  it('returns the whole-video no-op for an empty cue timeline', () => {
+    expect(clusterSegments([], 'asr', undefined, opts)).toEqual([
+      { startSec: 0, endSec: 0, multiplier: 1, mode: 'recommend' },
+    ]);
+  });
+
+  it('folds a short trailing cluster back into the whole', () => {
+    const s1: Segment[] = [];
+    for (let t = 0; t <= 68; t += 2) s1.push(cue(w5, t, 2));
+    const s2: Segment[] = [];
+    for (let t = 76; t <= 120; t += 2) s2.push(cue(w20, t, 2));
+    const s3: Segment[] = [];
+    for (let t = 126; t <= 160; t += 2) s3.push(cue(w5, t));
+    const segments = clusterSegments([...s1, ...s2, ...s3], 'manual', undefined, opts);
+    expect(segments).toHaveLength(1);
+    expect(segments[0]).toMatchObject({ startSec: 0, endSec: 160 });
+  });
+
+  it('leaves a rate jump without a structural pause unsplit (gap > window)', () => {
+    const cues: Segment[] = [];
+    for (let t = 0; t <= 40; t += 2) cues.push(cue(w5, t, 2));
+    for (let t = 94; t <= 200; t += 2) cues.push(cue(w20, t, 2));
+    expect(clusterSegments(cues, 'asr', undefined, opts)).toHaveLength(1);
+  });
+
+  it('respects a resolved language model in the per-slice rec', () => {
+    const ja = resolveLanguage('ja');
+    if (ja === null) throw new Error('ja language model must resolve');
+    const cues = [cue(w5, 0, 2), cue(w5, 4, 2), cue(w5, 8, 2)];
+    expect(clusterSegments(cues, 'asr', ja, opts)).toHaveLength(1);
+  });
+
+  it('ends an unbounded chapter at the last cue, absent or undurationed', () => {
+    expect(
+      segmentRates([], [{ title: 'A', startSec: 5, endSec: 0 }], 'asr', undefined, opts)[0],
+    ).toMatchObject({ startSec: 5, endSec: 5 });
+    const noDur = segmentRates(
+      [cue(w5, 10), cue(w5, 20)],
+      [{ title: 'B', startSec: 0, endSec: 0 }],
+      'asr',
+      undefined,
+      opts,
+    );
+    expect(noDur[0]).toMatchObject({ startSec: 0, endSec: 20 });
   });
 });

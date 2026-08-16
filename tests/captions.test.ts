@@ -59,6 +59,37 @@ describe('parseYouTubeJson3 — edge cases', () => {
     expect(parseYouTubeJson3('nonsense')).toEqual({ words: [], cues: [] });
   });
 
+  it('skips non-record entries in the events and windows arrays', () => {
+    const parsed = parseYouTubeJson3({
+      events: ['bogus', { tStartMs: 0, dDurationMs: 500, segs: [{ utf8: 'ok' }] }],
+      windows: ['bogus'],
+    });
+    expect(parsed.cues).toEqual([{ text: 'ok', startSec: 0, durSec: 0.5 }]);
+  });
+
+  it('skips segs and windows missing their timing fields', () => {
+    const parsed = parseYouTubeJson3({
+      windows: [
+        { wpWinStartMs: 1000, segs: [{ utf8: 'untimed seg' }] },
+        { wpWinStartMs: 2000, segs: [{ utf8: 'timed', tOffsetMs: 100 }] },
+      ],
+      events: [
+        { segs: [{ utf8: 'no start', tOffsetMs: 5 }] },
+        { tStartMs: 0, segs: [{ utf8: 'no dur' }] },
+        { windows: [{ text: 'no start', durMs: 500 }] },
+      ],
+    });
+    expect(parsed.words).toEqual([{ text: 'timed', startSec: 2.1, durSec: undefined }]);
+    expect(parsed.cues).toEqual([]);
+  });
+
+  it('filters non-record segs out of the cue text', () => {
+    const parsed = parseYouTubeJson3({
+      events: [{ tStartMs: 0, dDurationMs: 500, segs: ['bogus', { utf8: 'ok' }] }],
+    });
+    expect(parsed.cues).toEqual([{ text: 'ok', startSec: 0, durSec: 0.5 }]);
+  });
+
   it('sorts out-of-order word timings ascending', () => {
     const { words } = parseYouTubeJson3(readFixture('synthetic/out-of-order.json'));
     expect(words.map((w) => w.startSec)).toEqual([0, 1.5, 3]);
