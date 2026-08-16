@@ -192,20 +192,21 @@ export function wireEvents(
   });
 
   // Keyboard: Enter applies (or undoes auto in the auto-applied state),
-  // Escape dismisses. Both route through the button handlers so the focus
-  // restoration is shared with clicks. The chapter toggle is excluded — it
-  // is a native button whose own Enter activation must not also Apply.
+  // Escape dismisses — both route through the button handlers so focus
+  // restoration is shared with clicks. Enter routes only from the pill
+  // surface: focused buttons activate natively (their single apply path).
   dom.pill.addEventListener('keydown', (e: KeyboardEvent) => {
-    if (e.target === dom.chapterToggleBtn) return;
-    if (e.key === 'Enter' && !e.defaultPrevented) {
+    if (e.key === 'Escape' && !e.defaultPrevented) {
+      e.preventDefault();
+      dom.dismissBtn.click();
+    } else if (e.key === 'Enter' && !e.defaultPrevented && e.target === dom.pill) {
+      e.preventDefault();
       const state = getState();
       if (state?.applied === 'auto' && state.mode === 'recommend') {
         dom.stopAutoBtn.click();
       } else {
         dom.applyBtn.click();
       }
-    } else if (e.key === 'Escape' && !e.defaultPrevented) {
-      dom.dismissBtn.click();
     }
   });
 }
