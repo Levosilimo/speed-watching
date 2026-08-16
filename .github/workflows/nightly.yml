@@ -25,6 +25,10 @@ jobs:
       issues: write # the breach-response issue (gh issue create)
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          # The mutation run executes the same suite as the lineage gate;
+          # commit-hash evidence needs full history (see ci.yml).
+          fetch-depth: 0
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22

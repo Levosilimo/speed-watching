@@ -114,7 +114,8 @@ describe('gate wiring', () => {
     // every hash citation (the audit-corpus lanes prove the seam).
     const ciJob = ci.slice(ci.indexOf('  ci:'), ci.indexOf('  codeql:'));
     const checkout = ciJob.indexOf('actions/checkout');
-    const checkoutStep = ciJob.slice(checkout, checkout + 200);
+    const nextStep = ciJob.indexOf('\n      - uses:', checkout);
+    const checkoutStep = ciJob.slice(checkout, nextStep);
     expect(checkoutStep).toContain('fetch-depth: 0');
   });
 });
