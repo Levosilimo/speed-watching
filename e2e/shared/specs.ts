@@ -84,6 +84,34 @@ const VTT_HOST: VttHost = {
   },
 };
 
+/** Polls until the pill state holds across three consecutive reads. The
+ * generic fixture can render a transient none — the webm duration is still
+ * Infinity at injection in Firefox — before the playing-driven re-measure
+ * lands; a first-non-null read would pin that flash. Stable states,
+ * including the swap lane's reset none, return after the third read. */
+export async function readSettledPill(
+  read: () => Promise<PillState | null>,
+  timeoutMs = 15_000,
+): Promise<PillState | null> {
+  const deadline = Date.now() + timeoutMs;
+  let last: PillState | null = null;
+  let stable = 0;
+  while (Date.now() < deadline) {
+    const value = await read();
+    if (value !== null) {
+      if (last !== null && JSON.stringify(value) === JSON.stringify(last)) {
+        stable += 1;
+        if (stable >= 3) return value;
+      } else {
+        last = value;
+        stable = 1;
+      }
+    }
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  }
+  return last;
+}
+
 export interface E2EDriver {
   /** Navigate to the fixture watch page at a *.youtube.com origin; extra
    * appends raw query params (live=1, straybadge=1) for the fixture-server
@@ -91,7 +119,7 @@ export interface E2EDriver {
   navigateToWatch(fixture: string, extra?: string): Promise<void>;
   /** Page-captured speedwatcher:measure payload, or undefined before it fires. */
   readMeasurement(): Promise<Measurement | undefined>;
-  /** Current pill state (polls until the first update renders). */
+  /** Current pill state (polls until it settles across consecutive reads). */
   readPillState(): Promise<PillState | null>;
   /** Trigger the pill's Apply handler (same callback the Apply button fires). */
   applyPill(): Promise<void>;

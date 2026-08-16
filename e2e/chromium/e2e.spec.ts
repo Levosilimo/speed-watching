@@ -29,6 +29,7 @@ import {
   runMeasurementSpecs,
   runMultiVideoSpecs,
   runPillSpecs,
+  readSettledPill,
   runSkipSpecs,
   runTranscriptSpecs,
   runLoginRequiredSpecs,
@@ -89,12 +90,7 @@ test.beforeAll(async () => {
       return page.evaluate(() => window.__speedwatcherLastMeasure);
     },
     async readPillState() {
-      await page.waitForFunction(
-        () => window.__speedwatcherPill?.state != null,
-        undefined,
-        { timeout: 15_000 },
-      );
-      return page.evaluate(() => window.__speedwatcherPill?.state ?? null);
+      return readSettledPill(() => page.evaluate(() => window.__speedwatcherPill?.state ?? null));
     },
     async applyPill() {
       await page.evaluate(() => window.__speedwatcherPill?.apply());

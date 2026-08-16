@@ -29,7 +29,6 @@ import { Builder } from 'selenium-webdriver';
 import { Options as FirefoxOptions, Driver as FirefoxDriver } from 'selenium-webdriver/firefox';
 import { start as startGeckodriver } from 'geckodriver';
 import { createFixtureServer } from '../server';
-import type { PillState } from '../../ui/pill';
 import type { RateTier } from '../../lib/recommend';
 import {
   runBridgeSpecs,
@@ -39,6 +38,7 @@ import {
   runLiveSuppressionSpecs,
   runMeasurementSpecs,
   runMultiVideoSpecs,
+  readSettledPill,
   runPillSpecs,
   runTranscriptSpecs,
   runLoginRequiredSpecs,
@@ -138,15 +138,9 @@ async function main(): Promise<void> {
         return undefined;
       },
       async readPillState() {
-        const deadline = Date.now() + 15_000;
-        while (Date.now() < deadline) {
-          const value = await driver.executeScript(
-            'return window.__speedwatcherPill ? window.__speedwatcherPill.state : null',
-          );
-          if (value !== null && value !== undefined) return value as unknown as PillState;
-          await new Promise((resolve) => setTimeout(resolve, 250));
-        }
-        return null;
+        return readSettledPill(() =>
+          driver.executeScript('return window.__speedwatcherPill ? window.__speedwatcherPill.state : null'),
+        );
       },
       async applyPill() {
         await driver.executeScript('window.__speedwatcherPill && window.__speedwatcherPill.apply()');
