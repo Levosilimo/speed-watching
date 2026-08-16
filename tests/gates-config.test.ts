@@ -42,6 +42,10 @@ describe('vitest coverage config', () => {
     expect(coverageThresholds.branches, 'branches floor').toBeGreaterThanOrEqual(COVERAGE_FLOORS.branches);
   });
 
+  it('enforces the floors per file, not only in aggregate', () => {
+    expect(coverageThresholds.perFile).toBe(true);
+  });
+
   it('keeps the coverage gate scoped to the critical libs', () => {
     expect(coverage.include).toEqual([
       'lib/wpm.ts',
