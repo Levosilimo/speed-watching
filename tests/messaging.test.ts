@@ -624,6 +624,32 @@ describe('messaging bridge', () => {
     }
   });
 
+  it('ignores responses whose source is not the bridge frame window', async () => {
+    const { host, dispatch } = fakeWindow();
+    const client = createBridgeClient(host);
+    // A cross-frame forgery: a foreign source answers the in-flight request
+    // with a valid-shaped response. The request side drops foreign sources
+    // (createBridgeListener); the response side must mirror it — the forged
+    // envelope must not settle the pending request, which still times out.
+    const pending = client.request({ type: 'settings:get' });
+    dispatch({
+      data: {
+        channel: BRIDGE_CHANNEL,
+        direction: 'response',
+        payload: { id: 1, ok: true, result: defaultSettings() },
+      },
+      source: { foreign: true },
+    } as unknown as MessageEvent);
+    vi.useFakeTimers();
+    try {
+      const assertion = expect(pending).rejects.toThrow('bridge timeout');
+      vi.advanceTimersByTime(BRIDGE_TIMEOUT_MS + 1);
+      await assertion;
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('ignores responses with unknown ids', async () => {
     const { host } = fakeWindow();
     const client = createBridgeClient(host);

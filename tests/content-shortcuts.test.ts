@@ -139,6 +139,20 @@ beforeEach(() => {
 
   const main = (contentModule as { main: () => void }).main;
   main();
+
+  // happy-dom's global window is a proxy: native postMessage delivers
+  // events whose source is the underlying Window, so the bridge's same-frame
+  // source guard (event.source !== host) — satisfied by real browsers — would
+  // drop every envelope. Dispatch with source=window to model the browser;
+  // kept async (microtask) like the native delivery so the relay's
+  // post-then-listen ordering still holds. The window is captured at post
+  // time so a delivery that outlives the test cannot touch a torn-down env.
+  window.postMessage = ((message: unknown) => {
+    const win = window;
+    queueMicrotask(() => {
+      win.dispatchEvent(new MessageEvent('message', { data: message, source: win }));
+    });
+  }) as typeof window.postMessage;
 });
 
 describe('bridge shortcut relay (background → MAIN world)', () => {
