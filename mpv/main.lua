@@ -91,10 +91,13 @@ end
 local function run_measurement(apply)
   local rec, natural, lang = measure()
   if not rec then return end
-  state.measured_this_file = true
-  state.last_multiplier = rec.multiplier
-  state.last_mode = rec.mode
+  -- Arm the reset sentinel only when the apply happened, mirroring the
+  -- extension (lib/matcher.ts start() runs only on apply); a measure-only
+  -- must not re-assert the speed later.
   if apply then
+    state.measured_this_file = true
+    state.last_multiplier = rec.multiplier
+    state.last_mode = rec.mode
     mp.set_property_number("speed", rec.multiplier)
   end
   local lines = { rec.label }
