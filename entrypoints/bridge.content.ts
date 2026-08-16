@@ -3,11 +3,10 @@
 // + OverrideLog + ChannelMemory that MAIN-world scripts cannot touch
 // (chrome.* is unavailable in the page world). Answers the window
 // postMessage envelopes defined in lib/messaging.ts straight from
-// chrome.storage.local — no service-worker round trip. Demand increments,
-// the nudge messages, and time-saved accrues are the exceptions: they are
-// forwarded to the
-// background, the single writer (lib-11#3), so per-frame stores never
-// interleave get→set pairs.
+// chrome.storage.local — no service-worker round trip. channel:put, demand
+// increments, the nudge messages, and time-saved accrues are the exceptions:
+// they are forwarded to the background, the single writer (lib-11#3), so
+// per-frame stores never interleave get→set pairs.
 //
 // World tolerance: Firefox has no isolated worlds, so the bridge may share
 // the page world with the main script. Correctness never depends on world
@@ -63,6 +62,8 @@ export default defineContentScript({
             browser.runtime.sendMessage({ type: 'nudge:dismiss', forever }),
           forwardAccrue: (deltaSec, multiplier) =>
             browser.runtime.sendMessage({ type: 'timeSaved:accrue', deltaSec, multiplier }),
+          forwardChannelPut: (channelKey, record) =>
+            browser.runtime.sendMessage({ type: 'channel:put', channelKey, record }),
         },
         window,
       ),

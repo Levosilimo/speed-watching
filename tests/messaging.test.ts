@@ -66,22 +66,34 @@ function fakeWindow(): {
   };
 }
 
+/** The channel lane's shared storage and the single background writer both
+ * frames forward to (mirror of entrypoints/background.ts). */
+interface ChannelLane {
+  storage: StorageLike;
+  writer: ChannelMemory;
+}
+
 function serve(
   host: EventHost,
   forwardDemand: BridgeDeps['forwardDemand'] = vi.fn(),
   forwardAccrue: BridgeDeps['forwardAccrue'] = vi.fn(),
-  channelStorage: StorageLike = mockStorage(),
+  lane?: ChannelLane,
 ): BridgeDeps {
+  const storage = lane?.storage ?? mockStorage();
+  const writer = lane?.writer ?? new ChannelMemory(storage);
   const deps: BridgeDeps = {
     settings: new SettingsStore(mockStorage()),
     skip: new SkipSilenceStore(mockStorage()),
     log: new OverrideLog(mockStorage()),
-    channels: new ChannelMemory(channelStorage),
+    // channel:get answers per-frame from the shared storage; channel:put
+    // forwards to the background single writer over the same storage.
+    channels: new ChannelMemory(storage),
     forwardDemand,
     forwardJournalAppend: vi.fn(),
     forwardNudgeRecordApply: vi.fn(),
     forwardNudgeDismiss: vi.fn(),
     forwardAccrue,
+    forwardChannelPut: (channelKey, record) => writer.put(channelKey, record),
   };
   host.addEventListener('message', createBridgeListener(deps, host as unknown as Window));
   return deps;
@@ -453,14 +465,14 @@ describe('messaging bridge', () => {
   it('serializes concurrent channel:put from two frames so no update is lost (lib-11#3 single writer)', async () => {
     // Two frames share chrome.storage.local; each answers channel:put with
     // its own get→set pair, so concurrent writes interleave and lose one
-    // record. The puts must serialize on one writer (mirror of the
-    // demand:increment lane).
+    // record. The puts must serialize on one background writer (mirror of
+    // the demand:increment lane).
     const storage = mockStorage();
-    const background = new ChannelMemory(storage);
+    const writer = new ChannelMemory(storage);
     const hostA = fakeWindow();
     const hostB = fakeWindow();
-    serve(hostA.host, vi.fn(), vi.fn(), storage);
-    serve(hostB.host, vi.fn(), vi.fn(), storage);
+    serve(hostA.host, vi.fn(), vi.fn(), { storage, writer });
+    serve(hostB.host, vi.fn(), vi.fn(), { storage, writer });
     const clientA = createBridgeClient(hostA.host);
     const clientB = createBridgeClient(hostB.host);
     await Promise.all([
@@ -475,8 +487,8 @@ describe('messaging bridge', () => {
         record: { rate: 160, unit: 'wpm', language: 'en', ts: 2 },
       }),
     ]);
-    expect(await background.get('UC-a')).toEqual({ rate: 150, unit: 'wpm', language: 'en', ts: 1 });
-    expect(await background.get('UC-b')).toEqual({ rate: 160, unit: 'wpm', language: 'en', ts: 2 });
+    expect(await writer.get('UC-a')).toEqual({ rate: 150, unit: 'wpm', language: 'en', ts: 1 });
+    expect(await writer.get('UC-b')).toEqual({ rate: 160, unit: 'wpm', language: 'en', ts: 2 });
   });
 
   it('forwards demand:increment to the background single writer and resolves on its response (lib-11#3)', async () => {

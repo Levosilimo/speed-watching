@@ -6,7 +6,7 @@
 // Routing rationale (single-writer background forwarding) lives in
 // lib/messaging.ts.
 
-import { type ChannelRecord } from './channel-memory';
+import { CHANNEL_KEY_MAX_LENGTH, isChannelRecord, type ChannelRecord } from './channel-memory';
 import { isCaptionStatus } from './error-journal';
 import { isContentType, type ContentType } from './music';
 import type { CaptionStatus } from '../ui/pill';
@@ -34,6 +34,27 @@ interface DemandIncrementMessage {
 
 export function isDemandIncrementMessage(value: unknown): value is DemandIncrementMessage {
   return isRecord(value) && value.type === 'demand:increment' && isContentType(value.contentType);
+}
+
+/** Runtime message the bridge sends the background for channel:put
+ * (single-writer routing like demand:increment, lib-11#3); the background
+ * answers after the record lands. Same shape as the bridge request it
+ * carries. */
+interface ChannelPutMessage {
+  type: 'channel:put';
+  channelKey: string;
+  record: ChannelRecord;
+}
+
+export function isChannelPutMessage(value: unknown): value is ChannelPutMessage {
+  return (
+    isRecord(value) &&
+    value.type === 'channel:put' &&
+    typeof value.channelKey === 'string' &&
+    value.channelKey.length > 0 &&
+    value.channelKey.length <= CHANNEL_KEY_MAX_LENGTH &&
+    isChannelRecord(value.record)
+  );
 }
 
 /** Runtime message the bridge sends the background for journal:append

@@ -244,6 +244,22 @@ describe('background wiring', () => {
     expect(b).toBe(3 + (3 * 0.5) / 1.5); // +1
   });
 
+  it('routes channel:put through its single ChannelMemory (lib-11#3 single writer)', async () => {
+    const storageData = installLocalStorage();
+    const main = (backgroundModule as { main: () => unknown }).main;
+    main();
+    const listener = registeredListener();
+
+    const response = await driveMessage(listener, {
+      type: 'channel:put',
+      channelKey: 'UC-a',
+      record: { rate: 150, unit: 'wpm', language: 'en', ts: 1 },
+    });
+    expect(response).toBeUndefined();
+    const stored = storageData.get('sw.channelRates') as Record<string, unknown> | undefined;
+    expect(stored?.['UC-a']).toEqual({ rate: 150, unit: 'wpm', language: 'en', ts: 1 });
+  });
+
   it('ignores an action click without a tab id', async () => {
     const main = (backgroundModule as { main: () => unknown }).main;
     main();

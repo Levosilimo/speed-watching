@@ -2,13 +2,14 @@
 // chrome.* access) and the bridge script (entrypoints/bridge.content.ts),
 // which owns a chrome-backed SettingsStore, OverrideLog, and ChannelMemory.
 // Requests and responses travel as postMessage envelopes on the shared
-// window. Settings, log, and channel-memory requests the bridge answers
-// directly from chrome.storage.local — no service-worker round trip.
-// demand:increment, the nudge messages, and timeSaved:accrue are the
-// exceptions: the bridge forwards them to the background
-// (runtime.sendMessage), the single writer, so increments from every frame
-// serialize on one DemandStore / NudgeStore / TimeSavedStore instead of
-// interleaving per-frame get→set pairs (lib-11#3).
+// window. Settings and log requests the bridge answers directly from
+// chrome.storage.local — no service-worker round trip. channel:get is
+// answered per-frame too (read-only); channel:put, demand:increment, the
+// nudge messages, and timeSaved:accrue are the exceptions: the bridge
+// forwards them to the background (runtime.sendMessage), the single writer,
+// so increments from every frame serialize on one DemandStore / NudgeStore /
+// TimeSavedStore / ChannelMemory instead of interleaving per-frame get→set
+// pairs (lib-11#3).
 // World choice documented in entrypoints/content.ts.
 //
 // Transport choice: postMessage, not CustomEvents. Firefox does not deliver
@@ -20,7 +21,7 @@
 // Wire protocol (envelope shapes, payload guards, shared bounds) lives in
 // lib/bridge-protocol.ts and is re-exported below for existing importers.
 
-import { CHANNEL_KEY_MAX_LENGTH, ChannelMemory, isChannelRecord } from './channel-memory';
+import { CHANNEL_KEY_MAX_LENGTH, ChannelMemory, isChannelRecord, type ChannelRecord } from './channel-memory';
 import { isContentType, type ContentType } from './music';
 import { OverrideLog } from './override-log';
 import { SettingsStore } from './settings';
@@ -29,6 +30,7 @@ import { BRIDGE_CHANNEL, isBridgeEnvelope, isJournalAppendMessage, isLogEntry, i
 export {
   BRIDGE_CHANNEL,
   isBridgeEnvelope,
+  isChannelPutMessage,
   isDemandIncrementMessage,
   isJournalAppendMessage,
   isNudgeDismiss,
@@ -74,6 +76,7 @@ export interface BridgeDeps {
   forwardNudgeRecordApply: (multiplier: number) => Promise<unknown>;
   forwardNudgeDismiss: (forever: boolean) => Promise<unknown>;
   forwardAccrue: (deltaSec: number, multiplier: number) => Promise<unknown>;
+  forwardChannelPut: (channelKey: string, record: ChannelRecord) => Promise<unknown>;
 }
 
 /** Isolated-world side: resolves a request against the shared stores.
@@ -135,11 +138,11 @@ export async function handleBridgeRequest(
       return deps.channels.get(request.channelKey);
     case 'channel:put':
       // SEC-3: forged records (out-of-range rates, oversized or empty
-      // keys) must not reach storage.
+      // keys) must not reach storage — or the background writer.
       if (!isChannelKey(request.channelKey) || !isChannelRecord(request.record)) {
         throw new Error('channel:put: invalid record');
       }
-      await deps.channels.put(request.channelKey, request.record);
+      await deps.forwardChannelPut(request.channelKey, request.record);
       return undefined;
     case 'demand:increment':
       // Boundary validation: unknown content types never reach the
