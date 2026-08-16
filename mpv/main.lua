@@ -94,7 +94,9 @@ local function run_measurement(apply)
   -- Arm the reset sentinel only when the apply happened, mirroring the
   -- extension (lib/matcher.ts start() runs only on apply); a measure-only
   -- must not re-assert the speed later.
-  if apply then
+  -- The apply is mode-gated like the extension's pillHook (lib/rate-
+  -- controller.ts): music and unreachable never touch the rate.
+  if apply and rec.mode ~= "unreachable" and rec.mode ~= "music" then
     state.measured_this_file = true
     state.last_multiplier = rec.multiplier
     state.last_mode = rec.mode
