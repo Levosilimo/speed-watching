@@ -1,0 +1,24 @@
+<!doctype html>
+<!-- E2E fixture for the generic matcher's SPA video-swap path: two
+     captionless <video> elements on a non-YouTube origin. The first
+     autoplays (the generic path adopts it on its playing event and renders
+     the estimated pill after the resource-timeline wait); the second stays
+     paused until the swap lane dispatches a playing event on it, which
+     triggers the controller's onVideoSwap hook. No caption resources exist
+     on the page, so every measure renders the estimated tier — the stale
+     window the swap reset closes is the pill state read right after the
+     swap event. -->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Generic swap fixture</title>
+  </head>
+  <body>
+    <video id="generic-video-a" muted autoplay loop>
+      <source src="/fixtures/media/silence.webm" type="video/webm" />
+    </video>
+    <video id="generic-video-b" muted loop>
+      <source src="/fixtures/media/silence.webm" type="video/webm" />
+    </video>
+  </body>
+</html>

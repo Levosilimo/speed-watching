@@ -411,6 +411,58 @@ describe('session lifecycle', () => {
   });
 });
 
+describe('generic video swap', () => {
+  // The generic entrypoint's onVideoSwap hook mirrored here (the controller
+  // cannot see the entrypoint; the e2e swap lane pins the entrypoint
+  // itself): a swap must drop current and the pill like the YouTube
+  // navigation reset, and keep the swapped-in element active so the
+  // re-measure targets it. The first adoption (no recommendation rendered
+  // yet) skips the reset — there is no stale state to clear.
+  const swapHook = (getH: () => Harness): NonNullable<RateControllerDeps<Ctx>['onVideoSwap']> => () => {
+    const h = getH();
+    const next = h.controller.activeVideo;
+    if (h.controller.current !== null) h.controller.reset();
+    if (next !== null) h.controller.adoptVideo(next);
+  };
+
+  it('a generic swap after a render resets current and the pill, and keeps the swapped-in element active for the re-measure', () => {
+    const h = makeHarness({ onVideoSwap: swapHook(() => h) });
+    h.render({ naturalRate: 200 });
+    expect(h.controller.current?.naturalRate).toBe(200);
+    const other = document.createElement('video');
+    document.body.append(other);
+    other.addEventListener('play', (e) => h.controller.onMediaEvent(e));
+    other.dispatchEvent(new Event('play'));
+    expect(h.controller.current).toBeNull();
+    expect(h.controller.pillState?.mode).toBe('none');
+    expect(h.controller.activeVideo).toBe(other);
+  });
+
+  it('a timeupdate from a non-active element is not a swap — only play/playing transitions swap', () => {
+    const h = makeHarness({ onVideoSwap: (end) => end() });
+    h.render({ settings: autoOn() });
+    h.video.dispatchEvent(new Event('play')); // the playing element becomes active
+    h.calls.teardown.mockClear();
+    const other = document.createElement('video');
+    document.body.append(other);
+    other.addEventListener('timeupdate', (e) => h.controller.onMediaEvent(e));
+    other.dispatchEvent(new Event('timeupdate')); // backgrounded playback noise
+    expect(h.calls.teardown).not.toHaveBeenCalled();
+    expect(h.controller.activeVideo).toBe(h.video);
+  });
+
+  it('the first adoption (no recommendation yet) never renders a none pill', () => {
+    const h = makeHarness({ onVideoSwap: swapHook(() => h) });
+    const other = document.createElement('video');
+    document.body.append(other);
+    other.addEventListener('play', (e) => h.controller.onMediaEvent(e));
+    other.dispatchEvent(new Event('play'));
+    expect(h.controller.current).toBeNull();
+    expect(h.controller.pillState).toBeNull(); // no empty pill flash before the first measure
+    expect(h.controller.activeVideo).toBe(other);
+  });
+});
+
 describe('settings and serialization', () => {
   it('loadSettings falls back to defaults when the bridge is dead', async () => {
     const rejecting = makeHarness({
@@ -509,7 +561,7 @@ describe('post-apply discipline (wave-5 batch B)', () => {
   it('a media event on the already-active video does not re-run the swap teardown', () => {
     const h = makeHarness({ onVideoSwap: (end) => end() });
     h.render({ settings: autoOn() });
-    h.video.dispatchEvent(new Event('timeupdate')); // first event adopts the element
+    h.video.dispatchEvent(new Event('play')); // first event adopts the element
     expect(h.calls.teardown).toHaveBeenCalledTimes(1);
     h.calls.teardown.mockClear();
     h.video.dispatchEvent(new Event('timeupdate')); // same element again

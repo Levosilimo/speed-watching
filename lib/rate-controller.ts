@@ -46,7 +46,6 @@ export function createRateController<C extends RateCurrent>(deps: RateController
 
   const measureRunner = new SerializedRunner();
 
-
   /** E2E hook (SEC-2); showPill keeps its state in sync — the apply gate mirrors ui/pill.ts wireEvents (music/unreachable never touch the rate). */
   const pillHook: PillTestHook = {
     state: null,
@@ -290,7 +289,8 @@ export function createRateController<C extends RateCurrent>(deps: RateController
   }
 
   function onMediaEvent(event: Event): void {
-    if (event.target instanceof HTMLVideoElement && event.target !== activeVideo) {
+    // Only play/playing transitions swap; a backgrounded element's ticks must not flip the active video.
+    if (event.target instanceof HTMLVideoElement && event.target !== activeVideo && (event.type === 'play' || event.type === 'playing')) {
       activeVideo = event.target;
       deps.onVideoSwap?.(endSession);
     }

@@ -22,7 +22,7 @@
 import { defineContentScript } from 'wxt/utils/define-content-script';
 import { harvestCaptions, type VttHost } from '@/lib/captions-harvest';
 import { priorMidpoint } from '@/lib/heuristics';
-import { resolveLanguage } from '@/lib/languages';
+import { normalizeLanguageCode, resolveLanguage } from '@/lib/languages';
 import { RateReapplier, selectVideo } from '@/lib/matcher';
 import { createBridgeClient } from '@/lib/messaging';
 import { detectMusic } from '@/lib/music';
@@ -85,10 +85,17 @@ const controller = createRateController<RateCurrent>({
     isOwnDip: (rate) =>
       skipActuator.active && Math.abs(rate - reapplier.currentRateFor(skipActuator.inGapNow)) <= RATE_EPSILON,
   },
-  // A new element means the user switched videos: end the old session and
-  // re-measure (the observer's handleVideoMutations does the same).
-  onVideoSwap: (endSession) => {
-    endSession();
+  // A new element means the user switched videos: full reset like the
+  // YouTube navigation path — the old recommendation and pill must not
+  // outlive the swap (a fast Apply would use the previous multiplier). The
+  // controller adopted the new element before this hook runs, so re-adopt
+  // it after the reset and re-measure. The first adoption (nothing rendered
+  // yet) skips the reset — there is no stale state, and the reset would
+  // flash an empty pill before the first measure lands.
+  onVideoSwap: () => {
+    const next = controller.activeVideo;
+    if (controller.current !== null) controller.reset();
+    if (next !== null) controller.adoptVideo(next);
     void measure();
   },
 });
@@ -230,7 +237,15 @@ async function measureOnce(startedAt: number): Promise<void> {
   }
   if (__E2E__) window.__speedwatcherCaptionTier = 'estimated';
   const contentType = resolveContentType(settings, site, 'generic');
-  controller.renderRecommendation(location.href, priorMidpoint(contentType), 'estimated', contentType, settings, site, undefined, undefined, startedAt);
+  // No track language → the UI language's model drives math and range alike
+  // (mirror of content.ts's showEstimatedPill).
+  const model =
+    language ??
+    resolveLanguage(normalizeLanguageCode(navigator.language) ?? undefined) ??
+    undefined;
+  // The model's own generic prior keeps target ÷ rate in one unit (a ja
+  // 470-morae target over the en 160-wpm prior would be a ~2.94× unit mix).
+  controller.renderRecommendation(location.href, priorMidpoint('generic', model), 'estimated', contentType, settings, site, undefined, model, startedAt);
 }
 
 /** Arms skip-silence on an apply: the reapplier's pair (base = the applied

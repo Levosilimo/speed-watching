@@ -84,6 +84,34 @@ const VTT_HOST: VttHost = {
   },
 };
 
+/** Polls until the pill state holds across three consecutive reads. The
+ * generic fixture can render a transient none — the webm duration is still
+ * Infinity at injection in Firefox — before the playing-driven re-measure
+ * lands; a first-non-null read would pin that flash. Stable states,
+ * including the swap lane's reset none, return after the third read. */
+export async function readSettledPill(
+  read: () => Promise<PillState | null>,
+  timeoutMs = 15_000,
+): Promise<PillState | null> {
+  const deadline = Date.now() + timeoutMs;
+  let last: PillState | null = null;
+  let stable = 0;
+  while (Date.now() < deadline) {
+    const value = await read();
+    if (value !== null) {
+      if (last !== null && JSON.stringify(value) === JSON.stringify(last)) {
+        stable += 1;
+        if (stable >= 3) return value;
+      } else {
+        last = value;
+        stable = 1;
+      }
+    }
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  }
+  return last;
+}
+
 export interface E2EDriver {
   /** Navigate to the fixture watch page at a *.youtube.com origin; extra
    * appends raw query params (live=1, straybadge=1) for the fixture-server
@@ -91,7 +119,7 @@ export interface E2EDriver {
   navigateToWatch(fixture: string, extra?: string): Promise<void>;
   /** Page-captured speedwatcher:measure payload, or undefined before it fires. */
   readMeasurement(): Promise<Measurement | undefined>;
-  /** Current pill state (polls until the first update renders). */
+  /** Current pill state (polls until it settles across consecutive reads). */
   readPillState(): Promise<PillState | null>;
   /** Trigger the pill's Apply handler (same callback the Apply button fires). */
   applyPill(): Promise<void>;
@@ -130,6 +158,8 @@ export interface E2EDriver {
   navigateToGeneric(): Promise<void>;
   /** Navigate to the Dzen-shaped track-src fixture page. */
   navigateToGenericDzen(): Promise<void>;
+  /** Navigate to the captionless two-video swap fixture page. */
+  navigateToGenericSwap(): Promise<void>;
   /** Which caption tier the generic matcher rendered. */
   readCaptionTier(): Promise<RateTier | null>;
   /** Set the page video's playbackRate to 1 (simulates a player reset). */
@@ -222,14 +252,15 @@ const WPM_TOLERANCE = 0.5;
 const RATE_TOLERANCE = 0.01;
 
 /** The estimated-tier pill the content script must render when captions are
- * unavailable: generic-prior midpoint (no content-type signal in fixtures),
- * with the UI-locale language fallback mirroring entrypoints/content.ts —
- * no track language → navigator.language's model drives the math and the
- * displayed range. The e2e browsers run en-US, so the en fixtures stay
- * byte-identical. */
+ * unavailable: the UI-locale language's generic prior (no content-type
+ * signal in fixtures) feeds the rate AND the model drives the target and
+ * range — the language-aware path the userscript's estimated tier takes
+ * (userscript/src/main.ts feeds priorMidpoint('generic', language) the same
+ * way). The e2e browsers run en-US, so the en fixtures stay byte-identical
+ * to the old en-anchored math. */
 export function expectedEstimatedPill(browserLanguage: string): { rec: Recommendation; naturalRate: number } {
-  const naturalRate = priorMidpoint('generic');
   const language = resolveLanguage(normalizeLanguageCode(browserLanguage) ?? undefined) ?? undefined;
+  const naturalRate = priorMidpoint('generic', language);
   return {
     rec: recommend({ naturalRate, tier: 'estimated', contentType: 'generic', platformMax: 2, language }),
     naturalRate,
@@ -778,6 +809,55 @@ export async function runGenericSpecs(driver: E2EDriver): Promise<void> {
   const dzenTier = await driver.readCaptionTier();
   if (dzenTier !== 'asr-word') {
     throw new Error(`generic-dzen: caption tier ${dzenTier}, expected asr-word`);
+  }
+}
+
+/** Generic SPA video-swap e2e: a second <video> starting to play must not
+ * inherit the first video's recommendation or pill — the swap resets
+ * (current null, pill none) before the re-measure lands, and the re-measure
+ * targets the swapped-in element. The fixture page is captionless, so every
+ * measure renders the estimated tier after the resource-timeline wait — the
+ * stale window the reset closes is the pill read right after the swap
+ * event. */
+export async function runGenericSwapSpecs(driver: E2EDriver): Promise<void> {
+  await driver.navigateToGenericSwap();
+  // (a) The first video autoplays and renders its estimated pill.
+  const first = expectState(await driver.readPillState(), 'generic-swap');
+  if (first.tierLabel !== 'estimated') {
+    throw new Error(`generic-swap: initial pill tierLabel ${first.tierLabel}, expected estimated`);
+  }
+  // (b) The second video starts playing: the old recommendation must not
+  // survive the swap — the pill drops to none before the re-measure lands.
+  await driver.fireMediaEvent(1, 'playing');
+  const swapped = expectState(await driver.readPillState(), 'generic-swap');
+  if (swapped.mode !== 'none') {
+    throw new Error(
+      `generic-swap: pill mode ${swapped.mode} after swap, expected none (stale current/pill)`,
+    );
+  }
+  // (c) The re-measure recovers on the swapped-in element: its own
+  // estimated pill renders after the caption-resource wait.
+  await driver.sleep(3000);
+  const recovered = expectState(await driver.readPillState(), 'generic-swap');
+  if (recovered.mode !== 'recommend' || recovered.tierLabel !== 'estimated') {
+    throw new Error(
+      `generic-swap: recovered pill ${recovered.mode}/${recovered.tierLabel}, expected recommend/estimated`,
+    );
+  }
+  // (d) Apply targets the swapped-in element only: the reset re-adopted it,
+  // so the first video's rate stays untouched.
+  await driver.applyPill();
+  const firstRate = await driver.readPlaybackRate(0);
+  const secondRate = await driver.readPlaybackRate(1);
+  if (firstRate === null || Math.abs(firstRate - 1) > RATE_TOLERANCE) {
+    throw new Error(
+      `generic-swap: video[0] playbackRate ${firstRate} after apply on video[1], expected 1 (untouched)`,
+    );
+  }
+  if (secondRate === null || Math.abs(secondRate - recovered.multiplier) > RATE_TOLERANCE) {
+    throw new Error(
+      `generic-swap: video[1] playbackRate ${secondRate}, expected ${recovered.multiplier} (the swapped-in video)`,
+    );
   }
 }
 

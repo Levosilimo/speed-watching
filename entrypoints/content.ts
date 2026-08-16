@@ -343,9 +343,8 @@ async function measureOnce(startedAt: number): Promise<void> {
   rememberChannelRate(response.videoDetails, naturalRate, language);
 }
 
-/** No usable caption rate: heuristic prior midpoint for the content type,
- * in the language's unit when the track language is known — or the
- * channel's last measured rate when it was measured in the same language. */
+/** No usable caption rate: the resolved model's generic prior (in the
+ * model's own unit) or the channel's last same-language measured rate. */
 async function showEstimatedPill(
   videoId: string,
   settings: Settings,
@@ -358,7 +357,8 @@ async function showEstimatedPill(
   // No track language → the UI language's model drives math and range alike.
   const model = language ?? resolveLanguage(normalizeLanguageCode(navigator.language) ?? undefined) ?? undefined;
   const seeded = await channelSeededRate(videoDetails, model);
-  controller.renderRecommendation(videoId, seeded ?? priorMidpoint(contentType), 'estimated', contentType, settings, site, null, model, startedAt, captionStatus);
+  // The model's own generic prior keeps target ÷ rate in one unit (a ja 470-morae target over an en 160-wpm prior is a ~2.94× unit mix) — 'generic' mirrors the userscript.
+  controller.renderRecommendation(videoId, seeded ?? priorMidpoint('generic', model), 'estimated', contentType, settings, site, null, model, startedAt, captionStatus);
   // Local-only counters (demand proxy + collapse journal): best-effort — a dead bridge must not suppress the pill.
   void bridge
     .request({ type: 'demand:increment', contentType })
