@@ -107,4 +107,14 @@ describe('gate wiring', () => {
   it('keeps the ci script bound to the local runner', () => {
     expect(pkg.scripts.ci).toBe('bun run scripts/run-ci.ts');
   });
+
+  it('fetches full history in the ci job — commit-hash evidence needs it', () => {
+    // verifyEvidence resolves hash citations with git rev-parse; a shallow
+    // checkout cannot see the cited commits, so the lineage gate flags
+    // every hash citation (the audit-corpus lanes prove the seam).
+    const ciJob = ci.slice(ci.indexOf('  ci:'), ci.indexOf('  codeql:'));
+    const checkout = ciJob.indexOf('actions/checkout');
+    const checkoutStep = ciJob.slice(checkout, checkout + 200);
+    expect(checkoutStep).toContain('fetch-depth: 0');
+  });
 });
