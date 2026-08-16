@@ -438,6 +438,19 @@ describe('generic video swap', () => {
     expect(h.controller.activeVideo).toBe(other);
   });
 
+  it('a timeupdate from a non-active element is not a swap — only play/playing transitions swap', () => {
+    const h = makeHarness({ onVideoSwap: (end) => end() });
+    h.render({ settings: autoOn() });
+    h.video.dispatchEvent(new Event('play')); // the playing element becomes active
+    h.calls.teardown.mockClear();
+    const other = document.createElement('video');
+    document.body.append(other);
+    other.addEventListener('timeupdate', (e) => h.controller.onMediaEvent(e));
+    other.dispatchEvent(new Event('timeupdate')); // backgrounded playback noise
+    expect(h.calls.teardown).not.toHaveBeenCalled();
+    expect(h.controller.activeVideo).toBe(h.video);
+  });
+
   it('the first adoption (no recommendation yet) never renders a none pill', () => {
     const h = makeHarness({ onVideoSwap: swapHook(() => h) });
     const other = document.createElement('video');
