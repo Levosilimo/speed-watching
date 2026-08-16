@@ -685,6 +685,38 @@ test('ru UI locale: the estimated tier targets the ru model (168 wpm) and shows 
   }
 });
 
+test('generic path, ru UI locale: the captionless estimated tier keys to the ru model (168–180 range)', async () => {
+  // Fail-without-fix regression for the generic estimated tier: a ru
+  // browser on a captionless generic page used to render the en 250–275
+  // range (no track language and no UI-locale fallback). The fallback must
+  // drive the displayed range from navigator.language's model. The shared
+  // context cannot change locale mid-run, so a second persistent context
+  // side-loads the same extension with a ru-RU locale.
+  const ruDir = mkdtempSync(join(tmpdir(), 'speedwatcher-e2e-ru-generic-'));
+  const ruContext = await chromium.launchPersistentContext(ruDir, {
+    channel: 'chromium',
+    headless: true,
+    locale: 'ru-RU',
+    args: [`--disable-extensions-except=${extensionPath}`, `--load-extension=${extensionPath}`],
+  });
+  try {
+    await routeFixtures(ruContext);
+    const ruPage = ruContext.pages()[0] ?? (await ruContext.newPage());
+    await ruPage.goto(`${fixtureBase}/generic-swap`);
+    await ruPage.waitForFunction(
+      () => window.__speedwatcherPill?.state?.tierLabel === 'estimated',
+      undefined,
+      { timeout: 15_000 },
+    );
+    const state = await ruPage.evaluate(() => window.__speedwatcherPill?.state);
+    expect(state?.tierLabel).toBe('estimated');
+    expect(state?.mode).toBe('recommend');
+    expect(state?.range).toEqual({ lo: 168, hi: 180, unit: 'wpm' });
+  } finally {
+    await ruContext.close();
+  }
+});
+
 test('content script measures fixture wpm; console hook agrees with event hook', async () => {
   await runMeasurementSpecs(driver);
   const last = await page.evaluate(() => window.__speedwatcherLastMeasure);
