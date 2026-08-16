@@ -188,14 +188,20 @@ const MEASURE_LINK_MENU_ID = 'speedwatcher-measure-link';
 const MEASURE_LINK_MENU_TITLE = "Measure this video's rate";
 
 function installContextMenu(): void {
-  // id-guard: menus persist across service-worker restarts, and create
-  // with a duplicate id throws — register once per session.
-  if (browser.contextMenus.onClicked.hasListener(onMeasureLinkClick)) return;
-  browser.contextMenus.create({
-    id: MEASURE_LINK_MENU_ID,
-    title: MEASURE_LINK_MENU_TITLE,
-    contexts: ['link'],
-  });
+  // Menu items persist across service-worker restarts and listener
+  // registration does not, so hasListener is always false on a fresh session
+  // — it cannot guard idempotency. The duplicate-id create() rejection is
+  // the restart signal: benign (the menu is already there), but it must be
+  // handled, not left unhandled. The generated types still carry the
+  // callback-era `number | string` signature, so the promise is adopted
+  // through Promise.resolve before the catch.
+  void Promise.resolve(
+    browser.contextMenus.create({
+      id: MEASURE_LINK_MENU_ID,
+      title: MEASURE_LINK_MENU_TITLE,
+      contexts: ['link'],
+    }),
+  ).catch((error: unknown) => console.warn(`context menu: ${String(error)}`));
   browser.contextMenus.onClicked.addListener(onMeasureLinkClick);
 }
 
