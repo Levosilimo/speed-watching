@@ -85,10 +85,17 @@ const controller = createRateController<RateCurrent>({
     isOwnDip: (rate) =>
       skipActuator.active && Math.abs(rate - reapplier.currentRateFor(skipActuator.inGapNow)) <= RATE_EPSILON,
   },
-  // A new element means the user switched videos: end the old session and
-  // re-measure (the observer's handleVideoMutations does the same).
-  onVideoSwap: (endSession) => {
-    endSession();
+  // A new element means the user switched videos: full reset like the
+  // YouTube navigation path — the old recommendation and pill must not
+  // outlive the swap (a fast Apply would use the previous multiplier). The
+  // controller adopted the new element before this hook runs, so re-adopt
+  // it after the reset and re-measure. The first adoption (nothing rendered
+  // yet) skips the reset — there is no stale state, and the reset would
+  // flash an empty pill before the first measure lands.
+  onVideoSwap: () => {
+    const next = controller.activeVideo;
+    if (controller.current !== null) controller.reset();
+    if (next !== null) controller.adoptVideo(next);
     void measure();
   },
 });

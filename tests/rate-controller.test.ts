@@ -418,7 +418,12 @@ describe('generic video swap', () => {
   // navigation reset, and keep the swapped-in element active so the
   // re-measure targets it. The first adoption (no recommendation rendered
   // yet) skips the reset — there is no stale state to clear.
-  const swapHook = (getH: () => Harness): NonNullable<RateControllerDeps<Ctx>['onVideoSwap']> => (end) => end();
+  const swapHook = (getH: () => Harness): NonNullable<RateControllerDeps<Ctx>['onVideoSwap']> => () => {
+    const h = getH();
+    const next = h.controller.activeVideo;
+    if (h.controller.current !== null) h.controller.reset();
+    if (next !== null) h.controller.adoptVideo(next);
+  };
 
   it('a generic swap after a render resets current and the pill, and keeps the swapped-in element active for the re-measure', () => {
     const h = makeHarness({ onVideoSwap: swapHook(() => h) });
