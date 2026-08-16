@@ -7,6 +7,14 @@
 // (== visual order), and the label/tier live region (role=status) excludes
 // the action buttons.
 //
+// happy-dom limitation: synthetic KeyboardEvents carry no default action,
+// so the unit harness never runs native button activation — the double-fire
+// bug (the pill-level keydown routing Enter to applyBtn.click() on top of
+// the focused button's own native activation) only shows here, in a real
+// browser. The two Enter tests below are its lane: Enter on a focused
+// Apply fires exactly once (counted in the override log), Enter on a focused
+// Dismiss never applies.
+//
 // What each block pins:
 //   (a) Enter-apply and (b) Escape-dismiss re-prove the unit-tested
 //       handlers through the real event path (the pill's keydown routing
@@ -25,7 +33,7 @@
 //       .main-text (label/tier inside), buttons outside it — status regions
 //       announce atomically and swallow interactive children.
 
-import { test, expect, chromium, type BrowserContext, type Page } from '@playwright/test';
+import { test, expect, chromium, type BrowserContext, type Page, type Worker } from '@playwright/test';
 import { mkdtempSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -39,6 +47,20 @@ const watchUrl = (fixture: string): string =>
 
 let context: BrowserContext;
 let page: Page;
+let serviceWorker: Worker;
+
+/** The override-log apply entries the background store keeps: every apply
+ * appends exactly one entry, so the count discriminates a single apply from
+ * the pre-fix double-fire. */
+async function applyLogCount(): Promise<number> {
+  return serviceWorker.evaluate(async () => {
+    const items = await new Promise<Record<string, unknown>>((resolve) =>
+      chrome.storage.local.get('sw.overrideLog', (items) => resolve(items)),
+    );
+    const entries = items['sw.overrideLog'] as Array<{ userAction?: string }> | undefined;
+    return (entries ?? []).filter((entry) => entry.userAction === 'apply').length;
+  });
+}
 
 test.beforeAll(async () => {
   if (!existsSync(join(extensionPath, 'manifest.json'))) {
@@ -82,6 +104,8 @@ test.beforeAll(async () => {
       body: await response.text(),
     });
   });
+  serviceWorker =
+    context.serviceWorkers()[0] ?? (await context.waitForEvent('serviceworker', { timeout: 30_000 }));
   page = context.pages()[0] ?? (await context.newPage());
 });
 
@@ -148,6 +172,39 @@ test('keyboard: Enter on the Apply button applies the recommended rate', async (
   const rate = await page.evaluate(() => document.querySelector('video')?.playbackRate ?? null);
   expect(rate).not.toBeNull();
   expect(rate).toBeCloseTo(multiplier ?? -1, 2);
+});
+
+test('keyboard: Enter on the focused Apply button applies exactly once', async () => {
+  await renderPill();
+  const before = await applyLogCount();
+  await page.locator('.speedwatcher-pill-host').locator('button.btn-apply').focus();
+  await page.keyboard.press('Enter');
+  // One apply → one log entry. Pre-fix the pill-level keydown routed Enter
+  // to applyBtn.click() on top of the focused button's native activation
+  // (no preventDefault), so the apply double-fired: two entries, two nudge
+  // reports.
+  await expect.poll(async () => applyLogCount()).toBe(before + 1);
+  const rate = await page.evaluate(() => document.querySelector('video')?.playbackRate ?? null);
+  expect(rate).toBeCloseTo(await page.evaluate(() => window.__speedwatcherPill?.state?.multiplier ?? -1), 2);
+});
+
+test('keyboard: Enter on the focused Dismiss button never applies and dismisses', async () => {
+  await renderPill();
+  const before = await applyLogCount();
+  await page.locator('.speedwatcher-pill-host').locator('button.btn-dismiss').focus();
+  await page.keyboard.press('Enter');
+  // The focused Dismiss's own native Enter activation is the ONLY action:
+  // the pill hides and the rate stays untouched. Pre-fix the pill-level
+  // keydown routed Enter to Apply first (then native dismiss hid the pill)
+  // — the rate stayed applied with the pill gone.
+  await page.waitForFunction(
+    () => window.__speedwatcherPill?.state?.mode === 'none',
+    undefined,
+    { timeout: 15_000 },
+  );
+  const rate = await page.evaluate(() => document.querySelector('video')?.playbackRate ?? null);
+  expect(rate).toBeCloseTo(1, 6);
+  expect(await applyLogCount()).toBe(before);
 });
 
 test('keyboard: Escape dismisses the pill', async () => {

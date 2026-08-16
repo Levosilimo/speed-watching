@@ -2,9 +2,11 @@ import { browser } from 'wxt/browser';
 import { defineBackground } from 'wxt/utils/define-background';
 import { createCaptureOrchestrator } from '../lib/capture-orchestrator';
 import { isOffscreenEvent, isOptionsMessage } from '../lib/audio-probe';
+import { ChannelMemory } from '../lib/channel-memory';
 import { DemandStore } from '../lib/demand';
 import { ErrorJournal } from '../lib/error-journal';
 import {
+  isChannelPutMessage,
   isDemandIncrementMessage,
   isJournalAppendMessage,
   isNudgeDismiss,
@@ -31,15 +33,16 @@ export default defineBackground(() => {
     { offscreenUrl: browser.runtime.getURL('/offscreen.html') },
   );
 
-  // Single writer for demand counters, the recall nudge (lib-16), and the
-  // saved-time total (lib-11#3): every bridge frame forwards
-  // demand:increment, nudge:recordApply/nudge:dismiss, and timeSaved:accrue
-  // here, so one promise chain covers all frames instead of per-frame
-  // get→set interleaves.
+  // Single writer for demand counters, the recall nudge (lib-16), the
+  // saved-time total, and channel-memory puts (lib-11#3): every bridge frame
+  // forwards demand:increment, nudge:recordApply/nudge:dismiss,
+  // timeSaved:accrue, and channel:put here, so one promise chain covers all
+  // frames instead of per-frame get→set interleaves.
   const demand = new DemandStore(browser.storage.local);
   const errorJournal = new ErrorJournal(browser.storage.local);
   const nudge = new NudgeStore(browser.storage.local);
   const timeSaved = new TimeSavedStore(browser.storage.local);
+  const channels = new ChannelMemory(browser.storage.local);
   const settings = new SettingsStore(browser.storage.local);
 
   browser.runtime.onMessageExternal.addListener(
@@ -88,6 +91,10 @@ export default defineBackground(() => {
       }
       if (isTimeSavedAccrueMessage(message)) {
         void timeSaved.accrue(message.deltaSec, message.multiplier).then(sendResponse);
+        return true;
+      }
+      if (isChannelPutMessage(message)) {
+        void channels.put(message.channelKey, message.record).then(sendResponse);
         return true;
       }
       return false;
@@ -188,14 +195,20 @@ const MEASURE_LINK_MENU_ID = 'speedwatcher-measure-link';
 const MEASURE_LINK_MENU_TITLE = "Measure this video's rate";
 
 function installContextMenu(): void {
-  // id-guard: menus persist across service-worker restarts, and create
-  // with a duplicate id throws — register once per session.
-  if (browser.contextMenus.onClicked.hasListener(onMeasureLinkClick)) return;
-  browser.contextMenus.create({
-    id: MEASURE_LINK_MENU_ID,
-    title: MEASURE_LINK_MENU_TITLE,
-    contexts: ['link'],
-  });
+  // Menu items persist across service-worker restarts and listener
+  // registration does not, so hasListener is always false on a fresh session
+  // — it cannot guard idempotency. The duplicate-id create() rejection is
+  // the restart signal: benign (the menu is already there), but it must be
+  // handled, not left unhandled. The generated types still carry the
+  // callback-era `number | string` signature, so the promise is adopted
+  // through Promise.resolve before the catch.
+  void Promise.resolve(
+    browser.contextMenus.create({
+      id: MEASURE_LINK_MENU_ID,
+      title: MEASURE_LINK_MENU_TITLE,
+      contexts: ['link'],
+    }),
+  ).catch((error: unknown) => console.warn(`context menu: ${String(error)}`));
   browser.contextMenus.onClicked.addListener(onMeasureLinkClick);
 }
 

@@ -139,6 +139,20 @@ beforeEach(() => {
 
   const main = (contentModule as { main: () => void }).main;
   main();
+
+  // happy-dom's global window is a proxy: native postMessage delivers
+  // events whose source is the underlying Window, so the bridge's same-frame
+  // source guard (event.source !== host) — satisfied by real browsers — would
+  // drop every envelope. Dispatch with source=window to model the browser;
+  // kept async (microtask) like the native delivery so the relay's
+  // post-then-listen ordering still holds. The window is captured at post
+  // time so a delivery that outlives the test cannot touch a torn-down env.
+  window.postMessage = ((message: unknown) => {
+    const win = window;
+    queueMicrotask(() => {
+      win.dispatchEvent(new MessageEvent('message', { data: message, source: win }));
+    });
+  }) as typeof window.postMessage;
 });
 
 describe('bridge shortcut relay (background → MAIN world)', () => {
@@ -498,6 +512,47 @@ describe('bridge wpm:get relay (background → window → sendResponse)', () => 
       expect(returned).toBe(true);
     });
     expect(response).toMatchObject({ ok: true, version: 1, site: 'youtube.com', tier: 'estimated' });
+  });
+
+  it('ignores a foreign-source window answer (the relay mirrors the client source guard)', async () => {
+    const main = (bridgeModule as { main: () => void }).main;
+    main();
+    const listener = chromeMock.runtime.onMessage.addListener.mock.calls[0]?.[0] as
+      | ((message: unknown, sender: unknown, sendResponse: (response?: unknown) => void) => boolean)
+      | undefined;
+    if (!listener) throw new Error('no bridge runtime listener registered');
+
+    await vi.waitFor(() => {
+      expect(pillMode()).toBe('recommend');
+    });
+
+    // A cross-frame forgery: a valid-shaped wpm response from a foreign
+    // source must not be forwarded to the background — only the same-window
+    // answer settles sendResponse.
+    const forged = {
+      ok: true,
+      version: 1,
+      ts: 999,
+      site: 'evil.com',
+      naturalRate: 150,
+      unit: 'wpm',
+      language: 'en',
+      tier: 'asr-word',
+      contentType: 'lecture',
+      platformMax: 2,
+      recommendation: { target: 250, recommendedMultiplier: 1.65, mode: 'recommend' },
+    };
+    const response = await new Promise<unknown>((resolve) => {
+      const returned = listener({ type: 'wpm:get', version: 1 }, {}, resolve);
+      expect(returned).toBe(true);
+      window.dispatchEvent(
+        new MessageEvent('message', {
+          data: { channel: 'speedwatcher:wpm', message: forged },
+          source: { foreign: true } as unknown as MessageEvent['source'],
+        }),
+      );
+    });
+    expect(response).toMatchObject({ ok: true, version: 1, site: 'youtube.com' });
   });
 
   it('keeps the shortcut relay one-way (no response)', async () => {

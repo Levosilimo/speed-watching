@@ -28,6 +28,7 @@ import type { ContentType } from '../lib/music';
 import { OverrideLog } from '../lib/override-log';
 import type { OverrideLogEntry } from '../lib/override-log';
 import { defaultSettings, SettingsStore } from '../lib/settings';
+import type { StorageLike } from '../lib/settings';
 import { SkipSilenceStore, defaultSkipSilence } from '../lib/skip-silence';
 import { mockStorage } from './fixtures/helpers';
 
@@ -65,21 +66,34 @@ function fakeWindow(): {
   };
 }
 
+/** The channel lane's shared storage and the single background writer both
+ * frames forward to (mirror of entrypoints/background.ts). */
+interface ChannelLane {
+  storage: StorageLike;
+  writer: ChannelMemory;
+}
+
 function serve(
   host: EventHost,
   forwardDemand: BridgeDeps['forwardDemand'] = vi.fn(),
   forwardAccrue: BridgeDeps['forwardAccrue'] = vi.fn(),
+  lane?: ChannelLane,
 ): BridgeDeps {
+  const storage = lane?.storage ?? mockStorage();
+  const writer = lane?.writer ?? new ChannelMemory(storage);
   const deps: BridgeDeps = {
     settings: new SettingsStore(mockStorage()),
     skip: new SkipSilenceStore(mockStorage()),
     log: new OverrideLog(mockStorage()),
-    channels: new ChannelMemory(mockStorage()),
+    // channel:get answers per-frame from the shared storage; channel:put
+    // forwards to the background single writer over the same storage.
+    channels: new ChannelMemory(storage),
     forwardDemand,
     forwardJournalAppend: vi.fn(),
     forwardNudgeRecordApply: vi.fn(),
     forwardNudgeDismiss: vi.fn(),
     forwardAccrue,
+    forwardChannelPut: (channelKey, record) => writer.put(channelKey, record),
   };
   host.addEventListener('message', createBridgeListener(deps, host as unknown as Window));
   return deps;
@@ -120,7 +134,6 @@ describe('messaging bridge', () => {
           'youtube.com': {
             target: 240,
             platformMax: 1.75,
-            multiplierOverride: 1.3,
             contentType: 'lecture',
           },
         },
@@ -136,7 +149,6 @@ describe('messaging bridge', () => {
     expect(saved.sites['youtube.com']).toEqual({
       target: 240,
       platformMax: 1.75,
-      multiplierOverride: 1.3,
       contentType: 'lecture',
     });
     expect(saved.contentTypes.lecture).toEqual({ target: 235 });
@@ -448,6 +460,35 @@ describe('messaging bridge', () => {
     expect(await client.request({ type: 'channel:get', channelKey: 'x'.repeat(201) })).toBeNull();
   });
 
+  it('serializes concurrent channel:put from two frames so no update is lost (lib-11#3 single writer)', async () => {
+    // Two frames share chrome.storage.local; each answers channel:put with
+    // its own get→set pair, so concurrent writes interleave and lose one
+    // record. The puts must serialize on one background writer (mirror of
+    // the demand:increment lane).
+    const storage = mockStorage();
+    const writer = new ChannelMemory(storage);
+    const hostA = fakeWindow();
+    const hostB = fakeWindow();
+    serve(hostA.host, vi.fn(), vi.fn(), { storage, writer });
+    serve(hostB.host, vi.fn(), vi.fn(), { storage, writer });
+    const clientA = createBridgeClient(hostA.host);
+    const clientB = createBridgeClient(hostB.host);
+    await Promise.all([
+      clientA.request({
+        type: 'channel:put',
+        channelKey: 'UC-a',
+        record: { rate: 150, unit: 'wpm', language: 'en', ts: 1 },
+      }),
+      clientB.request({
+        type: 'channel:put',
+        channelKey: 'UC-b',
+        record: { rate: 160, unit: 'wpm', language: 'en', ts: 2 },
+      }),
+    ]);
+    expect(await writer.get('UC-a')).toEqual({ rate: 150, unit: 'wpm', language: 'en', ts: 1 });
+    expect(await writer.get('UC-b')).toEqual({ rate: 160, unit: 'wpm', language: 'en', ts: 2 });
+  });
+
   it('forwards demand:increment to the background single writer and resolves on its response (lib-11#3)', async () => {
     const { host } = fakeWindow();
     // forwardDemand is the bridge's runtime.sendMessage round trip; the
@@ -616,6 +657,32 @@ describe('messaging bridge', () => {
       const client = createBridgeClient(host);
       const pending = client.request({ type: 'settings:get' });
       expect(messages.length).toBe(1); // the request left the host
+      const assertion = expect(pending).rejects.toThrow('bridge timeout');
+      vi.advanceTimersByTime(BRIDGE_TIMEOUT_MS + 1);
+      await assertion;
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('ignores responses whose source is not the bridge frame window', async () => {
+    const { host, dispatch } = fakeWindow();
+    const client = createBridgeClient(host);
+    // A cross-frame forgery: a foreign source answers the in-flight request
+    // with a valid-shaped response. The request side drops foreign sources
+    // (createBridgeListener); the response side must mirror it — the forged
+    // envelope must not settle the pending request, which still times out.
+    const pending = client.request({ type: 'settings:get' });
+    dispatch({
+      data: {
+        channel: BRIDGE_CHANNEL,
+        direction: 'response',
+        payload: { id: 1, ok: true, result: defaultSettings() },
+      },
+      source: { foreign: true },
+    } as unknown as MessageEvent);
+    vi.useFakeTimers();
+    try {
       const assertion = expect(pending).rejects.toThrow('bridge timeout');
       vi.advanceTimersByTime(BRIDGE_TIMEOUT_MS + 1);
       await assertion;

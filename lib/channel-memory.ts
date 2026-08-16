@@ -3,9 +3,10 @@
 // joins the storage namespace declared in lib/settings.ts — one flat record
 // per channel, bounded to CHANNEL_MEMORY_MAX entries with least-recently-
 // written eviction (every put stamps a fresh ts, so write order is use
-// order). The bridge answers channel:get/put straight from
-// chrome.storage.local like settings (lib/messaging.ts). YouTube-only for
-// now — entrypoints/generic.content.ts never touches this store.
+// order). The bridge answers channel:get straight from chrome.storage.local
+// like settings; channel:put forwards to the background, the single writer
+// (lib/messaging.ts). YouTube-only for now —
+// entrypoints/generic.content.ts never touches this store.
 
 import type { StorageLike } from './settings';
 
@@ -50,6 +51,8 @@ export function isChannelRecord(value: unknown): value is ChannelRecord {
 }
 
 export class ChannelMemory {
+  private tail: Promise<void> = Promise.resolve();
+
   constructor(private readonly storage: StorageLike) {}
 
   /** The channel's last measured record, or null when unknown or corrupt. */
@@ -62,8 +65,21 @@ export class ChannelMemory {
   }
 
   /** Store a measured rate for the channel, evicting the least-recently-
-   * written entry when the bound is exceeded. */
+   * written entry when the bound is exceeded. Puts queue on a promise chain
+   * (mirror of DemandStore) so concurrent get→set pairs cannot interleave —
+   * chrome.storage.local has no atomic write. Single writer by
+   * construction: the background owns the only instance and every frame's
+   * bridge forwards channel:put to it (lib/messaging.ts). */
   async put(channelKey: string, record: ChannelRecord): Promise<void> {
+    const result = this.tail.then(() => this.putNow(channelKey, record));
+    this.tail = result.then(
+      () => undefined,
+      () => undefined,
+    );
+    return result;
+  }
+
+  private async putNow(channelKey: string, record: ChannelRecord): Promise<void> {
     const current = await this.load();
     current[channelKey] = record;
     const keys = Object.keys(current);

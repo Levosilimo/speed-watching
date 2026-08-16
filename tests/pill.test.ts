@@ -607,6 +607,9 @@ describe('createPill — ru locale', () => {
       const payload = (message as { payload?: { id?: number } }).payload ?? {};
       window.dispatchEvent(
         new MessageEvent('message', {
+          // source=window: the client's same-frame source guard (mirror of
+          // the request side) must accept this stubbed answer.
+          source: window,
           data: {
             channel: 'speedwatcher:bridge',
             direction: 'response',

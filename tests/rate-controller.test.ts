@@ -373,10 +373,22 @@ describe('session lifecycle', () => {
     other.dispatchEvent(new Event('play'));
     expect(h.controller.activeVideo).toBe(other);
     expect(h.calls.skipDetach).toHaveBeenCalled(); // endSession teardown
+    expect(h.calls.stopRateApplies).toHaveBeenCalled(); // endSession teardown
     expect(h.calls.teardown).toHaveBeenCalled(); // nudge surface teardown
     // The swap bumped the epoch: the next measure renders on the fresh session.
     h.render();
     expect(h.controller.pillState?.mode).toBe('recommend');
+  });
+
+  it('adoptVideo ends the session with the re-assert loop detached (endSession teardown)', () => {
+    const h = makeHarness();
+    h.render({ settings: autoOn() });
+    const other = document.createElement('video');
+    document.body.append(other);
+    h.controller.adoptVideo(other);
+    expect(h.calls.stopRateApplies).toHaveBeenCalled();
+    expect(h.calls.skipDetach).toHaveBeenCalled();
+    expect(h.calls.teardown).toHaveBeenCalled();
   });
 
   it('onVideoRemoved drops the recommendation, the pill, and the session', () => {

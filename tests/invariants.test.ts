@@ -6,11 +6,22 @@
 // fail for the right reason; each property below is written to the
 // research claim and must be able to fail if the code drifts.
 import fc from 'fast-check';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi, type Mock } from 'vitest';
 import type { Segment } from '../lib/captions';
 import { parseYouTubeJson3 } from '../lib/captions';
+import { ChannelMemory } from '../lib/channel-memory';
 import { LANGUAGES } from '../lib/languages';
+import {
+  createBridgeClient,
+  createBridgeListener,
+  type BridgeDeps,
+  type BridgeRequest,
+  type EventHost,
+} from '../lib/messaging';
+import { OverrideLog } from '../lib/override-log';
 import { recommend } from '../lib/recommend';
+import { defaultSettings, SettingsStore } from '../lib/settings';
+import { SkipSilenceStore, defaultSkipSilence } from '../lib/skip-silence';
 import { countMorae, countWordTokens, isBracketMarker } from '../lib/tokenizer';
 import {
   correctedCueLevelWpm,
@@ -19,7 +30,7 @@ import {
   manualCueRate,
   wordLevelWpm,
 } from '../lib/wpm';
-import { readFixture } from './fixtures/helpers';
+import { readFixture, mockStorage } from './fixtures/helpers';
 
 const SEED = 4242;
 
@@ -472,5 +483,127 @@ describe('cross-tier rate differentials', () => {
       }),
       { seed: SEED, numRuns: 200 },
     );
+  });
+});
+
+// (g) bridge write-bound catalog (C1): every WRITE message in the bridge
+// union (lib/bridge-protocol.ts) with every bounded field, its documented
+// bound, and the out-of-bounds payload the wire guard must reject. The
+// catalog is keyed on the write side of the union — a new write message
+// type without an entry fails to COMPILE (Record<WriteType, …>), so the
+// table cannot silently go stale. Bounds are written from the guards'
+// documented ranges (lib/bridge-protocol.ts), not from lib constants.
+
+type WriteType = Exclude<BridgeRequest['type'], 'settings:get' | 'skip:get' | 'channel:get'>;
+
+interface FieldEntry {
+  field: string;
+  /** The documented bound, as the guard's comment states it. */
+  bound: string;
+  /** A payload with exactly this field out of bounds. */
+  corrupt: BridgeRequest;
+  /** The rejection the handler throws for this message type. */
+  error: string;
+}
+
+const WRITE_CATALOG: Record<WriteType, FieldEntry[]> = {
+  // One-flag write with no payload fields: nothing a page can forge.
+  'settings:seenFirstRun': [],
+  'settings:set': [
+    { field: 'settings.target', bound: '[100, 400] wpm', error: 'invalid settings payload', corrupt: { type: 'settings:set', settings: { ...defaultSettings(), target: 500 } } },
+    { field: 'settings.platformMax', bound: '[1, 4]x', error: 'invalid settings payload', corrupt: { type: 'settings:set', settings: { ...defaultSettings(), platformMax: 10 } } },
+    { field: 'settings.sites[].target', bound: '[100, 400] wpm', error: 'invalid settings payload', corrupt: { type: 'settings:set', settings: { ...defaultSettings(), sites: { 'youtube.com': { target: 900 } } } } },
+    { field: 'settings.sites[].platformMax', bound: '[1, 4]x', error: 'invalid settings payload', corrupt: { type: 'settings:set', settings: { ...defaultSettings(), sites: { 'youtube.com': { platformMax: 9 } } } } },
+    { field: 'settings.contentTypes[].target', bound: '[100, 400] wpm', error: 'invalid settings payload', corrupt: { type: 'settings:set', settings: { ...defaultSettings(), contentTypes: { lecture: { target: 700 } } } } },
+  ],
+  'skip:set': [
+    { field: 'prefs.minGapSec', bound: '[1, 60] s', error: 'invalid prefs', corrupt: { type: 'skip:set', prefs: { ...defaultSkipSilence(), minGapSec: 61 } } },
+    { field: 'prefs.pauseRate', bound: '[1, 1.3]x', error: 'invalid prefs', corrupt: { type: 'skip:set', prefs: { ...defaultSkipSilence(), pauseRate: 2 } } },
+  ],
+  'log:append': [
+    { field: 'entry.naturalRate', bound: '[1, 1000] wpm', error: 'log:append: invalid entry', corrupt: { type: 'log:append', entry: { site: 'youtube.com', contentType: 'talk', naturalRate: 5000, multiplier: 1.5, mode: 'recommend', userAction: 'apply' } } },
+    { field: 'entry.multiplier', bound: '[0.1, 10]x', error: 'log:append: invalid entry', corrupt: { type: 'log:append', entry: { site: 'youtube.com', contentType: 'talk', naturalRate: 150, multiplier: 20, mode: 'recommend', userAction: 'apply' } } },
+    { field: 'entry.finalMultiplier', bound: '[0.1, 10]x', error: 'log:append: invalid entry', corrupt: { type: 'log:append', entry: { site: 'youtube.com', contentType: 'talk', naturalRate: 150, multiplier: 1.5, finalMultiplier: -2, mode: 'recommend', userAction: 'adjust' } } },
+  ],
+  'channel:put': [
+    { field: 'channelKey', bound: '1..200 chars', error: 'channel:put: invalid record', corrupt: { type: 'channel:put', channelKey: 'x'.repeat(201), record: { rate: 150, unit: 'wpm', language: 'en', ts: 1 } } },
+    { field: 'record.rate', bound: '[1, 1000] wpm', error: 'channel:put: invalid record', corrupt: { type: 'channel:put', channelKey: 'UC-a', record: { rate: 5000, unit: 'wpm', language: 'en', ts: 1 } } },
+  ],
+  'demand:increment': [
+    { field: 'contentType', bound: 'ContentType enum', error: 'unknown content type', corrupt: { type: 'demand:increment', contentType: 'bogus' as never } },
+  ],
+  'journal:append': [
+    { field: 'reason', bound: 'CaptionStatus enum', error: 'journal:append: invalid entry', corrupt: { type: 'journal:append', reason: 'bogus' as never } },
+  ],
+  'nudge:recordApply': [
+    { field: 'multiplier', bound: '[0.1, 10]x', error: 'nudge:recordApply: invalid multiplier', corrupt: { type: 'nudge:recordApply', multiplier: 50 } },
+  ],
+  'nudge:dismiss': [
+    { field: 'forever', bound: 'boolean', error: 'nudge:dismiss: invalid forever flag', corrupt: { type: 'nudge:dismiss', forever: 'yes' as never } },
+  ],
+  'timeSaved:accrue': [
+    { field: 'deltaSec', bound: '[0, 10] s (one flush interval)', error: 'timeSaved:accrue: invalid accrue payload', corrupt: { type: 'timeSaved:accrue', deltaSec: 1e12, multiplier: 2 } },
+    { field: 'multiplier', bound: '[0.1, 10]x', error: 'timeSaved:accrue: invalid accrue payload', corrupt: { type: 'timeSaved:accrue', deltaSec: 10, multiplier: 99 } },
+  ],
+};
+
+/** The bridge round-trip harness: a client and a listener sharing one
+ * same-frame host, with spies standing in for every background forwarder. */
+function catalogServe(): { client: ReturnType<typeof createBridgeClient>; forwards: Mock[] } {
+  const listeners = new Set<(event: MessageEvent) => void>();
+  const host: EventHost & { location: { hostname: string } } = {
+    location: { hostname: 'youtube.com' },
+    postMessage: (message: unknown) => {
+      for (const listener of listeners) listener({ data: message, source: host } as MessageEvent);
+    },
+    addEventListener: (type: string, listener: (event: MessageEvent) => void) => {
+      if (type === 'message') listeners.add(listener);
+    },
+  };
+  const forwardDemand = vi.fn();
+  const forwardJournalAppend = vi.fn();
+  const forwardNudgeRecordApply = vi.fn();
+  const forwardNudgeDismiss = vi.fn();
+  const forwardAccrue = vi.fn();
+  const forwardChannelPut = vi.fn();
+  const deps: BridgeDeps = {
+    settings: new SettingsStore(mockStorage()),
+    skip: new SkipSilenceStore(mockStorage()),
+    log: new OverrideLog(mockStorage()),
+    channels: new ChannelMemory(mockStorage()),
+    forwardDemand,
+    forwardJournalAppend,
+    forwardNudgeRecordApply,
+    forwardNudgeDismiss,
+    forwardAccrue,
+    forwardChannelPut,
+  };
+  host.addEventListener('message', createBridgeListener(deps, host as unknown as Window));
+  return {
+    client: createBridgeClient(host),
+    forwards: [
+      forwardDemand,
+      forwardJournalAppend,
+      forwardNudgeRecordApply,
+      forwardNudgeDismiss,
+      forwardAccrue,
+      forwardChannelPut,
+    ],
+  };
+}
+
+describe('bridge write-bound catalog (C1)', () => {
+  it('rejects an out-of-bounds payload for every bounded field of every write message', async () => {
+    for (const [type, fields] of Object.entries(WRITE_CATALOG)) {
+      for (const entry of fields) {
+        const { client, forwards } = catalogServe();
+        await expect(
+          client.request(entry.corrupt),
+          `${type}.${entry.field} outside ${entry.bound} must be rejected`,
+        ).rejects.toThrow(entry.error);
+        // Nothing crossed to the background: every forwarder stayed silent.
+        for (const forward of forwards) expect(forward, type).not.toHaveBeenCalled();
+      }
+    }
   });
 });
