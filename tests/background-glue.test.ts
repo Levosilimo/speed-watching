@@ -224,11 +224,11 @@ describe('background wiring', () => {
 
     const response = await driveMessage(listener, {
       type: 'timeSaved:accrue',
-      deltaSec: 60,
+      deltaSec: 6,
       multiplier: 2,
     });
 
-    expect(response).toBe(30);
+    expect(response).toBe(3);
   });
 
   it('serializes concurrent timeSaved:accrue from two frames without loss', async () => {
@@ -240,11 +240,11 @@ describe('background wiring', () => {
     // Two frames race their accrues; the single background-owned chain
     // serializes them so neither get→set interleaves.
     const [a, b] = await Promise.all([
-      driveMessage(listener, { type: 'timeSaved:accrue', deltaSec: 60, multiplier: 2 }, 1),
-      driveMessage(listener, { type: 'timeSaved:accrue', deltaSec: 30, multiplier: 1.5 }, 2),
+      driveMessage(listener, { type: 'timeSaved:accrue', deltaSec: 6, multiplier: 2 }, 1),
+      driveMessage(listener, { type: 'timeSaved:accrue', deltaSec: 3, multiplier: 1.5 }, 2),
     ]);
-    expect(a).toBe(30);
-    expect(b).toBe(30 + (30 * 0.5) / 1.5); // +10
+    expect(a).toBe(3);
+    expect(b).toBe(3 + (3 * 0.5) / 1.5); // +1
   });
 
   it('ignores an action click without a tab id', async () => {
